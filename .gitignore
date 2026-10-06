@@ -1,0 +1,95 @@
+# ---------------------------------------------
+# SQL Server Management Studio / Visual Studio
+# ---------------------------------------------
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.ssmssuo
+*.vsidx
+DocumentLayout.json
+DocumentLayout.backup.json
+
+# Resultados de ejecucion de queries
+*.rpt
+*.sqlplan
+*.queryanalysis
+
+# ---------------------------------------------
+# Archivos de base de datos y backups
+# (nunca versionar: son binarios y pesados)
+# ---------------------------------------------
+*.mdf
+*.ldf
+*.ndf
+*.bak
+*.trn
+*.bacpac
+*.dacpac
+*.dmp
+
+# ---------------------------------------------
+# Credenciales / configuracion local
+# ---------------------------------------------
+.env
+.env.*
+!.env.example
+*.publish.xml
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+*connection*.config
+
+# ---------------------------------------------
+# Documentacion (archivos temporales de Office)
+# ---------------------------------------------
+~$*
+*.tmp
+*.~vsd*
+
+# ---------------------------------------------
+# .NET (si se agrega una app cliente)
+# ---------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+*.dll
+*.exe
+*.pdb
+packages/
+project.lock.json
+
+# ---------------------------------------------
+# Python / notebooks (si se usa para cargas o ETL)
+# ---------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# ---------------------------------------------
+# Sistema operativo
+# ---------------------------------------------
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# ---------------------------------------------
+# Editores
+# ---------------------------------------------
+.idea/
+*.swp
+*.swo
+
+# ---------------------------------------------
+# Logs
+# ---------------------------------------------
+*.log
+logs/
