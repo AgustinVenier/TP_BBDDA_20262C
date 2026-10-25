@@ -2,12 +2,16 @@
 ================================================================================
  Universidad Nacional de La Matanza
  Materia: 3641 - Bases de Datos Aplicada
- Comisión: COMPLETAR    Grupo: COMPLETAR
+ Comisión: 01    Grupo: 2
  Integrantes:
-   COMPLETAR Apellido, Nombre - usuario GitHub COMPLETAR
-   COMPLETAR Apellido, Nombre - usuario GitHub COMPLETAR
- Fecha: 06/10/2026
+   Caruso Dellisanti, Carolina Belen - COMPLETAR
+   D'Ambrosio, Rodrigo - rodrigoDambrosio
+   Tavella, Tomás - TomasTavella
+   Venier, Agustin - AgustinVenier
+   
+ Fecha: 25/10/2026
  Archivo: 01_CrearEsquemas.sql
+ Objetivo: Crear los esquemas lógicos en los que se agrupan las tablas.
 ================================================================================
 */
 
@@ -16,13 +20,11 @@ GO
 
 /*
     Esquemas lógicos del sistema (no se usa dbo para objetos propios):
-      config       Parámetros del reglamento (cupos, cambios, suspensiones).
-      torneo       Países, indicadores económicos, sedes, fases, selecciones y partidos.
-      plantel      Jugadores, cuerpo técnico y convocatorias.
-      partido      Formaciones, alineaciones, cambios, goles, tarjetas y suspensiones.
-      arbitraje    Árbitros, idiomas, designaciones e informes post-partido.
-      publicidad   Anunciantes, campañas, piezas, espacios físicos y exhibiciones.
-      importacion  Lotes de importación, errores y lógica de upsert.
+      DatosGenerales    Países, idiomas, indicadores económicos y parámetros del reglamento.
+      Torneo            Sedes, selecciones, listas de convocados, jugadores, cuerpo técnico y partidos.
+      DesarrolloPartido Formaciones, alineaciones, cambios, goles y amonestaciones.
+      Arbitraje         Árbitros, idiomas que hablan y designaciones por partido.
+      Publicidad        Anunciantes, campañas, piezas, espacios publicitarios y exhibiciones.
 
     CREATE SCHEMA debe ser la única sentencia de su lote, por lo que no puede
     ir dentro de un IF. Para validar la existencia sin recurrir a SQL dinámico
@@ -30,51 +32,37 @@ GO
     pero no se ejecuta, y luego se restablece la ejecución normal.
 */
 
-IF SCHEMA_ID(N'config') IS NOT NULL SET NOEXEC ON;
+IF SCHEMA_ID(N'DatosGenerales') IS NOT NULL SET NOEXEC ON;
 GO
-CREATE SCHEMA config AUTHORIZATION dbo;
-GO
-SET NOEXEC OFF;
-GO
-
-IF SCHEMA_ID(N'torneo') IS NOT NULL SET NOEXEC ON;
-GO
-CREATE SCHEMA torneo AUTHORIZATION dbo;
+CREATE SCHEMA DatosGenerales AUTHORIZATION dbo;
 GO
 SET NOEXEC OFF;
 GO
 
-IF SCHEMA_ID(N'plantel') IS NOT NULL SET NOEXEC ON;
+IF SCHEMA_ID(N'Torneo') IS NOT NULL SET NOEXEC ON;
 GO
-CREATE SCHEMA plantel AUTHORIZATION dbo;
-GO
-SET NOEXEC OFF;
-GO
-
-IF SCHEMA_ID(N'partido') IS NOT NULL SET NOEXEC ON;
-GO
-CREATE SCHEMA partido AUTHORIZATION dbo;
+CREATE SCHEMA Torneo AUTHORIZATION dbo;
 GO
 SET NOEXEC OFF;
 GO
 
-IF SCHEMA_ID(N'arbitraje') IS NOT NULL SET NOEXEC ON;
+IF SCHEMA_ID(N'DesarrolloPartido') IS NOT NULL SET NOEXEC ON;
 GO
-CREATE SCHEMA arbitraje AUTHORIZATION dbo;
-GO
-SET NOEXEC OFF;
-GO
-
-IF SCHEMA_ID(N'importacion') IS NOT NULL SET NOEXEC ON;
-GO
-CREATE SCHEMA importacion AUTHORIZATION dbo;
+CREATE SCHEMA DesarrolloPartido AUTHORIZATION dbo;
 GO
 SET NOEXEC OFF;
 GO
 
-IF SCHEMA_ID(N'publicidad') IS NOT NULL SET NOEXEC ON;
+IF SCHEMA_ID(N'Arbitraje') IS NOT NULL SET NOEXEC ON;
 GO
-CREATE SCHEMA publicidad AUTHORIZATION dbo;
+CREATE SCHEMA Arbitraje AUTHORIZATION dbo;
+GO
+SET NOEXEC OFF;
+GO
+
+IF SCHEMA_ID(N'Publicidad') IS NOT NULL SET NOEXEC ON;
+GO
+CREATE SCHEMA Publicidad AUTHORIZATION dbo;
 GO
 SET NOEXEC OFF;
 GO
@@ -82,6 +70,6 @@ GO
 -- Evidencia: esquemas creados.
 SELECT name AS Esquema
 FROM sys.schemas
-WHERE name IN (N'config', N'torneo', N'plantel', N'partido', N'arbitraje', N'importacion', N'publicidad')
+WHERE name IN (N'DatosGenerales', N'Torneo', N'DesarrolloPartido', N'Arbitraje', N'Publicidad')
 ORDER BY name;
 GO
