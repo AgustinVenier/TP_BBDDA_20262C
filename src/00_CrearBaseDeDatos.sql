@@ -9,7 +9,10 @@
    Tavella, Tomás - TomasTavella
    Venier, Agustin - AgustinVenier
 
+ Fecha: 25/10/2026
  Archivo: 00_CrearBaseDeDatos.sql
+ Objetivo: Crear la base de datos MundialFutbol desde cero. Si ya existe, se
+           elimina y se vuelve a crear con modelo de recuperación FULL.
 ================================================================================
 */
 

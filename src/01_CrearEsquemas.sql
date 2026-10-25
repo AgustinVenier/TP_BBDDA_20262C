@@ -9,6 +9,7 @@
    Tavella, Tomás - TomasTavella
    Venier, Agustin - AgustinVenier
    
+ Fecha: 25/10/2026
  Archivo: 01_CrearEsquemas.sql
  Objetivo: Crear los esquemas lógicos en los que se agrupan las tablas.
 ================================================================================

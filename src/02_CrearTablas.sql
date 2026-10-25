@@ -9,6 +9,7 @@
    Tavella, Tomás - TomasTavella
    Venier, Agustin - AgustinVenier
 
+  Fecha:        25/10/2026
   Objetivo:     Crear todas las tablas del sistema con sus claves primarias,
                 claves foraneas, restricciones UNIQUE, CHECK y DEFAULT, y los
                 indices sobre claves foraneas.
@@ -17,7 +18,7 @@
 
 ================================================================================
 
-    Nomenlactura: 
+    Nomenclatura: 
     Tablas                      ESQUEMA.NOMBRE_EN_MAYUSCULAS (en singular)
     Columnas                    snake_case en minusculas; PK = id_<tabla>
     Clave primaria              PK_<TABLA>
@@ -27,6 +28,20 @@
     Indice                      IX_<TABLA>_<columnas>
     Check                       CK_<TABLA>_<regla>
     Default                     DF_<TABLA>_<columna>
+    SP de ABM                   ESQUEMA.usp_<TABLA>_<Alta|Baja|Modificacion>
+                                (ej. Torneo.usp_SEDE_Alta)
+    SP de negocio               ESQUEMA.usp_<Verbo><Objeto> en PascalCase
+                                (ej. Torneo.usp_RegistrarSede,
+                                Torneo.usp_ImportarFixture)
+                                No se usa el prefijo sp_, que es el de los
+                                SP del sistema.
+    Funcion                     ESQUEMA.fn_<Nombre> (ej. fn_EquipoEnCancha)
+    Vista                       ESQUEMA.vw_<Nombre> (ej. vw_Fixture)
+    Parametro                   @<columna> en snake_case, con el mismo nombre
+                                que la columna que carga (ej. @id_sede)
+    Variable local              @<nombre> en snake_case descriptivo
+                                (ej. @cantidad_titulares). La que junta los
+                                mensajes de validacion se llama @errores.
 
   El script es re-ejecutable: borra las tablas en orden inverso de dependencias
   y las vuelve a crear (CUIDADO: al hacer esto se pierden datos previamente cargados).
