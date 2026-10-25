@@ -43,6 +43,27 @@
                                 (ej. @cantidad_titulares). La que junta los
                                 mensajes de validacion se llama @errores.
 
+    Tipos de datos:
+    Texto                       VARCHAR por defecto: la intercalacion
+                                Modern_Spanish_100_CI_AS_SC usa la pagina de
+                                codigos 1252, que cubre tildes, ñ y dieresis.
+                                NVARCHAR solo para nombres que pueden venir en
+                                cualquier alfabeto (personas, clubes,
+                                anunciantes, campanias y piezas).
+    Cantidades                  El entero mas chico que cubra el dominio:
+                                TINYINT en minutos, goles, dorsal, numero de
+                                partido, duraciones y parametros; SMALLINT en
+                                el anio; INT en capacidad y asistencia (pasan
+                                de 32.767).
+    Claves                      INT en las tablas que crecen con el uso:
+                                IDENTITY no reutiliza los valores que consumen
+                                los INSERT fallidos, los ROLLBACK y los
+                                borrados, y achicarlas ahorraria pocos KB.
+                                Los catalogos cerrados usan el tipo mas chico:
+                                TIPO_GOL TINYINT, PAIS e IDIOMA SMALLINT. Cada
+                                FK tiene el mismo tipo que la PK que referencia.
+    Montos y coordenadas        DECIMAL, se evita FLOAT a menos que sea estrictamente necesario.
+
   El script es re-ejecutable: borra las tablas en orden inverso de dependencias
   y las vuelve a crear (CUIDADO: al hacer esto se pierden datos previamente cargados).
 
@@ -107,13 +128,13 @@ GO
   - codigo_moneda: ISO 4217.
 */
 CREATE TABLE DatosGenerales.PAIS (
-    id_pais         INT IDENTITY(1,1) NOT NULL,
-    nombre          NVARCHAR(60)      NOT NULL,
-    codigo_fifa     CHAR(3)           NULL,
-    codigo_iso2     CHAR(2)           NULL,
-    codigo_iso3     CHAR(3)           NULL,
-    huso_horario    VARCHAR(50)       NOT NULL,
-    codigo_moneda   CHAR(3)           NULL,
+    id_pais         SMALLINT IDENTITY(1,1) NOT NULL,
+    nombre          VARCHAR(60)            NOT NULL,
+    codigo_fifa     CHAR(3)                NULL,
+    codigo_iso2     CHAR(2)                NULL,
+    codigo_iso3     CHAR(3)                NULL,
+    huso_horario    VARCHAR(50)            NOT NULL,
+    codigo_moneda   CHAR(3)                NULL,
 
     CONSTRAINT PK_PAIS PRIMARY KEY (id_pais),
     CONSTRAINT UQ_PAIS_nombre UNIQUE (nombre),
@@ -131,12 +152,13 @@ GO
 
 
 CREATE TABLE DatosGenerales.IDIOMA (
-    id_idioma       INT IDENTITY(1,1) NOT NULL,
-    nombre          NVARCHAR(40)      NOT NULL,
-    codigo_iso      VARCHAR(3)        NULL,     -- ISO 639-1 / 639-2
+    id_idioma       SMALLINT IDENTITY(1,1) NOT NULL,
+    nombre          VARCHAR(40)            NOT NULL,
+    codigo_iso      CHAR(2)                NULL,     -- ISO 639-1 (ej. 'es', 'en')
 
     CONSTRAINT PK_IDIOMA PRIMARY KEY (id_idioma),
-    CONSTRAINT UQ_IDIOMA_nombre UNIQUE (nombre)
+    CONSTRAINT UQ_IDIOMA_nombre UNIQUE (nombre),
+    CONSTRAINT CK_IDIOMA_codigo_iso CHECK (codigo_iso LIKE '[a-z][a-z]')
 );
 GO
 
@@ -148,7 +170,7 @@ GO
 */
 CREATE TABLE DatosGenerales.INDICADOR_ECONOMICO (
     id_indicador        INT IDENTITY(1,1) NOT NULL,
-    id_pais             INT               NOT NULL,
+    id_pais             SMALLINT          NOT NULL,
     codigo_indicador    VARCHAR(30)       NOT NULL,
     anio                SMALLINT          NOT NULL,
     valor               DECIMAL(18,4)     NOT NULL,
@@ -183,17 +205,18 @@ GO
     CAMBIOS_EXTRA_ALARGUE            cambios adicionales en tiempo suplementario
     VENTANAS_EXTRA_ALARGUE           ventanas adicionales en tiempo suplementario
     MIN_CONVOCADOS / MAX_CONVOCADOS  tamanio de la lista de convocados
+  valor es TINYINT: los parametros son conteos chicos (0 a 255) y el tipo ya
+  impide valores negativos.
 */
 CREATE TABLE DatosGenerales.PARAMETRO_REGLAMENTO (
     codigo              VARCHAR(50)     NOT NULL,
-    descripcion         NVARCHAR(200)   NOT NULL,
-    valor               INT             NOT NULL,
+    descripcion         VARCHAR(200)    NOT NULL,
+    valor               TINYINT         NOT NULL,
     fecha_modificacion  DATETIME2(0)    NOT NULL
         CONSTRAINT DF_PARAMETRO_REGLAMENTO_fecha_modificacion DEFAULT (SYSDATETIME()),
 
     CONSTRAINT PK_PARAMETRO_REGLAMENTO PRIMARY KEY (codigo),
-    CONSTRAINT CK_PARAMETRO_REGLAMENTO_codigo CHECK (codigo NOT LIKE '%[^A-Z0-9_]%'),
-    CONSTRAINT CK_PARAMETRO_REGLAMENTO_valor  CHECK (valor >= 0)
+    CONSTRAINT CK_PARAMETRO_REGLAMENTO_codigo CHECK (codigo NOT LIKE '%[^A-Z0-9_]%')
 );
 GO
 
@@ -209,9 +232,9 @@ GO
 */
 CREATE TABLE Torneo.SEDE (
     id_sede         INT IDENTITY(1,1) NOT NULL,
-    nombre_estadio  NVARCHAR(100)     NOT NULL,
-    ciudad          NVARCHAR(80)      NOT NULL,
-    id_pais         INT               NOT NULL,
+    nombre_estadio  VARCHAR(100)      NOT NULL,
+    ciudad          VARCHAR(80)       NOT NULL,
+    id_pais         SMALLINT          NOT NULL,
     capacidad       INT               NOT NULL,
     huso_horario    VARCHAR(50)       NOT NULL,
     latitud         DECIMAL(9,6)      NULL,
@@ -235,7 +258,7 @@ GO
 */
 CREATE TABLE Torneo.SELECCION (
     id_seleccion    INT IDENTITY(1,1) NOT NULL,
-    id_pais         INT               NOT NULL,
+    id_pais         SMALLINT          NOT NULL,
     confederacion   VARCHAR(10)       NOT NULL,
     grupo           CHAR(1)           NULL,
 
@@ -279,7 +302,7 @@ GO
 CREATE TABLE Torneo.JUGADOR (
     id_jugador          INT IDENTITY(1,1) NOT NULL,
     id_lista            INT               NOT NULL,
-    id_pais_nacimiento  INT               NULL,
+    id_pais_nacimiento  SMALLINT          NULL,
     nombre              NVARCHAR(60)      NOT NULL,
     apellido            NVARCHAR(60)      NOT NULL,
     fecha_nacimiento    DATE              NULL,
@@ -288,9 +311,9 @@ CREATE TABLE Torneo.JUGADOR (
     dorsal              TINYINT           NOT NULL,
     fecha_alta          DATE              NOT NULL
         CONSTRAINT DF_JUGADOR_fecha_alta DEFAULT (CONVERT(DATE, GETDATE())),
-    motivo_alta         NVARCHAR(200)     NULL,
+    motivo_alta         VARCHAR(200)      NULL,
     fecha_baja          DATE              NULL,
-    motivo_baja         NVARCHAR(200)     NULL,
+    motivo_baja         VARCHAR(200)      NULL,
 
     CONSTRAINT PK_JUGADOR PRIMARY KEY (id_jugador),
     CONSTRAINT FK_JUGADOR_LISTA_CONVOCADOS
@@ -323,11 +346,11 @@ GO
 CREATE TABLE Torneo.PERSONA_CUERPO_TECNICO (
     id_persona_ct       INT IDENTITY(1,1) NOT NULL,
     id_seleccion        INT               NOT NULL,
-    id_pais_nacimiento  INT               NULL,
+    id_pais_nacimiento  SMALLINT          NULL,
     nombre              NVARCHAR(60)      NOT NULL,
     apellido            NVARCHAR(60)      NOT NULL,
     fecha_nacimiento    DATE              NULL,
-    rol                 VARCHAR(25)       NOT NULL,
+    rol                 VARCHAR(20)       NOT NULL,
 
     CONSTRAINT PK_PERSONA_CUERPO_TECNICO PRIMARY KEY (id_persona_ct),
     CONSTRAINT FK_PERSONA_CUERPO_TECNICO_SELECCION
@@ -362,7 +385,7 @@ GO
 */
 CREATE TABLE Torneo.PARTIDO (
     id_partido              INT IDENTITY(1,1) NOT NULL,
-    numero_partido          SMALLINT          NOT NULL,
+    numero_partido          TINYINT           NOT NULL,
     id_sede                 INT               NOT NULL,
     id_seleccion_local      INT               NULL,
     id_seleccion_visitante  INT               NULL,
@@ -428,9 +451,9 @@ GO
   se lo computa a la otra seleccion y la tabla de goleadores no lo cuenta.
 */
 CREATE TABLE DesarrolloPartido.TIPO_GOL (
-    id_tipo_gol     INT IDENTITY(1,1) NOT NULL,
-    descripcion     NVARCHAR(40)      NOT NULL,   -- jugada, penal, tiro libre, en contra, cabezazo...
-    es_en_contra    BIT               NOT NULL
+    id_tipo_gol     TINYINT IDENTITY(1,1) NOT NULL,
+    descripcion     VARCHAR(40)           NOT NULL,   -- jugada, penal, tiro libre, en contra, cabezazo...
+    es_en_contra    BIT                   NOT NULL
         CONSTRAINT DF_TIPO_GOL_es_en_contra DEFAULT (0),
 
     CONSTRAINT PK_TIPO_GOL PRIMARY KEY (id_tipo_gol),
@@ -542,8 +565,8 @@ CREATE TABLE DesarrolloPartido.GOL (
     id_partido              INT               NOT NULL,
     id_jugador_autor        INT               NOT NULL,
     id_jugador_asistencia   INT               NULL,
-    id_tipo_gol             INT               NOT NULL,
-    periodo                 VARCHAR(25)       NOT NULL,
+    id_tipo_gol             TINYINT           NOT NULL,
+    periodo                 VARCHAR(15)       NOT NULL,
     minuto                  TINYINT           NULL,
     minuto_adicional        TINYINT           NOT NULL
         CONSTRAINT DF_GOL_minuto_adicional DEFAULT (0),
@@ -593,7 +616,7 @@ CREATE TABLE DesarrolloPartido.AMONESTACION (
     minuto              TINYINT           NOT NULL,
     minuto_adicional    TINYINT           NOT NULL
         CONSTRAINT DF_AMONESTACION_minuto_adicional DEFAULT (0),
-    motivo              NVARCHAR(200)     NOT NULL,
+    motivo              VARCHAR(200)      NOT NULL,
 
     CONSTRAINT PK_AMONESTACION PRIMARY KEY (id_amonestacion),
     CONSTRAINT FK_AMONESTACION_PARTIDO
@@ -627,7 +650,7 @@ GO
 */
 CREATE TABLE Arbitraje.ARBITRO (
     id_arbitro          INT IDENTITY(1,1) NOT NULL,
-    id_pais             INT               NOT NULL,
+    id_pais             SMALLINT          NOT NULL,
     nombre              NVARCHAR(60)      NOT NULL,
     apellido            NVARCHAR(60)      NOT NULL,
     fecha_nacimiento    DATE              NULL,
@@ -649,8 +672,8 @@ GO
   Resuelve la relacion "habla" como N:N (un idioma lo hablan muchos arbitros).
 */
 CREATE TABLE Arbitraje.ARBITRO_IDIOMA (
-    id_arbitro  INT NOT NULL,
-    id_idioma   INT NOT NULL,
+    id_arbitro  INT      NOT NULL,
+    id_idioma   SMALLINT NOT NULL,
 
     CONSTRAINT PK_ARBITRO_IDIOMA PRIMARY KEY (id_arbitro, id_idioma),
     CONSTRAINT FK_ARBITRO_IDIOMA_ARBITRO
@@ -671,8 +694,8 @@ CREATE TABLE Arbitraje.DESIGNACION_ARBITRAL (
     id_partido          INT             NOT NULL,
     id_arbitro          INT             NOT NULL,
     rol                 VARCHAR(12)     NOT NULL,
-    informe_postpartido NVARCHAR(MAX)   NULL,
-    sancion             NVARCHAR(500)   NULL,
+    informe_postpartido VARCHAR(MAX)    NULL,
+    sancion             VARCHAR(500)    NULL,
     fecha_designacion   DATETIME2(0)    NOT NULL
         CONSTRAINT DF_DESIGNACION_ARBITRAL_fecha_designacion DEFAULT (SYSDATETIME()),
 
@@ -695,7 +718,7 @@ GO
 CREATE TABLE Publicidad.ANUNCIANTE (
     id_anunciante   INT IDENTITY(1,1) NOT NULL,
     razon_social    NVARCHAR(150)     NOT NULL,
-    id_pais         INT               NOT NULL,
+    id_pais         SMALLINT          NOT NULL,
 
     CONSTRAINT PK_ANUNCIANTE PRIMARY KEY (id_anunciante),
     CONSTRAINT FK_ANUNCIANTE_PAIS
@@ -732,9 +755,9 @@ GO
 CREATE TABLE Publicidad.PIEZA_PUBLICITARIA (
     id_pieza            INT IDENTITY(1,1) NOT NULL,
     id_campania         INT               NOT NULL,
-    id_idioma           INT               NULL,
+    id_idioma           SMALLINT          NULL,
     titulo              NVARCHAR(150)     NOT NULL,
-    duracion_segundos   SMALLINT          NULL,
+    duracion_segundos   TINYINT           NULL,
 
     CONSTRAINT PK_PIEZA_PUBLICITARIA PRIMARY KEY (id_pieza),
     CONSTRAINT FK_PIEZA_PUBLICITARIA_CAMPANIA
@@ -753,8 +776,8 @@ GO
   y un mercado recibe muchas piezas).
 */
 CREATE TABLE Publicidad.PIEZA_PAIS_INTERES (
-    id_pieza    INT NOT NULL,
-    id_pais     INT NOT NULL,
+    id_pieza    INT      NOT NULL,
+    id_pais     SMALLINT NOT NULL,
 
     CONSTRAINT PK_PIEZA_PAIS_INTERES PRIMARY KEY (id_pieza, id_pais),
     CONSTRAINT FK_PIEZA_PAIS_INTERES_PIEZA_PUBLICITARIA
@@ -776,8 +799,8 @@ CREATE TABLE Publicidad.ESPACIO_PUBLICITARIO (
     id_espacio      INT IDENTITY(1,1) NOT NULL,
     id_sede         INT               NOT NULL,
     numero_espacio  TINYINT           NOT NULL,
-    descripcion     NVARCHAR(100)     NULL,
-    tarifa_usd      DECIMAL(12,2)     NOT NULL,
+    descripcion     VARCHAR(100)      NULL,
+    tarifa_usd      DECIMAL(9,2)      NOT NULL,
 
     CONSTRAINT PK_ESPACIO_PUBLICITARIO PRIMARY KEY (id_espacio),
     CONSTRAINT FK_ESPACIO_PUBLICITARIO_SEDE
@@ -796,13 +819,15 @@ GO
   cada pieza ocupa un solo espacio.
   Es el historico para facturar. El costo se guarda al momento de la exhibicion
   (no es redundante con tarifa_usd porque la tarifa puede cambiar despues).
+  costo admite otras monedas (codigo_moneda), con montos nominales mucho
+  mayores que en dolares: DECIMAL(19,4) ocupa los mismos 9 bytes que (12,2).
   Que el espacio pertenezca a la sede del partido se valida en el SP.
 */
 CREATE TABLE Publicidad.EXHIBICION (
     id_partido      INT             NOT NULL,
     id_espacio      INT             NOT NULL,
     id_pieza        INT             NOT NULL,
-    costo           DECIMAL(12,2)   NOT NULL,
+    costo           DECIMAL(19,4)   NOT NULL,
     codigo_moneda   CHAR(3)         NOT NULL
         CONSTRAINT DF_EXHIBICION_codigo_moneda DEFAULT ('USD'),
     fecha_registro  DATETIME2(0)    NOT NULL
