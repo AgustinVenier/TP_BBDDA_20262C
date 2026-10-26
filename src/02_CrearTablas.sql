@@ -849,10 +849,14 @@ GO
 
 /* ============================================================================
    INDICES
-   Las PK y los UNIQUE ya crean un indice. Estos cubren las demas claves
-   foraneas y las busquedas que se piden: fixture por sede, seleccion
-   o fecha, historial de titularidad, goleadores, tarjetas, historial de cada
-   arbitro y ocupacion publicitaria.
+   Regla: un indice por cada clave foranea que no sea la primera columna de
+   la PK o de un UNIQUE (esas ya tienen el suyo). SQL Server no los crea
+   solo. Sirven a los JOIN de las vistas y los SP, y a las bajas: al borrar
+   una fila, SQL Server busca en cada tabla hija para validar la FK, y los SP
+   de baja cuentan las referencias antes de borrar. Sin el indice, cada una
+   de esas busquedas recorre la tabla hija completa.
+   Los indices unicos filtrados (UX_) estan junto a su tabla: son reglas de
+   negocio, no indices de busqueda.
    ============================================================================ */
 CREATE INDEX IX_SEDE_id_pais                        ON Torneo.SEDE (id_pais);
 CREATE INDEX IX_JUGADOR_id_pais_nacimiento          ON Torneo.JUGADOR (id_pais_nacimiento);
@@ -862,7 +866,6 @@ CREATE INDEX IX_PERSONA_CUERPO_TECNICO_id_pais_nacimiento
 CREATE INDEX IX_PARTIDO_id_sede                     ON Torneo.PARTIDO (id_sede);
 CREATE INDEX IX_PARTIDO_id_seleccion_local          ON Torneo.PARTIDO (id_seleccion_local);
 CREATE INDEX IX_PARTIDO_id_seleccion_visitante      ON Torneo.PARTIDO (id_seleccion_visitante);
-CREATE INDEX IX_PARTIDO_fecha_hora_utc              ON Torneo.PARTIDO (fecha_hora_utc);
 GO
 
 CREATE INDEX IX_FORMACION_id_seleccion              ON DesarrolloPartido.FORMACION (id_seleccion);

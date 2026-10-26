@@ -123,6 +123,24 @@
           <AssociatedConnUserName />
           <FullPath>20_DatosIniciales.sql</FullPath>
         </FileNode>
+        <FileNode Name="53_Test_FuncionesYVistas.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>53_Test_FuncionesYVistas.sql</FullPath>
+        </FileNode>
+        <FileNode Name="54_Test_SP_ABM_DatosGenerales.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>54_Test_SP_ABM_DatosGenerales.sql</FullPath>
+        </FileNode>
+        <FileNode Name="55_Test_SP_ABM_Torneo.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>55_Test_SP_ABM_Torneo.sql</FullPath>
+        </FileNode>
       </Items>
     </LogicalFolder>
     <LogicalFolder Name="Miscellaneous" Type="3" Sorted="true">
