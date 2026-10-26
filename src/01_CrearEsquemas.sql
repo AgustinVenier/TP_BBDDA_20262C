@@ -4,7 +4,7 @@
  Materia: 3641 - Bases de Datos Aplicada
  Comisión: 01    Grupo: 2
  Integrantes:
-   Caruso Dellisanti, Carolina Belen - COMPLETAR
+   Caruso Dellisanti, Carolina Belen - CarolinaCaruso
    D'Ambrosio, Rodrigo - rodrigoDambrosio
    Tavella, Tomás - TomasTavella
    Venier, Agustin - AgustinVenier
