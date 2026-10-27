@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <SqlWorkbenchSqlProject xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="MundialFutbol">
   <Items>
-    <LogicalFolder Name="Connections" Type="2" Sorted="true">
+    <LogicalFolder Name="Conexiones" Type="2" Sorted="true">
       <Items>
         <ConnectionNode Name="DESKTOP-G39AVGP\SQLEXPRESS:agustin">
           <Created>2026-10-27T18:07:38.053782-03:00</Created>
@@ -18,12 +18,12 @@
           <ConnectionProtocol>NotSpecified</ConnectionProtocol>
           <ApplicationName>Microsoft SQL Server Management Studio - Consulta</ApplicationName>
         </ConnectionNode>
-        <ConnectionNode Name="localhost:WIN11-DESK\Rodrigo">
+        <ConnectionNode Name="localhost:">
           <Created>2026-10-27T18:35:09.4071326-03:00</Created>
           <Type>SQL</Type>
           <Server>localhost</Server>
           <UserName />
-          <Authentication>Windows Authentication</Authentication>
+          <Authentication>SQL</Authentication>
           <InitialDB />
           <LoginTimeout>15</LoginTimeout>
           <TrustServerCertificate>True</TrustServerCertificate>
@@ -48,7 +48,7 @@
         </ConnectionNode>
       </Items>
     </LogicalFolder>
-    <LogicalFolder Name="Queries" Type="0" Sorted="true">
+    <LogicalFolder Name="Consultas" Type="0" Sorted="true">
       <Items>
         <FileNode Name="00_CrearBaseDeDatos.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
@@ -212,9 +212,27 @@
           <AssociatedConnUserName />
           <FullPath>63_Test_SP_Negocio_GolesYTarjetas.sql</FullPath>
         </FileNode>
+        <FileNode Name="64_Test_SP_Negocio_Arbitraje.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>64_Test_SP_Negocio_Arbitraje.sql</FullPath>
+        </FileNode>
+        <FileNode Name="65_Test_SP_Negocio_Publicidad.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>65_Test_SP_Negocio_Publicidad.sql</FullPath>
+        </FileNode>
+        <FileNode Name="66_Test_SP_Importacion.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>66_Test_SP_Importacion.sql</FullPath>
+        </FileNode>
       </Items>
     </LogicalFolder>
-    <LogicalFolder Name="Miscellaneous" Type="3" Sorted="true">
+    <LogicalFolder Name="Varios" Type="3" Sorted="true">
       <Items />
     </LogicalFolder>
   </Items>
