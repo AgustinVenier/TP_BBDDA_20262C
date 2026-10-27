@@ -1,14 +1,29 @@
 <?xml version="1.0"?>
 <SqlWorkbenchSqlProject xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="MundialFutbol">
   <Items>
-    <LogicalFolder Name="Connections" Type="2" Sorted="true">
+    <LogicalFolder Name="Conexiones" Type="2" Sorted="true">
       <Items>
-        <ConnectionNode Name="localhost\SQLEXPRESS:DESKTOP-8VD4HDG\Rodrigo">
+        <ConnectionNode Name="DESKTOP-G39AVGP\SQLEXPRESS:agustin">
+          <Created>2026-10-27T18:07:38.053782-03:00</Created>
+          <Type>SQL</Type>
+          <Server>DESKTOP-G39AVGP\SQLEXPRESS</Server>
+          <UserName>agustin</UserName>
+          <Authentication>SQL</Authentication>
+          <InitialDB />
+          <LoginTimeout>30</LoginTimeout>
+          <TrustServerCertificate>True</TrustServerCertificate>
+          <HostNameInServerCertificate />
+          <EncryptionOption>True</EncryptionOption>
+          <ExecutionTimeout>0</ExecutionTimeout>
+          <ConnectionProtocol>NotSpecified</ConnectionProtocol>
+          <ApplicationName>Microsoft SQL Server Management Studio - Consulta</ApplicationName>
+        </ConnectionNode>
+        <ConnectionNode Name="localhost\SQLEXPRESS:">
           <Created>2026-10-25T21:20:36.6095221-03:00</Created>
           <Type>SQL</Type>
           <Server>localhost\SQLEXPRESS</Server>
           <UserName />
-          <Authentication>Windows Authentication</Authentication>
+          <Authentication>SQL</Authentication>
           <InitialDB>master</InitialDB>
           <LoginTimeout>15</LoginTimeout>
           <TrustServerCertificate>True</TrustServerCertificate>
@@ -19,7 +34,7 @@
         </ConnectionNode>
       </Items>
     </LogicalFolder>
-    <LogicalFolder Name="Queries" Type="0" Sorted="true">
+    <LogicalFolder Name="Consultas" Type="0" Sorted="true">
       <Items>
         <FileNode Name="00_CrearBaseDeDatos.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost\SQLEXPRESS:True</AssociatedConnectionMoniker>
@@ -40,9 +55,9 @@
           <FullPath>02_CrearTablas.sql</FullPath>
         </FileNode>
         <FileNode Name="03_CrearFuncionesYVistas.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
-          <AssociatedConnUserName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:DESKTOP-G39AVGP\SQLEXPRESS:False:agustin</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>DESKTOP-G39AVGP\SQLEXPRESS</AssociatedConnSrvName>
+          <AssociatedConnUserName>agustin</AssociatedConnUserName>
           <FullPath>03_CrearFuncionesYVistas.sql</FullPath>
         </FileNode>
         <FileNode Name="04_SP_ABM_DatosGenerales.sql">
@@ -141,9 +156,33 @@
           <AssociatedConnUserName />
           <FullPath>55_Test_SP_ABM_Torneo.sql</FullPath>
         </FileNode>
+        <FileNode Name="60_Test_SP_Negocio_SedesYPartidos.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>60_Test_SP_Negocio_SedesYPartidos.sql</FullPath>
+        </FileNode>
+        <FileNode Name="61_Test_SP_Negocio_Convocatoria.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>61_Test_SP_Negocio_Convocatoria.sql</FullPath>
+        </FileNode>
+        <FileNode Name="62_Test_SP_Negocio_FormacionesYCambios.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>62_Test_SP_Negocio_FormacionesYCambios.sql</FullPath>
+        </FileNode>
+        <FileNode Name="63_Test_SP_Negocio_GolesYTarjetas.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>63_Test_SP_Negocio_GolesYTarjetas.sql</FullPath>
+        </FileNode>
       </Items>
     </LogicalFolder>
-    <LogicalFolder Name="Miscellaneous" Type="3" Sorted="true">
+    <LogicalFolder Name="Varios" Type="3" Sorted="true">
       <Items />
     </LogicalFolder>
   </Items>
