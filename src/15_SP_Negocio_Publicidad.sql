@@ -37,7 +37,9 @@ GO
   'ARG,URU,PAR') y @codigo_idioma el código ISO 639-1 del idioma de la pieza.
   Valida: al menos un mercado, que todos los códigos de país existan y que el
   idioma exista. Los datos de la pieza los valida
-  Publicidad.usp_PIEZA_PUBLICITARIA_Alta.
+  Publicidad.usp_PIEZA_PUBLICITARIA_Alta. Los mercados se cargan con un solo
+  INSERT: la pieza es nueva y los países ya están validados, así que no queda
+  nada que controle Publicidad.usp_PIEZA_PAIS_INTERES_Alta.
 */
 CREATE OR ALTER PROCEDURE Publicidad.usp_RegistrarPiezaPublicitaria
     @id_campania        INT,
@@ -56,7 +58,6 @@ BEGIN
     DECLARE @nl          NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @tran_propia BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
     DECLARE @id_idioma   SMALLINT;
-    DECLARE @id_pais     SMALLINT;
 
     DECLARE @paises TABLE (codigo VARCHAR(10) PRIMARY KEY, id_pais SMALLINT);
 
@@ -93,12 +94,8 @@ BEGIN
             @id_campania = @id_campania, @titulo = @titulo, @id_idioma = @id_idioma,
             @duracion_segundos = @duracion_segundos, @id_pieza = @id_pieza OUTPUT;
 
-        WHILE EXISTS (SELECT 1 FROM @paises)
-        BEGIN
-            SELECT TOP (1) @id_pais = id_pais FROM @paises ORDER BY codigo;
-            EXEC Publicidad.usp_PIEZA_PAIS_INTERES_Alta @id_pieza = @id_pieza, @id_pais = @id_pais;
-            DELETE FROM @paises WHERE id_pais = @id_pais;
-        END;
+        INSERT INTO Publicidad.PIEZA_PAIS_INTERES (id_pieza, id_pais)
+        SELECT @id_pieza, id_pais FROM @paises;
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
     END TRY
@@ -130,7 +127,10 @@ GO
   Valida: partido existente y PROGRAMADO; que la sede tenga sus 4 espacios;
   que haya al menos 4 piezas candidatas; que el partido no tenga ya
   publicidad asignada, salvo que se pida reasignar (@reasignar = 1), en cuyo
-  caso se reemplaza en la misma transacción.
+  caso se reemplaza en la misma transacción. Con eso cubre las reglas de
+  Publicidad.usp_EXHIBICION_Baja y usp_EXHIBICION_Alta (los espacios son de la
+  sede y fn_PrioridadPiezas solo devuelve piezas vigentes y sin repetir), así
+  que borra y carga las exhibiciones con un DELETE y un INSERT.
 */
 CREATE OR ALTER PROCEDURE Publicidad.usp_AsignarPublicidadPartido
     @id_partido  INT,
@@ -149,11 +149,8 @@ BEGIN
     DECLARE @espacios     INT;
     DECLARE @candidatas   INT;
     DECLARE @asignadas    INT;
-    DECLARE @id_espacio   INT;
-    DECLARE @id_pieza     INT;
-    DECLARE @orden        INT;
 
-    DECLARE @propuesta TABLE (orden INT PRIMARY KEY, id_espacio INT, id_pieza INT);
+    DECLARE @propuesta TABLE (orden INT PRIMARY KEY, id_espacio INT, id_pieza INT, costo DECIMAL(9,2));
 
     SELECT @estado = estado, @id_sede = id_sede FROM Torneo.PARTIDO WHERE id_partido = @id_partido;
     SELECT @espacios = COUNT(*) FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id_sede;
@@ -186,9 +183,9 @@ BEGIN
     END;
 
     -- Las 4 piezas de mayor prioridad, en los espacios de mayor a menor tarifa.
-    INSERT INTO @propuesta (orden, id_espacio, id_pieza)
-    SELECT e.orden, e.id_espacio, pz.id_pieza
-    FROM (SELECT id_espacio, ROW_NUMBER() OVER (ORDER BY tarifa_usd DESC, numero_espacio) AS orden
+    INSERT INTO @propuesta (orden, id_espacio, id_pieza, costo)
+    SELECT e.orden, e.id_espacio, pz.id_pieza, e.tarifa_usd
+    FROM (SELECT id_espacio, tarifa_usd, ROW_NUMBER() OVER (ORDER BY tarifa_usd DESC, numero_espacio) AS orden
           FROM Publicidad.ESPACIO_PUBLICITARIO
           WHERE id_sede = @id_sede) AS e
     INNER JOIN Publicidad.fn_PrioridadPiezas(@id_partido) AS pz ON pz.prioridad = e.orden;
@@ -197,19 +194,12 @@ BEGIN
         IF @tran_propia = 1 BEGIN TRANSACTION;
 
         -- Reasignación: se quitan las exhibiciones anteriores.
-        WHILE EXISTS (SELECT 1 FROM Publicidad.EXHIBICION WHERE id_partido = @id_partido)
-        BEGIN
-            SELECT TOP (1) @id_espacio = id_espacio FROM Publicidad.EXHIBICION WHERE id_partido = @id_partido;
-            EXEC Publicidad.usp_EXHIBICION_Baja @id_partido = @id_partido, @id_espacio = @id_espacio;
-        END;
+        DELETE FROM Publicidad.EXHIBICION WHERE id_partido = @id_partido;
 
-        SET @orden = 1;
-        WHILE @orden <= 4
-        BEGIN
-            SELECT @id_espacio = id_espacio, @id_pieza = id_pieza FROM @propuesta WHERE orden = @orden;
-            EXEC Publicidad.usp_EXHIBICION_Alta @id_partido = @id_partido, @id_espacio = @id_espacio, @id_pieza = @id_pieza;
-            SET @orden += 1;
-        END;
+        -- El costo de cada exhibición es la tarifa del espacio en ese momento.
+        INSERT INTO Publicidad.EXHIBICION (id_partido, id_espacio, id_pieza, costo, codigo_moneda)
+        SELECT @id_partido, id_espacio, id_pieza, costo, 'USD'
+        FROM @propuesta;
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
     END TRY

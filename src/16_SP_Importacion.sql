@@ -30,7 +30,9 @@
 
  Criterios comunes:
    - Las altas y modificaciones se hacen con los SP de ABM y de negocio, que
-     validan cada dato. Los errores se informan con THROW.
+     validan cada dato, salvo los indicadores económicos y los idiomas nuevos
+     de un árbitro, que se cargan con un solo INSERT (y UPDATE) porque el SP
+     de importación ya los validó. Los errores se informan con THROW.
    - Importar dos veces el mismo dato no duplica nada: si el registro existe
      y no cambió, no se modifica y @accion devuelve SIN CAMBIOS. Si cambió,
      se actualizan solo los datos distintos (ACTUALIZADO); si no existía,
@@ -54,7 +56,11 @@ GO
   El país se identifica por su código ISO alfa-3, que es el que usa la API.
   Como Inglaterra y Escocia comparten el código GBR, el valor se registra
   para todos los países que tengan ese código. Valida: código ISO de 3
-  letras y existente, indicador, año y valor obligatorios.
+  letras y existente; indicador obligatorio, de hasta 30 caracteres y solo
+  con letras sin acentos, números, puntos y guiones bajos; año obligatorio
+  entre 1960 y el actual; valor obligatorio. Con eso cubre las reglas de
+  usp_INDICADOR_ECONOMICO_Alta y _Modificacion, y hace el upsert para todos
+  los países con un UPDATE y un INSERT.
 */
 CREATE OR ALTER PROCEDURE DatosGenerales.usp_ImportarIndicadorEconomico
     @codigo_iso3       VARCHAR(10),
@@ -70,9 +76,7 @@ BEGIN
     DECLARE @errores      NVARCHAR(2048) = N'';
     DECLARE @nl           NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @tran_propia  BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
-    DECLARE @id_pais      SMALLINT;
-    DECLARE @id_indicador INT;
-    DECLARE @valor_actual DECIMAL(18,4);
+    DECLARE @anio_actual  SMALLINT       = YEAR(GETDATE());
     DECLARE @insertados   INT = 0;
     DECLARE @actualizados INT = 0;
 
@@ -92,8 +96,14 @@ BEGIN
 
     IF @codigo_indicador IS NULL
         SET @errores += @nl + N'- El código del indicador es obligatorio.';
+    ELSE IF LEN(@codigo_indicador) > 30
+        SET @errores += @nl + N'- El código del indicador no puede superar los 30 caracteres.';
+    ELSE IF @codigo_indicador COLLATE Latin1_General_BIN LIKE '%[^A-Z0-9._]%'
+        SET @errores += @nl + N'- El código del indicador solo admite letras sin acentos, números, puntos y guiones bajos.';
     IF @anio IS NULL
         SET @errores += @nl + N'- El año es obligatorio.';
+    ELSE IF @anio NOT BETWEEN 1960 AND @anio_actual
+        SET @errores += @nl + N'- El año debe estar entre 1960 y ' + CAST(@anio_actual AS NVARCHAR(4)) + N'.';
     IF @valor IS NULL
         SET @errores += @nl + N'- El valor es obligatorio.';
 
@@ -106,30 +116,22 @@ BEGIN
     BEGIN TRY
         IF @tran_propia = 1 BEGIN TRANSACTION;
 
-        WHILE EXISTS (SELECT 1 FROM @paises)
-        BEGIN
-            SELECT TOP (1) @id_pais = id_pais FROM @paises ORDER BY id_pais;
-            SELECT @id_indicador = NULL, @valor_actual = NULL;
+        -- Países que ya tienen el indicador para ese año, con otro valor.
+        UPDATE ie
+        SET valor = @valor, fecha_actualizacion = SYSDATETIME()
+        FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
+        INNER JOIN @paises AS p ON p.id_pais = ie.id_pais
+        WHERE ie.codigo_indicador = @codigo_indicador AND ie.anio = @anio AND ie.valor <> @valor;
+        SET @actualizados = @@ROWCOUNT;
 
-            SELECT @id_indicador = id_indicador, @valor_actual = valor
-            FROM DatosGenerales.INDICADOR_ECONOMICO
-            WHERE id_pais = @id_pais AND codigo_indicador = @codigo_indicador AND anio = @anio;
-
-            IF @id_indicador IS NULL
-            BEGIN
-                EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Alta
-                    @id_pais = @id_pais, @codigo_indicador = @codigo_indicador, @anio = @anio, @valor = @valor;
-                SET @insertados += 1;
-            END
-            ELSE IF @valor_actual <> @valor
-            BEGIN
-                EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Modificacion
-                    @id_indicador = @id_indicador, @valor = @valor;
-                SET @actualizados += 1;
-            END;
-
-            DELETE FROM @paises WHERE id_pais = @id_pais;
-        END;
+        -- Países que todavía no lo tienen.
+        INSERT INTO DatosGenerales.INDICADOR_ECONOMICO (id_pais, codigo_indicador, anio, valor)
+        SELECT p.id_pais, @codigo_indicador, @anio, @valor
+        FROM @paises AS p
+        WHERE NOT EXISTS (SELECT 1 FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
+                          WHERE ie.id_pais = p.id_pais AND ie.codigo_indicador = @codigo_indicador
+                            AND ie.anio = @anio);
+        SET @insertados = @@ROWCOUNT;
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
     END TRY
@@ -555,7 +557,6 @@ BEGIN
     DECLARE @id_arbitro     INT;
     DECLARE @categoria_act  VARCHAR(15);
     DECLARE @nacimiento_act DATE;
-    DECLARE @id_idioma      SMALLINT;
     DECLARE @cambios        INT = 0;
 
     SET @codigo_fifa_pais = UPPER(NULLIF(TRIM(@codigo_fifa_pais), ''));
@@ -615,13 +616,11 @@ BEGIN
             SET @cambios += 1;
         END;
 
-        WHILE EXISTS (SELECT 1 FROM @nuevos)
-        BEGIN
-            SELECT TOP (1) @id_idioma = id_idioma FROM @nuevos ORDER BY id_idioma;
-            EXEC Arbitraje.usp_ARBITRO_IDIOMA_Alta @id_arbitro = @id_arbitro, @id_idioma = @id_idioma;
-            DELETE FROM @nuevos WHERE id_idioma = @id_idioma;
-            SET @cambios += 1;
-        END;
+        -- El árbitro existe y @nuevos solo tiene idiomas existentes que todavía no
+        -- tiene: no queda nada que controle Arbitraje.usp_ARBITRO_IDIOMA_Alta.
+        INSERT INTO Arbitraje.ARBITRO_IDIOMA (id_arbitro, id_idioma)
+        SELECT @id_arbitro, id_idioma FROM @nuevos;
+        SET @cambios += @@ROWCOUNT;
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
     END TRY

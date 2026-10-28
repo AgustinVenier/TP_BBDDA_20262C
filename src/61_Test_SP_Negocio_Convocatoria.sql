@@ -201,11 +201,41 @@ END TRY
 BEGIN CATCH
     EXEC #usp_MostrarError @caso = 'CV1';
 END CATCH;
-SELECT 'CV1 después' AS caso, COUNT(*) AS jugadores_de_ghana FROM Torneo.JUGADOR AS j
+SELECT 'CV1 después' AS caso, COUNT(*) AS jugadores_de_xca FROM Torneo.JUGADOR AS j
 INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista WHERE l.id_seleccion = @xca;
 GO
 
-/* CV2 (OK) Lista inicial válida de 23 jugadores.
+/* CV2 (ERROR) Lista completa con datos que el alta de jugador no acepta.
+   23 jugadores con 3 arqueros, pero un dorsal 100, una fecha de nacimiento
+   futura y un país de nacimiento inexistente (id 32767).
+   Esperado: error 50001 con 3 condiciones en un solo mensaje. Prueba XCA
+   sigue sin jugadores (no entra ninguno de los 20 jugadores correctos). */
+DECLARE @xca INT = (SELECT s.id_seleccion FROM Torneo.SELECCION AS s INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais WHERE p.codigo_fifa = 'XCA');
+DECLARE @lista Torneo.TT_CONVOCADO;
+INSERT INTO @lista (nombre, apellido, posicion_habitual, dorsal, fecha_nacimiento)
+SELECT N'Prueba', CONCAT(N'Prueba XCA ', d.dorsal), d.posicion, d.dorsal, DATEADD(DAY, d.dorsal * 211, '1995-01-01')
+FROM (VALUES (1, 'ARQUERO'), (12, 'ARQUERO'), (23, 'ARQUERO'),
+             (2, 'DEFENSOR'), (3, 'DEFENSOR'), (4, 'DEFENSOR'), (5, 'DEFENSOR'), (6, 'DEFENSOR'),
+             (13, 'DEFENSOR'), (14, 'DEFENSOR'), (15, 'DEFENSOR'),
+             (7, 'MEDIOCAMPISTA'), (8, 'MEDIOCAMPISTA'), (10, 'MEDIOCAMPISTA'), (16, 'MEDIOCAMPISTA'),
+             (17, 'MEDIOCAMPISTA'), (18, 'MEDIOCAMPISTA'),
+             (9, 'DELANTERO'), (11, 'DELANTERO'), (19, 'DELANTERO'), (20, 'DELANTERO'), (21, 'DELANTERO'),
+             (22, 'DELANTERO')) AS d (dorsal, posicion);
+UPDATE @lista SET dorsal = 100 WHERE dorsal = 22;                                    -- dorsal fuera de rango
+UPDATE @lista SET fecha_nacimiento = DATEADD(YEAR, 1, GETDATE()) WHERE dorsal = 21;  -- nacimiento futuro
+UPDATE @lista SET id_pais_nacimiento = 32767 WHERE dorsal = 20;                      -- país inexistente
+BEGIN TRY
+    EXEC Torneo.usp_RegistrarConvocatoria @id_seleccion = @xca, @jugadores = @lista;
+    PRINT N'CV2: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'CV2';
+END CATCH;
+SELECT 'CV2 después' AS caso, COUNT(*) AS jugadores_de_xca FROM Torneo.JUGADOR AS j
+INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista WHERE l.id_seleccion = @xca;
+GO
+
+/* CV3 (OK) Lista inicial válida de 23 jugadores.
    Esperado: la consulta del SP muestra 3 arqueros, 8 defensores, 6
    mediocampistas y 6 delanteros; todos dados de alta el 01/06/2026 con motivo
    "Lista inicial". */
@@ -221,11 +251,11 @@ FROM (VALUES (1, 'ARQUERO'), (12, 'ARQUERO'), (23, 'ARQUERO'),
              (9, 'DELANTERO'), (11, 'DELANTERO'), (19, 'DELANTERO'), (20, 'DELANTERO'), (21, 'DELANTERO'),
              (22, 'DELANTERO')) AS d (dorsal, posicion);
 EXEC Torneo.usp_RegistrarConvocatoria @id_seleccion = @xca, @jugadores = @lista;
-SELECT 'CV2 después' AS caso, COUNT(*) AS jugadores, MIN(j.fecha_alta) AS fecha_alta, MIN(j.motivo_alta) AS motivo_alta
+SELECT 'CV3 después' AS caso, COUNT(*) AS jugadores, MIN(j.fecha_alta) AS fecha_alta, MIN(j.motivo_alta) AS motivo_alta
 FROM Torneo.JUGADOR AS j INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista WHERE l.id_seleccion = @xca;
 GO
 
-/* CV3 (ERROR) Segunda convocatoria, con más jugadores que el máximo.
+/* CV4 (ERROR) Segunda convocatoria, con más jugadores que el máximo.
    Esperado: error 50001 con 2 condiciones: la lista ya tiene jugadores (los
    cambios son reemplazos) y 27 jugadores superan el máximo de 26. */
 DECLARE @xca INT = (SELECT s.id_seleccion FROM Torneo.SELECCION AS s INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais WHERE p.codigo_fifa = 'XCA');
@@ -236,10 +266,10 @@ SELECT TOP (27) N'Otro', CONCAT(N'Jugador ', ROW_NUMBER() OVER (ORDER BY object_
 FROM sys.objects;
 BEGIN TRY
     EXEC Torneo.usp_RegistrarConvocatoria @id_seleccion = @xca, @jugadores = @lista;
-    PRINT N'CV3: FALLÓ, se esperaba un error de validación.';
+    PRINT N'CV4: FALLÓ, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'CV3';
+    EXEC #usp_MostrarError @caso = 'CV4';
 END CATCH;
 GO
 

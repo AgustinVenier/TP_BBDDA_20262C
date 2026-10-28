@@ -136,7 +136,10 @@ GO
   entre MIN_CONVOCADOS y MAX_CONVOCADOS jugadores; al menos
   MIN_ARQUEROS_CONVOCADOS arqueros; filas completas (nombre, apellido,
   posición y dorsal); posiciones válidas; sin dorsales ni jugadores
-  repetidos. Cada jugador lo valida además Torneo.usp_JUGADOR_Alta.
+  repetidos; dorsales entre 1 y 99; sin fechas de nacimiento futuras;
+  países de nacimiento existentes. Con eso cubre las reglas de
+  Torneo.usp_JUGADOR_Alta y carga a todos con un solo INSERT, sin recorrer la
+  lista fila por fila (las reglas del alta de jugador quedan en los dos SP).
 */
 CREATE OR ALTER PROCEDURE Torneo.usp_RegistrarConvocatoria
     @id_seleccion  INT,
@@ -158,11 +161,9 @@ BEGIN
     DECLARE @cantidad           INT     = (SELECT COUNT(*) FROM @jugadores);
     DECLARE @arqueros           INT;
     DECLARE @incompletas        INT;
-    DECLARE @i                  INT     = 1;
 
-    -- Copia numerada de la lista, para recorrerla fila por fila.
+    -- Copia normalizada de la lista, la que se valida y se inserta.
     DECLARE @lista TABLE (
-        fila                INT PRIMARY KEY,
         nombre              NVARCHAR(60),
         apellido            NVARCHAR(60),
         posicion_habitual   VARCHAR(15),
@@ -173,9 +174,8 @@ BEGIN
     );
 
     INSERT INTO @lista
-    SELECT ROW_NUMBER() OVER (ORDER BY dorsal, apellido, nombre),
-           TRIM(nombre), TRIM(apellido), UPPER(TRIM(posicion_habitual)), dorsal,
-           fecha_nacimiento, TRIM(club_origen), id_pais_nacimiento
+    SELECT TRIM(nombre), TRIM(apellido), UPPER(TRIM(posicion_habitual)), dorsal,
+           fecha_nacimiento, NULLIF(TRIM(club_origen), N''), id_pais_nacimiento
     FROM @jugadores;
 
     SELECT @id_lista = l.id_lista, @fecha_presentacion = l.fecha_presentacion
@@ -224,35 +224,37 @@ BEGIN
               WHERE nombre IS NOT NULL AND apellido IS NOT NULL
               GROUP BY nombre, apellido HAVING COUNT(*) > 1) AS x), N'');
 
+    SET @errores += ISNULL((
+        SELECT @nl + N'- Dorsales fuera de rango (1 a 99): ' + STRING_AGG(CAST(dorsal AS NVARCHAR(3)), ', ') + N'.'
+        FROM @lista WHERE dorsal NOT BETWEEN 1 AND 99), N'');
+
+    SET @errores += ISNULL((
+        SELECT @nl + N'- Fecha de nacimiento futura: ' + STRING_AGG(nombre + N' ' + apellido, ', ') + N'.'
+        FROM @lista WHERE fecha_nacimiento > CONVERT(DATE, GETDATE())), N'');
+
+    SET @errores += ISNULL((
+        SELECT @nl + N'- No existen los países de nacimiento con id: '
+               + STRING_AGG(CAST(id_pais_nacimiento AS NVARCHAR(10)), ', ') + N'.'
+        FROM (SELECT DISTINCT l.id_pais_nacimiento FROM @lista AS l
+              WHERE l.id_pais_nacimiento IS NOT NULL
+                AND NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS AS p
+                                WHERE p.id_pais = l.id_pais_nacimiento)) AS x), N'');
+
     IF @errores <> N''
     BEGIN
         SET @errores = N'Torneo.usp_RegistrarConvocatoria: no se pudo registrar la convocatoria.' + @errores;
         THROW 50001, @errores, 1;
     END;
 
-    DECLARE @nombre NVARCHAR(60), @apellido NVARCHAR(60), @posicion VARCHAR(15), @dorsal TINYINT,
-            @fecha_nacimiento DATE, @club NVARCHAR(100), @id_pais_nacimiento SMALLINT;
-
     BEGIN TRY
         IF @tran_propia = 1 BEGIN TRANSACTION;
 
-        WHILE @i <= @cantidad
-        BEGIN
-            SELECT @nombre = nombre, @apellido = apellido, @posicion = posicion_habitual, @dorsal = dorsal,
-                   @fecha_nacimiento = fecha_nacimiento, @club = club_origen,
-                   @id_pais_nacimiento = id_pais_nacimiento
-            FROM @lista
-            WHERE fila = @i;
-
-            EXEC Torneo.usp_JUGADOR_Alta
-                @id_lista = @id_lista, @nombre = @nombre, @apellido = @apellido,
-                @posicion_habitual = @posicion, @dorsal = @dorsal,
-                @fecha_nacimiento = @fecha_nacimiento, @club_origen = @club,
-                @id_pais_nacimiento = @id_pais_nacimiento,
-                @fecha_alta = @fecha_presentacion, @motivo_alta = 'Lista inicial';
-
-            SET @i += 1;
-        END;
+        INSERT INTO Torneo.JUGADOR
+            (id_lista, id_pais_nacimiento, nombre, apellido, fecha_nacimiento, club_origen,
+             posicion_habitual, dorsal, fecha_alta, motivo_alta)
+        SELECT @id_lista, id_pais_nacimiento, nombre, apellido, fecha_nacimiento, club_origen,
+               posicion_habitual, dorsal, @fecha_presentacion, 'Lista inicial'
+        FROM @lista;
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
     END TRY

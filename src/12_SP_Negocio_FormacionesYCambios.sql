@@ -58,8 +58,9 @@ GO
   selección a la fecha del partido; que ninguno esté suspendido para ese
   partido (fn_JugadoresSuspendidos), con el detalle de cada suspensión. El
   partido, la selección y el esquema los valida
-  DesarrolloPartido.usp_FORMACION_Alta y cada jugador
-  DesarrolloPartido.usp_ALINEACION_Alta.
+  DesarrolloPartido.usp_FORMACION_Alta. Con eso cubre las reglas de
+  DesarrolloPartido.usp_ALINEACION_Alta y carga a todos los jugadores con un
+  solo INSERT, sin recorrer la lista fila por fila.
 */
 CREATE OR ALTER PROCEDURE DesarrolloPartido.usp_RegistrarFormacion
     @id_partido       INT,
@@ -81,22 +82,16 @@ BEGIN
     DECLARE @arqueros      INT;
     DECLARE @sin_posicion  INT;
     DECLARE @sin_jugador   INT;
-    DECLARE @cantidad      INT;
-    DECLARE @i             INT = 1;
 
     DECLARE @lista TABLE (
-        fila                INT PRIMARY KEY,
         id_jugador          INT,
         es_titular          BIT,
         posicion_en_cancha  VARCHAR(30)
     );
 
     INSERT INTO @lista
-    SELECT ROW_NUMBER() OVER (ORDER BY es_titular DESC, id_jugador),
-           id_jugador, es_titular, UPPER(NULLIF(TRIM(posicion_en_cancha), ''))
+    SELECT id_jugador, es_titular, UPPER(NULLIF(TRIM(posicion_en_cancha), ''))
     FROM @jugadores;
-
-    SET @cantidad = @@ROWCOUNT;
 
     SELECT @fecha_partido = CAST(fecha_hora_local AS DATE) FROM Torneo.PARTIDO WHERE id_partido = @id_partido;
 
@@ -154,8 +149,6 @@ BEGIN
         THROW 50001, @errores, 1;
     END;
 
-    DECLARE @id_jugador INT, @es_titular BIT, @posicion VARCHAR(30);
-
     BEGIN TRY
         IF @tran_propia = 1 BEGIN TRANSACTION;
 
@@ -163,18 +156,9 @@ BEGIN
             @id_partido = @id_partido, @id_seleccion = @id_seleccion,
             @esquema_tactico = @esquema_tactico, @id_formacion = @id_formacion OUTPUT;
 
-        WHILE @i <= @cantidad
-        BEGIN
-            SELECT @id_jugador = id_jugador, @es_titular = es_titular, @posicion = posicion_en_cancha
-            FROM @lista
-            WHERE fila = @i;
-
-            EXEC DesarrolloPartido.usp_ALINEACION_Alta
-                @id_formacion = @id_formacion, @id_jugador = @id_jugador,
-                @es_titular = @es_titular, @posicion_en_cancha = @posicion;
-
-            SET @i += 1;
-        END;
+        INSERT INTO DesarrolloPartido.ALINEACION (id_formacion, id_jugador, es_titular, posicion_en_cancha)
+        SELECT @id_formacion, id_jugador, es_titular, posicion_en_cancha
+        FROM @lista;
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
     END TRY

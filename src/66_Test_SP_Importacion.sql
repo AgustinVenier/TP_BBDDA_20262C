@@ -199,9 +199,10 @@ WHERE p.codigo_iso3 = 'XIB' AND ie.anio = 2023;
 GO
 
 /* II3 (ERROR) Datos incompletos o con formato inválido.
-   Esperado: dos errores 50001. II3a con 1 condición: no hay ningún país con
+   Esperado: tres errores 50001. II3a con 1 condición: no hay ningún país con
    código XXX. II3b con 3 condiciones: el código AR no tiene 3 letras y faltan
-   el año y el valor. */
+   el año y el valor. II3c con 2 condiciones: el código del indicador tiene un
+   guion y el año 1950 es anterior a 1960; XIA no queda con ningún valor de 1950. */
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarIndicadorEconomico @codigo_iso3 = 'XXX', @codigo_indicador = 'NY.GDP.PCAP.CD', @anio = 2023, @valor = 1;
     PRINT N'II3a: FALLÓ, se esperaba un error de validación.';
@@ -216,6 +217,16 @@ END TRY
 BEGIN CATCH
     EXEC #usp_MostrarError @caso = 'II3b';
 END CATCH;
+BEGIN TRY
+    EXEC DatosGenerales.usp_ImportarIndicadorEconomico @codigo_iso3 = 'XIA', @codigo_indicador = 'NY-GDP', @anio = 1950, @valor = 1;
+    PRINT N'II3c: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'II3c';
+END CATCH;
+SELECT 'II3c después' AS caso, COUNT(*) AS valores_1950_de_xia
+FROM DatosGenerales.INDICADOR_ECONOMICO AS ie INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = ie.id_pais
+WHERE p.codigo_iso3 = 'XIA' AND ie.anio = 1950;
 GO
 
 

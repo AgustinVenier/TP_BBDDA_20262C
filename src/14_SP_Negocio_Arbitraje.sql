@@ -42,7 +42,9 @@ GO
   Registra un árbitro con los idiomas que habla, en una sola transacción.
   @idiomas es una lista de códigos ISO 639-1 separados por comas (ej.
   'es,en'). Valida: al menos un idioma y que todos los códigos existan. Los
-  datos del árbitro los valida Arbitraje.usp_ARBITRO_Alta.
+  datos del árbitro los valida Arbitraje.usp_ARBITRO_Alta. Los idiomas se
+  cargan con un solo INSERT: el árbitro es nuevo y los códigos ya están
+  validados, así que no queda nada que controle Arbitraje.usp_ARBITRO_IDIOMA_Alta.
 */
 CREATE OR ALTER PROCEDURE Arbitraje.usp_RegistrarArbitro
     @id_pais           SMALLINT,
@@ -61,7 +63,6 @@ BEGIN
     DECLARE @errores     NVARCHAR(2048) = N'';
     DECLARE @nl          NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @tran_propia BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
-    DECLARE @id_idioma   SMALLINT;
 
     DECLARE @codigos TABLE (codigo VARCHAR(10) PRIMARY KEY, id_idioma SMALLINT);
 
@@ -93,12 +94,8 @@ BEGIN
             @categoria = @categoria, @fecha_nacimiento = @fecha_nacimiento,
             @id_arbitro = @id_arbitro OUTPUT;
 
-        WHILE EXISTS (SELECT 1 FROM @codigos)
-        BEGIN
-            SELECT TOP (1) @id_idioma = id_idioma FROM @codigos ORDER BY codigo;
-            EXEC Arbitraje.usp_ARBITRO_IDIOMA_Alta @id_arbitro = @id_arbitro, @id_idioma = @id_idioma;
-            DELETE FROM @codigos WHERE id_idioma = @id_idioma;
-        END;
+        INSERT INTO Arbitraje.ARBITRO_IDIOMA (id_arbitro, id_idioma)
+        SELECT @id_arbitro, id_idioma FROM @codigos;
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
     END TRY
@@ -133,6 +130,8 @@ GO
     - ninguno puede tener otro partido a menos de 24 horas.
   Desde dieciseisavos, advierte (sin impedir la designación) cuando un
   árbitro es de un país que puede cruzarse con los que juegan el partido.
+  Con esas validaciones cubre las reglas de Arbitraje.usp_DESIGNACION_ARBITRAL_Alta
+  y designa a los cinco con un solo INSERT.
 */
 CREATE OR ALTER PROCEDURE Arbitraje.usp_DesignarTernaArbitral
     @id_partido      INT,
@@ -156,13 +155,11 @@ BEGIN
     DECLARE @utc          DATETIME2(0);
     DECLARE @local        INT;
     DECLARE @visitante    INT;
-    DECLARE @id_arbitro   INT;
-    DECLARE @rol          VARCHAR(12);
 
-    DECLARE @terna TABLE (orden INT PRIMARY KEY, rol VARCHAR(12), id_arbitro INT);
-    INSERT INTO @terna (orden, rol, id_arbitro)
-    VALUES (1, 'PRINCIPAL', @id_principal), (2, 'ASISTENTE_1', @id_asistente_1),
-           (3, 'ASISTENTE_2', @id_asistente_2), (4, 'CUARTO', @id_cuarto), (5, 'VAR', @id_var);
+    DECLARE @terna TABLE (rol VARCHAR(12) PRIMARY KEY, id_arbitro INT);
+    INSERT INTO @terna (rol, id_arbitro)
+    VALUES ('PRINCIPAL', @id_principal), ('ASISTENTE_1', @id_asistente_1),
+           ('ASISTENTE_2', @id_asistente_2), ('CUARTO', @id_cuarto), ('VAR', @id_var);
 
     SELECT @estado = estado, @fase = fase, @utc = fecha_hora_utc,
            @local = id_seleccion_local, @visitante = id_seleccion_visitante
@@ -251,14 +248,8 @@ BEGIN
     BEGIN TRY
         IF @tran_propia = 1 BEGIN TRANSACTION;
 
-        DECLARE @orden INT = 1;
-        WHILE @orden <= 5
-        BEGIN
-            SELECT @rol = rol, @id_arbitro = id_arbitro FROM @terna WHERE orden = @orden;
-            EXEC Arbitraje.usp_DESIGNACION_ARBITRAL_Alta
-                @id_partido = @id_partido, @id_arbitro = @id_arbitro, @rol = @rol;
-            SET @orden += 1;
-        END;
+        INSERT INTO Arbitraje.DESIGNACION_ARBITRAL (id_partido, id_arbitro, rol)
+        SELECT @id_partido, id_arbitro, rol FROM @terna;
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
     END TRY
