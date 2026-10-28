@@ -632,7 +632,7 @@ BEGIN
 
     DECLARE @utc DATETIME2(0), @pais_local SMALLINT, @pais_visitante SMALLINT;
     DECLARE @terna TABLE (rol TINYINT PRIMARY KEY, id_arbitro INT);
-    DECLARE @paso TINYINT = 1, @rol TINYINT;
+    DECLARE @candidatos TABLE (id_arbitro INT PRIMARY KEY, categoria VARCHAR(15), usos INT);
     DECLARE @principal INT, @asistente_1 INT, @asistente_2 INT, @cuarto INT, @var INT;
 
     SELECT @utc = p.fecha_hora_utc, @pais_local = sl.id_pais, @pais_visitante = sv.id_pais
@@ -641,35 +641,42 @@ BEGIN
     INNER JOIN Torneo.SELECCION AS sv ON sv.id_seleccion = p.id_seleccion_visitante
     WHERE p.id_partido = @id_partido;
 
+    -- Árbitros que pueden dirigir el partido: activos, sin conflicto de
+    -- nacionalidad y sin otro partido a menos de 24 horas.
+    INSERT INTO @candidatos (id_arbitro, categoria, usos)
+    SELECT a.id_arbitro, a.categoria,
+           (SELECT COUNT(*) FROM Arbitraje.DESIGNACION_ARBITRAL AS d WHERE d.id_arbitro = a.id_arbitro)
+    FROM Arbitraje.ARBITRO AS a
+    WHERE a.activo = 1
+      AND a.id_pais NOT IN (@pais_local, @pais_visitante)
+      AND NOT EXISTS (SELECT 1
+                      FROM Arbitraje.DESIGNACION_ARBITRAL AS d
+                      INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = d.id_partido
+                      WHERE d.id_arbitro = a.id_arbitro
+                        AND ABS(DATEDIFF(MINUTE, p.fecha_hora_utc, @utc)) < 1440);
+
     -- Roles: 1 principal, 2 y 3 asistentes, 4 cuarto árbitro, 5 VAR.
-    WHILE @paso <= 5
-    BEGIN
-        SET @rol = CHOOSE(@paso, 1, 5, 2, 3, 4);
+    -- Principal y VAR: los dos FIFA menos usados.
+    INSERT INTO @terna (rol, id_arbitro)
+    SELECT CHOOSE(x.n, 1, 5), x.id_arbitro
+    FROM (SELECT id_arbitro, ROW_NUMBER() OVER (ORDER BY usos, id_arbitro) AS n
+          FROM @candidatos WHERE categoria = 'FIFA') AS x
+    WHERE x.n <= 2;
 
-        INSERT INTO @terna (rol, id_arbitro)
-        SELECT TOP (1) @rol, a.id_arbitro
-        FROM Arbitraje.ARBITRO AS a
-        WHERE a.activo = 1
-          AND a.id_pais NOT IN (@pais_local, @pais_visitante)
-          AND (a.categoria = 'FIFA' OR @rol NOT IN (1, 5))
-          AND NOT EXISTS (SELECT 1 FROM @terna AS t WHERE t.id_arbitro = a.id_arbitro)
-          AND NOT EXISTS (SELECT 1
-                          FROM Arbitraje.DESIGNACION_ARBITRAL AS d
-                          INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = d.id_partido
-                          WHERE d.id_arbitro = a.id_arbitro
-                            AND ABS(DATEDIFF(MINUTE, p.fecha_hora_utc, @utc)) < 1440)
-        ORDER BY IIF(@rol IN (1, 5) OR a.categoria <> 'FIFA', 0, 1),
-                 (SELECT COUNT(*) FROM Arbitraje.DESIGNACION_ARBITRAL AS d WHERE d.id_arbitro = a.id_arbitro),
-                 a.id_arbitro;
+    -- Asistentes y cuarto árbitro: primero los que no son FIFA.
+    INSERT INTO @terna (rol, id_arbitro)
+    SELECT CHOOSE(x.n, 2, 3, 4), x.id_arbitro
+    FROM (SELECT c.id_arbitro, ROW_NUMBER() OVER (ORDER BY IIF(c.categoria <> 'FIFA', 0, 1), c.usos, c.id_arbitro) AS n
+          FROM @candidatos AS c
+          WHERE NOT EXISTS (SELECT 1 FROM @terna AS t WHERE t.id_arbitro = c.id_arbitro)) AS x
+    WHERE x.n <= 3;
 
-        SET @paso += 1;
-    END;
-
-    SELECT @principal = id_arbitro FROM @terna WHERE rol = 1;
-    SELECT @asistente_1 = id_arbitro FROM @terna WHERE rol = 2;
-    SELECT @asistente_2 = id_arbitro FROM @terna WHERE rol = 3;
-    SELECT @cuarto = id_arbitro FROM @terna WHERE rol = 4;
-    SELECT @var = id_arbitro FROM @terna WHERE rol = 5;
+    SELECT @principal   = MAX(IIF(rol = 1, id_arbitro, NULL)),
+           @asistente_1 = MAX(IIF(rol = 2, id_arbitro, NULL)),
+           @asistente_2 = MAX(IIF(rol = 3, id_arbitro, NULL)),
+           @cuarto      = MAX(IIF(rol = 4, id_arbitro, NULL)),
+           @var         = MAX(IIF(rol = 5, id_arbitro, NULL))
+    FROM @terna;
 
     EXEC Arbitraje.usp_DesignarTernaArbitral
         @id_partido = @id_partido, @id_principal = @principal, @id_asistente_1 = @asistente_1,

@@ -229,7 +229,7 @@ BEGIN
         FROM @lista WHERE dorsal NOT BETWEEN 1 AND 99), N'');
 
     SET @errores += ISNULL((
-        SELECT @nl + N'- Fecha de nacimiento futura: ' + STRING_AGG(nombre + N' ' + apellido, ', ') + N'.'
+        SELECT @nl + N'- Fecha de nacimiento futura (dorsal): ' + STRING_AGG(ISNULL(CAST(dorsal AS NVARCHAR(3)), N'sin dorsal'), ', ') + N'.'
         FROM @lista WHERE fecha_nacimiento > CONVERT(DATE, GETDATE())), N'');
 
     SET @errores += ISNULL((
@@ -254,7 +254,8 @@ BEGIN
              posicion_habitual, dorsal, fecha_alta, motivo_alta)
         SELECT @id_lista, id_pais_nacimiento, nombre, apellido, fecha_nacimiento, club_origen,
                posicion_habitual, dorsal, @fecha_presentacion, 'Lista inicial'
-        FROM @lista;
+        FROM @lista
+        ORDER BY dorsal, apellido, nombre;
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
     END TRY
