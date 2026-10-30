@@ -1,0 +1,271 @@
+# Scraping de los jugadores del Mundial 2026
+
+Universidad Nacional de La Matanza · 3641 - Bases de Datos Aplicada · Comisión 01 · Grupo 2
+Entrega 6 – Procesos de importación
+
+La consigna (sección II, punto I) pide que al menos uno de los datasets importados se obtenga por **scraping de una página web**. También pide documentar:
+
+- la técnica utilizada;
+- la página de origen;
+- los límites de uso de la fuente.
+
+Este documento cubre esos tres puntos para el script [`Scraping_Jugadores.py`](Scraping_Jugadores.py).
+
+---
+
+## 1. Qué se obtiene
+
+El script genera **`jugadores.csv`**: los 1248 convocados de las 48 selecciones del Mundial 2026, 26 por selección. Se carga en la tabla **`Torneo.JUGADOR`**.
+
+### Orden de ejecución
+
+| Paso | Script | Qué hace |
+|---|---|---|
+| 1 | `src/20_DatosIniciales.sql` | Crea los países, los parámetros y las 48 selecciones, cada una con su lista de convocados y su DT |
+| 2 | `scraping/Scraping_Jugadores.py` | Genera `jugadores.csv` desde Wikipedia |
+| 3 | `src/21_Importacion_Jugadores.sql` | Importa el archivo con `Torneo.usp_ImportarJugador`, fila por fila |
+| 4 | `src/22_JuegoDeDatos.sql` | Carga partidos, formaciones, goles y tarjetas con los jugadores importados |
+
+### Destino de cada columna
+
+| Columna del CSV | Columna de `JUGADOR` | Observación |
+|---|---|---|
+| `codigo_fifa` | `id_lista` | `usp_ImportarJugador` busca la lista de convocados de la selección de ese país |
+| `dorsal` | `dorsal` | |
+| `posicion` | `posicion_habitual` | Viene como GK / DF / MF / FW; el SP la traduce a ARQUERO / DEFENSOR / MEDIOCAMPISTA / DELANTERO |
+| `nombre`, `apellido` | `nombre`, `apellido` | Ver [separación de nombre y apellido](#44-separación-de-nombre-y-apellido) |
+| `fecha_nacimiento` | `fecha_nacimiento` | Formato ISO `AAAA-MM-DD` |
+| `club` | `club_origen` | |
+
+Las demás columnas de `JUGADOR` no vienen en el archivo:
+
+| Columna | Valor | Motivo |
+|---|---|---|
+| `fecha_alta`, `motivo_alta` | Fecha de presentación de la lista y "Importación" | Los pone `usp_ImportarJugador` |
+| `fecha_baja`, `motivo_baja` | NULL | No es un dato faltante: NULL significa que el jugador está activo en la lista |
+| `id_pais_nacimiento` | NULL | La fuente no lo publica. La consigna no lo pide y ninguna vista, función ni reporte lo usa |
+
+Los largos máximos del dataset entran en las columnas de la base:
+
+| Columna | Largo máximo en el dataset | Columna en la base |
+|---|---|---|
+| nombre | 15 caracteres | `NVARCHAR(60)` |
+| apellido | 18 caracteres | `NVARCHAR(60)` |
+| club | 31 caracteres | `NVARCHAR(100)` |
+
+---
+
+## 2. Páginas de origen
+
+Las dos páginas son de Wikipedia en inglés.
+
+| Página | URL | Qué se toma |
+|---|---|---|
+| 2026 FIFA World Cup squads | https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_squads | **Fuente principal.** Una sección por selección con la tabla de sus 26 convocados |
+| List of FIFA country codes | https://en.wikipedia.org/wiki/List_of_FIFA_country_codes | El código FIFA de cada selección, solo de la sección "FIFA member codes". Con ese código, cada jugador se asocia a su selección en la base |
+
+Las dos páginas escriben cada selección con el mismo nombre (por ejemplo, "Ivory Coast" o "Cape Verde"). Por eso se cruzan por nombre sin tablas de traducción escritas a mano, y las 48 selecciones encontraron su código.
+
+### Por qué esta fuente
+
+Se evaluaron las páginas que sugiere la consigna, descargándolas y revisando su contenido real. El criterio fue que el archivo scrapeado complete entera la tabla que carga.
+
+| Página | Tabla que cargaría | Resultado |
+|---|---|---|
+| **Wikipedia – plantillas** (elegida) | JUGADOR | Trae todos los datos de la tabla salvo el país de nacimiento, que no se usa |
+| fifa.com (fixture, sedes, resultados) | PARTIDO, SEDE | Se arma con JavaScript en el navegador: el HTML que se descarga no contiene los datos |
+| Wikipedia – artículo del torneo (sedes) | SEDE | Faltan país, huso horario y coordenadas, que obligan a bajar 32 páginas más. Además, dar de alta una sede crea sus 4 espacios publicitarios, y su tarifa no tiene fuente: habría que inventarla |
+| Wikipedia – fase de grupos y eliminatorias | PARTIDO | No publica el número de partido, que es la clave del upsert |
+| Wikipedia – "List of FIFA World Cup referees" | ARBITRO | Solo lista los árbitros de cada final |
+| Wikipedia – árbitros del Mundial 2026 | ARBITRO | No trae los idiomas, que en la base son obligatorios, ni la fecha de nacimiento |
+| Wikipedia en español – plantillas | JUGADOR | Las fechas vienen como texto ("25 de febrero de 2000"), las posiciones con palabras completas y no trae el orden "Apellido, Nombre" |
+
+La página de plantillas en inglés es la que requiere menos conversión:
+
+- sus columnas coinciden casi una a una con las de `JUGADOR`;
+- la fecha de nacimiento ya está en formato ISO dentro del HTML;
+- la posición viene en el código que `usp_ImportarJugador` ya traduce.
+
+---
+
+## 3. Límites de uso de la fuente
+
+| Aspecto | Condición de Wikipedia | Qué hace el script |
+|---|---|---|
+| Clave / registro | No requiere clave ni cuenta para leer artículos | — |
+| User-Agent | Exige un User-Agent que identifique al cliente y tenga un dato de contacto, con el formato `nombre/versión (contacto)`. Los agentes genéricos (`python-requests`, `curl`) pueden recibir un error 403 o quedar bloqueados | Envía `TP-BBDDA-UNLaM-Grupo2/1.0 (trabajo práctico; https://github.com/AgustinVenier/TP_BBDDA_20262C)` |
+| Ritmo de pedidos | Para páginas `/wiki/`: concurrencia menor a 10 y un promedio menor a 20 pedidos por segundo. Ante un error 429 hay que esperar lo que indique `Retry-After` | Hace **2 pedidos por ejecución**, uno detrás de otro, sin paralelismo y por una misma conexión. Ante un 429 espera lo que indica `Retry-After` y reintenta hasta 3 veces; si no viene ese encabezado, espera 5, 10 y 20 s. Ante cualquier otro error HTTP se detiene |
+| Formato de URL | Usar `/wiki/Título` sin parámetros, sin guardar cookies ni ejecutar JavaScript | Usa solo `/wiki/Título` y no guarda cookies |
+| robots.txt | Los artículos están permitidos ("Friendly, low-speed bots are welcome viewing article pages"). Están prohibidas `/w/`, `/api/` y `Special:` | Solo lee artículos |
+| Licencia | El texto está publicado bajo CC BY-SA 4.0, que permite reutilizarlo citando la fuente | La fuente se cita en este documento y en el encabezado del script |
+
+Fuentes:
+- [Wikimedia Foundation User-Agent Policy](https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy)
+- [Wikimedia Robot policy](https://wikitech.wikimedia.org/wiki/Robot_policy)
+- [robots.txt de en.wikipedia.org](https://en.wikipedia.org/robots.txt)
+- [Términos de uso de Wikimedia](https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use)
+
+---
+
+## 4. Técnica de scraping
+
+**Scraping de HTML estático mediante pedido HTTP y parseo del DOM con selectores CSS.** Además, aprovecha un microformato (hCard) y atributos de datos (`data-sort-value`) que la página incluye en el HTML.
+
+Es la técnica adecuada porque Wikipedia entrega el HTML ya armado desde el servidor, con todos los datos. No hace falta un navegador automatizado (Selenium, Playwright), que se usa para páginas que arman su contenido con JavaScript y es mucho más lento.
+
+### 4.1 Herramientas
+
+| Herramienta | Versión usada | Para qué |
+|---|---|---|
+| Python | 3.11 | Lenguaje del script |
+| `requests` | 2.34 | Descargar el HTML de cada página |
+| `beautifulsoup4` | 4.15 | Recorrer el HTML y buscar elementos por etiqueta, clase y atributo |
+| `lxml` | 6.1 | Parser de HTML que usa BeautifulSoup |
+| `csv` (biblioteca estándar) | — | Escribir el archivo de salida |
+
+### 4.2 Pasos
+
+1. **Descargar** cada página con una `requests.Session`. La sesión reutiliza la misma conexión para los dos pedidos y envía siempre el User-Agent propio. Cada pedido tiene un timeout de 60 s y los reintentos ante un 429 que se describen en la sección 3.
+2. **Quedarse con el cuerpo del artículo** (`#mw-content-text .mw-parser-output`), para dejar afuera menús y barras laterales.
+3. **Armar un diccionario** nombre de la selección → código FIFA, desde "List of FIFA country codes".
+4. **Recorrer la página de plantillas** sección por sección (ver 4.3) y armar una fila por jugador.
+5. **Escribir el CSV** e informar por pantalla cuántas selecciones y jugadores se encontraron, junto con los avisos (por ejemplo, una selección sin código).
+
+### 4.3 Dónde está cada dato en el HTML
+
+En la página de plantillas cada grupo es un `<h2>` ("Group A") y cada selección un `<h3>` dentro de él. Debajo del `<h3>` está la tabla de convocados, con una fila por jugador:
+
+```html
+<h3>Mexico</h3>
+...
+<table class="sortable wikitable plainrowheaders">
+  <tr class="nat-fs-player">
+    <td>1</td>
+    <td><span style="display:none">1</span><a ...>GK</a></td>
+    <th data-sort-value="Rangel, Raul" scope="row"><a ...>Raúl Rangel</a></th>
+    <td><span style="display:none"> (<span class="bday">2000-02-25</span>)</span>25 February 2000 (aged 26)</td>
+    <td>14</td>   <!-- partidos jugados: no se usa -->
+    <td>0</td>    <!-- goles: no se usa -->
+    <td><span class="flagicon">...</span> <a ...>Guadalajara</a></td>
+  </tr>
+```
+
+| Dato | Cómo se obtiene |
+|---|---|
+| Selección | El texto del `<h3>`, traducido a su código FIFA |
+| Jugadores | Cada fila `<tr class="nat-fs-player">` de la primera tabla de la sección |
+| Dorsal | Primera celda |
+| Posición | Texto del enlace de la segunda celda. Se toma el enlace y no toda la celda, porque la celda tiene un número oculto que usa la página para ordenar |
+| Nombre visible | Texto del enlace de la celda `<th>` |
+| Orden "Apellido, Nombre" | Atributo `data-sort-value` de esa `<th>`, que Wikipedia usa para ordenar la tabla por apellido |
+| Fecha de nacimiento | El `<span class="bday">` oculto (microformato hCard), que ya está en formato ISO. No hace falta interpretar "25 February 2000" |
+| Club | Texto del último enlace de la última celda que no sea la bandera (`.flagicon`) |
+
+El resto de la página no se toma: partidos jugados, goles, edad, DT, listas preliminares y notas. Solo se extrae lo que tiene columna en `JUGADOR`.
+
+### 4.4 Separación de nombre y apellido
+
+La base guarda nombre y apellido por separado, pero la página muestra el nombre completo ("Raúl Rangel"). Para separarlos se usa el atributo `data-sort-value`, que trae el apellido primero y sin tildes. El script busca dónde está ese apellido dentro del nombre visible y corta ahí, conservando las tildes del nombre visible.
+
+| Nombre visible | `data-sort-value` | Nombre | Apellido | Caso |
+|---|---|---|---|---|
+| Edson Álvarez | `Alvarez, Edson` | Edson | Álvarez | Normal (las tildes se conservan) |
+| Jan Paul van Hecke | `Hecke, Jan Paul van` | Jan Paul | van Hecke | Partícula: van, de, de la, da, dos, etc. |
+| Micky van de Ven | `Ven, Micky van de` | Micky | van de Ven | Partícula de dos palabras |
+| Son Heung-min | `Son, Heung-min` | Heung-min | Son | El apellido va primero (Corea) |
+| Hassan Al-Haydos | `Haydos, Hassan` | Hassan | Al-Haydos | El orden omite el prefijo "Al-" |
+| Neymar | `Neymar` | Neymar | Neymar | Nombre único (ver abajo) |
+
+**Nombre único.** Hay 22 jugadores conocidos por un solo nombre, como Neymar, Alisson, Casemiro o Raphinha. Como `nombre` y `apellido` son obligatorios en `JUGADOR`, se guarda el mismo valor en los dos.
+
+Estas transformaciones se hacen durante el scraping. La consigna prohíbe modificar los archivos con herramientas externas antes de importarlos, pero exceptúa lo que se obtiene por scraping.
+
+---
+
+## 5. Formato del archivo generado
+
+- Codificación **UTF-8 sin BOM**: se conservan tildes y letras como č, ø o ł.
+- Separador **coma**, con una primera fila de **encabezado** con los nombres de columna.
+- Un valor que contenga una coma o comillas va entre comillas dobles (estándar CSV); en el dataset actual no hay ninguno.
+- Fechas en formato ISO `AAAA-MM-DD`.
+- Fin de línea `\r\n`.
+
+Para importarlo desde SQL Server, la lectura tiene que indicar UTF-8 y formato CSV. En `BULK INSERT` eso es `CODEPAGE = '65001'`, `FORMAT = 'CSV'` y `FIRSTROW = 2`.
+
+```csv
+codigo_fifa,dorsal,posicion,nombre,apellido,fecha_nacimiento,club
+CZE,1,GK,Matěj,Kovář,2000-05-17,PSV Eindhoven
+CZE,2,DF,David,Zima,2000-11-08,Slavia Prague
+```
+
+---
+
+## 6. Cómo ejecutarlo
+
+Requisitos: Python 3.9 o superior y conexión a internet.
+
+```bash
+pip install requests beautifulsoup4 lxml
+python Scraping_Jugadores.py
+```
+
+Tarda unos 3 segundos y por defecto deja `jugadores.csv` en la carpeta `datos`, junto al script. Para elegir otra carpeta:
+
+```bash
+python Scraping_Jugadores.py --salida C:\MundialFutbol\Importacion
+```
+
+Salida esperada:
+
+```
+Selecciones: 48  Jugadores: 1248
+Archivo: ...\datos\jugadores.csv
+```
+
+**Carpeta para la importación.** SQL Server lee el archivo con la cuenta de su servicio (en SQL Server Express, `NT Service\MSSQL$SQLEXPRESS`). Esa cuenta no tiene permiso sobre las carpetas de usuario (`C:\Users\...`): si el archivo está ahí, `BULK INSERT` falla con el error 4860. Hay dos soluciones:
+
+- generar el CSV con `--salida` en una carpeta que el servicio pueda leer;
+- darle a esa cuenta permiso de lectura sobre la carpeta.
+
+**En la defensa:**
+
+1. Ejecutar el script, que scrapea la página en el momento.
+2. Ejecutar `21_Importacion_Jugadores.sql` sobre el archivo recién generado.
+
+---
+
+## 7. Controles realizados sobre el dataset
+
+Resultado de la ejecución del 29/10/2026:
+
+| Control | Resultado |
+|---|---|
+| Selecciones | 48, todas con su código FIFA |
+| Jugadores | 1248 (26 por selección) |
+| Jugadores por posición | GK 145, DF 422, MF 370, FW 311. Todas las selecciones tienen al menos 3 arqueros |
+| Campos vacíos | Ninguno |
+| Duplicados por (selección, apellido, nombre) | Ninguno. Es la clave que usa el upsert de `usp_ImportarJugador` |
+| Dorsales repetidos dentro de una selección | Ninguno |
+| Dorsales | Entre 1 y 26 (la tabla admite de 1 a 99) |
+| Fechas de nacimiento | Todas válidas en formato ISO, entre 1982-12-31 y 2008-10-14 |
+
+### Prueba de carga con los SP de la Entrega 5
+
+Para comprobar que los datos entran en el modelo, se armó una base de prueba con los scripts 00 a 20. Las 48 selecciones y sus listas se crearon con `Torneo.usp_RegistrarSeleccion`, como lo hará el script 20. Después se cargó cada fila del CSV con `Torneo.usp_ImportarJugador`.
+
+| Resultado | Detalle |
+|---|---|
+| Jugadores | 1248 insertados, sin errores. Las posiciones quedaron traducidas a ARQUERO, DEFENSOR, MEDIOCAMPISTA y DELANTERO |
+| Segunda importación del mismo archivo | Los 1248 jugadores dieron "SIN CAMBIOS": no se duplicó nada |
+| Caracteres especiales | Se conservan en la base (Matěj Kovář, Nicolás de la Cruz) |
+
+**Requisito previo:** las selecciones del CSV tienen que existir antes de importar. Para 7 de ellas el país no está todavía en `20_DatosIniciales.sql`: CZE, BIH, TUR, CUW, SWE, IRQ y COD. Se agregan al script 20 junto con las 48 selecciones; si faltan, los jugadores de esas selecciones se rechazan con el error "No hay una selección con lista de convocados".
+
+### Si la página cambia
+
+El script depende de la estructura del HTML, es decir, de las etiquetas y clases de la sección 4.3:
+
+- si deja de encontrar jugadores, se detiene con el mensaje "No se encontró ningún jugador: puede haber cambiado la estructura de la página";
+- si falta un dato puntual, como el código FIFA de una selección o su tabla, lo informa como aviso y sigue con las demás.
+
+Los datos dependen de lo que publique Wikipedia en el momento de la ejecución. Si cambia un dato de un jugador (por ejemplo, su club), la próxima ejecución trae el valor nuevo y el upsert de la importación lo actualiza en lugar de duplicar el registro.
