@@ -3,28 +3,10 @@
 Universidad Nacional de La Matanza · 3641 - Bases de Datos Aplicada · Comisión 01 · Grupo 2
 Entrega 6 – Procesos de importación
 
-La consigna (sección II, punto I) pide que al menos uno de los datasets importados se obtenga por **scraping de una página web**. También pide documentar:
-
-- la técnica utilizada;
-- la página de origen;
-- los límites de uso de la fuente.
-
-Este documento cubre esos tres puntos para el script [`Scraping_Jugadores.py`](Scraping_Jugadores.py).
-
 ---
-
 ## 1. Qué se obtiene
 
 El script genera **`jugadores.csv`**: los 1248 convocados de las 48 selecciones del Mundial 2026, 26 por selección. Se carga en la tabla **`Torneo.JUGADOR`**.
-
-### Orden de ejecución
-
-| Paso | Script | Qué hace |
-|---|---|---|
-| 1 | `src/20_DatosIniciales.sql` | Crea los países, los parámetros y las 48 selecciones, cada una con su lista de convocados y su DT |
-| 2 | `scraping/Scraping_Jugadores.py` | Genera `jugadores.csv` desde Wikipedia |
-| 3 | `src/21_Importacion_Jugadores.sql` | Importa el archivo con `Torneo.usp_ImportarJugador`, fila por fila |
-| 4 | `src/22_JuegoDeDatos.sql` | Carga partidos, formaciones, goles y tarjetas con los jugadores importados |
 
 ### Destino de cada columna
 
@@ -45,14 +27,6 @@ Las demás columnas de `JUGADOR` no vienen en el archivo:
 | `fecha_baja`, `motivo_baja` | NULL | No es un dato faltante: NULL significa que el jugador está activo en la lista |
 | `id_pais_nacimiento` | NULL | La fuente no lo publica. La consigna no lo pide y ninguna vista, función ni reporte lo usa |
 
-Los largos máximos del dataset entran en las columnas de la base:
-
-| Columna | Largo máximo en el dataset | Columna en la base |
-|---|---|---|
-| nombre | 15 caracteres | `NVARCHAR(60)` |
-| apellido | 18 caracteres | `NVARCHAR(60)` |
-| club | 31 caracteres | `NVARCHAR(100)` |
-
 ---
 
 ## 2. Páginas de origen
@@ -65,26 +39,6 @@ Las dos páginas son de Wikipedia en inglés.
 | List of FIFA country codes | https://en.wikipedia.org/wiki/List_of_FIFA_country_codes | El código FIFA de cada selección, solo de la sección "FIFA member codes". Con ese código, cada jugador se asocia a su selección en la base |
 
 Las dos páginas escriben cada selección con el mismo nombre (por ejemplo, "Ivory Coast" o "Cape Verde"). Por eso se cruzan por nombre sin tablas de traducción escritas a mano, y las 48 selecciones encontraron su código.
-
-### Por qué esta fuente
-
-Se evaluaron las páginas que sugiere la consigna, descargándolas y revisando su contenido real. El criterio fue que el archivo scrapeado complete entera la tabla que carga.
-
-| Página | Tabla que cargaría | Resultado |
-|---|---|---|
-| **Wikipedia – plantillas** (elegida) | JUGADOR | Trae todos los datos de la tabla salvo el país de nacimiento, que no se usa |
-| fifa.com (fixture, sedes, resultados) | PARTIDO, SEDE | Se arma con JavaScript en el navegador: el HTML que se descarga no contiene los datos |
-| Wikipedia – artículo del torneo (sedes) | SEDE | Faltan país, huso horario y coordenadas, que obligan a bajar 32 páginas más. Además, dar de alta una sede crea sus 4 espacios publicitarios, y su tarifa no tiene fuente: habría que inventarla |
-| Wikipedia – fase de grupos y eliminatorias | PARTIDO | No publica el número de partido, que es la clave del upsert |
-| Wikipedia – "List of FIFA World Cup referees" | ARBITRO | Solo lista los árbitros de cada final |
-| Wikipedia – árbitros del Mundial 2026 | ARBITRO | No trae los idiomas, que en la base son obligatorios, ni la fecha de nacimiento |
-| Wikipedia en español – plantillas | JUGADOR | Las fechas vienen como texto ("25 de febrero de 2000"), las posiciones con palabras completas y no trae el orden "Apellido, Nombre" |
-
-La página de plantillas en inglés es la que requiere menos conversión:
-
-- sus columnas coinciden casi una a una con las de `JUGADOR`;
-- la fecha de nacimiento ya está en formato ISO dentro del HTML;
-- la posición viene en el código que `usp_ImportarJugador` ya traduce.
 
 ---
 
@@ -190,8 +144,6 @@ Estas transformaciones se hacen durante el scraping. La consigna prohíbe modifi
 - Fechas en formato ISO `AAAA-MM-DD`.
 - Fin de línea `\r\n`.
 
-Para importarlo desde SQL Server, la lectura tiene que indicar UTF-8 y formato CSV. En `BULK INSERT` eso es `CODEPAGE = '65001'`, `FORMAT = 'CSV'` y `FIRSTROW = 2`.
-
 ```csv
 codigo_fifa,dorsal,posicion,nombre,apellido,fecha_nacimiento,club
 CZE,1,GK,Matěj,Kovář,2000-05-17,PSV Eindhoven
@@ -221,51 +173,6 @@ Salida esperada:
 Selecciones: 48  Jugadores: 1248
 Archivo: ...\datos\jugadores.csv
 ```
-
-**Carpeta para la importación.** SQL Server lee el archivo con la cuenta de su servicio (en SQL Server Express, `NT Service\MSSQL$SQLEXPRESS`). Esa cuenta no tiene permiso sobre las carpetas de usuario (`C:\Users\...`): si el archivo está ahí, `BULK INSERT` falla con el error 4860. Hay dos soluciones:
-
-- generar el CSV con `--salida` en una carpeta que el servicio pueda leer;
-- darle a esa cuenta permiso de lectura sobre la carpeta.
-
-**En la defensa:**
-
-1. Ejecutar el script, que scrapea la página en el momento.
-2. Ejecutar `21_Importacion_Jugadores.sql` sobre el archivo recién generado.
-
 ---
 
-## 7. Controles realizados sobre el dataset
 
-Resultado de la ejecución del 29/10/2026:
-
-| Control | Resultado |
-|---|---|
-| Selecciones | 48, todas con su código FIFA |
-| Jugadores | 1248 (26 por selección) |
-| Jugadores por posición | GK 145, DF 422, MF 370, FW 311. Todas las selecciones tienen al menos 3 arqueros |
-| Campos vacíos | Ninguno |
-| Duplicados por (selección, apellido, nombre) | Ninguno. Es la clave que usa el upsert de `usp_ImportarJugador` |
-| Dorsales repetidos dentro de una selección | Ninguno |
-| Dorsales | Entre 1 y 26 (la tabla admite de 1 a 99) |
-| Fechas de nacimiento | Todas válidas en formato ISO, entre 1982-12-31 y 2008-10-14 |
-
-### Prueba de carga con los SP de la Entrega 5
-
-Para comprobar que los datos entran en el modelo, se armó una base de prueba con los scripts 00 a 20. Las 48 selecciones y sus listas se crearon con `Torneo.usp_RegistrarSeleccion`, como lo hará el script 20. Después se cargó cada fila del CSV con `Torneo.usp_ImportarJugador`.
-
-| Resultado | Detalle |
-|---|---|
-| Jugadores | 1248 insertados, sin errores. Las posiciones quedaron traducidas a ARQUERO, DEFENSOR, MEDIOCAMPISTA y DELANTERO |
-| Segunda importación del mismo archivo | Los 1248 jugadores dieron "SIN CAMBIOS": no se duplicó nada |
-| Caracteres especiales | Se conservan en la base (Matěj Kovář, Nicolás de la Cruz) |
-
-**Requisito previo:** las selecciones del CSV tienen que existir antes de importar. Para 7 de ellas el país no está todavía en `20_DatosIniciales.sql`: CZE, BIH, TUR, CUW, SWE, IRQ y COD. Se agregan al script 20 junto con las 48 selecciones; si faltan, los jugadores de esas selecciones se rechazan con el error "No hay una selección con lista de convocados".
-
-### Si la página cambia
-
-El script depende de la estructura del HTML, es decir, de las etiquetas y clases de la sección 4.3:
-
-- si deja de encontrar jugadores, se detiene con el mensaje "No se encontró ningún jugador: puede haber cambiado la estructura de la página";
-- si falta un dato puntual, como el código FIFA de una selección o su tabla, lo informa como aviso y sigue con las demás.
-
-Los datos dependen de lo que publique Wikipedia en el momento de la ejecución. Si cambia un dato de un jugador (por ejemplo, su club), la próxima ejecución trae el valor nuevo y el upsert de la importación lo actualiza en lugar de duplicar el registro.
