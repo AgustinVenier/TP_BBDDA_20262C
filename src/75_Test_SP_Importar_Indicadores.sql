@@ -26,9 +26,12 @@
            puede ejecutar más de una vez.
 ================================================================================
 
- Antes de ejecutar: en el primer lote, @carpeta tiene que ser la carpeta
- datos\pruebas\ del repositorio, y la cuenta del servicio de SQL Server tiene
- que poder leerla.
+ Antes de ejecutar: CAMBIAR @carpeta, en el primer lote, por la ruta de la
+ carpeta datos\pruebas\ del repositorio en tu máquina. Es distinta para cada
+ uno: depende de dónde se clonó el repositorio. Además, la cuenta del servicio
+ de SQL Server tiene que poder leerla. El error "does not exist or you don't
+ have file access rights" aparece tanto si la ruta está mal como si falta el
+ permiso. Cómo darlo: ver "Antes de ejecutar" en 26_ImportarIndicadores.sql.
 
  Sin transacción: la importación confirma cada registro por separado y no
  puede correr dentro de una transacción (lo prueba IX9). Por eso el test no
@@ -57,7 +60,8 @@ SET NOCOUNT ON;
 GO
 
 -- Carpeta de los archivos de prueba y configuración de OLE Automation antes del test (para los lotes siguientes).
-DECLARE @carpeta NVARCHAR(400) = N'C:\TP_BBDDA_20262C\datos\pruebas\';
+-- CAMBIAR: ruta de la carpeta datos\pruebas\ del repositorio en tu máquina, terminada en \ (ver "Antes de ejecutar").
+DECLARE @carpeta NVARCHAR(400) = N'C:\Users\Rodrigo\Desktop\TP_BBDDA_20262C\datos\pruebas\';
 DECLARE @ole_antes INT = (SELECT CAST(value_in_use AS INT) FROM sys.configurations
                           WHERE name = N'Ole Automation Procedures');
 DECLARE @avanzadas_antes INT = (SELECT CAST(value_in_use AS INT) FROM sys.configurations

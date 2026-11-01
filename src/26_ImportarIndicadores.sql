@@ -23,11 +23,18 @@
 ================================================================================
 
  Antes de ejecutar:
-   - @carpeta tiene que ser la carpeta datos\ del repositorio, y la cuenta
-     del servicio de SQL Server tiene que poder leerla. Si no puede (error
-     "does not exist or you don't have file access rights"), se le da
-     permiso de lectura desde una consola de Windows, por ejemplo:
-       icacls "<carpeta del repositorio>\datos" /grant "NT Service\MSSQL$SQLEXPRESS:(OI)(CI)RX"
+   - CAMBIAR @carpeta (sección 1) por la ruta de la carpeta datos\ del
+     repositorio en tu máquina. Es distinta para cada uno: depende de dónde
+     se clonó el repositorio.
+   - La cuenta del servicio de SQL Server tiene que poder leer esa carpeta.
+     El error "does not exist or you don't have file access rights" aparece
+     tanto si la ruta está mal como si falta el permiso. Para darlo, desde
+     PowerShell como administrador (con comillas simples, porque con dobles
+     PowerShell toma $ como variable):
+       icacls '<carpeta del repositorio>\datos' /grant 'NT Service\MSSQLSERVER:(OI)(CI)RX'
+     MSSQLSERVER es la instancia por defecto. Con una instancia con nombre la
+     cuenta es NT Service\MSSQL$<instancia>, por ejemplo MSSQL$SQLEXPRESS. El
+     nombre se ve con: Get-Service -Name 'MSSQL*'
    - La parte 2 necesita internet y OLE Automation, que la instancia trae
      deshabilitado. Este script lo habilita solo mientras consulta la API y
      después lo deja como estaba. Hace falta ser sysadmin. Si no hay conexión,
@@ -46,7 +53,8 @@ SET NOCOUNT ON;
 GO
 
 -- 1. Archivo XML.
-DECLARE @carpeta  NVARCHAR(400) = N'C:\TP_BBDDA_20262C\datos\';
+-- CAMBIAR: ruta de la carpeta datos\ del repositorio en tu máquina, terminada en \ (ver "Antes de ejecutar").
+DECLARE @carpeta  NVARCHAR(400) = N'C:\Users\Rodrigo\Desktop\TP_BBDDA_20262C\datos\';
 DECLARE @archivo  NVARCHAR(400) = @carpeta + N'fuentes\bancomundial\pbi_per_capita_2015_2025.xml';
 
 EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
