@@ -1,0 +1,1249 @@
+codigo_fifa,dorsal,posicion,nombre,apellido,fecha_nacimiento,club
+CZE,1,GK,Matěj,Kovář,2000-05-17,PSV Eindhoven
+CZE,2,DF,David,Zima,2000-11-08,Slavia Prague
+CZE,3,DF,Tomáš,Holeš,1993-03-31,Slavia Prague
+CZE,4,DF,Robin,Hranáč,2000-01-29,TSG Hoffenheim
+CZE,5,DF,Vladimír,Coufal,1992-08-22,TSG Hoffenheim
+CZE,6,DF,Štěpán,Chaloupek,2003-03-08,Slavia Prague
+CZE,7,DF,Ladislav,Krejčí,1999-04-20,Wolverhampton Wanderers
+CZE,8,MF,Vladimír,Darida,1990-08-08,Hradec Králové
+CZE,9,FW,Adam,Hložek,2002-07-25,TSG Hoffenheim
+CZE,10,FW,Patrik,Schick,1996-01-24,Bayer Leverkusen
+CZE,11,FW,Jan,Kuchta,1997-01-08,Sparta Prague
+CZE,12,MF,Lukáš,Červ,2001-04-10,Viktoria Plzeň
+CZE,13,FW,Mojmír,Chytil,1999-04-29,Slavia Prague
+CZE,14,DF,David,Jurásek,2000-08-07,Slavia Prague
+CZE,15,FW,Pavel,Šulc,2000-12-29,Lyon
+CZE,16,GK,Jindřich,Staněk,1996-04-27,Slavia Prague
+CZE,17,MF,Lukáš,Provod,1996-10-23,Slavia Prague
+CZE,18,MF,Michal,Sadílek,1999-05-31,Slavia Prague
+CZE,19,FW,Tomáš,Chorý,1995-01-26,Slavia Prague
+CZE,20,DF,Jaroslav,Zelený,1992-08-20,Sparta Prague
+CZE,21,DF,David,Douděra,1998-05-31,Slavia Prague
+CZE,22,MF,Tomáš,Souček,1995-02-27,West Ham United
+CZE,23,GK,Lukáš,Horníček,2002-07-13,Braga
+CZE,24,MF,Alexandr,Sojka,2003-04-02,Viktoria Plzeň
+CZE,25,MF,Hugo,Sochůrek,2008-06-07,Sparta Prague
+CZE,26,FW,Denis,Višinský,2003-03-21,Viktoria Plzeň
+MEX,1,GK,Raúl,Rangel,2000-02-25,Guadalajara
+MEX,2,DF,Jorge,Sánchez,1997-12-10,PAOK
+MEX,3,DF,César,Montes,1997-02-24,Lokomotiv Moscow
+MEX,4,DF,Edson,Álvarez,1997-10-24,Fenerbahçe
+MEX,5,DF,Johan,Vásquez,1998-10-22,Genoa
+MEX,6,MF,Érik,Lira,2000-05-08,Cruz Azul
+MEX,7,MF,Luis,Romo,1995-06-05,Guadalajara
+MEX,8,MF,Álvaro,Fidalgo,1997-04-09,Real Betis
+MEX,9,FW,Raúl,Jiménez,1991-05-05,Fulham
+MEX,10,FW,Alexis,Vega,1997-11-25,Toluca
+MEX,11,FW,Santiago,Giménez,2001-04-18,AC Milan
+MEX,12,GK,Carlos,Acevedo,1996-04-19,Santos Laguna
+MEX,13,GK,Guillermo,Ochoa,1985-07-13,AEL Limassol
+MEX,14,FW,Armando,González,2003-04-20,Guadalajara
+MEX,15,DF,Israel,Reyes,2000-05-23,América
+MEX,16,FW,Julián,Quiñones,1997-03-24,Al-Qadsiah
+MEX,17,MF,Orbelín,Pineda,1996-03-24,AEK Athens
+MEX,18,MF,Obed,Vargas,2005-08-05,Atlético Madrid
+MEX,19,MF,Gilberto,Mora,2008-10-14,Tijuana
+MEX,20,DF,Mateo,Chávez,2004-05-12,AZ
+MEX,21,FW,César,Huerta,2000-12-03,Anderlecht
+MEX,22,FW,Guillermo,Martínez,1995-03-15,Pumas UNAM
+MEX,23,DF,Jesús,Gallardo,1994-08-15,Toluca
+MEX,24,MF,Luis,Chávez,1996-01-15,Dynamo Moscow
+MEX,25,FW,Roberto,Alvarado,1998-09-07,Guadalajara
+MEX,26,MF,Brian,Gutiérrez,2003-06-17,Guadalajara
+RSA,1,GK,Ronwen,Williams,1992-01-21,Mamelodi Sundowns
+RSA,2,DF,Thabang,Matuludi,1999-01-14,Polokwane City
+RSA,3,DF,Khulumani,Ndamane,2004-02-05,Mamelodi Sundowns
+RSA,4,MF,Teboho,Mokoena,1997-01-24,Mamelodi Sundowns
+RSA,5,MF,Thalente,Mbatha,2000-03-06,Orlando Pirates
+RSA,6,DF,Aubrey,Modiba,1995-07-22,Mamelodi Sundowns
+RSA,7,FW,Oswin,Appollis,2001-08-25,Orlando Pirates
+RSA,8,FW,Tshepang,Moremi,2000-10-02,Orlando Pirates
+RSA,9,FW,Lyle,Foster,2000-09-03,Burnley
+RSA,10,FW,Relebohile,Mofokeng,2004-10-23,Orlando Pirates
+RSA,11,MF,Themba,Zwane,1989-08-03,Mamelodi Sundowns
+RSA,12,FW,Thapelo,Maseko,2003-11-11,AEL Limassol
+RSA,13,MF,Sphephelo,Sithole,1999-03-03,Tondela
+RSA,14,DF,Mbekezeli,Mbokazi,2005-09-19,Chicago Fire FC
+RSA,15,FW,Iqraam,Rayners,1995-12-19,Mamelodi Sundowns
+RSA,16,GK,Sipho,Chaine,1996-12-14,Orlando Pirates
+RSA,17,FW,Evidence,Makgopa,2000-06-05,Orlando Pirates
+RSA,18,DF,Samukele,Kabini,2004-03-15,Molde
+RSA,19,DF,Nkosinathi,Sibisi,1995-09-22,Orlando Pirates
+RSA,20,DF,Khuliso,Mudau,1995-04-26,Mamelodi Sundowns
+RSA,21,DF,Ime,Okon,2004-02-20,Hannover 96
+RSA,22,GK,Ricardo,Goss,1994-04-02,Siwelele
+RSA,23,MF,Jayden,Adams,2001-05-05,Mamelodi Sundowns
+RSA,24,DF,Olwethu,Makhanya,2004-04-30,Philadelphia Union
+RSA,25,FW,Kamogelo,Sebelebele,2002-07-21,Orlando Pirates
+RSA,26,DF,Bradley,Cross,2001-01-30,Kaizer Chiefs
+KOR,1,GK,Seung-gyu,Kim,1990-09-30,FC Tokyo
+KOR,2,DF,Han-beom,Lee,2002-06-17,Midtjylland
+KOR,3,MF,Gi-hyuk,Lee,2000-07-07,Gangwon FC
+KOR,4,DF,Min-jae,Kim,1996-11-15,Bayern Munich
+KOR,5,DF,Tae-hyeon,Kim,2000-09-17,Kashima Antlers
+KOR,6,MF,In-beom,Hwang,1996-09-20,Feyenoord
+KOR,7,FW,Heung-min,Son,1992-07-08,Los Angeles FC
+KOR,8,MF,Seung-ho,Paik,1997-03-17,Birmingham City
+KOR,9,FW,Gue-sung,Cho,1998-01-25,Midtjylland
+KOR,10,MF,Jae-sung,Lee,1992-08-10,Mainz 05
+KOR,11,MF,Hee-chan,Hwang,1996-01-26,Wolverhampton Wanderers
+KOR,12,GK,Bum-keun,Song,1997-10-15,Jeonbuk Hyundai Motors
+KOR,13,DF,Tae-seok,Lee,2002-07-28,Austria Wien
+KOR,14,DF,Wi-je,Cho,2001-08-25,Jeonbuk Hyundai Motors
+KOR,15,DF,Moon-hwan,Kim,1995-08-01,Daejeon Hana Citizen
+KOR,16,DF,Jin-seob,Park,1995-10-23,Zhejiang
+KOR,17,MF,Jun-ho,Bae,2003-08-21,Stoke City
+KOR,18,FW,Hyeon-gyu,Oh,2001-04-12,Beşiktaş
+KOR,19,MF,Kang-in,Lee,2001-02-19,Paris Saint-Germain
+KOR,20,MF,Hyun-jun,Yang,2002-05-25,Celtic
+KOR,21,GK,Hyeon-woo,Jo,1991-09-25,Ulsan HD
+KOR,22,DF,Young-woo,Seol,1998-12-05,Red Star Belgrade
+KOR,23,DF,Jens,Castrop,2003-07-29,Borussia Mönchengladbach
+KOR,24,MF,Jin-gyu,Kim,1997-02-24,Jeonbuk Hyundai Motors
+KOR,25,MF,Ji-sung,Eom,2002-05-09,Swansea City
+KOR,26,MF,Dong-gyeong,Lee,1997-09-20,Ulsan HD
+BIH,1,GK,Nikola,Vasilj,1995-12-02,FC St. Pauli
+BIH,2,DF,Nihad,Mujakić,1998-04-15,Gaziantep
+BIH,3,DF,Dennis,Hadžikadunić,1998-07-09,Sampdoria
+BIH,4,DF,Tarik,Muharemović,2003-02-28,Sassuolo
+BIH,5,DF,Sead,Kolašinac,1993-06-20,Atalanta
+BIH,6,MF,Benjamin,Tahirović,2003-03-03,Brøndby
+BIH,7,DF,Amar,Dedić,2002-08-18,Benfica
+BIH,8,MF,Armin,Gigović,2002-04-06,Young Boys
+BIH,9,FW,Samed,Baždar,2004-01-31,Jagiellonia Białystok
+BIH,10,FW,Ermedin,Demirović,1998-03-25,VfB Stuttgart
+BIH,11,FW,Edin,Džeko,1986-03-17,Schalke 04
+BIH,12,GK,Mladen,Jurkas,2007-10-07,Borac Banja Luka
+BIH,13,MF,Ivan,Bašić,2002-04-30,Astana
+BIH,14,MF,Ivan,Šunjić,1996-10-09,Pafos
+BIH,15,MF,Amar,Memić,2001-01-20,Viktoria Plzeň
+BIH,16,MF,Amir,Hadžiahmetović,1997-03-08,Hull City
+BIH,17,MF,Dženis,Burnić,1998-05-22,Karlsruher SC
+BIH,18,DF,Nikola,Katić,1996-10-10,Schalke 04
+BIH,19,FW,Kerim,Alajbegović,2007-09-21,Red Bull Salzburg
+BIH,20,FW,Esmir,Bajraktarević,2005-03-10,PSV Eindhoven
+BIH,21,DF,Stjepan,Radeljić,1997-09-05,Rijeka
+BIH,22,GK,Martin,Zlomislić,1998-08-16,Rijeka
+BIH,23,FW,Haris,Tabaković,1994-06-20,Borussia Mönchengladbach
+BIH,24,DF,Arjan,Malić,2005-08-28,Sturm Graz
+BIH,25,FW,Jovo,Lukić,1998-11-28,Universitatea Cluj
+BIH,26,MF,Ermin,Mahmić,2005-03-14,Slovan Liberec
+CAN,1,GK,Dayne,St. Clair,1997-05-09,Inter Miami CF
+CAN,2,DF,Alistair,Johnston,1998-10-08,Celtic
+CAN,3,DF,Alfie,Jones,1997-10-07,Middlesbrough
+CAN,4,DF,Luc,de Fougerolles,2005-10-12,Dender EH
+CAN,5,DF,Joel,Waterman,1996-01-24,Chicago Fire FC
+CAN,6,MF,Mathieu,Choinière,1999-02-07,Los Angeles FC
+CAN,7,MF,Stephen,Eustáquio,1996-12-21,Los Angeles FC
+CAN,8,MF,Ismaël,Koné,2002-06-16,Sassuolo
+CAN,9,FW,Cyle,Larin,1995-04-17,Southampton
+CAN,10,FW,Jonathan,David,2000-01-14,Juventus
+CAN,11,MF,Liam,Millar,1999-09-27,Hull City
+CAN,12,FW,Tani,Oluwaseyi,2000-05-15,Villarreal
+CAN,13,DF,Derek,Cornelius,1997-11-25,Rangers
+CAN,14,MF,Jacob,Shaffelburg,1999-11-26,Los Angeles FC
+CAN,15,DF,Moïse,Bombito,2000-03-30,Nice
+CAN,16,GK,Maxime,Crépeau,1994-05-11,Orlando City SC
+CAN,17,FW,Tajon,Buchanan,1999-02-08,Villarreal
+CAN,18,GK,Owen,Goodman,2003-11-27,Barnsley
+CAN,19,DF,Alphonso,Davies,2000-11-02,Bayern Munich
+CAN,20,FW,Ali,Ahmed,2000-10-10,Norwich City
+CAN,21,MF,Jonathan,Osorio,1992-06-12,Toronto FC
+CAN,22,DF,Richie,Laryea,1995-01-07,Toronto FC
+CAN,23,DF,Niko,Sigur,2003-09-09,Hajduk Split
+CAN,24,FW,Promise,David,2001-07-03,Union Saint-Gilloise
+CAN,25,MF,Nathan,Saliba,2004-02-07,Anderlecht
+CAN,26,FW,Jayden,Nelson,2002-09-26,Austin FC
+QAT,1,GK,Mahmud,Abunada,2000-02-05,Al-Rayyan
+QAT,2,DF,Pedro,Miguel,1990-08-06,Al-Sadd
+QAT,3,DF,Lucas,Mendes,1990-07-03,Al-Wakrah
+QAT,4,DF,Issa,Laye,1997-12-22,Al-Arabi
+QAT,5,DF,Jassem,Gaber,2002-02-20,Al-Rayyan
+QAT,6,MF,Abdulaziz,Hatem,1990-01-01,Al-Rayyan
+QAT,7,FW,Ahmed,Alaaeldin,1993-01-31,Al-Rayyan
+QAT,8,FW,Edmilson,Junior,1994-08-19,Al-Duhail
+QAT,9,FW,Mohammed,Muntari,1993-12-20,Al-Gharafa
+QAT,10,FW,Hassan,Al-Haydos,1990-12-11,Al-Sadd
+QAT,11,FW,Akram,Afif,1996-11-18,Al-Sadd
+QAT,12,MF,Karim,Boudiaf,1990-09-16,Al-Duhail
+QAT,13,DF,Ayoub,Al-Oui,2005-03-11,Al-Gharafa
+QAT,14,DF,Homam,Ahmed,1999-08-25,Cultural Leonesa
+QAT,15,FW,Yusuf,Abdurisag,1999-08-06,Al-Wakrah
+QAT,16,DF,Boualem,Khoukhi,1990-07-09,Al-Sadd
+QAT,17,MF,Ahmed,Al-Ganehi,2000-09-22,Al-Gharafa
+QAT,18,DF,Sultan,Al-Brake,1996-04-07,Al-Duhail
+QAT,19,FW,Almoez,Ali,1996-08-19,Al-Duhail
+QAT,20,MF,Ahmed,Fathy,1993-01-25,Al-Arabi
+QAT,21,GK,Salah,Zakaria,1999-04-24,Al-Duhail
+QAT,22,GK,Meshaal,Barsham,1998-02-14,Al-Sadd
+QAT,23,MF,Assim,Madibo,1996-10-22,Al-Wakrah
+QAT,24,FW,Tahsin,Jamshid,2006-06-16,Al-Duhail
+QAT,25,DF,Al-Hashmi,Al-Hussain,2003-08-15,Al-Arabi
+QAT,26,FW,Mohamed,Manai,2002-10-25,Al-Shamal
+SUI,1,GK,Gregor,Kobel,1997-12-06,Borussia Dortmund
+SUI,2,DF,Miro,Muheim,1998-03-24,Hamburger SV
+SUI,3,DF,Silvan,Widmer,1993-03-05,Mainz 05
+SUI,4,DF,Nico,Elvedi,1996-09-30,Borussia Mönchengladbach
+SUI,5,DF,Manuel,Akanji,1995-07-19,Inter Milan
+SUI,6,MF,Denis,Zakaria,1996-11-20,Monaco
+SUI,7,FW,Breel,Embolo,1997-02-14,Rennes
+SUI,8,MF,Remo,Freuler,1992-04-15,Bologna
+SUI,9,MF,Johan,Manzambi,2005-10-14,SC Freiburg
+SUI,10,MF,Granit,Xhaka,1992-09-27,Sunderland
+SUI,11,FW,Dan,Ndoye,2000-10-25,Nottingham Forest
+SUI,12,GK,Yvon,Mvogo,1994-06-06,Lorient
+SUI,13,DF,Ricardo,Rodriguez,1992-08-25,Real Betis
+SUI,14,MF,Ardon,Jashari,2002-07-30,AC Milan
+SUI,15,MF,Djibril,Sow,1997-02-06,Sevilla
+SUI,16,FW,Christian,Fassnacht,1993-11-11,Young Boys
+SUI,17,FW,Rubén,Vargas,1998-08-05,Sevilla
+SUI,18,DF,Eray,Cömert,1998-02-04,Valencia
+SUI,19,FW,Noah,Okafor,2000-05-24,Leeds United
+SUI,20,MF,Michel,Aebischer,1997-01-06,Pisa
+SUI,21,GK,Marvin,Keller,2002-07-03,Young Boys
+SUI,22,MF,Fabian,Rieder,2002-02-16,FC Augsburg
+SUI,23,FW,Zeki,Amdouni,2000-12-04,Burnley
+SUI,24,DF,Aurèle,Amenda,2003-07-31,Eintracht Frankfurt
+SUI,25,DF,Luca,Jaquez,2003-06-02,VfB Stuttgart
+SUI,26,FW,Cedric,Itten,1996-12-27,Fortuna Düsseldorf
+BRA,1,GK,Alisson,Alisson,1992-10-02,Liverpool
+BRA,2,MF,Éderson,Silva,1999-07-07,Atalanta
+BRA,3,DF,Gabriel,Magalhães,1997-12-19,Arsenal
+BRA,4,DF,Marquinhos,Marquinhos,1994-05-14,Paris Saint-Germain
+BRA,5,MF,Casemiro,Casemiro,1992-02-23,Manchester United
+BRA,6,DF,Alex,Sandro,1991-01-26,Flamengo
+BRA,7,FW,Vinícius,Júnior,2000-07-12,Real Madrid
+BRA,8,MF,Bruno,Guimarães,1997-11-16,Newcastle United
+BRA,9,FW,Matheus,Cunha,1999-05-27,Manchester United
+BRA,10,FW,Neymar,Neymar,1992-02-05,Santos
+BRA,11,FW,Raphinha,Raphinha,1996-12-14,Barcelona
+BRA,12,GK,Weverton,Weverton,1987-12-13,Grêmio
+BRA,13,DF,Danilo,Luiz,1991-07-15,Flamengo
+BRA,14,DF,Bremer,Bremer,1997-03-18,Juventus
+BRA,15,DF,Léo,Pereira,1996-01-31,Flamengo
+BRA,16,DF,Douglas,Santos,1994-03-22,Zenit Saint Petersburg
+BRA,17,MF,Fabinho,Fabinho,1993-10-23,Al-Ittihad
+BRA,18,MF,Danilo,Santos,2001-04-29,Botafogo
+BRA,19,FW,Endrick,Endrick,2006-07-21,Lyon
+BRA,20,MF,Lucas,Paquetá,1997-08-27,Flamengo
+BRA,21,FW,Luiz,Henrique,2001-01-02,Zenit Saint Petersburg
+BRA,22,FW,Gabriel,Martinelli,2001-06-18,Arsenal
+BRA,23,GK,Ederson,Moraes,1993-08-17,Fenerbahçe
+BRA,24,DF,Roger,Ibañez,1998-11-23,Al-Ahli
+BRA,25,FW,Igor,Thiago,2001-06-26,Brentford
+BRA,26,FW,Rayan,Rayan,2006-08-03,Bournemouth
+HAI,1,GK,Johny,Placide,1988-01-29,Bastia
+HAI,2,DF,Carlens,Arcus,1996-06-28,Angers
+HAI,3,DF,Keeto,Thermoncy,2006-03-29,Young Boys
+HAI,4,DF,Ricardo,Adé,1990-05-21,LDU Quito
+HAI,5,DF,Hannes,Delcroix,1999-02-28,Lugano
+HAI,6,MF,Carl,Sainté,2002-08-09,El Paso Locomotive FC
+HAI,7,FW,Derrick,Etienne Jr.,1996-11-25,Toronto FC
+HAI,8,DF,Martin,Expérience,1999-03-09,Nancy
+HAI,9,FW,Duckens,Nazon,1994-04-07,Esteghlal
+HAI,10,MF,Jean-Ricner,Bellegarde,1998-06-27,Wolverhampton Wanderers
+HAI,11,FW,Louicius,Deedson,2001-02-11,FC Dallas
+HAI,12,GK,Alexandre,Pierre,2001-02-25,Sochaux
+HAI,13,DF,Duke,Lacroix,1993-10-14,Colorado Springs Switchbacks FC
+HAI,14,DF,Garven,Metusala,1999-12-31,Colorado Springs Switchbacks FC
+HAI,15,FW,Ruben,Providence,2001-07-07,Almere City
+HAI,16,FW,Lenny,Joseph,2000-10-12,Ferencváros
+HAI,17,MF,Danley,Jean Jacques,2000-05-20,Philadelphia Union
+HAI,18,FW,Wilson,Isidor,2000-08-27,Sunderland
+HAI,19,FW,Yassin,Fortuné,1999-01-30,Vizela
+HAI,20,FW,Frantzdy,Pierrot,1995-03-29,Çaykur Rizespor
+HAI,21,FW,Josué,Casimir,2001-09-24,Auxerre
+HAI,22,DF,Jean-Kévin,Duverne,1997-07-12,Gent
+HAI,23,GK,Josué,Duverger,2000-04-27,Cosmos Koblenz
+HAI,24,DF,Wilguens,Paugain,2001-08-24,Zulte Waregem
+HAI,25,MF,Dominique,Simon,2000-07-29,Tatran Prešov
+HAI,26,MF,Woodensky,Pierre,2004-12-30,Violette
+MAR,1,GK,Yassine,Bounou,1991-04-05,Al-Hilal
+MAR,2,DF,Achraf,Hakimi,1998-11-04,Paris Saint-Germain
+MAR,3,DF,Noussair,Mazraoui,1997-11-14,Manchester United
+MAR,4,MF,Sofyan,Amrabat,1996-08-21,Real Betis
+MAR,5,DF,Marwane,Saâdane,1992-01-17,Al-Fateh
+MAR,6,MF,Ayyoub,Bouaddi,2007-10-02,Lille
+MAR,7,MF,Chemsdine,Talbi,2005-05-09,Sunderland
+MAR,8,MF,Azzedine,Ounahi,2000-04-19,Girona
+MAR,9,FW,Soufiane,Rahimi,1996-06-02,Al Ain
+MAR,10,FW,Brahim,Díaz,1999-08-03,Real Madrid
+MAR,11,MF,Ismael,Saibari,2001-01-28,PSV Eindhoven
+MAR,12,GK,Munir,Mohamedi,1989-05-10,RS Berkane
+MAR,13,DF,Zakaria El,Ouahdi,2001-12-31,Genk
+MAR,14,DF,Issa,Diop,1997-01-09,Fulham
+MAR,15,MF,Samir El,Mourabet,2005-10-06,Strasbourg
+MAR,16,MF,Gessime,Yassine,2005-11-22,Strasbourg
+MAR,17,FW,Amine,Sbaï,2000-11-05,Angers
+MAR,18,DF,Chadi,Riad,2003-06-17,Crystal Palace
+MAR,19,DF,Youssef,Belammari,1998-09-20,Al Ahly
+MAR,20,FW,Ayoub El,Kaabi,1993-06-25,Olympiacos
+MAR,21,FW,Ayoube,Amaimouni,2004-11-30,Eintracht Frankfurt
+MAR,22,GK,Ahmed Reda,Tagnaouti,1996-04-05,AS FAR
+MAR,23,MF,Bilal El,Khannouss,2004-05-10,VfB Stuttgart
+MAR,24,MF,Neil El,Aynaoui,2001-07-02,Roma
+MAR,25,DF,Redouane,Halhal,2003-03-05,Mechelen
+MAR,26,DF,Anass,Salah-Eddine,2002-01-18,PSV Eindhoven
+SCO,1,GK,Angus,Gunn,1996-01-22,Nottingham Forest
+SCO,2,DF,Aaron,Hickey,2002-06-10,Brentford
+SCO,3,DF,Andy,Robertson,1994-03-11,Liverpool
+SCO,4,MF,Scott,McTominay,1996-12-08,Napoli
+SCO,5,DF,Grant,Hanley,1991-11-20,Hibernian
+SCO,6,DF,Kieran,Tierney,1997-06-05,Celtic
+SCO,7,MF,John,McGinn,1994-10-18,Aston Villa
+SCO,8,MF,Tyler,Fletcher,2007-03-19,Manchester United
+SCO,9,FW,Lyndon,Dykes,1995-10-07,Charlton Athletic
+SCO,10,FW,Ché,Adams,1996-07-13,Torino
+SCO,11,MF,Ryan,Christie,1995-02-22,Bournemouth
+SCO,12,GK,Liam,Kelly,1996-01-23,Rangers
+SCO,13,DF,Jack,Hendry,1995-05-07,Al-Ettifaq
+SCO,14,FW,Ross,Stewart,1996-07-11,Southampton
+SCO,15,DF,John,Souttar,1996-09-25,Rangers
+SCO,16,DF,Dominic,Hyam,1995-12-20,Wrexham
+SCO,17,FW,Ben,Gannon-Doak,2005-11-11,Bournemouth
+SCO,18,FW,George,Hirst,1999-02-15,Ipswich Town
+SCO,19,MF,Lewis,Ferguson,1999-08-24,Bologna
+SCO,20,FW,Lawrence,Shankland,1995-08-10,Heart of Midlothian
+SCO,21,GK,Craig,Gordon,1982-12-31,Heart of Midlothian
+SCO,22,DF,Nathan,Patterson,2001-10-16,Everton
+SCO,23,MF,Kenny,McLean,1992-01-08,Norwich City
+SCO,24,DF,Anthony,Ralston,1998-11-16,Celtic
+SCO,25,FW,Findlay,Curtis,2006-06-09,Kilmarnock
+SCO,26,DF,Scott,McKenna,1996-11-12,Dinamo Zagreb
+AUS,1,GK,Mathew,Ryan,1992-04-08,Levante
+AUS,2,DF,Miloš,Degenek,1994-04-28,APOEL
+AUS,3,DF,Alessandro,Circati,2003-10-10,Parma
+AUS,4,DF,Jacob,Italiano,2001-07-30,Grazer AK
+AUS,5,DF,Jordan,Bos,2002-10-29,Feyenoord
+AUS,6,DF,Jason,Geria,1993-05-10,Albirex Niigata
+AUS,7,FW,Mathew,Leckie,1991-02-04,Melbourne City
+AUS,8,MF,Connor,Metcalfe,1999-11-05,FC St. Pauli
+AUS,9,FW,Mohamed,Touré,2004-03-26,Norwich City
+AUS,10,FW,Ajdin,Hrustic,1996-07-05,Heracles Almelo
+AUS,11,FW,Awer,Mabil,1995-09-15,Castellón
+AUS,12,GK,Paul,Izzo,1995-01-06,Randers
+AUS,13,MF,Aiden,O'Neill,1998-07-04,New York City FC
+AUS,14,MF,Cammy,Devlin,1998-06-07,Heart of Midlothian
+AUS,15,DF,Kai,Trewin,2001-05-18,New York City FC
+AUS,16,DF,Aziz,Behich,1990-12-16,Melbourne City
+AUS,17,FW,Nestory,Irankunda,2006-02-09,Watford
+AUS,18,GK,Patrick,Beach,2003-08-06,Melbourne City
+AUS,19,DF,Harry,Souttar,1998-10-22,Leicester City
+AUS,20,FW,Cristian,Volpato,2003-11-15,Sassuolo
+AUS,21,DF,Cameron,Burgess,1995-10-21,Swansea City
+AUS,22,MF,Jackson,Irvine,1993-03-07,FC St. Pauli
+AUS,23,FW,Nishan,Velupillay,2001-05-07,Melbourne Victory
+AUS,24,MF,Paul,Okon-Engstler,2005-01-24,Sydney FC
+AUS,25,DF,Lucas,Herrington,2007-09-05,Colorado Rapids
+AUS,26,FW,Tete,Yengi,2000-11-28,Machida Zelvia
+PAR,1,GK,Gatito,Fernández,1988-03-29,Cerro Porteño
+PAR,2,DF,Gustavo,Velázquez,1991-04-17,Cerro Porteño
+PAR,3,DF,Omar,Alderete,1996-12-26,Sunderland
+PAR,4,DF,Juan José,Cáceres,2000-06-01,Dynamo Moscow
+PAR,5,DF,Fabián,Balbuena,1991-08-23,Grêmio
+PAR,6,DF,Júnior,Alonso,1993-02-09,Atlético Mineiro
+PAR,7,MF,Ramón,Sosa,1999-08-31,Palmeiras
+PAR,8,MF,Diego,Gómez,2003-03-27,Brighton & Hove Albion
+PAR,9,FW,Antonio,Sanabria,1996-03-04,Cremonese
+PAR,10,MF,Miguel,Almirón,1994-02-10,Atlanta United FC
+PAR,11,MF,Maurício,Maurício,2001-06-22,Palmeiras
+PAR,12,GK,Orlando,Gill,2000-06-11,San Lorenzo
+PAR,13,DF,José,Canale,1996-07-20,Lanús
+PAR,14,MF,Andrés,Cubas,1996-05-11,Vancouver Whitecaps FC
+PAR,15,DF,Gustavo,Gómez,1993-05-06,Palmeiras
+PAR,16,MF,Damián,Bobadilla,2001-07-11,São Paulo
+PAR,17,FW,Kaku,Kaku,1995-01-11,Al Ain
+PAR,18,FW,Álex,Arce,1995-06-16,Independiente Rivadavia
+PAR,19,FW,Julio,Enciso,2004-01-23,Strasbourg
+PAR,20,MF,Braian,Ojeda,2000-06-27,Orlando City SC
+PAR,21,FW,Gabriel,Ávalos,1991-07-09,Independiente
+PAR,22,GK,Gastón,Olveira,1993-04-21,Olimpia
+PAR,23,MF,Matías,Galarza,2002-02-11,Atlanta United FC
+PAR,24,MF,Gustavo,Caballero,2001-09-21,Portsmouth
+PAR,25,FW,Isidro,Pitta,1999-08-14,Red Bull Bragantino
+PAR,26,DF,Alexandro,Maidana,2005-07-26,Talleres
+TUR,1,GK,Mert,Günok,1989-03-01,Fenerbahçe
+TUR,2,DF,Zeki,Çelik,1997-02-17,Roma
+TUR,3,DF,Merih,Demiral,1998-03-05,Al-Ahli
+TUR,4,DF,Çağlar,Söyüncü,1996-05-23,Fenerbahçe
+TUR,5,MF,Salih,Özcan,1998-01-11,Borussia Dortmund
+TUR,6,MF,Orkun,Kökçü,2000-12-29,Beşiktaş
+TUR,7,FW,Kerem,Aktürkoğlu,1998-10-21,Fenerbahçe
+TUR,8,FW,Arda,Güler,2005-02-25,Real Madrid
+TUR,9,FW,Deniz,Gül,2004-07-02,Porto
+TUR,10,MF,Hakan,Çalhanoğlu,1994-02-08,Inter Milan
+TUR,11,FW,Kenan,Yıldız,2005-05-04,Juventus
+TUR,12,GK,Altay,Bayındır,1998-04-14,Manchester United
+TUR,13,DF,Eren,Elmalı,2000-07-07,Galatasaray
+TUR,14,DF,Abdülkerim,Bardakcı,1994-09-07,Galatasaray
+TUR,15,DF,Ozan,Kabak,2000-03-25,TSG Hoffenheim
+TUR,16,MF,İsmail,Yüksek,1999-01-26,Fenerbahçe
+TUR,17,FW,İrfan Can,Kahveci,1995-07-15,Kasımpaşa
+TUR,18,DF,Mert,Müldür,1999-04-03,Fenerbahçe
+TUR,19,FW,Yunus,Akgün,2000-07-07,Galatasaray
+TUR,20,DF,Ferdi,Kadıoğlu,1999-10-07,Brighton & Hove Albion
+TUR,21,FW,Barış Alper,Yılmaz,2000-05-23,Galatasaray
+TUR,22,MF,Kaan,Ayhan,1994-11-10,Galatasaray
+TUR,23,GK,Uğurcan,Çakır,1996-04-05,Galatasaray
+TUR,24,FW,Oğuz,Aydın,2000-10-27,Fenerbahçe
+TUR,25,DF,Samet,Akaydin,1994-03-13,Çaykur Rizespor
+TUR,26,FW,Can,Uzun,2005-11-11,Eintracht Frankfurt
+USA,1,GK,Matt,Turner,1994-06-24,New England Revolution
+USA,2,DF,Sergiño,Dest,2000-11-03,PSV Eindhoven
+USA,3,DF,Chris,Richards,2000-03-28,Crystal Palace
+USA,4,MF,Tyler,Adams,1999-02-14,Bournemouth
+USA,5,DF,Antonee,Robinson,1997-08-08,Fulham
+USA,6,DF,Auston,Trusty,1998-08-12,Celtic
+USA,7,MF,Giovanni,Reyna,2002-11-13,Borussia Mönchengladbach
+USA,8,MF,Weston,McKennie,1998-08-28,Juventus
+USA,9,FW,Ricardo,Pepi,2003-01-09,PSV Eindhoven
+USA,10,FW,Christian,Pulisic,1998-09-18,AC Milan
+USA,11,FW,Brenden,Aaronson,2000-10-22,Leeds United
+USA,12,DF,Miles,Robinson,1997-03-14,FC Cincinnati
+USA,13,DF,Tim,Ream,1987-10-05,Charlotte FC
+USA,14,MF,Sebastian,Berhalter,2001-05-10,Vancouver Whitecaps FC
+USA,15,MF,Cristian,Roldan,1995-06-03,Seattle Sounders FC
+USA,16,DF,Alex,Freeman,2004-08-09,Villarreal
+USA,17,MF,Malik,Tillman,2002-05-28,Bayer Leverkusen
+USA,18,DF,Max,Arfsten,2001-04-19,Columbus Crew
+USA,19,FW,Haji,Wright,1998-03-27,Coventry City
+USA,20,FW,Folarin,Balogun,2001-07-03,Monaco
+USA,21,FW,Timothy,Weah,2000-02-22,Marseille
+USA,22,DF,Mark,McKenzie,1999-02-25,Toulouse
+USA,23,DF,Joe,Scally,2002-12-31,Borussia Mönchengladbach
+USA,24,GK,Matt,Freese,1998-09-02,New York City FC
+USA,25,GK,Chris,Brady,2004-03-03,Chicago Fire FC
+USA,26,FW,Alejandro,Zendejas,1998-02-07,América
+CUW,1,GK,Eloy,Room,1989-02-06,Miami FC
+CUW,2,DF,Shurandy,Sambo,2001-08-19,Sparta Rotterdam
+CUW,3,DF,Juriën,Gaari,1993-12-23,Abha
+CUW,4,DF,Roshon,van Eijma,1998-06-09,RKC Waalwijk
+CUW,5,DF,Sherel,Floranus,1998-08-23,PEC Zwolle
+CUW,6,MF,Godfried,Roemeratoe,1999-08-19,RKC Waalwijk
+CUW,7,MF,Juninho,Bacuna,1997-08-07,Volendam
+CUW,8,MF,Livano,Comenencia,2004-02-03,Zürich
+CUW,9,FW,Jürgen,Locadia,1993-11-07,Miami FC
+CUW,10,MF,Leandro,Bacuna,1991-08-21,Iğdır
+CUW,11,FW,Jeremy,Antonisse,2002-03-29,Kifisia
+CUW,12,FW,Sontje,Hansen,2002-05-18,Middlesbrough
+CUW,13,FW,Tyrese,Noslin,2002-09-11,Telstar
+CUW,14,FW,Kenji,Gorré,1994-09-29,Maccabi Haifa
+CUW,15,MF,Ar'jany,Martha,2003-09-04,Rotherham United
+CUW,16,FW,Jearl,Margaritha,2000-04-10,Beveren
+CUW,17,FW,Brandley,Kuwas,1992-09-19,Volendam
+CUW,18,DF,Armando,Obispo,1999-03-05,PSV Eindhoven
+CUW,19,FW,Gervane,Kastaneer,1996-06-09,Terengganu
+CUW,20,DF,Joshua,Brenet,1994-03-20,Kayserispor
+CUW,21,MF,Tahith,Chong,1999-12-04,Sheffield United
+CUW,22,MF,Kevin,Felida,1999-11-11,Den Bosch
+CUW,23,DF,Riechedly,Bazoer,1996-10-12,Konyaspor
+CUW,24,DF,Deveron,Fonville,2003-05-16,NEC
+CUW,25,GK,Tyrick,Bodak,2002-05-15,Telstar
+CUW,26,GK,Trevor,Doornbusch,1999-07-06,VVV-Venlo
+ECU,1,GK,Hernán,Galíndez,1987-03-30,Huracán
+ECU,2,DF,Félix,Torres,1997-01-11,Internacional
+ECU,3,DF,Piero,Hincapié,2002-01-09,Arsenal
+ECU,4,DF,Joel,Ordóñez,2004-04-21,Club Brugge
+ECU,5,MF,Jordy,Alcívar,1999-08-05,Independiente del Valle
+ECU,6,DF,Willian,Pacho,2001-10-16,Paris Saint-Germain
+ECU,7,DF,Pervis,Estupiñán,1998-01-21,AC Milan
+ECU,8,MF,Anthony,Valencia,2003-07-21,Antwerp
+ECU,9,FW,John,Yeboah,2000-06-23,Venezia
+ECU,10,MF,Kendry,Páez,2007-05-04,River Plate
+ECU,11,FW,Kevin,Rodríguez,2000-03-04,Union Saint-Gilloise
+ECU,12,GK,Moisés,Ramírez,2000-09-09,Kifisia
+ECU,13,FW,Enner,Valencia,1989-11-04,Pachuca
+ECU,14,MF,Alan,Minda,2003-05-14,Atlético Mineiro
+ECU,15,MF,Pedro,Vite,2002-03-09,Pumas UNAM
+ECU,16,FW,Jordy,Caicedo,1997-11-18,Huracán
+ECU,17,DF,Ángelo,Preciado,1998-02-18,Atlético Mineiro
+ECU,18,MF,Denil,Castillo,2004-03-24,Midtjylland
+ECU,19,FW,Gonzalo,Plata,2000-11-01,Flamengo
+ECU,20,FW,Nilson,Angulo,2003-06-19,Sunderland
+ECU,21,MF,Alan,Franco,1998-08-21,Atlético Mineiro
+ECU,22,GK,Gonzalo,Valle,1996-02-28,LDU Quito
+ECU,23,MF,Moisés,Caicedo,2001-11-02,Chelsea
+ECU,24,FW,Jeremy,Arévalo,2005-03-19,VfB Stuttgart
+ECU,25,DF,Jackson,Porozo,2000-08-04,Tijuana
+ECU,26,DF,Yaimar,Medina,2004-11-05,Genk
+GER,1,GK,Manuel,Neuer,1986-03-27,Bayern Munich
+GER,2,DF,Antonio,Rüdiger,1993-03-03,Real Madrid
+GER,3,DF,Waldemar,Anton,1996-07-20,Borussia Dortmund
+GER,4,DF,Jonathan,Tah,1996-02-11,Bayern Munich
+GER,5,MF,Aleksandar,Pavlović,2004-05-03,Bayern Munich
+GER,6,DF,Joshua,Kimmich,1995-02-08,Bayern Munich
+GER,7,FW,Kai,Havertz,1999-06-11,Arsenal
+GER,8,MF,Leon,Goretzka,1995-02-06,Bayern Munich
+GER,9,MF,Jamie,Leweling,2001-02-26,VfB Stuttgart
+GER,10,MF,Jamal,Musiala,2003-02-26,Bayern Munich
+GER,11,FW,Nick,Woltemade,2002-02-14,Newcastle United
+GER,12,GK,Oliver,Baumann,1990-06-02,TSG Hoffenheim
+GER,13,MF,Pascal,Groß,1991-06-15,Brighton & Hove Albion
+GER,14,FW,Maximilian,Beier,2002-10-17,Borussia Dortmund
+GER,15,DF,Nico,Schlotterbeck,1999-12-01,Borussia Dortmund
+GER,16,MF,Angelo,Stiller,2001-04-04,VfB Stuttgart
+GER,17,MF,Florian,Wirtz,2003-05-03,Liverpool
+GER,18,DF,Nathaniel,Brown,2003-06-16,Eintracht Frankfurt
+GER,19,MF,Leroy,Sané,1996-01-11,Galatasaray
+GER,20,MF,Nadiem,Amiri,1996-10-27,Mainz 05
+GER,21,GK,Alexander,Nübel,1996-09-30,VfB Stuttgart
+GER,22,DF,David,Raum,1998-04-22,RB Leipzig
+GER,23,MF,Felix,Nmecha,2000-10-10,Borussia Dortmund
+GER,24,DF,Malick,Thiaw,2001-08-08,Newcastle United
+GER,25,MF,Assan,Ouédraogo,2006-05-09,RB Leipzig
+GER,26,FW,Deniz,Undav,1996-07-19,VfB Stuttgart
+CIV,1,GK,Yahia,Fofana,2000-08-21,Çaykur Rizespor
+CIV,2,DF,Ousmane,Diomande,2003-12-04,Sporting CP
+CIV,3,DF,Ghislain,Konan,1995-12-27,Gil Vicente
+CIV,4,MF,Jean Michaël,Seri,1991-07-19,Maribor
+CIV,5,DF,Wilfried,Singo,2000-12-25,Galatasaray
+CIV,6,MF,Seko,Fofana,1995-05-07,Porto
+CIV,7,DF,Odilon,Kossounou,2001-01-04,Atalanta
+CIV,8,MF,Franck,Kessié,1996-12-19,Al-Ahli
+CIV,9,FW,Ange-Yoan,Bonny,2003-10-25,Inter Milan
+CIV,10,FW,Simon,Adingra,2002-01-01,Monaco
+CIV,11,FW,Yan,Diomande,2006-11-14,RB Leipzig
+CIV,12,FW,Elye,Wahi,2003-01-02,Nice
+CIV,13,DF,Christopher,Opéri,1997-04-29,İstanbul Başakşehir
+CIV,14,FW,Oumar,Diakité,2003-12-20,Cercle Brugge
+CIV,15,FW,Amad,Diallo,2002-07-11,Manchester United
+CIV,16,GK,Mohamed,Koné,2002-03-07,Charleroi
+CIV,17,DF,Guéla,Doué,2002-10-17,Strasbourg
+CIV,18,MF,Ibrahim,Sangaré,1997-12-02,Nottingham Forest
+CIV,19,FW,Nicolas,Pépé,1995-05-29,Villarreal
+CIV,20,DF,Emmanuel,Agbadou,1997-06-17,Beşiktaş
+CIV,21,DF,Evan,Ndicka,1999-08-20,Roma
+CIV,22,FW,Evann,Guessand,2001-07-01,Crystal Palace
+CIV,23,GK,Alban,Lafont,1999-01-23,Panathinaikos
+CIV,24,FW,Bazoumana,Touré,2006-03-02,TSG Hoffenheim
+CIV,25,MF,Parfait,Guiagon,2001-02-22,Charleroi
+CIV,26,MF,Christ,Inao Oulaï,2006-04-06,Trabzonspor
+JPN,1,GK,Zion,Suzuki,2002-08-21,Parma
+JPN,2,DF,Yukinari,Sugawara,2000-06-28,Werder Bremen
+JPN,3,DF,Shōgo,Taniguchi,1991-07-15,Sint-Truiden
+JPN,4,DF,Kō,Itakura,1997-01-27,Ajax
+JPN,5,DF,Yūto,Nagatomo,1986-09-12,FC Tokyo
+JPN,6,FW,Shūto,Machino,1999-09-30,Borussia Mönchengladbach
+JPN,7,MF,Ao,Tanaka,1998-09-10,Leeds United
+JPN,8,MF,Takefusa,Kubo,2001-06-04,Real Sociedad
+JPN,9,FW,Keisuke,Gotō,2005-06-03,Sint-Truiden
+JPN,10,MF,Ritsu,Dōan,1998-06-16,Eintracht Frankfurt
+JPN,11,MF,Daizen,Maeda,1997-10-20,Celtic
+JPN,12,GK,Keisuke,Ōsako,1999-07-28,Sanfrecce Hiroshima
+JPN,13,MF,Keito,Nakamura,2000-07-28,Reims
+JPN,14,MF,Junya,Itō,1993-03-09,Genk
+JPN,15,MF,Daichi,Kamada,1996-08-05,Crystal Palace
+JPN,16,DF,Tsuyoshi,Watanabe,1997-02-05,Feyenoord
+JPN,17,MF,Yuito,Suzuki,2001-10-25,SC Freiburg
+JPN,18,FW,Ayase,Ueda,1998-08-28,Feyenoord
+JPN,19,FW,Kōki,Ogawa,1997-08-08,NEC
+JPN,20,DF,Ayumu,Seko,2000-06-07,Le Havre
+JPN,21,DF,Hiroki,Itō,1999-05-12,Bayern Munich
+JPN,22,DF,Takehiro,Tomiyasu,1998-11-05,Ajax
+JPN,23,GK,Tomoki,Hayakawa,1999-03-03,Kashima Antlers
+JPN,24,MF,Kaishū,Sano,2000-12-30,Mainz 05
+JPN,25,DF,Junnosuke,Suzuki,2003-07-12,Copenhagen
+JPN,26,FW,Kento,Shiogai,2005-03-26,VfL Wolfsburg
+NED,1,GK,Bart,Verbruggen,2002-08-18,Brighton & Hove Albion
+NED,2,DF,Lutsharel,Geertruida,2000-07-18,Sunderland
+NED,3,MF,Marten,de Roon,1991-03-29,Atalanta
+NED,4,DF,Virgil,van Dijk,1991-07-08,Liverpool
+NED,5,DF,Nathan,Aké,1995-02-18,Manchester City
+NED,6,DF,Jan Paul,van Hecke,2000-06-08,Brighton & Hove Albion
+NED,7,MF,Justin,Kluivert,1999-05-05,Bournemouth
+NED,8,MF,Ryan,Gravenberch,2002-05-16,Liverpool
+NED,9,FW,Wout,Weghorst,1992-08-07,Ajax
+NED,10,FW,Memphis,Depay,1994-02-13,Corinthians
+NED,11,FW,Cody,Gakpo,1999-05-07,Liverpool
+NED,12,DF,Mats,Wieffer,1999-11-16,Brighton & Hove Albion
+NED,13,GK,Robin,Roefs,2003-01-17,Sunderland
+NED,14,MF,Tijjani,Reijnders,1998-07-29,Manchester City
+NED,15,DF,Micky,van de Ven,2001-04-19,Tottenham Hotspur
+NED,16,MF,Guus,Til,1997-12-22,PSV Eindhoven
+NED,17,FW,Noa,Lang,1999-06-17,Galatasaray
+NED,18,FW,Donyell,Malen,1999-01-19,Roma
+NED,19,FW,Brian,Brobbey,2002-02-01,Sunderland
+NED,20,MF,Teun,Koopmeiners,1998-02-28,Juventus
+NED,21,MF,Frenkie,de Jong,1997-05-12,Barcelona
+NED,22,DF,Denzel,Dumfries,1996-04-18,Inter Milan
+NED,23,GK,Mark,Flekken,1993-06-13,Bayer Leverkusen
+NED,24,FW,Crysencio,Summerville,2001-10-30,West Ham United
+NED,25,DF,Jorrel,Hato,2006-03-07,Chelsea
+NED,26,MF,Quinten,Timber,2001-06-17,Marseille
+SWE,1,GK,Jacob,Widell Zetterström,1998-07-11,Derby County
+SWE,2,DF,Gustaf,Lagerbielke,2000-04-10,Braga
+SWE,3,DF,Victor,Lindelöf,1994-07-17,Aston Villa
+SWE,4,DF,Isak,Hien,1999-01-13,Atalanta
+SWE,5,DF,Gabriel,Gudmundsson,1999-04-29,Leeds United
+SWE,6,DF,Herman,Johansson,1997-10-16,FC Dallas
+SWE,7,MF,Lucas,Bergvall,2006-02-02,Tottenham Hotspur
+SWE,8,DF,Daniel,Svensson,2002-02-12,Borussia Dortmund
+SWE,9,FW,Alexander,Isak,1999-09-21,Liverpool
+SWE,10,MF,Benjamin,Nygren,2001-07-08,Celtic
+SWE,11,FW,Anthony,Elanga,2002-04-27,Newcastle United
+SWE,12,GK,Viktor,Johansson,1998-09-14,Stoke City
+SWE,13,MF,Ken,Sema,1993-09-30,Pafos
+SWE,14,DF,Hjalmar,Ekdal,1998-10-21,Burnley
+SWE,15,DF,Carl,Starfelt,1995-06-01,Celta Vigo
+SWE,16,MF,Jesper,Karlström,1995-06-21,Udinese
+SWE,17,FW,Viktor,Gyökeres,1998-06-04,Arsenal
+SWE,18,MF,Yasin,Ayari,2003-10-06,Brighton & Hove Albion
+SWE,19,MF,Mattias,Svanberg,1999-01-05,VfL Wolfsburg
+SWE,20,DF,Eric,Smith,1997-01-08,FC St. Pauli
+SWE,21,DF,Alexander,Bernhardsson,1998-09-08,Holstein Kiel
+SWE,22,MF,Besfort,Zeneli,2002-11-21,Union Saint-Gilloise
+SWE,23,GK,Kristoffer,Nordfeldt,1989-06-23,AIK
+SWE,24,DF,Elliot,Stroud,2002-06-22,Mjällby AIF
+SWE,25,FW,Gustaf,Nilsson,1997-05-23,Club Brugge
+SWE,26,FW,Taha,Ali,1998-07-01,Malmö FF
+TUN,1,GK,Mouhib,Chamakh,2001-08-25,Club Africain
+TUN,2,DF,Ali,Abdi,1993-12-20,Nice
+TUN,3,DF,Montassar,Talbi,1998-05-26,Lorient
+TUN,4,DF,Omar,Rekik,2001-12-20,Maribor
+TUN,5,DF,Adem,Arous,2004-07-17,Kasımpaşa
+TUN,6,DF,Dylan,Bronn,1995-06-19,Servette
+TUN,7,FW,Elias,Achouri,1999-02-10,Copenhagen
+TUN,8,FW,Elias,Saad,1999-12-27,Hannover 96
+TUN,9,FW,Hazem,Mastouri,1997-06-18,Dynamo Makhachkala
+TUN,10,MF,Hannibal,Mejbri,2003-01-21,Burnley
+TUN,11,MF,Ismaël,Gharbi,2004-04-10,FC Augsburg
+TUN,12,DF,Mortadha,Ben Ouanes,1994-07-02,Kasımpaşa
+TUN,13,MF,Rani,Khedira,1994-01-27,Union Berlin
+TUN,14,MF,Khalil,Ayari,2005-02-02,Paris Saint-Germain
+TUN,15,MF,Mohamed,Belhadj Mahmoud,2000-04-24,Lugano
+TUN,16,GK,Aymen,Dahmen,1997-01-28,CS Sfaxien
+TUN,17,MF,Ellyes,Skhiri,1995-05-10,Eintracht Frankfurt
+TUN,18,FW,Rayan,Elloumi,2007-09-17,Vancouver Whitecaps FC
+TUN,19,FW,Firas,Chaouat,1996-05-08,Club Africain
+TUN,20,DF,Yan,Valery,1999-02-22,Young Boys
+TUN,21,DF,Mohamed Amine,Ben Hamida,1995-12-15,Espérance de Tunis
+TUN,22,GK,Sabri,Ben Hessen,1996-06-13,Étoile du Sahel
+TUN,23,DF,Moutaz,Neffati,2004-09-04,IFK Norrköping
+TUN,24,DF,Raed,Chikhaoui,2004-06-09,US Monastir
+TUN,25,MF,Anis,Ben Slimane,2001-03-16,Norwich City
+TUN,26,MF,Sebastian,Tounekti,2002-07-13,Celtic
+BEL,1,GK,Thibaut,Courtois,1992-05-11,Real Madrid
+BEL,2,DF,Zeno,Debast,2003-10-24,Sporting CP
+BEL,3,DF,Arthur,Theate,2000-05-25,Eintracht Frankfurt
+BEL,4,DF,Brandon,Mechele,1993-01-28,Club Brugge
+BEL,5,DF,Maxim,De Cuyper,2000-12-22,Brighton & Hove Albion
+BEL,6,MF,Axel,Witsel,1989-01-12,Girona
+BEL,7,MF,Kevin,De Bruyne,1991-06-28,Napoli
+BEL,8,MF,Youri,Tielemans,1997-05-07,Aston Villa
+BEL,9,FW,Romelu,Lukaku,1993-05-13,Napoli
+BEL,10,FW,Leandro,Trossard,1994-12-04,Arsenal
+BEL,11,FW,Jérémy,Doku,2002-05-27,Manchester City
+BEL,12,GK,Senne,Lammens,2002-07-07,Manchester United
+BEL,13,GK,Mike,Penders,2005-07-31,Strasbourg
+BEL,14,FW,Dodi,Lukébakio,1997-09-24,Benfica
+BEL,15,DF,Thomas,Meunier,1991-09-12,Lille
+BEL,16,DF,Koni,De Winter,2002-06-12,AC Milan
+BEL,17,FW,Charles,De Ketelaere,2001-03-10,Atalanta
+BEL,18,DF,Joaquin,Seys,2005-03-28,Club Brugge
+BEL,19,MF,Diego,Moreira,2004-08-06,Strasbourg
+BEL,20,MF,Hans,Vanaken,1992-08-24,Club Brugge
+BEL,21,DF,Timothy,Castagne,1995-12-05,Fulham
+BEL,22,MF,Alexis,Saelemaekers,1999-06-27,AC Milan
+BEL,23,MF,Nicolas,Raskin,2001-02-23,Rangers
+BEL,24,MF,Amadou,Onana,2001-08-16,Aston Villa
+BEL,25,DF,Nathan,Ngoy,2003-06-10,Lille
+BEL,26,FW,Matias,Fernandez-Pardo,2005-02-03,Lille
+EGY,1,GK,Mohamed El,Shenawy,1988-12-18,Al Ahly
+EGY,2,DF,Yasser,Ibrahim,1993-02-10,Al Ahly
+EGY,3,DF,Mohamed,Hany,1996-02-02,Al Ahly
+EGY,4,DF,Hossam,Abdelmaguid,2001-04-30,Zamalek
+EGY,5,DF,Ramy,Rabia,1993-05-20,Al Ain
+EGY,6,DF,Mohamed,Abdelmonem,1999-02-01,Nice
+EGY,7,FW,Trézéguet,Trézéguet,1994-10-01,Al Ahly
+EGY,8,MF,Emam,Ashour,1998-02-20,Al Ahly
+EGY,9,FW,Hamza,Abdelkarim,2008-01-01,Barcelona B
+EGY,10,FW,Mohamed,Salah,1992-06-15,Liverpool
+EGY,11,MF,Mostafa,Ziko,1997-04-27,Pyramids
+EGY,12,FW,Haissem,Hassan,2002-02-08,Oviedo
+EGY,13,DF,Ahmed,Fatouh,1998-03-22,Zamalek
+EGY,14,MF,Hamdy,Fathy,1994-09-29,Al-Wakrah
+EGY,15,DF,Karim,Hafez,1996-03-12,Pyramids
+EGY,16,GK,El Mahdy,Soliman,1987-06-08,Zamalek
+EGY,17,MF,Mohanad,Lasheen,1996-05-29,Pyramids
+EGY,18,MF,Nabil,Emad,1996-04-06,Al-Najma
+EGY,19,MF,Marwan,Attia,1998-08-01,Al Ahly
+EGY,20,FW,Ibrahim,Adel,2001-04-23,Nordsjælland
+EGY,21,MF,Mahmoud,Saber,2001-07-30,ZED
+EGY,22,FW,Omar,Marmoush,1999-02-07,Manchester City
+EGY,23,GK,Mostafa,Shobeir,2000-05-15,Al Ahly
+EGY,24,DF,Tarek,Alaa,2002-01-05,ZED
+EGY,25,FW,Zizo,Zizo,1996-01-10,Al Ahly
+EGY,26,GK,Mohamed,Alaa,1999-01-01,El Gouna
+IRN,1,GK,Alireza,Beiranvand,1992-09-21,Tractor
+IRN,2,DF,Saleh,Hardani,1998-12-26,Esteghlal
+IRN,3,DF,Ehsan,Hajsafi,1990-02-25,Sepahan
+IRN,4,DF,Shojae,Khalilzadeh,1989-05-14,Tractor
+IRN,5,DF,Milad,Mohammadi,1993-09-29,Persepolis
+IRN,6,MF,Saeid,Ezatolahi,1996-10-01,Shabab Al Ahli
+IRN,7,MF,Alireza,Jahanbakhsh,1993-08-11,Dender EH
+IRN,8,MF,Mohammad,Mohebi,1998-12-20,Rostov
+IRN,9,FW,Mehdi,Taremi,1992-07-18,Olympiacos
+IRN,10,FW,Mehdi,Ghayedi,1998-12-05,Al Nasr
+IRN,11,FW,Ali,Alipour,1995-11-11,Persepolis
+IRN,12,GK,Payam,Niazmand,1995-04-06,Persepolis
+IRN,13,DF,Hossein,Kanaanizadegan,1994-03-23,Persepolis
+IRN,14,MF,Saman,Ghoddos,1993-09-06,Kalba
+IRN,15,MF,Rouzbeh,Cheshmi,1993-07-24,Esteghlal
+IRN,16,MF,Mahdi,Torabi,1994-09-10,Tractor
+IRN,17,DF,Arya,Yousefi,2002-04-22,Sepahan
+IRN,18,FW,Amirhossein,Hosseinzadeh,2000-10-30,Tractor
+IRN,19,DF,Ali,Nemati,1996-02-08,Foolad
+IRN,20,FW,Shahriyar,Moghanlou,1994-12-21,Kalba
+IRN,21,MF,Mohammad,Ghorbani,2001-10-07,Al Wahda
+IRN,22,GK,Hossein,Hosseini,1992-06-30,Sepahan
+IRN,23,DF,Ramin,Rezaeian,1990-03-21,Foolad
+IRN,24,FW,Dennis,Eckert,1997-01-09,Standard Liège
+IRN,25,DF,Danial,Eiri,2003-10-26,Malavan
+IRN,26,MF,Amirmohammad,Razzaghinia,2006-04-11,Esteghlal
+NZL,1,GK,Max,Crocombe,1993-08-12,Millwall
+NZL,2,DF,Tim,Payne,1994-01-10,Wellington Phoenix
+NZL,3,DF,Francis,de Vries,1994-11-28,Auckland FC
+NZL,4,DF,Tyler,Bindon,2005-01-27,Sheffield United
+NZL,5,DF,Michael,Boxall,1988-08-18,Minnesota United FC
+NZL,6,MF,Joe,Bell,1999-04-27,Viking
+NZL,7,FW,Logan,Rogerson,1998-05-28,Auckland FC
+NZL,8,MF,Marko,Stamenić,2002-02-19,Swansea City
+NZL,9,FW,Chris,Wood,1991-12-07,Nottingham Forest
+NZL,10,MF,Sarpreet,Singh,1999-02-20,Wellington Phoenix
+NZL,11,MF,Elijah,Just,2000-05-01,Motherwell
+NZL,12,GK,Alex,Paulsen,2002-07-04,Lechia Gdańsk
+NZL,13,DF,Liberato,Cacace,2000-09-27,Wrexham
+NZL,14,MF,Alex,Rufer,1996-06-12,Wellington Phoenix
+NZL,15,DF,Nando,Pijnaker,1999-02-25,Auckland FC
+NZL,16,DF,Finn,Surman,2003-09-23,Portland Timbers
+NZL,17,FW,Kosta,Barbarouses,1990-02-19,Western Sydney Wanderers
+NZL,18,FW,Ben,Waine,2001-06-11,Port Vale
+NZL,19,MF,Ben,Old,2002-08-13,Saint-Étienne
+NZL,20,MF,Callum,McCowatt,1999-04-30,Silkeborg
+NZL,21,FW,Jesse,Randall,2002-08-19,Auckland FC
+NZL,22,GK,Michael,Woud,1999-01-16,Auckland FC
+NZL,23,MF,Ryan,Thomas,1994-12-20,PEC Zwolle
+NZL,24,DF,Callan,Elliot,1999-07-07,Auckland FC
+NZL,25,MF,Lachlan,Bayliss,2002-07-24,Newcastle Jets
+NZL,26,DF,Tommy,Smith,1990-03-31,Braintree Town
+CPV,1,GK,Vozinha,Vozinha,1986-06-03,Chaves
+CPV,2,DF,Stopira,Stopira,1988-05-20,Torreense
+CPV,3,DF,Diney,Diney,1995-01-17,Al Bataeh
+CPV,4,DF,Pico,Pico,1992-06-17,Shamrock Rovers
+CPV,5,DF,Logan,Costa,2001-04-01,Villarreal
+CPV,6,MF,Kevin,Pina,1997-01-27,Krasnodar
+CPV,7,MF,Jovane,Cabral,1998-06-14,Estrela Amadora
+CPV,8,MF,João,Paulo,1998-05-26,FCSB
+CPV,9,FW,Gilson,Benchimol,2001-12-29,Akron Tolyatti
+CPV,10,MF,Jamiro,Monteiro,1993-11-23,PEC Zwolle
+CPV,11,MF,Garry,Rodrigues,1990-11-27,Apollon Limassol
+CPV,12,GK,Márcio,Rosa,1997-02-23,Montana
+CPV,13,DF,Sidny,Lopes Cabral,2002-09-18,Benfica
+CPV,14,MF,Deroy,Duarte,1999-07-04,Ludogorets Razgrad
+CPV,15,MF,Laros,Duarte,1997-02-28,Puskás Akadémia
+CPV,16,MF,Yannick,Semedo,1995-12-29,Farense
+CPV,17,MF,Willy,Semedo,1994-04-27,Omonia
+CPV,18,MF,Telmo,Arcanjo,2001-06-21,Vitória de Guimarães
+CPV,19,FW,Dailon,Livramento,2001-05-04,Casa Pia
+CPV,20,FW,Ryan,Mendes,1990-01-08,Iğdır
+CPV,21,MF,Nuno,da Costa,1991-02-10,İstanbul Başakşehir
+CPV,22,DF,Steven,Moreira,1994-08-13,Columbus Crew
+CPV,23,GK,CJ,dos Santos,2000-08-24,San Diego FC
+CPV,24,DF,Wagner,Pina,2002-11-03,Trabzonspor
+CPV,25,DF,Kelvin,Pires,2000-06-05,SJK
+CPV,26,MF,Hélio,Varela,2002-05-03,Maccabi Tel Aviv
+KSA,1,GK,Nawaf,Al-Aqidi,2000-05-10,Al-Nassr
+KSA,2,DF,Ali,Majrashi,1999-10-02,Al-Ahli
+KSA,3,DF,Ali,Lajami,1996-04-24,Al-Hilal
+KSA,4,DF,Abdulelah,Al-Amri,1997-01-15,Al-Nassr
+KSA,5,DF,Hassan,Al-Tambakti,1999-02-09,Al-Hilal
+KSA,6,MF,Nasser,Al-Dawsari,1998-12-19,Al-Hilal
+KSA,7,MF,Musab,Al-Juwayr,2003-06-20,Al-Qadsiah
+KSA,8,FW,Ayman,Yahya,2001-05-14,Al-Nassr
+KSA,9,FW,Firas,Al-Buraikan,2000-05-14,Al-Ahli
+KSA,10,FW,Salem,Al-Dawsari,1991-08-19,Al-Hilal
+KSA,11,FW,Saleh,Al-Shehri,1993-11-01,Al-Ittihad
+KSA,12,DF,Saud,Abdulhamid,1999-07-18,Lens
+KSA,13,DF,Nawaf,Boushal,1999-09-16,Al-Nassr
+KSA,14,DF,Hassan,Kadesh,1992-09-26,Al-Ittihad
+KSA,15,MF,Abdullah,Al-Khaibari,1996-08-16,Al-Nassr
+KSA,16,MF,Ziyad,Al-Johani,2001-11-11,Al-Ahli
+KSA,17,FW,Khalid,Al-Ghannam,2000-11-08,Al-Ettifaq
+KSA,18,MF,Alaa,Al-Hejji,1995-12-03,Neom
+KSA,19,FW,Abdullah,Al-Hamdan,1999-09-13,Al-Nassr
+KSA,20,FW,Sultan,Mandash,1994-10-17,Al-Hilal
+KSA,21,GK,Mohammed,Al-Owais,1991-10-10,Al-Ula
+KSA,22,GK,Ahmed,Al-Kassar,1991-05-08,Al-Qadsiah
+KSA,23,MF,Mohamed,Kanno,1994-09-22,Al-Hilal
+KSA,24,DF,Moteb,Al-Harbi,2000-02-20,Al-Hilal
+KSA,25,DF,Jehad,Thakri,2001-07-21,Al-Qadsiah
+KSA,26,DF,Mohammed,Abu Al-Shamat,2002-08-11,Al-Qadsiah
+ESP,1,GK,David,Raya,1995-09-15,Arsenal
+ESP,2,DF,Marc,Pubill,2003-06-20,Atlético Madrid
+ESP,3,DF,Álex,Grimaldo,1995-09-20,Bayer Leverkusen
+ESP,4,DF,Eric,García,2001-01-09,Barcelona
+ESP,5,DF,Marcos,Llorente,1995-01-30,Atlético Madrid
+ESP,6,MF,Mikel,Merino,1996-06-22,Arsenal
+ESP,7,FW,Ferran,Torres,2000-02-29,Barcelona
+ESP,8,MF,Fabián,Ruiz,1996-04-03,Paris Saint-Germain
+ESP,9,MF,Gavi,Gavi,2004-08-05,Barcelona
+ESP,10,FW,Dani,Olmo,1998-05-07,Barcelona
+ESP,11,FW,Yéremy,Pino,2002-10-20,Crystal Palace
+ESP,12,DF,Pedro,Porro,1999-09-13,Tottenham Hotspur
+ESP,13,GK,Joan,Garcia,2001-05-04,Barcelona
+ESP,14,DF,Aymeric,Laporte,1994-05-27,Athletic Bilbao
+ESP,15,MF,Álex,Baena,2001-07-20,Atlético Madrid
+ESP,16,MF,Rodri,Rodri,1996-06-22,Manchester City
+ESP,17,FW,Nico,Williams,2002-07-12,Athletic Bilbao
+ESP,18,MF,Martín,Zubimendi,1999-02-02,Arsenal
+ESP,19,FW,Lamine,Yamal,2007-07-13,Barcelona
+ESP,20,MF,Pedri,Pedri,2002-11-25,Barcelona
+ESP,21,FW,Mikel,Oyarzabal,1997-04-21,Real Sociedad
+ESP,22,DF,Pau,Cubarsí,2007-01-22,Barcelona
+ESP,23,GK,Unai,Simón,1997-06-11,Athletic Bilbao
+ESP,24,DF,Marc,Cucurella,1998-07-22,Chelsea
+ESP,25,FW,Víctor,Muñoz,2003-07-13,Osasuna
+ESP,26,FW,Borja,Iglesias,1993-01-17,Celta Vigo
+URU,1,GK,Sergio,Rochet,1993-03-23,Internacional
+URU,2,DF,José María,Giménez,1995-01-20,Atlético Madrid
+URU,3,DF,Sebastián,Cáceres,1999-08-18,América
+URU,4,DF,Ronald,Araújo,1999-03-07,Barcelona
+URU,5,MF,Manuel,Ugarte,2001-04-11,Manchester United
+URU,6,MF,Rodrigo,Bentancur,1997-06-25,Tottenham Hotspur
+URU,7,MF,Nicolás,de la Cruz,1997-06-01,Flamengo
+URU,8,MF,Federico,Valverde,1998-07-22,Real Madrid
+URU,9,FW,Darwin,Núñez,1999-06-24,Al-Hilal
+URU,10,MF,Giorgian,de Arrascaeta,1994-06-01,Flamengo
+URU,11,FW,Facundo,Pellistri,2001-12-20,Panathinaikos
+URU,12,GK,Santiago,Mele,1997-09-06,Monterrey
+URU,13,DF,Guillermo,Varela,1993-03-24,Flamengo
+URU,14,MF,Agustín,Canobbio,1998-10-01,Fluminense
+URU,15,MF,Emiliano,Martínez,1999-08-17,Palmeiras
+URU,16,DF,Mathías,Olivera,1997-10-31,Napoli
+URU,17,DF,Matías,Viña,1997-11-09,River Plate
+URU,18,FW,Brian,Rodríguez,2000-05-20,América
+URU,19,FW,Rodrigo,Aguirre,1994-10-01,Tigres UANL
+URU,20,MF,Maximiliano,Araújo,2000-02-15,Sporting CP
+URU,21,FW,Federico,Viñas,1998-06-30,Oviedo
+URU,22,MF,Joaquín,Piquerez,1998-08-24,Palmeiras
+URU,23,GK,Fernando,Muslera,1986-06-16,Estudiantes
+URU,24,DF,Santiago,Bueno,1998-11-09,Wolverhampton Wanderers
+URU,25,MF,Juan Manuel,Sanabria,2000-03-29,Real Salt Lake
+URU,26,MF,Rodrigo,Zalazar,1999-08-12,Braga
+FRA,1,GK,Brice,Samba,1994-04-25,Rennes
+FRA,2,DF,Malo,Gusto,2003-05-19,Chelsea
+FRA,3,DF,Lucas,Digne,1993-07-20,Aston Villa
+FRA,4,DF,Dayot,Upamecano,1998-10-27,Bayern Munich
+FRA,5,DF,Jules,Koundé,1998-11-12,Barcelona
+FRA,6,MF,Manu,Koné,2001-05-17,Roma
+FRA,7,FW,Ousmane,Dembélé,1997-05-15,Paris Saint-Germain
+FRA,8,MF,Aurélien,Tchouaméni,2000-01-27,Real Madrid
+FRA,9,FW,Marcus,Thuram,1997-08-06,Inter Milan
+FRA,10,FW,Kylian,Mbappé,1998-12-20,Real Madrid
+FRA,11,FW,Michael,Olise,2001-12-12,Bayern Munich
+FRA,12,FW,Bradley,Barcola,2002-09-02,Paris Saint-Germain
+FRA,13,MF,N'Golo,Kanté,1991-03-29,Fenerbahçe
+FRA,14,MF,Adrien,Rabiot,1995-04-03,AC Milan
+FRA,15,DF,Ibrahima,Konaté,1999-05-25,Liverpool
+FRA,16,GK,Mike,Maignan,1995-07-03,AC Milan
+FRA,17,DF,William,Saliba,2001-03-24,Arsenal
+FRA,18,MF,Warren,Zaïre-Emery,2006-03-08,Paris Saint-Germain
+FRA,19,DF,Théo,Hernandez,1997-10-06,Al-Hilal
+FRA,20,FW,Désiré,Doué,2005-06-03,Paris Saint-Germain
+FRA,21,DF,Lucas,Hernandez,1996-02-14,Paris Saint-Germain
+FRA,22,FW,Jean-Philippe,Mateta,1997-06-28,Crystal Palace
+FRA,23,GK,Robin,Risser,2004-12-02,Lens
+FRA,24,MF,Rayan,Cherki,2003-08-17,Manchester City
+FRA,25,MF,Maghnes,Akliouche,2002-02-25,Monaco
+FRA,26,DF,Maxence,Lacroix,2000-04-06,Crystal Palace
+IRQ,1,GK,Fahad,Talib,1994-10-21,Al-Talaba
+IRQ,2,DF,Rebin,Sulaka,1992-04-12,Port
+IRQ,3,DF,Hussein,Ali,2002-03-01,Pogoń Szczecin
+IRQ,4,DF,Zaid,Tahseen,2001-01-29,Pakhtakor
+IRQ,5,DF,Akam,Hashim,1998-08-16,Al-Zawraa
+IRQ,6,DF,Manaf,Younis,1996-11-16,Al-Shorta
+IRQ,7,MF,Youssef,Amyn,2003-08-21,AEK Larnaca
+IRQ,8,MF,Ibrahim,Bayesh,2000-05-01,Al Dhafra
+IRQ,9,FW,Ali,Al-Hamadi,2002-03-01,Luton Town
+IRQ,10,FW,Mohanad,Ali,2000-06-20,Dibba
+IRQ,11,FW,Ahmed,Qasem,2003-07-12,Nashville SC
+IRQ,12,GK,Jalal,Hassan,1991-05-18,Al-Zawraa
+IRQ,13,FW,Ali,Yousif,1996-01-19,Al-Talaba
+IRQ,14,MF,Zidane,Iqbal,2003-04-27,Utrecht
+IRQ,15,DF,Ahmed,Maknzi,2001-09-24,Al-Karma
+IRQ,16,MF,Amir,Al-Ammari,1997-07-27,Cracovia
+IRQ,17,FW,Ali,Jasim,2004-01-20,Al-Najma
+IRQ,18,FW,Aymen,Hussein,1996-03-22,Al-Karma
+IRQ,19,MF,Kevin,Yakob,2000-10-10,AGF
+IRQ,20,MF,Aimar,Sher,2002-12-20,Sarpsborg 08
+IRQ,21,FW,Marko,Farji,2004-03-16,Venezia
+IRQ,22,GK,Ahmed,Basil,1996-08-19,Al-Shorta
+IRQ,23,DF,Merchas,Doski,1999-12-07,Viktoria Plzeň
+IRQ,24,MF,Zaid,Ismail,2002-01-03,Al-Talaba
+IRQ,25,DF,Mustafa,Saadoon,2001-05-25,Al-Shorta
+IRQ,26,DF,Frans,Putros,1993-07-14,Persib
+NOR,1,GK,Ørjan,Nyland,1990-09-10,Sevilla
+NOR,2,MF,Morten,Thorsby,1996-05-05,Cremonese
+NOR,3,DF,Kristoffer,Ajer,1998-04-17,Brentford
+NOR,4,DF,Leo,Østigård,1999-11-28,Genoa
+NOR,5,DF,David,Møller Wolfe,2002-04-23,Wolverhampton Wanderers
+NOR,6,MF,Patrick,Berg,1997-11-24,Bodø/Glimt
+NOR,7,FW,Alexander,Sørloth,1995-12-05,Atlético Madrid
+NOR,8,MF,Sander,Berge,1998-02-14,Fulham
+NOR,9,FW,Erling,Haaland,2000-07-21,Manchester City
+NOR,10,MF,Martin,Ødegaard,1998-12-17,Arsenal
+NOR,11,FW,Jørgen,Strand Larsen,2000-02-06,Crystal Palace
+NOR,12,GK,Sander,Tangvik,2002-11-29,Hamburger SV
+NOR,13,GK,Egil,Selvik,1997-07-30,Watford
+NOR,14,MF,Fredrik,Aursnes,1995-12-10,Benfica
+NOR,15,DF,Fredrik André,Bjørkan,1998-08-21,Bodø/Glimt
+NOR,16,DF,Marcus Holmgren,Pedersen,2000-07-16,Torino
+NOR,17,DF,Torbjørn,Heggem,1999-01-12,Bologna
+NOR,18,MF,Kristian,Thorstvedt,1999-03-13,Sassuolo
+NOR,19,MF,Thelo,Aasgaard,2002-05-02,Rangers
+NOR,20,MF,Antonio,Nusa,2005-04-17,RB Leipzig
+NOR,21,MF,Andreas,Schjelderup,2004-06-01,Benfica
+NOR,22,MF,Oscar,Bobb,2003-07-12,Fulham
+NOR,23,MF,Jens Petter,Hauge,1999-10-12,Bodø/Glimt
+NOR,24,DF,Sondre,Langås,2001-02-02,Derby County
+NOR,25,DF,Henrik,Falchener,2003-05-08,Viking
+NOR,26,DF,Julian,Ryerson,1997-11-17,Borussia Dortmund
+SEN,1,GK,Yehvann,Diouf,1999-11-16,Nice
+SEN,2,DF,Mamadou,Sarr,2005-08-29,Chelsea
+SEN,3,DF,Kalidou,Koulibaly,1991-06-20,Al-Hilal
+SEN,4,DF,Abdoulaye,Seck,1992-06-04,Maccabi Haifa
+SEN,5,MF,Idrissa,Gueye,1989-09-26,Everton
+SEN,6,MF,Pathé,Ciss,1994-03-16,Rayo Vallecano
+SEN,7,FW,Assane,Diao,2005-09-07,Como
+SEN,8,MF,Lamine,Camara,2004-01-01,Monaco
+SEN,9,FW,Bamba,Dieng,2000-03-23,Lorient
+SEN,10,FW,Sadio,Mané,1992-04-10,Al-Nassr
+SEN,11,FW,Nicolas,Jackson,2001-06-20,Bayern Munich
+SEN,12,FW,Cherif,Ndiaye,1996-01-23,Samsunspor
+SEN,13,FW,Iliman,Ndiaye,2000-03-06,Everton
+SEN,14,DF,Ismail,Jakobs,1999-08-17,Galatasaray
+SEN,15,DF,Krépin,Diatta,1999-02-25,Monaco
+SEN,16,GK,Édouard,Mendy,1992-03-01,Al-Ahli
+SEN,17,MF,Pape Matar,Sarr,2002-09-14,Tottenham Hotspur
+SEN,18,FW,Ismaïla,Sarr,1998-02-25,Crystal Palace
+SEN,19,DF,Moussa,Niakhaté,1996-03-08,Lyon
+SEN,20,FW,Ibrahim,Mbaye,2008-01-24,Paris Saint-Germain
+SEN,21,MF,Habib,Diarra,2004-01-03,Sunderland
+SEN,22,MF,Bara,Sapoko Ndiaye,2007-12-31,Bayern Munich
+SEN,23,GK,Mory,Diaw,1993-06-22,Le Havre
+SEN,24,DF,Antoine,Mendy,2004-05-27,Nice
+SEN,25,DF,El Hadji Malick,Diouf,2004-12-29,West Ham United
+SEN,26,MF,Pape,Gueye,1999-01-24,Villarreal
+ALG,1,GK,Melvin,Mastil,2000-02-19,Stade Nyonnais
+ALG,2,DF,Aïssa,Mandi,1991-10-22,Lille
+ALG,3,DF,Achref,Abada,1999-06-15,USM Alger
+ALG,4,DF,Mohamed Amine,Tougai,2000-01-22,Espérance de Tunis
+ALG,5,DF,Zineddine,Belaïd,1999-03-20,JS Kabylie
+ALG,6,MF,Ramiz,Zerrouki,1998-05-26,Twente
+ALG,7,FW,Riyad,Mahrez,1991-02-21,Al-Ahli
+ALG,8,MF,Houssem,Aouar,1998-06-30,Al-Ittihad
+ALG,9,FW,Amine,Gouiri,2000-02-16,Marseille
+ALG,10,MF,Farès,Chaïbi,2002-11-28,Eintracht Frankfurt
+ALG,11,FW,Anis,Hadj Moussa,2002-02-11,Feyenoord
+ALG,12,FW,Nadhir,Benbouali,2000-04-17,Győri ETO
+ALG,13,DF,Jaouen,Hadjam,2003-03-26,Young Boys
+ALG,14,MF,Hicham,Boudaoui,1999-09-23,Nice
+ALG,15,DF,Rayan,Aït-Nouri,2001-06-06,Manchester City
+ALG,16,GK,Oussama,Benbot,1994-10-11,USM Alger
+ALG,17,DF,Rafik,Belghali,2002-06-07,Hellas Verona
+ALG,18,FW,Mohamed,Amoura,2000-05-09,VfL Wolfsburg
+ALG,19,MF,Nabil,Bentaleb,1994-11-24,Lille
+ALG,20,FW,Adil,Boulbina,2003-05-02,Al-Duhail
+ALG,21,DF,Ramy,Bensebaini,1995-04-16,Borussia Dortmund
+ALG,22,MF,Ibrahim,Maza,2005-11-24,Bayer Leverkusen
+ALG,23,GK,Luca,Zidane,1998-05-13,Granada
+ALG,24,MF,Yacine,Titraoui,2003-07-26,Charleroi
+ALG,25,FW,Farès,Ghedjemis,2002-09-06,Frosinone
+ALG,26,DF,Samir,Chergui,1999-02-06,Paris FC
+ARG,1,GK,Juan,Musso,1994-05-06,Atlético Madrid
+ARG,2,DF,Marcos,Senesi,1997-05-10,Bournemouth
+ARG,3,DF,Nicolás,Tagliafico,1992-08-31,Lyon
+ARG,4,DF,Gonzalo,Montiel,1997-01-01,River Plate
+ARG,5,MF,Leandro,Paredes,1994-06-29,Boca Juniors
+ARG,6,DF,Lisandro,Martínez,1998-01-18,Manchester United
+ARG,7,MF,Rodrigo,De Paul,1994-05-24,Inter Miami CF
+ARG,8,MF,Valentín,Barco,2004-07-23,Strasbourg
+ARG,9,FW,Julián,Alvarez,2000-01-31,Atlético Madrid
+ARG,10,FW,Lionel,Messi,1987-06-24,Inter Miami CF
+ARG,11,MF,Giovani,Lo Celso,1996-04-09,Real Betis
+ARG,12,GK,Gerónimo,Rulli,1992-05-20,Marseille
+ARG,13,DF,Cristian,Romero,1998-04-27,Tottenham Hotspur
+ARG,14,MF,Exequiel,Palacios,1998-10-05,Bayer Leverkusen
+ARG,15,MF,Nicolás,González,1998-04-06,Atlético Madrid
+ARG,16,FW,Thiago,Almada,2001-04-26,Atlético Madrid
+ARG,17,FW,Giuliano,Simeone,2002-12-18,Atlético Madrid
+ARG,18,FW,Nico,Paz,2004-09-08,Como
+ARG,19,DF,Nicolás,Otamendi,1988-02-12,Benfica
+ARG,20,MF,Alexis,Mac Allister,1998-12-24,Liverpool
+ARG,21,FW,José Manuel,López,2000-12-06,Palmeiras
+ARG,22,FW,Lautaro,Martínez,1997-08-22,Inter Milan
+ARG,23,GK,Emiliano,Martínez,1992-09-02,Aston Villa
+ARG,24,MF,Enzo,Fernández,2001-01-17,Chelsea
+ARG,25,DF,Facundo,Medina,1999-05-28,Marseille
+ARG,26,DF,Nahuel,Molina,1998-04-06,Atlético Madrid
+AUT,1,GK,Alexander,Schlager,1996-02-01,Red Bull Salzburg
+AUT,2,DF,David,Affengruber,2001-03-19,Elche
+AUT,3,DF,Kevin,Danso,1998-09-19,Tottenham Hotspur
+AUT,4,MF,Xaver,Schlager,1997-09-28,RB Leipzig
+AUT,5,DF,Stefan,Posch,1997-05-14,Mainz 05
+AUT,6,MF,Nicolas,Seiwald,2001-05-04,RB Leipzig
+AUT,7,FW,Marko,Arnautović,1989-04-19,Red Star Belgrade
+AUT,8,DF,David,Alaba,1992-06-24,Real Madrid
+AUT,9,MF,Marcel,Sabitzer,1994-03-17,Borussia Dortmund
+AUT,10,MF,Florian,Grillitsch,1995-08-07,Braga
+AUT,11,FW,Michael,Gregoritsch,1994-04-18,FC Augsburg
+AUT,12,GK,Florian,Wiegele,2001-03-21,Viktoria Plzeň
+AUT,13,GK,Patrick,Pentz,1997-01-02,Brøndby
+AUT,14,FW,Saša,Kalajdžić,1997-07-07,LASK
+AUT,15,DF,Philipp,Lienhart,1996-07-11,SC Freiburg
+AUT,16,DF,Phillipp,Mwene,1994-01-29,Mainz 05
+AUT,17,MF,Carney,Chukwuemeka,2003-10-20,Borussia Dortmund
+AUT,18,MF,Romano,Schmid,2000-01-27,Werder Bremen
+AUT,19,MF,Dejan,Ljubičić,1997-10-08,Schalke 04
+AUT,20,MF,Konrad,Laimer,1997-05-27,Bayern Munich
+AUT,21,FW,Patrick,Wimmer,2001-05-30,VfL Wolfsburg
+AUT,22,MF,Alexander,Prass,2001-05-26,TSG Hoffenheim
+AUT,23,DF,Marco,Friedl,1998-03-16,Werder Bremen
+AUT,24,MF,Paul,Wanner,2005-12-23,PSV Eindhoven
+AUT,25,DF,Michael,Svoboda,1998-10-15,Venezia
+AUT,26,MF,Alessandro,Schöpf,1994-02-07,Wolfsberger AC
+JOR,1,GK,Yazeed,Abulaila,1993-01-08,Al-Hussein
+JOR,2,DF,Mohammad,Abu Hashish,1995-05-09,Al-Karma
+JOR,3,DF,Abdallah,Nasib,1994-02-25,Al-Zawraa
+JOR,4,DF,Husam,Abu Dahab,2000-05-13,Al-Faisaly
+JOR,5,DF,Yazan,Al-Arab,1996-01-31,FC Seoul
+JOR,6,MF,Amer,Jamous,2002-07-03,Al-Zawraa
+JOR,7,FW,Mohammad,Abu Zrayq,1997-12-30,Raja Casablanca
+JOR,8,MF,Noor,Al-Rawabdeh,1997-02-24,Selangor
+JOR,9,FW,Ali,Olwan,2000-03-26,Al-Sailiya
+JOR,10,FW,Musa,Al-Taamari,1997-06-10,Rennes
+JOR,11,FW,Odeh,Al-Fakhouri,2005-11-22,Pyramids
+JOR,12,GK,Nour,Bani Attiah,1993-01-25,Al-Faisaly
+JOR,13,FW,Mahmoud,Al-Mardi,1993-10-06,Al-Hussein
+JOR,14,MF,Rajaei,Ayed,1993-07-25,Al-Hussein
+JOR,15,MF,Ibrahim,Sadeh,2000-04-27,Al-Karma
+JOR,16,DF,Mo,Abualnadi,2001-02-08,Selangor
+JOR,17,DF,Salim,Obaid,1992-01-17,Al-Hussein
+JOR,18,MF,Mohammad,Abu Ghoush,2005-07-13,Al-Hussein
+JOR,19,DF,Saed,Al-Rosan,1997-02-01,Al-Hussein
+JOR,20,MF,Mohannad,Abu Taha,2003-02-02,Al-Quwa Al-Jawiya
+JOR,21,MF,Nizar,Al-Rashdan,1999-03-23,Qatar SC
+JOR,22,GK,Abdallah,Al-Fakhouri,2000-01-22,Al-Wehdat
+JOR,23,DF,Ihsan,Haddad,1994-02-05,Al-Hussein
+JOR,24,FW,Ali,Azaizeh,2004-04-13,Al-Shabab
+JOR,25,MF,Mohammad,Al-Dawoud,1992-04-12,Al-Wehdat
+JOR,26,DF,Anas,Badawi,1997-09-13,Al-Faisaly
+COL,1,GK,David,Ospina,1988-08-31,Atlético Nacional
+COL,2,DF,Daniel,Muñoz,1996-05-26,Crystal Palace
+COL,3,DF,Jhon,Lucumí,1998-06-26,Bologna
+COL,4,DF,Santiago,Arias,1992-01-13,Independiente
+COL,5,MF,Kevin,Castaño,2000-09-29,River Plate
+COL,6,MF,Richard,Ríos,2000-06-02,Benfica
+COL,7,FW,Luis,Díaz,1997-01-13,Bayern Munich
+COL,8,MF,Jorge,Carrascal,1998-05-25,Flamengo
+COL,9,FW,Jhon,Córdoba,1993-05-11,Krasnodar
+COL,10,MF,James,Rodríguez,1991-07-12,Minnesota United FC
+COL,11,MF,Jhon,Arias,1997-09-21,Palmeiras
+COL,12,GK,Camilo,Vargas,1989-03-09,Atlas
+COL,13,DF,Yerry,Mina,1994-09-23,Cagliari
+COL,14,DF,Gustavo,Puerta,2003-07-23,Racing Santander
+COL,15,MF,Juan,Portilla,1998-09-12,Athletico Paranaense
+COL,16,MF,Jefferson,Lerma,1994-10-25,Crystal Palace
+COL,17,DF,Johan,Mojica,1992-08-21,Mallorca
+COL,18,DF,Willer,Ditta,1998-01-23,Cruz Azul
+COL,19,FW,Cucho,Hernández,1999-04-20,Real Betis
+COL,20,MF,Juan Fernando,Quintero,1993-01-18,River Plate
+COL,21,FW,Jaminton,Campaz,2000-05-24,Rosario Central
+COL,22,DF,Deiver,Machado,1993-09-02,Nantes
+COL,23,DF,Davinson,Sánchez,1996-06-12,Galatasaray
+COL,24,GK,Álvaro,Montero,1995-03-29,Vélez Sarsfield
+COL,25,FW,Luis,Suárez,1997-12-02,Sporting CP
+COL,26,FW,Andrés,Gómez,2002-09-12,Vasco da Gama
+COD,1,GK,Lionel,Mpasi,1994-08-01,Le Havre
+COD,2,DF,Aaron,Wan-Bissaka,1997-11-26,West Ham United
+COD,3,DF,Steve,Kapuadi,1998-04-30,Widzew Łódź
+COD,4,DF,Axel,Tuanzebe,1997-11-14,Burnley
+COD,5,DF,Dylan,Batubinsika,1996-02-15,AEL
+COD,6,MF,Ngal'ayel,Mukau,2004-11-03,Lille
+COD,7,MF,Nathanaël,Mbuku,2002-03-16,Montpellier
+COD,8,MF,Samuel,Moutoussamy,1996-08-12,Atromitos
+COD,9,FW,Brian,Cipenga,1998-03-11,Castellón
+COD,10,MF,Théo,Bongonda,1995-11-20,Spartak Moscow
+COD,11,FW,Gaël,Kakuta,1991-06-21,AEL
+COD,12,DF,Joris,Kayembe,1994-08-08,Genk
+COD,13,FW,Meschak,Elia,1997-08-06,Alanyaspor
+COD,14,MF,Noah,Sadiki,2004-12-17,Sunderland
+COD,15,MF,Aaron,Tshibola,1995-01-02,Kilmarnock
+COD,16,GK,Timothy,Fayulu,1999-07-24,Noah
+COD,17,FW,Cédric,Bakambu,1991-04-11,Real Betis
+COD,18,MF,Charles,Pickel,1997-05-15,Espanyol
+COD,19,FW,Fiston,Mayele,1994-06-24,Pyramids
+COD,20,FW,Yoane,Wissa,1996-09-03,Newcastle United
+COD,21,GK,Matthieu,Epolo,2005-01-15,Standard Liège
+COD,22,DF,Chancel,Mbemba,1994-08-08,Lille
+COD,23,FW,Simon,Banza,1996-08-13,Al Jazira
+COD,24,DF,Gédéon,Kalulu,1997-08-29,Aris Limassol
+COD,25,MF,Edo,Kayembe,1998-06-03,Watford
+COD,26,DF,Arthur,Masuaku,1993-11-07,Lens
+POR,1,GK,Diogo,Costa,1999-09-19,Porto
+POR,2,DF,Nélson,Semedo,1993-11-16,Fenerbahçe
+POR,3,DF,Rúben,Dias,1997-05-14,Manchester City
+POR,4,DF,Tomás,Araújo,2002-05-16,Benfica
+POR,5,DF,Diogo,Dalot,1999-03-18,Manchester United
+POR,6,MF,Matheus,Nunes,1998-08-27,Manchester City
+POR,7,FW,Cristiano,Ronaldo,1985-02-05,Al-Nassr
+POR,8,MF,Bruno,Fernandes,1994-09-08,Manchester United
+POR,9,FW,Gonçalo,Ramos,2001-06-20,Paris Saint-Germain
+POR,10,MF,Bernardo,Silva,1994-08-10,Manchester City
+POR,11,FW,João,Félix,1999-11-10,Al-Nassr
+POR,12,GK,José,Sá,1993-01-17,Wolverhampton Wanderers
+POR,13,DF,Renato,Veiga,2003-07-29,Villarreal
+POR,14,DF,Gonçalo,Inácio,2001-08-25,Sporting CP
+POR,15,MF,João,Neves,2004-09-27,Paris Saint-Germain
+POR,16,FW,Francisco,Trincão,1999-12-29,Sporting CP
+POR,17,FW,Rafael,Leão,1999-06-10,AC Milan
+POR,18,FW,Pedro,Neto,2000-03-09,Chelsea
+POR,19,FW,Gonçalo,Guedes,1996-11-29,Real Sociedad
+POR,20,DF,João,Cancelo,1994-05-27,Barcelona
+POR,21,MF,Rúben,Neves,1997-03-13,Al-Hilal
+POR,22,GK,Rui,Silva,1994-02-07,Sporting CP
+POR,23,MF,Vitinha,Vitinha,2000-02-13,Paris Saint-Germain
+POR,24,DF,Samú,Costa,2000-11-27,Mallorca
+POR,25,DF,Nuno,Mendes,2002-06-19,Paris Saint-Germain
+POR,26,FW,Francisco,Conceição,2002-12-14,Juventus
+UZB,1,GK,Utkir,Yusupov,1991-01-04,Navbahor Namangan
+UZB,2,DF,Abdukodir,Khusanov,2004-02-29,Manchester City
+UZB,3,DF,Khojiakbar,Alijonov,1997-04-19,Pakhtakor
+UZB,4,DF,Farrukh,Sayfiev,1991-01-17,Neftchi Fergana
+UZB,5,DF,Rustam,Ashurmatov,1996-07-07,Esteghlal
+UZB,6,MF,Akmal,Mozgovoy,1999-04-02,Pakhtakor
+UZB,7,MF,Otabek,Shukurov,1996-06-22,Baniyas
+UZB,8,MF,Jamshid,Iskanderov,1993-10-16,Neftchi Fergana
+UZB,9,MF,Odiljon,Hamrobekov,1996-02-13,Tractor
+UZB,10,MF,Ruslanbek,Jiyanov,2001-06-05,Navbahor Namangan
+UZB,11,MF,Oston,Urunov,2000-12-19,Persepolis
+UZB,12,GK,Abduvohid,Nematov,2001-03-20,Nasaf
+UZB,13,DF,Sherzod,Nasrullaev,1998-07-23,Nasaf
+UZB,14,FW,Eldor,Shomurodov,1995-06-29,İstanbul Başakşehir
+UZB,15,DF,Umar,Eshmurodov,1992-11-30,Nasaf
+UZB,16,GK,Botirali,Ergashev,1995-06-23,Neftchi Fergana
+UZB,17,MF,Dostonbek,Khamdamov,1996-07-24,Pakhtakor
+UZB,18,DF,Abdulla,Abdullaev,1997-09-01,Dibba
+UZB,19,MF,Azizjon,Ganiev,1998-02-22,Al Bataeh
+UZB,20,FW,Azizbek,Amonov,1997-10-30,Dinamo Samarqand
+UZB,21,FW,Igor,Sergeev,1993-04-30,Persepolis
+UZB,22,MF,Abbosbek,Fayzullaev,2003-10-03,İstanbul Başakşehir
+UZB,23,MF,Sherzod,Esanov,2003-02-01,Bukhara
+UZB,24,DF,Bekhruz,Karimov,2007-08-07,Surkhon Termiz
+UZB,25,DF,Avazbek,Ulmasaliev,2000-03-27,AGMK
+UZB,26,DF,Jakhongir,Urozov,2004-01-18,Dinamo Samarqand
+CRO,1,GK,Dominik,Livaković,1995-01-09,Dinamo Zagreb
+CRO,2,DF,Josip,Stanišić,2000-04-02,Bayern Munich
+CRO,3,DF,Marin,Pongračić,1997-09-11,Fiorentina
+CRO,4,DF,Joško,Gvardiol,2002-01-23,Manchester City
+CRO,5,DF,Duje,Ćaleta-Car,1996-09-17,Real Sociedad
+CRO,6,DF,Josip,Šutalo,2000-02-28,Ajax
+CRO,7,MF,Nikola,Moro,1998-03-12,Bologna
+CRO,8,MF,Mateo,Kovačić,1994-05-06,Manchester City
+CRO,9,FW,Andrej,Kramarić,1991-06-19,TSG Hoffenheim
+CRO,10,MF,Luka,Modrić,1985-09-09,AC Milan
+CRO,11,FW,Ante,Budimir,1991-07-22,Osasuna
+CRO,12,GK,Ivor,Pandur,2000-03-25,Hull City
+CRO,13,MF,Nikola,Vlašić,1997-10-04,Torino
+CRO,14,FW,Ivan,Perišić,1989-02-02,PSV Eindhoven
+CRO,15,MF,Mario,Pašalić,1995-02-09,Atalanta
+CRO,16,MF,Martin,Baturina,2003-02-16,Como
+CRO,17,MF,Petar,Sučić,2003-10-25,Inter Milan
+CRO,18,DF,Kristijan,Jakić,1997-05-14,FC Augsburg
+CRO,19,MF,Toni,Fruk,2001-03-09,Rijeka
+CRO,20,FW,Igor,Matanović,2003-03-31,SC Freiburg
+CRO,21,MF,Luka,Sučić,2002-09-08,Real Sociedad
+CRO,22,DF,Luka,Vušković,2007-02-24,Hamburger SV
+CRO,23,GK,Dominik,Kotarski,2000-02-10,Copenhagen
+CRO,24,FW,Marco,Pašalić,2000-09-14,Orlando City SC
+CRO,25,DF,Martin,Erlić,1998-01-24,Midtjylland
+CRO,26,FW,Petar,Musa,1998-03-04,FC Dallas
+ENG,1,GK,Jordan,Pickford,1994-03-07,Everton
+ENG,2,DF,Ezri,Konsa,1997-10-23,Aston Villa
+ENG,3,DF,Nico,O'Reilly,2005-03-21,Manchester City
+ENG,4,MF,Declan,Rice,1999-01-14,Arsenal
+ENG,5,DF,John,Stones,1994-05-28,Manchester City
+ENG,6,DF,Marc,Guéhi,2000-07-13,Manchester City
+ENG,7,FW,Bukayo,Saka,2001-09-05,Arsenal
+ENG,8,MF,Elliot,Anderson,2002-11-06,Nottingham Forest
+ENG,9,FW,Harry,Kane,1993-07-28,Bayern Munich
+ENG,10,MF,Jude,Bellingham,2003-06-29,Real Madrid
+ENG,11,FW,Marcus,Rashford,1997-10-31,Barcelona
+ENG,12,DF,Trevoh,Chalobah,1999-07-05,Chelsea
+ENG,13,GK,Dean,Henderson,1997-03-12,Crystal Palace
+ENG,14,MF,Jordan,Henderson,1990-06-17,Brentford
+ENG,15,DF,Dan,Burn,1992-05-09,Newcastle United
+ENG,16,MF,Kobbie,Mainoo,2005-04-19,Manchester United
+ENG,17,MF,Morgan,Rogers,2002-07-26,Aston Villa
+ENG,18,FW,Anthony,Gordon,2001-02-24,Newcastle United
+ENG,19,FW,Ollie,Watkins,1995-12-30,Aston Villa
+ENG,20,FW,Noni,Madueke,2002-03-10,Arsenal
+ENG,21,MF,Eberechi,Eze,1998-06-29,Arsenal
+ENG,22,FW,Ivan,Toney,1996-03-16,Al-Ahli
+ENG,23,GK,James,Trafford,2002-10-10,Manchester City
+ENG,24,DF,Reece,James,1999-12-08,Chelsea
+ENG,25,DF,Djed,Spence,2000-08-09,Tottenham Hotspur
+ENG,26,DF,Jarell,Quansah,2003-01-29,Bayer Leverkusen
+GHA,1,GK,Lawrence,Ati-Zigi,1996-11-29,St. Gallen
+GHA,2,DF,Alidu,Seidu,2000-06-04,Rennes
+GHA,3,MF,Caleb,Yirenkyi,2006-01-15,Nordsjælland
+GHA,4,DF,Jonas,Adjetey,2003-12-13,VfL Wolfsburg
+GHA,5,MF,Thomas,Partey,1993-06-13,Villarreal
+GHA,6,DF,Abdul,Mumin,1998-06-06,Rayo Vallecano
+GHA,7,FW,Abdul,Fatawu,2004-03-08,Leicester City
+GHA,8,MF,Kwasi,Sibo,1998-06-24,Oviedo
+GHA,9,FW,Jordan,Ayew,1991-09-11,Leicester City
+GHA,10,FW,Brandon,Thomas-Asante,1998-12-29,Coventry City
+GHA,11,MF,Antoine,Semenyo,2000-01-07,Manchester City
+GHA,12,GK,Joseph,Anang,2000-06-08,St Patrick's Athletic
+GHA,13,FW,Christopher,Bonsu Baah,2004-12-14,Al-Qadsiah
+GHA,14,DF,Gideon,Mensah,1998-07-18,Auxerre
+GHA,15,MF,Elisha,Owusu,1997-11-07,Auxerre
+GHA,16,GK,Benjamin,Asare,1992-07-13,Hearts of Oak
+GHA,17,DF,Abdul Rahman,Baba,1994-07-02,PAOK
+GHA,18,DF,Jerome,Opoku,1998-10-14,İstanbul Başakşehir
+GHA,19,FW,Iñaki,Williams,1994-06-15,Athletic Bilbao
+GHA,20,MF,Augustine,Boakye,2000-11-03,Saint-Étienne
+GHA,21,DF,Kojo,Peprah Oppong,2004-06-04,Nice
+GHA,22,FW,Kamaldeen,Sulemana,2002-02-15,Atalanta
+GHA,23,DF,Derrick,Luckassen,1995-07-03,Pafos
+GHA,24,FW,Ernest,Nuamah,2003-11-01,Lyon
+GHA,25,FW,Prince Kwabena,Adu,2003-09-23,Viktoria Plzeň
+GHA,26,DF,Marvin,Senaya,2001-01-28,Auxerre
+PAN,1,GK,Luis,Mejía,1991-03-16,Nacional
+PAN,2,DF,César,Blackman,1998-04-02,Slovan Bratislava
+PAN,3,DF,José,Córdoba,2001-06-03,Norwich City
+PAN,4,DF,Fidel,Escobar,1995-01-09,Saprissa
+PAN,5,DF,Edgardo,Fariña,2001-10-19,Pari Nizhny Novgorod
+PAN,6,MF,Cristian,Martínez,1997-02-06,Ironi Kiryat Shmona
+PAN,7,MF,José Luis,Rodríguez,1998-06-19,Juárez
+PAN,8,MF,Adalberto,Carrasquilla,1998-11-28,Pumas UNAM
+PAN,9,FW,Tomás,Rodríguez,1999-03-09,Saprissa
+PAN,10,MF,Ismael,Díaz,1997-05-12,León
+PAN,11,MF,Yoel,Bárcenas,1993-10-23,Mazatlán
+PAN,12,GK,César,Samudio,1994-02-23,Marathón
+PAN,13,DF,Jiovany,Ramos,1997-01-26,Puerto Cabello
+PAN,14,DF,Carlos,Harvey,2000-02-03,Minnesota United FC
+PAN,15,DF,Eric,Davis,1991-03-31,Plaza Amador
+PAN,16,DF,Andrés,Andrade,1998-10-16,LASK
+PAN,17,FW,José,Fajardo,1993-08-18,Universidad Católica
+PAN,18,FW,Cecilio,Waterman,1991-04-13,Universidad de Concepción
+PAN,19,MF,Alberto,Quintero,1987-12-18,Plaza Amador
+PAN,20,MF,Aníbal,Godoy,1990-02-10,San Diego FC
+PAN,21,MF,César,Yanis,1996-01-28,Cobresal
+PAN,22,GK,Orlando,Mosquera,1994-12-25,Al-Fayha
+PAN,23,DF,Michael Amir,Murillo,1996-02-11,Beşiktaş
+PAN,24,FW,Azarias,Londoño,2001-06-21,Universidad Católica
+PAN,25,DF,Roderick,Miller,1992-04-03,Turan Tovuz
+PAN,26,DF,Jorge,Gutiérrez,1998-09-01,Deportivo La Guaira
