@@ -12,9 +12,10 @@
  Fecha: 25/10/2026
  Archivo: 53_Test_FuncionesYVistas.sql
  Objetivo: Probar las funciones y vistas de 03_CrearFuncionesYVistas.sql:
-           fixture filtrable, equipo en cancha en distintos minutos, marcador
-           según los goles, sanciones y suspensiones (también cambiando sus
-           parámetros), selecciones en competencia, simulación de prime time,
+           cotización vigente, fixture filtrable, equipo en cancha en
+           distintos minutos, marcador según los goles, sanciones y
+           suspensiones (también cambiando sus parámetros), selecciones en
+           competencia, simulación de prime time y feriados por mercado,
            prioridad de piezas, historial de titularidad, goleadores e
            historial de árbitros.
            Requiere haber ejecutado 00 a 20 y no depende del juego de datos.
@@ -601,6 +602,32 @@ LEFT JOIN DatosGenerales.PARAMETRO_REGLAMENTO AS pr ON pr.codigo = ps.codigo
 ORDER BY ps.codigo;
 GO
 
+/* FV1b fn_CotizacionVigente, con dos cotizaciones de XTS (el código de prueba
+   de ISO 4217) dentro de una transacción que se deshace al final del caso:
+   1000 el jueves 11/06/2026 y 1010 el viernes 12/06/2026.
+   Esperado: el 11/06, la del 11/06 (1000); el domingo 14/06, sin cotización
+   ese día, la del viernes 12/06 (1010); el 10/06, antes de la primera, ninguna
+   fila; el dólar, 1 en cualquier fecha. */
+BEGIN TRANSACTION;
+BEGIN TRY
+    EXEC DatosGenerales.usp_COTIZACION_Alta @codigo_moneda = 'XTS', @fecha = '2026-06-11', @unidades_por_usd = 1000;
+    EXEC DatosGenerales.usp_COTIZACION_Alta @codigo_moneda = 'XTS', @fecha = '2026-06-12', @unidades_por_usd = 1010;
+
+    SELECT 'FV1b' AS caso, f.consulta, f.moneda, f.fecha, c.fecha_cotizacion, c.unidades_por_usd
+    FROM (VALUES ('el mismo día', 'XTS', CAST('2026-06-11' AS DATE)),
+                 ('fin de semana', 'XTS', CAST('2026-06-14' AS DATE)),
+                 ('antes de la primera', 'XTS', CAST('2026-06-10' AS DATE)),
+                 ('dólar', 'USD', CAST('2026-06-14' AS DATE))) AS f (consulta, moneda, fecha)
+    OUTER APPLY DatosGenerales.fn_CotizacionVigente(f.moneda, f.fecha) AS c
+    ORDER BY f.consulta;
+END TRY
+BEGIN CATCH
+    PRINT N'FV1b: FALLÓ, error inesperado: ' + ERROR_MESSAGE();
+END CATCH;
+IF @@TRANCOUNT > 0
+    ROLLBACK TRANSACTION;
+GO
+
 /* FV2 vw_Fixture y fn_Fixture con cada filtro (contando solo los partidos de prueba)
    Esperado: 4 partidos en total; 3 de GRUPOS; 3 de XVA; 2 en "Estadio Prueba
    Vistas 1"; 1 el 11/02/2027 en hora local (el 227). El detalle de XVA muestra
@@ -763,6 +790,34 @@ BEGIN TRY
 END TRY
 BEGIN CATCH
     PRINT N'FV10: FALLÓ, error inesperado: ' + ERROR_MESSAGE();
+END CATCH;
+IF @@TRANCOUNT > 0
+    ROLLBACK TRANSACTION;
+GO
+
+/* FV10b fn_MercadosEnPrimeTime: feriados del partido 226. Dentro de una
+   transacción que se deshace al final del caso, XVA tiene feriado el
+   10/02/2027 (el día del partido en su hora local) y XVM el 11/02/2027.
+   Esperado: XVA con es_feriado = 1 y el nombre "Feriado Prueba XVA"; XVM con
+   es_feriado = 0 (a las 21 del 10/02 todavía no es su feriado); los demás
+   países de prueba sin feriado. */
+DECLARE @id_226 INT = (SELECT id_partido FROM Torneo.PARTIDO WHERE numero_partido = 226);
+DECLARE @id_xva SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XVA');
+DECLARE @id_xvm SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XVM');
+
+BEGIN TRANSACTION;
+BEGIN TRY
+    EXEC DatosGenerales.usp_FERIADO_Alta @id_pais = @id_xva, @fecha = '2027-02-10', @nombre = N'Feriado Prueba XVA';
+    EXEC DatosGenerales.usp_FERIADO_Alta @id_pais = @id_xvm, @fecha = '2027-02-11', @nombre = N'Feriado Prueba XVM';
+
+    SELECT 'FV10b feriados' AS caso, pa.codigo_fifa, m.hora_local, m.es_feriado, m.feriado
+    FROM Publicidad.fn_MercadosEnPrimeTime(@id_226) AS m
+    INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = m.id_pais
+    WHERE pa.codigo_fifa LIKE 'XV_' AND pa.nombre LIKE 'Prueba XV_'
+    ORDER BY m.es_feriado DESC, pa.codigo_fifa;
+END TRY
+BEGIN CATCH
+    PRINT N'FV10b: FALLÓ, error inesperado: ' + ERROR_MESSAGE();
 END CATCH;
 IF @@TRANCOUNT > 0
     ROLLBACK TRANSACTION;

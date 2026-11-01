@@ -12,8 +12,9 @@
  Fecha: 25/10/2026
  Archivo: 04_SP_ABM_DatosGenerales.sql
  Objetivo: Crear los stored procedures de alta, baja y modificación de las
-           tablas del esquema DatosGenerales: PAIS, IDIOMA, INDICADOR_ECONOMICO
-           y PARAMETRO_REGLAMENTO. Requiere haber ejecutado 00 a 03.
+           tablas del esquema DatosGenerales: PAIS, IDIOMA, INDICADOR_ECONOMICO,
+           COTIZACION, FERIADO y PARAMETRO_REGLAMENTO. Requiere haber
+           ejecutado 00 a 03.
            Su script de testing es 54_Test_SP_ABM_DatosGenerales.sql.
 ================================================================================
 
@@ -253,6 +254,9 @@ BEGIN
                 UNION ALL
                 SELECT N'DatosGenerales.INDICADOR_ECONOMICO', COUNT(*)
                 FROM DatosGenerales.INDICADOR_ECONOMICO WHERE id_pais = @id_pais
+                UNION ALL
+                SELECT N'DatosGenerales.FERIADO', COUNT(*)
+                FROM DatosGenerales.FERIADO WHERE id_pais = @id_pais
             ) AS r (tabla, cantidad)
             WHERE r.cantidad > 0), N'');
 
@@ -575,6 +579,310 @@ BEGIN
     END;
 
     DELETE FROM DatosGenerales.INDICADOR_ECONOMICO WHERE id_indicador = @id_indicador;
+END;
+GO
+
+
+/* ============================================================================
+   COTIZACION
+   ============================================================================ */
+
+/*
+  usp_COTIZACION_Alta
+  Valida: moneda obligatoria, de 3 letras (ISO 4217) y distinta del dólar (es
+  la base de las cotizaciones y vale siempre 1); fecha obligatoria y no
+  futura; unidades por dólar obligatorias y mayores que cero; que la moneda
+  no tenga ya una cotización para esa fecha. La moneda se guarda en
+  mayúsculas.
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_COTIZACION_Alta
+    @codigo_moneda     VARCHAR(10),
+    @fecha             DATE,
+    @unidades_por_usd  DECIMAL(19,6),
+    @id_cotizacion     INT = NULL OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores NVARCHAR(2048) = N'';
+    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+
+    SET @codigo_moneda = UPPER(NULLIF(TRIM(@codigo_moneda), ''));
+
+    IF @codigo_moneda IS NULL
+        SET @errores += @nl + N'- La moneda es obligatoria.';
+    ELSE IF @codigo_moneda COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
+        SET @errores += @nl + N'- El código de moneda debe tener 3 letras (ISO 4217).';
+    ELSE IF @codigo_moneda = 'USD'
+        SET @errores += @nl + N'- El dólar no lleva cotización: es la base y vale siempre 1.';
+
+    IF @fecha IS NULL
+        SET @errores += @nl + N'- La fecha es obligatoria.';
+    ELSE IF @fecha > CONVERT(DATE, GETDATE())
+        SET @errores += @nl + N'- La fecha no puede ser futura.';
+
+    IF @unidades_por_usd IS NULL
+        SET @errores += @nl + N'- Las unidades por dólar son obligatorias.';
+    ELSE IF @unidades_por_usd <= 0
+        SET @errores += @nl + N'- Las unidades por dólar tienen que ser mayores que cero.';
+
+    IF EXISTS (SELECT 1 FROM DatosGenerales.COTIZACION WHERE codigo_moneda = @codigo_moneda AND fecha = @fecha)
+        SET @errores += @nl + N'- La moneda ' + @codigo_moneda + N' ya tiene una cotización para el '
+                      + CONVERT(NVARCHAR(10), @fecha, 103) + N' (para cambiarla se usa la modificación).';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'DatosGenerales.usp_COTIZACION_Alta: no se pudo dar de alta la cotización.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    INSERT INTO DatosGenerales.COTIZACION (codigo_moneda, fecha, unidades_por_usd)
+    VALUES (@codigo_moneda, @fecha, @unidades_por_usd);
+
+    SET @id_cotizacion = SCOPE_IDENTITY();
+END;
+GO
+
+
+/*
+  usp_COTIZACION_Modificacion
+  Valida: que la cotización exista y que se informe al menos un dato; para
+  cada dato informado, las mismas reglas del alta; y que con los cambios no
+  quede repetida la moneda y fecha. Actualiza fecha_actualizacion.
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_COTIZACION_Modificacion
+    @id_cotizacion     INT,
+    @codigo_moneda     VARCHAR(10)   = NULL,
+    @fecha             DATE          = NULL,
+    @unidades_por_usd  DECIMAL(19,6) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores        NVARCHAR(2048) = N'';
+    DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    -- Valores que va a tener el registro después del cambio, para controlar repetidos.
+    DECLARE @moneda_final   VARCHAR(10);
+    DECLARE @fecha_final    DATE;
+
+    SET @codigo_moneda = UPPER(NULLIF(TRIM(@codigo_moneda), ''));
+
+    IF @id_cotizacion IS NULL
+        SET @errores += @nl + N'- El id de la cotización es obligatorio.';
+    ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.COTIZACION WHERE id_cotizacion = @id_cotizacion)
+        SET @errores += @nl + N'- No existe una cotización con id ' + CAST(@id_cotizacion AS NVARCHAR(10)) + N'.';
+
+    IF @codigo_moneda IS NULL AND @fecha IS NULL AND @unidades_por_usd IS NULL
+        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+
+    IF @codigo_moneda COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
+        SET @errores += @nl + N'- El código de moneda debe tener 3 letras (ISO 4217).';
+    ELSE IF @codigo_moneda = 'USD'
+        SET @errores += @nl + N'- El dólar no lleva cotización: es la base y vale siempre 1.';
+
+    IF @fecha > CONVERT(DATE, GETDATE())
+        SET @errores += @nl + N'- La fecha no puede ser futura.';
+
+    IF @unidades_por_usd <= 0
+        SET @errores += @nl + N'- Las unidades por dólar tienen que ser mayores que cero.';
+
+    SELECT @moneda_final = ISNULL(@codigo_moneda, codigo_moneda),
+           @fecha_final  = ISNULL(@fecha, fecha)
+    FROM DatosGenerales.COTIZACION
+    WHERE id_cotizacion = @id_cotizacion;
+
+    IF EXISTS (SELECT 1 FROM DatosGenerales.COTIZACION
+               WHERE codigo_moneda = @moneda_final AND fecha = @fecha_final AND id_cotizacion <> @id_cotizacion)
+        SET @errores += @nl + N'- La moneda ' + @moneda_final + N' ya tiene otra cotización para el '
+                      + CONVERT(NVARCHAR(10), @fecha_final, 103) + N'.';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'DatosGenerales.usp_COTIZACION_Modificacion: no se pudo modificar la cotización.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    UPDATE DatosGenerales.COTIZACION
+    SET codigo_moneda       = ISNULL(@codigo_moneda, codigo_moneda),
+        fecha               = ISNULL(@fecha, fecha),
+        unidades_por_usd    = ISNULL(@unidades_por_usd, unidades_por_usd),
+        fecha_actualizacion = SYSDATETIME()
+    WHERE id_cotizacion = @id_cotizacion;
+END;
+GO
+
+
+/*
+  usp_COTIZACION_Baja
+  Valida: que la cotización exista.
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_COTIZACION_Baja
+    @id_cotizacion INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores NVARCHAR(2048) = N'';
+    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+
+    IF @id_cotizacion IS NULL
+        SET @errores += @nl + N'- El id de la cotización es obligatorio.';
+    ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.COTIZACION WHERE id_cotizacion = @id_cotizacion)
+        SET @errores += @nl + N'- No existe una cotización con id ' + CAST(@id_cotizacion AS NVARCHAR(10)) + N'.';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'DatosGenerales.usp_COTIZACION_Baja: no se pudo dar de baja la cotización.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    DELETE FROM DatosGenerales.COTIZACION WHERE id_cotizacion = @id_cotizacion;
+END;
+GO
+
+
+/* ============================================================================
+   FERIADO
+   ============================================================================ */
+
+/*
+  usp_FERIADO_Alta
+  Valida: país obligatorio y existente; fecha obligatoria; nombre obligatorio
+  y de hasta 200 caracteres; que el país no tenga ya un feriado en esa fecha
+  (si son dos el mismo día, van juntos en el nombre).
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_FERIADO_Alta
+    @id_pais     SMALLINT,
+    @fecha       DATE,
+    @nombre      NVARCHAR(400),
+    @id_feriado  INT = NULL OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores NVARCHAR(2048) = N'';
+    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+
+    SET @nombre = NULLIF(TRIM(@nombre), N'');
+
+    IF @id_pais IS NULL
+        SET @errores += @nl + N'- El país es obligatorio.';
+    ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
+        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+
+    IF @fecha IS NULL
+        SET @errores += @nl + N'- La fecha es obligatoria.';
+
+    IF @nombre IS NULL
+        SET @errores += @nl + N'- El nombre del feriado es obligatorio.';
+    ELSE IF LEN(@nombre) > 200
+        SET @errores += @nl + N'- El nombre del feriado no puede superar los 200 caracteres.';
+
+    IF EXISTS (SELECT 1 FROM DatosGenerales.FERIADO WHERE id_pais = @id_pais AND fecha = @fecha)
+        SET @errores += @nl + N'- Ese país ya tiene un feriado el ' + CONVERT(NVARCHAR(10), @fecha, 103)
+                      + N' (si hay dos el mismo día, se registran juntos en el nombre con la modificación).';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'DatosGenerales.usp_FERIADO_Alta: no se pudo dar de alta el feriado.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    INSERT INTO DatosGenerales.FERIADO (id_pais, fecha, nombre)
+    VALUES (@id_pais, @fecha, @nombre);
+
+    SET @id_feriado = SCOPE_IDENTITY();
+END;
+GO
+
+
+/*
+  usp_FERIADO_Modificacion
+  Valida: que el feriado exista y que se informe al menos un dato; para cada
+  dato informado, las mismas reglas del alta; y que con los cambios no quede
+  repetido el país y fecha. Actualiza fecha_actualizacion.
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_FERIADO_Modificacion
+    @id_feriado  INT,
+    @id_pais     SMALLINT      = NULL,
+    @fecha       DATE          = NULL,
+    @nombre      NVARCHAR(400) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores        NVARCHAR(2048) = N'';
+    DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    -- Valores que va a tener el registro después del cambio, para controlar repetidos.
+    DECLARE @id_pais_final  SMALLINT;
+    DECLARE @fecha_final    DATE;
+
+    SET @nombre = NULLIF(TRIM(@nombre), N'');
+
+    IF @id_feriado IS NULL
+        SET @errores += @nl + N'- El id del feriado es obligatorio.';
+    ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.FERIADO WHERE id_feriado = @id_feriado)
+        SET @errores += @nl + N'- No existe un feriado con id ' + CAST(@id_feriado AS NVARCHAR(10)) + N'.';
+
+    IF @id_pais IS NULL AND @fecha IS NULL AND @nombre IS NULL
+        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+
+    IF @id_pais IS NOT NULL AND NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
+        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+
+    IF LEN(@nombre) > 200
+        SET @errores += @nl + N'- El nombre del feriado no puede superar los 200 caracteres.';
+
+    SELECT @id_pais_final = ISNULL(@id_pais, id_pais),
+           @fecha_final   = ISNULL(@fecha, fecha)
+    FROM DatosGenerales.FERIADO
+    WHERE id_feriado = @id_feriado;
+
+    IF EXISTS (SELECT 1 FROM DatosGenerales.FERIADO
+               WHERE id_pais = @id_pais_final AND fecha = @fecha_final AND id_feriado <> @id_feriado)
+        SET @errores += @nl + N'- Ese país ya tiene otro feriado el ' + CONVERT(NVARCHAR(10), @fecha_final, 103) + N'.';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'DatosGenerales.usp_FERIADO_Modificacion: no se pudo modificar el feriado.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    UPDATE DatosGenerales.FERIADO
+    SET id_pais             = ISNULL(@id_pais, id_pais),
+        fecha               = ISNULL(@fecha, fecha),
+        nombre              = ISNULL(@nombre, nombre),
+        fecha_actualizacion = SYSDATETIME()
+    WHERE id_feriado = @id_feriado;
+END;
+GO
+
+
+/*
+  usp_FERIADO_Baja
+  Valida: que el feriado exista.
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_FERIADO_Baja
+    @id_feriado INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores NVARCHAR(2048) = N'';
+    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+
+    IF @id_feriado IS NULL
+        SET @errores += @nl + N'- El id del feriado es obligatorio.';
+    ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.FERIADO WHERE id_feriado = @id_feriado)
+        SET @errores += @nl + N'- No existe un feriado con id ' + CAST(@id_feriado AS NVARCHAR(10)) + N'.';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'DatosGenerales.usp_FERIADO_Baja: no se pudo dar de baja el feriado.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    DELETE FROM DatosGenerales.FERIADO WHERE id_feriado = @id_feriado;
 END;
 GO
 

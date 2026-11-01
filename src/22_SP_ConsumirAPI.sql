@@ -15,7 +15,9 @@
              DatosGenerales.usp_ConsumirAPI  hace un pedido GET a una URL https
            No depende de ninguna API: lo usan los procesos que consultan una,
            como la importación de indicadores del Banco Mundial
-           (25_SP_Importar_Indicadores.sql).
+           (25_SP_Importar_Indicadores.sql), de cotizaciones de Frankfurter
+           (27_SP_Importar_Cotizaciones.sql) y de feriados de Nager.Date
+           (28_SP_Importar_Feriados.sql).
            Requiere haber ejecutado 00 y 01. Su script de testing es
            72_Test_SP_ConsumirAPI.sql.
 ================================================================================

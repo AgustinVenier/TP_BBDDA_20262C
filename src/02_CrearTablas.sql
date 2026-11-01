@@ -106,6 +106,8 @@ DROP TABLE IF EXISTS Torneo.SELECCION;
 DROP TABLE IF EXISTS Torneo.SEDE;
 
 DROP TABLE IF EXISTS DatosGenerales.PARAMETRO_REGLAMENTO;
+DROP TABLE IF EXISTS DatosGenerales.FERIADO;
+DROP TABLE IF EXISTS DatosGenerales.COTIZACION;
 DROP TABLE IF EXISTS DatosGenerales.INDICADOR_ECONOMICO;
 DROP TABLE IF EXISTS DatosGenerales.IDIOMA;
 DROP TABLE IF EXISTS DatosGenerales.PAIS;
@@ -183,6 +185,58 @@ CREATE TABLE DatosGenerales.INDICADOR_ECONOMICO (
     CONSTRAINT UQ_INDICADOR_ECONOMICO_pais_codigo_anio
         UNIQUE (id_pais, codigo_indicador, anio),
     CONSTRAINT CK_INDICADOR_ECONOMICO_anio CHECK (anio BETWEEN 1960 AND 2100)
+);
+GO
+
+
+/*
+  COTIZACION
+  Un registro por moneda y fecha: cuantas unidades de la moneda vale un dolar.
+  Las tarifas de los espacios publicitarios estan en dolares, asi que con la
+  cotizacion se convierte la pauta a la moneda de cada mercado (y la
+  exhibicion facturada en otra moneda, a dolares). El UNIQUE es la clave
+  natural que usa el upsert de la importacion desde la API Frankfurter. Los
+  dias sin cotizacion (fines de semana y feriados bancarios) no tienen
+  registro: vale la ultima cotizacion anterior (fn_CotizacionVigente).
+  unidades_por_usd es DECIMAL(19,6): hay monedas que pasan el millon por
+  dolar (IRR) y otras que valen mas que el dolar (GBP, 0,74).
+*/
+CREATE TABLE DatosGenerales.COTIZACION (
+    id_cotizacion       INT IDENTITY(1,1) NOT NULL,
+    codigo_moneda       CHAR(3)           NOT NULL,
+    fecha               DATE              NOT NULL,
+    unidades_por_usd    DECIMAL(19,6)     NOT NULL,
+    fecha_actualizacion DATETIME2(0)      NOT NULL
+        CONSTRAINT DF_COTIZACION_fecha_actualizacion DEFAULT (SYSDATETIME()),
+
+    CONSTRAINT PK_COTIZACION PRIMARY KEY (id_cotizacion),
+    CONSTRAINT UQ_COTIZACION_moneda_fecha UNIQUE (codigo_moneda, fecha),
+    CONSTRAINT CK_COTIZACION_codigo_moneda CHECK (codigo_moneda LIKE '[A-Z][A-Z][A-Z]'),
+    CONSTRAINT CK_COTIZACION_unidades_por_usd CHECK (unidades_por_usd > 0)
+);
+GO
+
+
+/*
+  FERIADO
+  Feriados nacionales de cada pais, para saber si un partido cae en dia
+  feriado en un mercado de la publicidad. Un registro por pais y fecha (el
+  UNIQUE es la clave natural del upsert de la importacion desde la API
+  Nager.Date): si un pais tiene dos feriados el mismo dia, el nombre los
+  junta. Nombre NVARCHAR porque es el nombre en el idioma del pais.
+*/
+CREATE TABLE DatosGenerales.FERIADO (
+    id_feriado          INT IDENTITY(1,1) NOT NULL,
+    id_pais             SMALLINT          NOT NULL,
+    fecha               DATE              NOT NULL,
+    nombre              NVARCHAR(200)     NOT NULL,
+    fecha_actualizacion DATETIME2(0)      NOT NULL
+        CONSTRAINT DF_FERIADO_fecha_actualizacion DEFAULT (SYSDATETIME()),
+
+    CONSTRAINT PK_FERIADO PRIMARY KEY (id_feriado),
+    CONSTRAINT FK_FERIADO_PAIS
+        FOREIGN KEY (id_pais) REFERENCES DatosGenerales.PAIS (id_pais),
+    CONSTRAINT UQ_FERIADO_pais_fecha UNIQUE (id_pais, fecha)
 );
 GO
 

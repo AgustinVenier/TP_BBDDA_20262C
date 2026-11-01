@@ -12,7 +12,9 @@
  Fecha: 29/10/2026
  Archivo: 75_Test_SP_Importar_Indicadores.sql
  Objetivo: Probar la importación masiva de indicadores económicos de
-           25_SP_Importar_Indicadores.sql:
+           25_SP_Importar_Indicadores.sql, y la carga en bloque
+           DatosGenerales.usp_ImportarIndicadoresEconomicos de
+           16_SP_Importacion.sql que usa:
              - desde los archivos XML chicos de datos/pruebas/ (con el formato
                de la API del Banco Mundial): alta, reimportación sin
                duplicados, actualización, importación con errores parciales y
@@ -33,10 +35,10 @@
  have file access rights" aparece tanto si la ruta está mal como si falta el
  permiso. Cómo darlo: ver "Antes de ejecutar" en 26_ImportarIndicadores.sql.
 
- Sin transacción: la importación confirma cada registro por separado y no
- puede correr dentro de una transacción (lo prueba IX9). Por eso el test no
- se deshace con ROLLBACK: borra al final, con el SP de baja, los indicadores
- que cargó.
+ Transacciones: la importación es un solo upsert y puede correr dentro de
+ una transacción, que IX9 deshace con ROLLBACK. Los demás casos no se
+ deshacen: el test borra al final, con el SP de baja, los indicadores que
+ cargó.
 
  OLE Automation: los casos AP llaman a la API con OLE Automation. Si la
  instancia lo tiene deshabilitado, el test lo habilita antes de esos casos y
@@ -72,6 +74,7 @@ EXEC sp_set_session_context @key = N'ole_antes', @value = @ole_antes;
 EXEC sp_set_session_context @key = N'avanzadas_antes', @value = @avanzadas_antes;
 
 IF OBJECT_ID(N'DatosGenerales.usp_ImportarIndicadoresXML', N'P') IS NULL
+   OR OBJECT_ID(N'DatosGenerales.usp_ImportarIndicadoresEconomicos', N'P') IS NULL
    OR OBJECT_ID(N'DatosGenerales.usp_ConsumirAPI', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE codigo_iso3 = 'GBR')
 BEGIN
@@ -181,13 +184,13 @@ GO
    Esperado: 12 leídos, 2 insertados (Uruguay 2022 y Ecuador 2023), 1 omitido
    (la copia de Ecuador 2023 con el mismo valor) y 9 rechazados, con estos
    motivos:
-     BOL (sin año)    el año es obligatorio (lo informa el SP de la Entrega 5).
-     CHL 2023         el código del indicador es obligatorio (SP).
-     CHL 2024         el código "TP PRUEBA PBI" tiene espacios (SP).
+     BOL (sin año)    el año es obligatorio.
+     CHL 2023         el código del indicador es obligatorio.
+     CHL 2024         el código "TP PRUEBA PBI" tiene espacios.
      COL 2023 (x2)    el archivo trae 2 veces Colombia 2023 con valores
                       distintos: se rechazan las dos.
      PER 2023         el valor no es un número válido (15 dígitos enteros).
-     PRY 1950         el año debe estar entre 1960 y el actual (SP).
+     PRY 1950         el año debe estar entre 1960 y el actual.
      URY 2023         el valor "dos mil" no es un número.
      URY 2023Q1       el año no es un año (AAAA).
    Quedan importados Uruguay 2022 (1234.5000) y Ecuador 2023 (300.0000), y
@@ -300,20 +303,57 @@ END CATCH;
 GO
 
 
-/* IX9 (ERROR) Importación dentro de una transacción.
-   Esperado: error 50001 (cada registro se confirma por separado), sin
-   importar nada. La transacción del test se deshace. */
-DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'indicadores_prueba_errores.xml';
+/* IX9 (OK) Importación dentro de una transacción que se deshace: se vuelve a
+   importar indicadores_prueba_ok.xml, que tiene Argentina 2024 en 1100.2500
+   (IX3 la dejó en 1150.7500).
+   Esperado: 6 leídos, 1 actualizado (Argentina 2024), 2 sin cambios
+   (Argentina 2023 y GBR 2024) y 3 omitidos. Dentro de la transacción
+   Argentina 2024 vale 1100.2500; después del ROLLBACK vuelve a 1150.7500. */
+DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'indicadores_prueba_ok.xml';
 
 BEGIN TRANSACTION;
+
+EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
+
+SELECT 'IX9 dentro de la transacción' AS caso, ie.valor
+FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
+INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = ie.id_pais
+WHERE ie.codigo_indicador = 'TP.PRUEBA.PBI' AND p.nombre = 'Argentina' AND ie.anio = 2024;
+
+IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+
+SELECT 'IX9 después del ROLLBACK' AS caso, ie.valor
+FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
+INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = ie.id_pais
+WHERE ie.codigo_indicador = 'TP.PRUEBA.PBI' AND p.nombre = 'Argentina' AND ie.anio = 2024;
+GO
+
+
+/* IX10 (ERROR) Carga en bloque con usp_ImportarIndicadoresEconomicos de un
+   conjunto con errores (el SP de la Entrega 5, sin el procesamiento de 25
+   que los filtra).
+   Esperado: error 50001 con 5 condiciones en un solo mensaje: 1 fila sin
+   valor, el código ISO XYZ no es de ningún país, el código "TP PRUEBA" tiene
+   espacios, el año 1950 está fuera de rango y Argentina 2020 viene
+   repetida. No se carga ninguno, ni siquiera los válidos. */
+DECLARE @indicadores DatosGenerales.TT_INDICADOR_ECONOMICO;
+
+INSERT INTO @indicadores (codigo_iso3, codigo_indicador, anio, valor)
+VALUES ('ARG', 'TP.PRUEBA.PBI', 2020, 10), ('ARG', 'TP.PRUEBA.PBI', 2020, 11), ('URY', 'TP.PRUEBA.PBI', 2020, NULL),
+       ('XYZ', 'TP.PRUEBA.PBI', 2020, 12), ('URY', 'TP PRUEBA', 2020, 13), ('BRA', 'TP.PRUEBA.PBI', 1950, 14),
+       ('CHL', 'TP.PRUEBA.PBI', 2020, 15);
+
 BEGIN TRY
-    EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
-    PRINT N'IX9: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_ImportarIndicadoresEconomicos @indicadores = @indicadores;
+    PRINT N'IX10: FALLÓ, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'IX9', @error_esperado = 50001;
+    EXEC #usp_MostrarError @caso = 'IX10', @error_esperado = 50001;
 END CATCH;
-IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+
+SELECT 'IX10 después' AS caso, COUNT(*) AS indicadores_de_2020_y_1950
+FROM DatosGenerales.INDICADOR_ECONOMICO
+WHERE codigo_indicador IN ('TP.PRUEBA.PBI', 'TP PRUEBA') AND anio IN (2020, 1950);
 GO
 
 

@@ -25,6 +25,7 @@ GO
       DesarrolloPartido Formaciones, alineaciones, cambios, goles y amonestaciones.
       Arbitraje         Árbitros, idiomas que hablan y designaciones por partido.
       Publicidad        Anunciantes, campañas, piezas, espacios publicitarios y exhibiciones.
+      Reportes          Vistas y SP de reportes (fuente de datos de la herramienta de BI).
 
     CREATE SCHEMA debe ser la única sentencia de su lote, por lo que no puede
     ir dentro de un IF. Para validar la existencia sin recurrir a SQL dinámico
@@ -67,9 +68,16 @@ GO
 SET NOEXEC OFF;
 GO
 
+IF SCHEMA_ID(N'Reportes') IS NOT NULL SET NOEXEC ON;
+GO
+CREATE SCHEMA Reportes AUTHORIZATION dbo;
+GO
+SET NOEXEC OFF;
+GO
+
 -- Evidencia: esquemas creados.
 SELECT name AS Esquema
 FROM sys.schemas
-WHERE name IN (N'DatosGenerales', N'Torneo', N'DesarrolloPartido', N'Arbitraje', N'Publicidad')
+WHERE name IN (N'DatosGenerales', N'Torneo', N'DesarrolloPartido', N'Arbitraje', N'Publicidad', N'Reportes')
 ORDER BY name;
 GO

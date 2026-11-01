@@ -166,12 +166,6 @@
           <AssociatedConnUserName />
           <FullPath>20_DatosIniciales.sql</FullPath>
         </FileNode>
-        <FileNode Name="21_DatosDePrueba.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
-          <AssociatedConnUserName />
-          <FullPath>21_DatosDePrueba.sql</FullPath>
-        </FileNode>
         <FileNode Name="22_SP_ConsumirAPI.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
@@ -189,6 +183,36 @@
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
           <FullPath>26_ImportarIndicadores.sql</FullPath>
+        </FileNode>
+        <FileNode Name="27_SP_Importar_Cotizaciones.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>27_SP_Importar_Cotizaciones.sql</FullPath>
+        </FileNode>
+        <FileNode Name="28_SP_Importar_Feriados.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>28_SP_Importar_Feriados.sql</FullPath>
+        </FileNode>
+        <FileNode Name="29_ImportarCotizacionesYFeriados.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>29_ImportarCotizacionesYFeriados.sql</FullPath>
+        </FileNode>
+        <FileNode Name="30_SP_Reportes.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>30_SP_Reportes.sql</FullPath>
+        </FileNode>
+        <FileNode Name="31_DatosDePrueba.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>31_DatosDePrueba.sql</FullPath>
         </FileNode>
         <FileNode Name="53_Test_FuncionesYVistas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
@@ -279,6 +303,24 @@
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
           <FullPath>75_Test_SP_Importar_Indicadores.sql</FullPath>
+        </FileNode>
+        <FileNode Name="77_Test_SP_Importar_Cotizaciones.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>77_Test_SP_Importar_Cotizaciones.sql</FullPath>
+        </FileNode>
+        <FileNode Name="78_Test_SP_Importar_Feriados.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>78_Test_SP_Importar_Feriados.sql</FullPath>
+        </FileNode>
+        <FileNode Name="80_Test_SP_Reportes.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>80_Test_SP_Reportes.sql</FullPath>
         </FileNode>
       </Items>
     </LogicalFolder>

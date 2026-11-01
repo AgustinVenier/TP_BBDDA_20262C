@@ -19,9 +19,10 @@
            valores del reglamento de 20_DatosIniciales.sql, e I6, el idioma
            inglés que carga ese script. No depende del juego de
            datos: crea sus propios datos de prueba (dos países, un
-           idioma, un parámetro y, para las bajas rechazadas por referencias,
-           un árbitro y una sede) y los borra al empezar y al terminar con los
-           SP de baja, así que se puede ejecutar más de una vez.
+           idioma, un parámetro, una cotización, un feriado y, para las bajas
+           rechazadas por referencias, un árbitro y una sede) y los borra al
+           empezar y al terminar con los SP de baja, así que se puede
+           ejecutar más de una vez.
 ================================================================================
 
  Cómo leer los resultados:
@@ -111,6 +112,22 @@ BEGIN
     IF @id IS NULL BREAK;
     EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Baja @id_indicador = @id;
 END;
+
+SET @vuelta = 0;
+WHILE @vuelta < 20
+BEGIN
+    SET @vuelta += 1;
+    SET @id = (SELECT TOP (1) f.id_feriado
+               FROM DatosGenerales.FERIADO AS f
+               INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = f.id_pais
+               WHERE p.nombre LIKE 'Pais Prueba%');
+    IF @id IS NULL BREAK;
+    EXEC DatosGenerales.usp_FERIADO_Baja @id_feriado = @id;
+END;
+
+SET @id = (SELECT id_cotizacion FROM DatosGenerales.COTIZACION WHERE codigo_moneda = 'XTS' AND fecha = '2026-06-11');
+IF @id IS NOT NULL
+    EXEC DatosGenerales.usp_COTIZACION_Baja @id_cotizacion = @id;
 
 SET @vuelta = 0;
 WHILE @vuelta < 20
@@ -559,6 +576,245 @@ BEGIN CATCH
 END CATCH;
 GO
 
+
+/* ============================================================================
+   COTIZACION
+   Usa XTS, el código de prueba de ISO 4217.
+   ============================================================================ */
+
+/* C1 (OK) Alta de la cotización de XTS del 11/06/2026.
+   Esperado: 0 cotizaciones de XTS antes y una fila nueva después, con la
+   moneda en mayúsculas y 1234.500000 unidades por dólar. */
+DECLARE @id INT;
+
+SELECT 'C1 antes' AS caso, COUNT(*) AS cotizaciones_de_prueba
+FROM DatosGenerales.COTIZACION
+WHERE codigo_moneda = 'XTS';
+
+EXEC DatosGenerales.usp_COTIZACION_Alta
+    @codigo_moneda = ' xts ', @fecha = '2026-06-11', @unidades_por_usd = 1234.5, @id_cotizacion = @id OUTPUT;
+
+SELECT 'C1 después' AS caso, id_cotizacion, codigo_moneda, fecha, unidades_por_usd, fecha_actualizacion
+FROM DatosGenerales.COTIZACION
+WHERE id_cotizacion = @id;
+GO
+
+/* C2 (ERROR) Alta con todos los datos mal, y alta del dólar.
+   Esperado: dos errores 50001. C2a con 3 condiciones: la moneda no tiene 3
+   letras, la fecha es futura y las unidades por dólar no son mayores que
+   cero. C2b con 1 condición: el dólar no lleva cotización. */
+DECLARE @manana DATE = DATEADD(DAY, 1, CONVERT(DATE, GETDATE()));
+
+BEGIN TRY
+    EXEC DatosGenerales.usp_COTIZACION_Alta @codigo_moneda = 'US1', @fecha = @manana, @unidades_por_usd = 0;
+    PRINT N'C2a: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'C2a';
+END CATCH;
+
+BEGIN TRY
+    EXEC DatosGenerales.usp_COTIZACION_Alta @codigo_moneda = 'usd', @fecha = '2026-06-11', @unidades_por_usd = 1;
+    PRINT N'C2b: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'C2b';
+END CATCH;
+GO
+
+/* C3 (ERROR) Alta repetida: misma moneda y fecha.
+   Esperado: error 50001 con 1 condición: XTS ya tiene una cotización para el
+   11/06/2026. */
+BEGIN TRY
+    EXEC DatosGenerales.usp_COTIZACION_Alta @codigo_moneda = 'XTS', @fecha = '2026-06-11', @unidades_por_usd = 1;
+    PRINT N'C3: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'C3';
+END CATCH;
+GO
+
+/* C4 (OK) Modificación de las unidades por dólar.
+   Esperado: pasan de 1234.500000 a 1250.750000; la moneda y la fecha no
+   cambian y fecha_actualizacion se renueva. */
+DECLARE @id INT = (SELECT id_cotizacion FROM DatosGenerales.COTIZACION WHERE codigo_moneda = 'XTS');
+
+SELECT 'C4 antes' AS caso, id_cotizacion, codigo_moneda, fecha, unidades_por_usd, fecha_actualizacion
+FROM DatosGenerales.COTIZACION
+WHERE id_cotizacion = @id;
+
+EXEC DatosGenerales.usp_COTIZACION_Modificacion @id_cotizacion = @id, @unidades_por_usd = 1250.75;
+
+SELECT 'C4 después' AS caso, id_cotizacion, codigo_moneda, fecha, unidades_por_usd, fecha_actualizacion
+FROM DatosGenerales.COTIZACION
+WHERE id_cotizacion = @id;
+GO
+
+/* C5 (ERROR) Modificación de una cotización que no existe y sin datos.
+   Esperado: error 50001 con 2 condiciones: no existe una cotización con id
+   -1 y no se indicó ningún dato para modificar. */
+BEGIN TRY
+    EXEC DatosGenerales.usp_COTIZACION_Modificacion @id_cotizacion = -1;
+    PRINT N'C5: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'C5';
+END CATCH;
+GO
+
+/* C6 (OK) Baja de la cotización.
+   Esperado: 1 cotización de XTS antes y 0 después.
+   C7 (ERROR) Baja de la misma cotización otra vez.
+   Esperado: error 50001 con 1 condición: no existe una cotización con ese id. */
+DECLARE @id INT = (SELECT id_cotizacion FROM DatosGenerales.COTIZACION WHERE codigo_moneda = 'XTS');
+
+SELECT 'C6 antes' AS caso, COUNT(*) AS cotizaciones_de_prueba
+FROM DatosGenerales.COTIZACION
+WHERE codigo_moneda = 'XTS';
+
+EXEC DatosGenerales.usp_COTIZACION_Baja @id_cotizacion = @id;
+
+SELECT 'C6 después' AS caso, COUNT(*) AS cotizaciones_de_prueba
+FROM DatosGenerales.COTIZACION
+WHERE codigo_moneda = 'XTS';
+
+BEGIN TRY
+    EXEC DatosGenerales.usp_COTIZACION_Baja @id_cotizacion = @id;
+    PRINT N'C7: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'C7';
+END CATCH;
+GO
+
+
+/* ============================================================================
+   FERIADO
+   ============================================================================ */
+
+/* F1 (OK) Alta de un feriado de "Pais Prueba A2" el 20/06/2026.
+   Esperado: 0 feriados del país antes y una fila nueva después, con el
+   nombre sin los espacios de los costados. */
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
+DECLARE @id INT;
+
+SELECT 'F1 antes' AS caso, COUNT(*) AS feriados_del_pais
+FROM DatosGenerales.FERIADO
+WHERE id_pais = @id_pais;
+
+EXEC DatosGenerales.usp_FERIADO_Alta
+    @id_pais = @id_pais, @fecha = '2026-06-20', @nombre = N'  Día de Prueba  ', @id_feriado = @id OUTPUT;
+
+SELECT 'F1 después' AS caso, f.id_feriado, p.nombre AS pais, f.fecha, f.nombre, f.fecha_actualizacion
+FROM DatosGenerales.FERIADO AS f
+INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = f.id_pais
+WHERE f.id_feriado = @id;
+GO
+
+/* F2 (ERROR) Alta con todos los datos mal.
+   Esperado: error 50001 con 3 condiciones: no existe un país con id -1, la
+   fecha es obligatoria y el nombre supera los 200 caracteres. */
+DECLARE @nombre_largo NVARCHAR(400) = REPLICATE(N'x', 201);
+
+BEGIN TRY
+    EXEC DatosGenerales.usp_FERIADO_Alta @id_pais = -1, @fecha = NULL, @nombre = @nombre_largo;
+    PRINT N'F2: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'F2';
+END CATCH;
+GO
+
+/* F3 (ERROR) Alta repetida: mismo país y fecha, con otro nombre.
+   Esperado: error 50001 con 1 condición: ese país ya tiene un feriado el
+   20/06/2026. */
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
+
+BEGIN TRY
+    EXEC DatosGenerales.usp_FERIADO_Alta @id_pais = @id_pais, @fecha = '2026-06-20', @nombre = N'Otro feriado';
+    PRINT N'F3: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'F3';
+END CATCH;
+GO
+
+/* F4 (OK) Modificación del nombre, para registrar dos feriados del mismo día.
+   Esperado: el nombre pasa a "Día de Prueba / Otro feriado"; el país y la
+   fecha no cambian y fecha_actualizacion se renueva. */
+DECLARE @id INT = (SELECT f.id_feriado
+                   FROM DatosGenerales.FERIADO AS f
+                   INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = f.id_pais
+                   WHERE p.nombre = 'Pais Prueba A2');
+
+SELECT 'F4 antes' AS caso, id_feriado, id_pais, fecha, nombre, fecha_actualizacion
+FROM DatosGenerales.FERIADO
+WHERE id_feriado = @id;
+
+EXEC DatosGenerales.usp_FERIADO_Modificacion @id_feriado = @id, @nombre = N'Día de Prueba / Otro feriado';
+
+SELECT 'F4 después' AS caso, id_feriado, id_pais, fecha, nombre, fecha_actualizacion
+FROM DatosGenerales.FERIADO
+WHERE id_feriado = @id;
+GO
+
+/* F5 (ERROR) Modificación de un feriado que no existe, a un país que no
+   existe y con nombre en blanco (cuenta como no informado).
+   Esperado: error 50001 con 2 condiciones: no existe un feriado con id -1 y
+   no existe un país con id -1. */
+BEGIN TRY
+    EXEC DatosGenerales.usp_FERIADO_Modificacion @id_feriado = -1, @id_pais = -1, @nombre = N'   ';
+    PRINT N'F5: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'F5';
+END CATCH;
+GO
+
+/* P10 (ERROR) Baja de un país que todavía tiene feriados.
+   Esperado: error 50001 con 1 condición: lo referencia 1 registro de
+   DatosGenerales.FERIADO. El país sigue existiendo. */
+DECLARE @id SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
+
+BEGIN TRY
+    EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id;
+    PRINT N'P10: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'P10';
+END CATCH;
+
+SELECT 'P10 después' AS caso, id_pais, nombre
+FROM DatosGenerales.PAIS
+WHERE id_pais = @id;
+GO
+
+/* F6 (OK) Baja del feriado.
+   Esperado: 1 feriado del país de prueba antes y 0 después.
+   F7 (ERROR) Baja del mismo feriado otra vez.
+   Esperado: error 50001 con 1 condición: no existe un feriado con ese id. */
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
+DECLARE @id INT = (SELECT id_feriado FROM DatosGenerales.FERIADO WHERE id_pais = @id_pais);
+
+SELECT 'F6 antes' AS caso, COUNT(*) AS feriados_del_pais
+FROM DatosGenerales.FERIADO
+WHERE id_pais = @id_pais;
+
+EXEC DatosGenerales.usp_FERIADO_Baja @id_feriado = @id;
+
+SELECT 'F6 después' AS caso, COUNT(*) AS feriados_del_pais
+FROM DatosGenerales.FERIADO
+WHERE id_pais = @id_pais;
+
+BEGIN TRY
+    EXEC DatosGenerales.usp_FERIADO_Baja @id_feriado = @id;
+    PRINT N'F7: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'F7';
+END CATCH;
+GO
+
 /* P8 (ERROR) Baja de un país referenciado desde varias tablas.
    Preparación: se da de alta la sede "Estadio Prueba DatosGenerales" en
    "Pais Prueba B", que ya tiene el árbitro de prueba de I7.
@@ -757,7 +1013,7 @@ GO
 
 /* ============================================================================
    VERIFICACIÓN FINAL
-   Esperado: 0 en las cinco columnas de datos de prueba, y los parámetros del
+   Esperado: 0 en las siete columnas de datos de prueba, y los parámetros del
    reglamento con sus valores originales (MAX_CAMBIOS 5, MAX_CONVOCADOS 26,
    MAX_VENTANAS 3, MIN_CONVOCADOS 23, PRIME_TIME_DESDE 19).
    ============================================================================ */
@@ -769,7 +1025,11 @@ SELECT 'Final' AS caso,
        (SELECT COUNT(*) FROM Arbitraje.ARBITRO
         WHERE apellido = N'Prueba DatosGenerales')                                    AS arbitros_de_prueba,
        (SELECT COUNT(*) FROM Torneo.SEDE
-        WHERE nombre_estadio = 'Estadio Prueba DatosGenerales')                       AS sedes_de_prueba;
+        WHERE nombre_estadio = 'Estadio Prueba DatosGenerales')                       AS sedes_de_prueba,
+       (SELECT COUNT(*) FROM DatosGenerales.COTIZACION WHERE codigo_moneda = 'XTS')    AS cotizaciones_de_prueba,
+       (SELECT COUNT(*) FROM DatosGenerales.FERIADO AS f
+        INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = f.id_pais
+        WHERE p.nombre LIKE 'Pais Prueba%')                                           AS feriados_de_prueba;
 
 SELECT 'Final' AS caso, codigo, valor
 FROM DatosGenerales.PARAMETRO_REGLAMENTO

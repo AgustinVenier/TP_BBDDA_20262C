@@ -10,17 +10,18 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 27/10/2026
- Archivo: 21_DatosDePrueba.sql
+ Archivo: 31_DatosDePrueba.sql
  Objetivo: Llenar la base con un torneo completo de prueba, para tener datos
            con los que consultar vistas, funciones y reportes. Todo se carga
            con los SP de ABM y de negocio, nunca con INSERT directo.
-           Requiere haber ejecutado 00 a 20 sobre una base sin sedes cargadas
-           (se ejecuta una sola vez, después de recrear la base).
+           Va al final: requiere haber ejecutado 00 a 30 sobre una base sin
+           sedes cargadas (se ejecuta una sola vez, después de recrear la
+           base). De lo anterior, lo que necesita es la importación del PBI
+           per cápita del Banco Mundial (22, 25 y 26): la asignación de
+           publicidad lo usa para priorizar las piezas.
 ================================================================================
 
  Qué carga:
-   - PBI per cápita 2024 (NY.GDP.PCAP.CD, valores aproximados) de los países
-     de selecciones y mercados.
    - 10 sedes en 4 husos horarios, con sus 4 espacios publicitarios.
    - 16 selecciones en 4 grupos (A a D), cada una con director técnico, 3
      ayudantes y 23 convocados (3 arqueros, 8 defensores, 7 mediocampistas y
@@ -56,48 +57,26 @@ GO
 -- Se ejecuta sobre la base recién creada: si ya hay sedes, no se carga nada.
 IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS) OR EXISTS (SELECT 1 FROM Torneo.SEDE)
 BEGIN
-    PRINT N'21_DatosDePrueba.sql: la base tiene que tener los datos iniciales (20) y ninguna sede cargada. '
-        + N'Recreá la base con los scripts 00 a 20 y volvé a ejecutarlo.';
+    PRINT N'31_DatosDePrueba.sql: la base tiene que tener los datos iniciales (20) y ninguna sede cargada. '
+        + N'Recreá la base con los scripts 00 a 30 y volvé a ejecutarlo.';
     SET NOEXEC ON;
 END;
 GO
 
 
 /* ============================================================================
-   1. INDICADORES ECONÓMICOS (PBI per cápita en USD, valores aproximados)
+   1. INDICADORES ECONÓMICOS
+   No se cargan acá: el PBI per cápita lo trae la importación del Banco
+   Mundial (26_ImportarIndicadores.sql), que tiene que ejecutarse antes
+   porque la asignación de publicidad de cada partido (sección 9) prioriza
+   por PBI.
    ============================================================================ */
-BEGIN TRY
-    DECLARE @pbi TABLE (orden INT IDENTITY(1,1) PRIMARY KEY, codigo_fifa CHAR(3), valor DECIMAL(18,4));
-
-    INSERT INTO @pbi (codigo_fifa, valor)
-    VALUES ('USA', 85800), ('CAN', 53400), ('MEX', 13900), ('ARG', 13900), ('BRA', 10300),
-           ('URU', 23900), ('COL',  7900), ('CHI', 16700), ('PAR',  6200), ('ESP', 35300),
-           ('FRA', 46100), ('GER', 55800), ('ENG', 52600), ('SCO', 52600), ('AUT', 58300),
-           ('SUI', 103700), ('JPN', 32500), ('KOR', 36100), ('AUS', 64700), ('RSA',  6300),
-           ('MAR',  4200), ('ALG',  5700), ('SEN',  1700), ('KSA', 33100), ('QAT', 76700);
-
-    DECLARE @i INT = 1, @total INT = (SELECT COUNT(*) FROM @pbi);
-    DECLARE @id_pais SMALLINT, @valor DECIMAL(18,4);
-
-    WHILE @i <= @total
-    BEGIN
-        SELECT @id_pais = pa.id_pais, @valor = p.valor
-        FROM @pbi AS p
-        INNER JOIN DatosGenerales.PAIS AS pa ON pa.codigo_fifa = p.codigo_fifa
-        WHERE p.orden = @i;
-
-        EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Alta
-            @id_pais = @id_pais, @codigo_indicador = 'NY.GDP.PCAP.CD', @anio = 2024, @valor = @valor;
-
-        SET @i += 1;
-    END;
-
-    PRINT CONCAT(N'Indicadores económicos: ', @total, N' cargados.');
-END TRY
-BEGIN CATCH
-    PRINT N'Error al cargar los indicadores: ' + ERROR_MESSAGE();
+IF NOT EXISTS (SELECT 1 FROM DatosGenerales.INDICADOR_ECONOMICO WHERE codigo_indicador = 'NY.GDP.PCAP.CD')
+BEGIN
+    PRINT N'31_DatosDePrueba.sql: no hay PBI per cápita cargado y la publicidad se asigna según el PBI. '
+        + N'Ejecutá 22, 25 y 26 (importación del Banco Mundial) y volvé a ejecutar este script.';
     SET NOEXEC ON;
-END CATCH;
+END;
 GO
 
 

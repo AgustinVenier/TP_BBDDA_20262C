@@ -12,10 +12,12 @@
  Fecha: 25/10/2026
  Archivo: 03_CrearFuncionesYVistas.sql
  Objetivo: Crear las funciones y vistas que usan los SP y las consultas del
-           sistema: parámetros del sistema, fixture filtrable, equipo en
+           sistema: parámetros del sistema, cotización vigente de una
+           moneda, fixture filtrable, equipo en
            cancha en cualquier minuto, marcador según los goles cargados,
            sanciones y suspensiones, selecciones en competencia, simulación
-           de prime time, prioridad de piezas publicitarias, historial de
+           de prime time y feriados por mercado, prioridad de piezas
+           publicitarias, historial de
            titularidad, goleadores e historial de árbitros.
            Requiere haber ejecutado 00, 01 y 02. Su script de testing es
            53_Test_FuncionesYVistas.sql.
@@ -72,6 +74,33 @@ RETURN
         ('PRIME_TIME_HASTA',                  0,  23),
         ('PBI_FRANJA_MILES_USD',              1, 255)
     ) AS p (codigo, valor_minimo, valor_maximo);
+GO
+
+
+/*
+  fn_CotizacionVigente
+  Cotización de una moneda en una fecha: cuántas unidades de la moneda vale
+  un dólar. Si ese día no hay cotización (fin de semana o feriado bancario),
+  devuelve la última anterior, con la fecha de la que es. El dólar vale
+  siempre 1. Sin cotizaciones cargadas hasta esa fecha, no devuelve filas.
+  Ej. pauta de un espacio en la moneda de un mercado y exhibición en dólares:
+    SELECT ep.tarifa_usd * c.unidades_por_usd
+    FROM ... CROSS APPLY DatosGenerales.fn_CotizacionVigente(pa.codigo_moneda, @fecha) AS c;
+    SELECT ex.costo / c.unidades_por_usd
+    FROM ... CROSS APPLY DatosGenerales.fn_CotizacionVigente(ex.codigo_moneda, @fecha) AS c;
+*/
+CREATE OR ALTER FUNCTION DatosGenerales.fn_CotizacionVigente (@codigo_moneda CHAR(3), @fecha DATE)
+RETURNS TABLE
+AS
+RETURN
+    SELECT TOP (1) c.codigo_moneda, c.fecha AS fecha_cotizacion, c.unidades_por_usd
+    FROM (SELECT codigo_moneda, fecha, unidades_por_usd
+          FROM DatosGenerales.COTIZACION
+          WHERE codigo_moneda = @codigo_moneda AND fecha <= @fecha
+          UNION ALL
+          SELECT CAST('USD' AS CHAR(3)), @fecha, CAST(1 AS DECIMAL(19,6))
+          WHERE @codigo_moneda = 'USD') AS c
+    ORDER BY c.fecha DESC;
 GO
 
 
@@ -529,6 +558,8 @@ GO
   indica si cae en prime time (de PRIME_TIME_DESDE inclusive a
   PRIME_TIME_HASTA exclusive; si DESDE es mayor que HASTA, la franja cruza la
   medianoche). AT TIME ZONE aplica el horario de verano de cada país.
+  También indica si la fecha local del partido es feriado en ese mercado
+  (DatosGenerales.FERIADO) y cuál.
   Ej.: SELECT * FROM Publicidad.fn_MercadosEnPrimeTime(@id_partido) WHERE en_prime_time = 1;
 */
 CREATE OR ALTER FUNCTION Publicidad.fn_MercadosEnPrimeTime (@id_partido INT)
@@ -549,7 +580,9 @@ RETURN
                      ELSE IIF(DATEPART(HOUR, hl.hora_local) >= prm.desde
                               OR DATEPART(HOUR, hl.hora_local) < prm.hasta, 1, 0)
                 END AS BIT) AS en_prime_time,
-           CAST(IIF(pa.id_pais IN (sl.id_pais, sv.id_pais), 1, 0) AS BIT) AS juega_el_partido
+           CAST(IIF(pa.id_pais IN (sl.id_pais, sv.id_pais), 1, 0) AS BIT) AS juega_el_partido,
+           CAST(IIF(f.id_feriado IS NULL, 0, 1) AS BIT) AS es_feriado,
+           f.nombre AS feriado
     FROM Torneo.PARTIDO AS p
     CROSS JOIN DatosGenerales.PAIS AS pa
     CROSS JOIN parametros AS prm
@@ -557,6 +590,8 @@ RETURN
     LEFT JOIN Torneo.SELECCION AS sv ON sv.id_seleccion = p.id_seleccion_visitante
     CROSS APPLY (SELECT CONVERT(DATETIME2(0),
                                 (p.fecha_hora_utc AT TIME ZONE 'UTC') AT TIME ZONE pa.huso_horario) AS hora_local) AS hl
+    LEFT JOIN DatosGenerales.FERIADO AS f
+           ON f.id_pais = pa.id_pais AND f.fecha = CAST(hl.hora_local AS DATE)
     WHERE p.id_partido = @id_partido;
 GO
 
