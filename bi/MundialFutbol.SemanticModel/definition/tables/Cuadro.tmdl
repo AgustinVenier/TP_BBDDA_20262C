@@ -1,0 +1,223 @@
+table Cuadro
+	lineageTag: e28b9322-f6e5-5eb6-a1c8-942380b61692
+
+	measure 'Cuadro de eliminación' =
+			VAR Rondas = MAX(Cuadro[rondas])
+			VAR AnchoCaja = 250
+			VAR MedioAncho = 125
+			VAR Separacion = 60
+			VAR MediaSeparacion = 30
+			VAR AltoFila = 76
+			VAR AltoCaja = 58
+			VAR MedioAlto = 29
+			VAR Arriba = 44
+			VAR AltoCuadro = POWER(2, Rondas - 1) * AltoFila
+			VAR HayTercero = NOT ISEMPTY(FILTER(Cuadro, Cuadro[es_tercer_puesto]))
+			VAR Ancho = 40 + Rondas * AnchoCaja + (Rondas - 1) * Separacion + IF(HayTercero, Separacion + AnchoCaja, 0)
+			VAR Alto = Arriba + AltoCuadro + 10
+			VAR Fuente = "font-family='Segoe UI' "
+			VAR Titulos =
+			    CONCATENATEX(
+			        SUMMARIZE(Cuadro, Cuadro[ronda], Cuadro[es_tercer_puesto], Cuadro[etiqueta]),
+			        VAR Columna = IF(Cuadro[es_tercer_puesto], Rondas, Cuadro[ronda])
+			        VAR X = 20 + Columna * (AnchoCaja + Separacion) + MedioAncho
+			        RETURN "<text x='" & X & "' y='26' text-anchor='middle' " & Fuente & "font-size='15' font-weight='600' fill='rgb(60,60,60)'>" & Cuadro[etiqueta] & "</text>",
+			        ""
+			    )
+			VAR Partidos =
+			    CONCATENATEX(
+			        Cuadro,
+			        VAR Columna = IF(Cuadro[es_tercer_puesto], Rondas, Cuadro[ronda])
+			        VAR Lugares = IF(Cuadro[es_tercer_puesto], 1, POWER(2, Rondas - 1 - Cuadro[ronda]))
+			        VAR X = 20 + Columna * (AnchoCaja + Separacion)
+			        VAR CY = INT(Arriba + (Cuadro[posicion] + 0.5) * AltoCuadro / Lugares)
+			        VAR Y = CY - MedioAlto
+			        VAR GanaLocal = Cuadro[gana_local]
+			        VAR Definido = NOT ISBLANK(GanaLocal)
+			        VAR GanoLocal = Definido && GanaLocal = 1
+			        VAR GanoVisitante = Definido && GanaLocal = 0
+			        VAR Local = SUBSTITUTE(SUBSTITUTE(Cuadro[seleccion_local], "&", "&amp;"), "<", "&lt;")
+			        VAR Visitante = SUBSTITUTE(SUBSTITUTE(Cuadro[seleccion_visitante], "&", "&amp;"), "<", "&lt;")
+			        VAR MarcadorLocal = Cuadro[goles_local] & IF(NOT ISBLANK(Cuadro[penales_local]), " (" & Cuadro[penales_local] & ")")
+			        VAR MarcadorVisitante = Cuadro[goles_visitante] & IF(NOT ISBLANK(Cuadro[penales_visitante]), " (" & Cuadro[penales_visitante] & ")")
+			        VAR Conector =
+			            IF(
+			                NOT Cuadro[es_tercer_puesto] && Cuadro[ronda] < Rondas - 1,
+			                VAR X1 = X + AnchoCaja
+			                VAR XM = X1 + MediaSeparacion
+			                VAR X2 = X1 + Separacion
+			                VAR CYP = INT(Arriba + (INT(Cuadro[posicion] / 2) + 0.5) * AltoCuadro * 2 / Lugares)
+			                RETURN "<polyline points='" & X1 & "," & CY & " " & XM & "," & CY & " " & XM & "," & CYP & " " & X2 & "," & CYP & "' fill='none' stroke='rgb(170,170,170)' stroke-width='1.5'/>"
+			            )
+			        VAR Campeon =
+			            IF(
+			                Cuadro[fase] = "FINAL" && Definido,
+			                "<rect x='" & X & "' y='" & IF(GanoLocal, Y, CY) & "' width='" & AnchoCaja & "' height='" & MedioAlto & "' rx='6' fill='rgb(253,236,180)'/>"
+			            )
+			        VAR ColorLocal = IF(GanoVisitante, "rgb(130,130,130)", "rgb(30,30,30)")
+			        VAR ColorVisitante = IF(GanoLocal, "rgb(130,130,130)", "rgb(30,30,30)")
+			        VAR PesoLocal = IF(GanoLocal, "700", "400")
+			        VAR PesoVisitante = IF(GanoVisitante, "700", "400")
+			        RETURN
+			            Conector
+			                & "<rect x='" & X & "' y='" & Y & "' width='" & AnchoCaja & "' height='" & AltoCaja & "' rx='6' fill='white' stroke='rgb(200,200,200)'/>"
+			                & Campeon
+			                & "<line x1='" & X & "' y1='" & CY & "' x2='" & X + AnchoCaja & "' y2='" & CY & "' stroke='rgb(225,225,225)'/>"
+			                & "<text x='" & X + 10 & "' y='" & Y + 20 & "' " & Fuente & "font-size='14' font-weight='" & PesoLocal & "' fill='" & ColorLocal & "'>" & Local & "</text>"
+			                & "<text x='" & X + AnchoCaja - 10 & "' y='" & Y + 20 & "' text-anchor='end' " & Fuente & "font-size='14' font-weight='" & PesoLocal & "' fill='" & ColorLocal & "'>" & MarcadorLocal & "</text>"
+			                & "<text x='" & X + 10 & "' y='" & CY + 20 & "' " & Fuente & "font-size='14' font-weight='" & PesoVisitante & "' fill='" & ColorVisitante & "'>" & Visitante & "</text>"
+			                & "<text x='" & X + AnchoCaja - 10 & "' y='" & CY + 20 & "' text-anchor='end' " & Fuente & "font-size='14' font-weight='" & PesoVisitante & "' fill='" & ColorVisitante & "'>" & MarcadorVisitante & "</text>",
+			        "",
+			        Cuadro[ronda], ASC
+			    )
+			RETURN
+			    IF(
+			        NOT ISEMPTY(Cuadro),
+			        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='" & Ancho & "' height='" & Alto & "' viewBox='0 0 " & Ancho & " " & Alto & "'>"
+			            & Titulos & Partidos & "</svg>"
+			    )
+		lineageTag: 9e523547-c634-5295-bf68-66f96ff87665
+		dataCategory: ImageUrl
+
+	column id_partido
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 713743dc-15cd-554f-9e97-d3aa000c9446
+		summarizeBy: none
+		sourceColumn: id_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column numero_partido
+		dataType: int64
+		formatString: 0
+		lineageTag: acf08e96-9292-5c39-b678-548d43628cc1
+		summarizeBy: none
+		sourceColumn: numero_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column fase
+		dataType: string
+		lineageTag: a997006d-b88a-5b20-b3b1-989b01ca188d
+		summarizeBy: none
+		sourceColumn: fase
+
+		annotation SummarizationSetBy = Automatic
+
+	column etiqueta
+		dataType: string
+		lineageTag: 5d9edccc-7d2d-5156-aa35-327d3aaafc53
+		summarizeBy: none
+		sourceColumn: etiqueta
+
+		annotation SummarizationSetBy = Automatic
+
+	column ronda
+		dataType: int64
+		formatString: 0
+		lineageTag: 76dfaf1d-c7af-51c4-a325-f42c4428156e
+		summarizeBy: none
+		sourceColumn: ronda
+
+		annotation SummarizationSetBy = Automatic
+
+	column rondas
+		dataType: int64
+		formatString: 0
+		lineageTag: dcf6ae36-2eff-5046-9425-59cfc75f3959
+		summarizeBy: none
+		sourceColumn: rondas
+
+		annotation SummarizationSetBy = Automatic
+
+	column posicion
+		dataType: int64
+		formatString: 0
+		lineageTag: 1880aa65-3c0f-5961-94ea-6e510e72a71f
+		summarizeBy: none
+		sourceColumn: posicion
+
+		annotation SummarizationSetBy = Automatic
+
+	column es_tercer_puesto
+		dataType: boolean
+		lineageTag: 75d70e12-51b0-5dd8-b150-88883bcad1e2
+		summarizeBy: none
+		sourceColumn: es_tercer_puesto
+
+		annotation SummarizationSetBy = Automatic
+
+	column seleccion_local
+		dataType: string
+		lineageTag: 98878574-7f60-5892-8801-35440fb0e2d2
+		summarizeBy: none
+		sourceColumn: seleccion_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column seleccion_visitante
+		dataType: string
+		lineageTag: 96e09002-350c-560f-9b56-bca215edc42f
+		summarizeBy: none
+		sourceColumn: seleccion_visitante
+
+		annotation SummarizationSetBy = Automatic
+
+	column goles_local
+		dataType: int64
+		formatString: 0
+		lineageTag: c43983f7-3f25-586c-a055-d87a89c30077
+		summarizeBy: none
+		sourceColumn: goles_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column goles_visitante
+		dataType: int64
+		formatString: 0
+		lineageTag: 5eea7af8-4420-5fb7-beaa-f1e1f2dbcd75
+		summarizeBy: none
+		sourceColumn: goles_visitante
+
+		annotation SummarizationSetBy = Automatic
+
+	column penales_local
+		dataType: int64
+		formatString: 0
+		lineageTag: dcdaa7d2-68eb-5027-bf3f-72bf4621bf67
+		summarizeBy: none
+		sourceColumn: penales_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column penales_visitante
+		dataType: int64
+		formatString: 0
+		lineageTag: 178c1a67-b626-5cb5-9083-c6177896c6e8
+		summarizeBy: none
+		sourceColumn: penales_visitante
+
+		annotation SummarizationSetBy = Automatic
+
+	column gana_local
+		dataType: int64
+		formatString: 0
+		lineageTag: fd02542f-3de0-59ef-afed-a1639f814b8c
+		summarizeBy: none
+		sourceColumn: gana_local
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Cuadro = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_CuadroEliminacion"]}[Data]
+				in
+				    Vista
+
+	annotation PBI_ResultType = Table
+

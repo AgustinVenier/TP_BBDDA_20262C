@@ -1,0 +1,96 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "ingresosSedeMoneda",
+  "position": {
+    "x": 240,
+    "y": 130,
+    "z": 2000,
+    "height": 570,
+    "width": 1020,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "clusteredColumnChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Sedes"
+                    }
+                  },
+                  "Property": "sede"
+                }
+              },
+              "queryRef": "Sedes.sede",
+              "nativeQueryRef": "sede",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "IngresosPorMoneda"
+                    }
+                  },
+                  "Property": "Ingresos en moneda"
+                }
+              },
+              "queryRef": "IngresosPorMoneda.Ingresos en moneda",
+              "nativeQueryRef": "Ingresos en moneda"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "IngresosPorMoneda"
+                  }
+                },
+                "Property": "Ingresos en moneda"
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Ingresos por sede en la moneda elegida (cotización del día del partido)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "totales",
+  "position": {
+    "x": 340,
+    "y": 20,
+    "z": 1000,
+    "height": 100,
+    "width": 400,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "Amarillas"
+                }
+              },
+              "queryRef": "Tarjetas.Amarillas",
+              "nativeQueryRef": "Amarillas"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "Rojas"
+                }
+              },
+              "queryRef": "Tarjetas.Rojas",
+              "nativeQueryRef": "Rojas"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -1,0 +1,26 @@
+model Model
+	culture: es-AR
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: es-AR
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_QueryOrder = ["Servidor", "BaseDeDatos", "Partidos", "Sedes", "Goles", "Tarjetas", "Ocupacion", "IngresosPorMoneda", "PrimeTime", "Posiciones", "Cuadro"]
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table Partidos
+ref table Sedes
+ref table Goles
+ref table Tarjetas
+ref table Ocupacion
+ref table IngresosPorMoneda
+ref table PrimeTime
+ref table Posiciones
+ref table Cuadro
+
+ref cultureInfo es-AR
+

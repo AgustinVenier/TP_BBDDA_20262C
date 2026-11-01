@@ -73,6 +73,7 @@ SELECT g.id_gol,
        j.id_jugador,
        j.apellido,
        j.nombre,
+       CONCAT(j.apellido, N', ', j.nombre)                                AS jugador,
        j.dorsal,
        j.posicion_habitual,
        tg.descripcion                                                     AS tipo_gol,
@@ -112,6 +113,7 @@ SELECT a.id_amonestacion,
        a.id_persona_ct,
        COALESCE(j.apellido, ct.apellido)                                  AS apellido,
        COALESCE(j.nombre, ct.nombre)                                      AS nombre,
+       CONCAT(COALESCE(j.apellido, ct.apellido), N', ', COALESCE(j.nombre, ct.nombre)) AS persona,
        j.dorsal,
        ct.rol                                                             AS rol_cuerpo_tecnico,
        a.tipo_tarjeta,
@@ -317,6 +319,29 @@ GO
 
 
 /*
+  vw_Sedes
+  Una sede por fila con su ubicación (latitud y longitud, para el mapa del
+  BI) y cuántos partidos tiene. sede tiene el mismo formato que en
+  vw_OcupacionPublicitaria.
+*/
+CREATE OR ALTER VIEW Reportes.vw_Sedes
+AS
+SELECT s.id_sede,
+       CONCAT(s.nombre_estadio, N' (', s.ciudad, N')')  AS sede,
+       s.nombre_estadio,
+       s.ciudad,
+       pa.nombre                                        AS pais,
+       s.capacidad,
+       s.huso_horario,
+       s.latitud,
+       s.longitud,
+       (SELECT COUNT(*) FROM Torneo.PARTIDO AS p WHERE p.id_sede = s.id_sede) AS partidos
+FROM Torneo.SEDE AS s
+INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais;
+GO
+
+
+/*
   vw_Plantillas
   Un convocado por fila con su selección. activo = 0 son los dados de baja
   (reemplazados).
@@ -350,11 +375,14 @@ GO
   Un partido por fila con el resultado, el ganador (también por penales; en
   grupos puede ser "Empate") y los goles de cada lado en el orden en que se
   hicieron. Un gol en contra figura del lado que lo suma, marcado (e/c).
+  partido lleva el número, así es único aunque las selecciones de dos
+  cruces todavía sean "A definir": el BI la usa como dimensión de partidos.
 */
 CREATE OR ALTER VIEW Reportes.vw_Resultados
 AS
 SELECT f.id_partido,
        f.numero_partido,
+       CONCAT(f.numero_partido, N'. ', f.seleccion_local, N' vs ', f.seleccion_visitante) AS partido,
        f.fase,
        CASE f.fase WHEN 'GRUPOS' THEN 1 WHEN 'DIECISEISAVOS' THEN 2 WHEN 'OCTAVOS' THEN 3
                    WHEN 'CUARTOS' THEN 4 WHEN 'SEMIFINAL' THEN 5 WHEN 'TERCER_PUESTO' THEN 6
@@ -459,6 +487,87 @@ SELECT grupo,
        gf - gc     AS dg,
        pg * 3 + pe AS pts
 FROM totales;
+GO
+
+
+/*
+  vw_CuadroEliminacion
+  Partidos de eliminación directa ubicados en el cuadro, para dibujarlo en el
+  BI: ronda (0 = la primera ronda de eliminación que tenga el torneo; la
+  última, rondas - 1, es la final), posición dentro de la ronda (0 arriba) y
+  qué selección ganó (gana_local: 1 la local, 0 la visitante, NULL sin
+  definir). El tercer puesto va aparte, en la ronda de la final.
+  El cuadro no está modelado (no se guarda qué partido alimenta a cuál), así
+  que se reconstruye con los resultados, desde la final hacia atrás: el
+  partido que ganó la selección local de un cruce va en la posición 2p y el
+  que ganó la visitante, en la 2p + 1. Una ronda en la que no se pueden ubicar
+  todos los partidos así (porque falta jugar el cruce siguiente) se ordena por
+  número de partido.
+*/
+CREATE OR ALTER VIEW Reportes.vw_CuadroEliminacion
+AS
+WITH eliminacion AS (
+    SELECT p.id_partido,
+           p.numero_partido,
+           p.fase,
+           CASE p.fase WHEN 'DIECISEISAVOS' THEN 1 WHEN 'OCTAVOS' THEN 2 WHEN 'CUARTOS' THEN 3
+                       WHEN 'SEMIFINAL' THEN 4 ELSE 5 END AS nivel,
+           p.id_seleccion_local,
+           p.id_seleccion_visitante,
+           CASE WHEN p.estado <> 'FINALIZADO'               THEN NULL
+                WHEN p.goles_local > p.goles_visitante      THEN p.id_seleccion_local
+                WHEN p.goles_visitante > p.goles_local      THEN p.id_seleccion_visitante
+                WHEN p.penales_local > p.penales_visitante  THEN p.id_seleccion_local
+                WHEN p.penales_visitante > p.penales_local  THEN p.id_seleccion_visitante
+           END AS id_ganador
+    FROM Torneo.PARTIDO AS p
+    WHERE p.fase IN ('DIECISEISAVOS', 'OCTAVOS', 'CUARTOS', 'SEMIFINAL', 'FINAL', 'TERCER_PUESTO')
+),
+-- Desde la final hacia atrás: cada partido ubica al anterior que ganó cada una de sus selecciones.
+arbol AS (
+    SELECT id_partido, nivel, 0 AS posicion
+    FROM eliminacion
+    WHERE fase = 'FINAL'
+    UNION ALL
+    SELECT h.id_partido, h.nivel, a.posicion * 2 + IIF(h.id_ganador = padre.id_seleccion_local, 0, 1)
+    FROM arbol AS a
+    INNER JOIN eliminacion AS padre ON padre.id_partido = a.id_partido
+    INNER JOIN eliminacion AS h ON h.nivel = padre.nivel - 1
+                               AND h.fase <> 'TERCER_PUESTO'
+                               AND h.id_ganador IN (padre.id_seleccion_local, padre.id_seleccion_visitante)
+),
+ubicados AS (
+    SELECT e.*,
+           a.posicion                                                                   AS posicion_arbol,
+           COUNT(a.id_partido) OVER (PARTITION BY e.nivel, IIF(e.fase = 'TERCER_PUESTO', 1, 0)) AS ubicados_en_ronda,
+           COUNT(*) OVER (PARTITION BY e.nivel, IIF(e.fase = 'TERCER_PUESTO', 1, 0))           AS partidos_en_ronda,
+           ROW_NUMBER() OVER (PARTITION BY e.nivel, IIF(e.fase = 'TERCER_PUESTO', 1, 0)
+                              ORDER BY e.numero_partido) - 1                            AS posicion_numero
+    FROM eliminacion AS e
+    LEFT JOIN arbol AS a ON a.id_partido = e.id_partido
+)
+SELECT u.id_partido,
+       u.numero_partido,
+       u.fase,
+       CASE u.fase WHEN 'DIECISEISAVOS' THEN 'Dieciseisavos de final' WHEN 'OCTAVOS' THEN 'Octavos de final'
+                   WHEN 'CUARTOS' THEN 'Cuartos de final' WHEN 'SEMIFINAL' THEN 'Semifinales'
+                   WHEN 'FINAL' THEN 'Final' ELSE 'Tercer puesto' END                  AS etiqueta,
+       u.nivel - r.primera                                                              AS ronda,
+       5 - r.primera + 1                                                                AS rondas,
+       IIF(u.ubicados_en_ronda = u.partidos_en_ronda, u.posicion_arbol, u.posicion_numero) AS posicion,
+       CAST(IIF(u.fase = 'TERCER_PUESTO', 1, 0) AS BIT)                                 AS es_tercer_puesto,
+       f.seleccion_local,
+       f.seleccion_visitante,
+       f.goles_local,
+       f.goles_visitante,
+       f.penales_local,
+       f.penales_visitante,
+       CASE WHEN u.id_ganador IS NULL THEN NULL
+            WHEN u.id_ganador = u.id_seleccion_local THEN 1
+            ELSE 0 END                                                                  AS gana_local
+FROM ubicados AS u
+INNER JOIN Torneo.vw_Fixture AS f ON f.id_partido = u.id_partido
+CROSS JOIN (SELECT MIN(nivel) AS primera FROM eliminacion) AS r;
 GO
 
 

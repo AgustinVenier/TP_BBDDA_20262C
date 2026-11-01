@@ -1,0 +1,28 @@
+relationship ec02768a-2f44-53fa-82ce-0df56d37a8c5
+	fromColumn: Goles.id_partido
+	toColumn: Partidos.id_partido
+
+relationship 0d0489fc-5f02-594a-9951-88771b7edf7a
+	fromColumn: Tarjetas.id_partido
+	toColumn: Partidos.id_partido
+
+relationship 25efb601-5710-5b59-982a-745136eb6096
+	fromColumn: Ocupacion.id_partido
+	toColumn: Partidos.id_partido
+
+relationship 77ea6c01-68ad-57a9-bb97-79dd2c26c061
+	fromColumn: IngresosPorMoneda.id_partido
+	toColumn: Partidos.id_partido
+
+relationship 68d5e243-ab35-5b6c-b9f7-88957a99d878
+	fromColumn: PrimeTime.id_partido
+	toColumn: Partidos.id_partido
+
+relationship 9e1bbb30-4396-54b0-8ed6-c2f485b6d329
+	fromColumn: Ocupacion.id_sede
+	toColumn: Sedes.id_sede
+
+relationship 33568700-d39f-5d42-a83c-5f3d68b69534
+	fromColumn: IngresosPorMoneda.id_sede
+	toColumn: Sedes.id_sede
+

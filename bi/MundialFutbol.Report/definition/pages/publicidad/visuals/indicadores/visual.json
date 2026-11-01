@@ -1,0 +1,66 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "indicadores",
+  "position": {
+    "x": 340,
+    "y": 20,
+    "z": 1000,
+    "height": 100,
+    "width": 820,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "Ingresos USD"
+                }
+              },
+              "queryRef": "Ocupacion.Ingresos USD",
+              "nativeQueryRef": "Ingresos USD"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "% Ocupación"
+                }
+              },
+              "queryRef": "Ocupacion.% Ocupación",
+              "nativeQueryRef": "% Ocupación"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "Espacios ocupados"
+                }
+              },
+              "queryRef": "Ocupacion.Espacios ocupados",
+              "nativeQueryRef": "Espacios ocupados"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

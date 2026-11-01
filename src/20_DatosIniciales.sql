@@ -247,7 +247,15 @@ VALUES
     ('Haití',                  'HAI', 'HT', 'HTI', 'Haiti Standard Time',             'HTG'),
     ('Costa Rica',             'CRC', 'CR', 'CRI', 'Central America Standard Time',   'CRC'),
     -- OFC
-    ('Nueva Zelanda',          'NZL', 'NZ', 'NZL', 'New Zealand Standard Time',       'NZD');
+    ('Nueva Zelanda',          'NZL', 'NZ', 'NZL', 'New Zealand Standard Time',       'NZD'),
+    -- Selecciones del Mundial 2026 que no están en las listas de arriba
+    ('Bosnia y Herzegovina',   'BIH', 'BA', 'BIH', 'Central European Standard Time',  'BAM'),
+    ('República Checa',        'CZE', 'CZ', 'CZE', 'Central Europe Standard Time',    'CZK'),
+    ('Suecia',                 'SWE', 'SE', 'SWE', 'W. Europe Standard Time',         'SEK'),
+    ('Turquía',                'TUR', 'TR', 'TUR', 'Turkey Standard Time',            'TRY'),
+    ('Irak',                   'IRQ', 'IQ', 'IRQ', 'Arabic Standard Time',            'IQD'),
+    ('República Democrática del Congo', 'COD', 'CD', 'COD', 'W. Central Africa Standard Time', 'CDF'),
+    ('Curazao',                'CUW', 'CW', 'CUW', 'SA Western Standard Time',        'XCG');
 
 DECLARE @i INT = 1, @total INT = (SELECT COUNT(*) FROM @paises);
 DECLARE @cargados INT = 0, @existentes INT = 0, @rechazados INT = 0;

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "totalGoles",
+  "position": {
+    "x": 660,
+    "y": 20,
+    "z": 2000,
+    "height": 100,
+    "width": 220,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Goles"
+                    }
+                  },
+                  "Property": "Total goles"
+                }
+              },
+              "queryRef": "Goles.Total goles",
+              "nativeQueryRef": "Total goles"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

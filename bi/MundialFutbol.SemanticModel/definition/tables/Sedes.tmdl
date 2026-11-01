@@ -1,0 +1,102 @@
+table Sedes
+	lineageTag: 8c619234-1994-5a70-b9a8-32b8910c9f17
+
+	measure 'Partidos por sede' = SUM(Sedes[partidos])
+		formatString: 0
+		lineageTag: 4653cc4d-66cf-53a0-8de6-09ec6e981eb0
+
+	column id_sede
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: e2dc1605-7efa-59c2-9f36-12e456118e84
+		summarizeBy: none
+		sourceColumn: id_sede
+
+		annotation SummarizationSetBy = Automatic
+
+	column sede
+		dataType: string
+		lineageTag: 47aa437f-3903-5865-8678-a05ebc3d837b
+		summarizeBy: none
+		sourceColumn: sede
+
+		annotation SummarizationSetBy = Automatic
+
+	column nombre_estadio
+		dataType: string
+		lineageTag: a364995f-4608-5510-8696-c65683448866
+		summarizeBy: none
+		sourceColumn: nombre_estadio
+
+		annotation SummarizationSetBy = Automatic
+
+	column ciudad
+		dataType: string
+		lineageTag: 4c3c1810-3f35-5aab-87f0-e31871312c4b
+		summarizeBy: none
+		sourceColumn: ciudad
+
+		annotation SummarizationSetBy = Automatic
+
+	column pais
+		dataType: string
+		lineageTag: 2c703496-8fd1-5484-80a6-a9a31141fe3c
+		summarizeBy: none
+		sourceColumn: pais
+
+		annotation SummarizationSetBy = Automatic
+
+	column capacidad
+		dataType: int64
+		formatString: 0
+		lineageTag: 037e8a48-79e3-5d95-9b08-4f5fc5c13c26
+		summarizeBy: none
+		sourceColumn: capacidad
+
+		annotation SummarizationSetBy = Automatic
+
+	column huso_horario
+		dataType: string
+		lineageTag: 96cd29a3-c1ca-59e0-9d71-910790bc96e7
+		summarizeBy: none
+		sourceColumn: huso_horario
+
+		annotation SummarizationSetBy = Automatic
+
+	column latitud
+		dataType: double
+		lineageTag: 0b748e27-7b5a-5e43-bbe9-b12a0c6d0881
+		summarizeBy: none
+		sourceColumn: latitud
+
+		annotation SummarizationSetBy = Automatic
+
+	column longitud
+		dataType: double
+		lineageTag: 951296f3-6b55-5578-8c9a-0ffced3f6aa9
+		summarizeBy: none
+		sourceColumn: longitud
+
+		annotation SummarizationSetBy = Automatic
+
+	column partidos
+		dataType: int64
+		formatString: 0
+		lineageTag: 4f8f28ac-b5b7-599d-ac63-0fe84bbcef5d
+		summarizeBy: none
+		sourceColumn: partidos
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Sedes = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_Sedes"]}[Data]
+				in
+				    Vista
+
+	annotation PBI_ResultType = Table
+

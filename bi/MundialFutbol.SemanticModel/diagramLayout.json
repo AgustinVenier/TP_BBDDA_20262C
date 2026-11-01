@@ -1,0 +1,139 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 0,
+        "y": 0
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 883.48530083864352,
+            "y": 656.80574176976438
+          },
+          "nodeIndex": "Goles",
+          "nodeLineageTag": "bf50ba81-007c-52fe-b19f-f2c826ebc132",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 385.82440934176952,
+            "y": 467.76154281233204
+          },
+          "nodeIndex": "IngresosPorMoneda",
+          "nodeLineageTag": "2cf5dcdd-756c-5c79-afb2-45e677654fc6",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 337.00749259935151,
+            "y": 114.06060118257142
+          },
+          "nodeIndex": "Ocupacion",
+          "nodeLineageTag": "0553726b-31f6-5d34-9c6a-7c5dfa6e7cbe",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 672.886601739238,
+            "y": 303.09232556768268
+          },
+          "nodeIndex": "Partidos",
+          "nodeLineageTag": "483190f2-5eeb-5b65-8b8a-b3f68e58d2ab",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1269.9734258531012,
+            "y": 353.40287088488219
+          },
+          "nodeIndex": "Posiciones",
+          "nodeLineageTag": "a88fac27-23bf-558f-86d7-d40da6dfbf6a",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1035.9734258531012,
+            "y": 303.04925815536666
+          },
+          "nodeIndex": "PrimeTime",
+          "nodeLineageTag": "ed84a590-4894-5193-b0f5-1e0572f33a0f",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 50,
+            "y": 326.06700070410034
+          },
+          "nodeIndex": "Sedes",
+          "nodeLineageTag": "8c619234-1994-5a70-b9a8-32b8910c9f17",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 758.87920968557421,
+            "y": -50
+          },
+          "nodeIndex": "Tarjetas",
+          "nodeLineageTag": "e3b1a4db-6fa9-5564-8c3e-ddfe56025d43",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1503.9734258531012,
+            "y": 353.40287088488219
+          },
+          "nodeIndex": "Cuadro",
+          "nodeLineageTag": "e28b9322-f6e5-5eb6-a1c8-942380b61692",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        }
+      ],
+      "name": "Todas las tablas",
+      "zoomValue": 100,
+      "pinKeyFieldsToTop": false,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ],
+  "selectedDiagram": "Todas las tablas",
+  "defaultDiagram": "Todas las tablas"
+}

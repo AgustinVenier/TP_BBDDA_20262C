@@ -1,0 +1,120 @@
+table IngresosPorMoneda
+	lineageTag: 2cf5dcdd-756c-5c79-afb2-45e677654fc6
+
+	measure 'Moneda mostrada' = IF(HASONEVALUE(IngresosPorMoneda[codigo_moneda]), VALUES(IngresosPorMoneda[codigo_moneda]), "USD")
+		lineageTag: 0b3ea36e-6b96-59f8-afc5-1cd1ce1517bc
+
+	measure 'Ingresos en moneda' = VAR moneda = [Moneda mostrada] RETURN CALCULATE(SUM(IngresosPorMoneda[ingresos_en_moneda]), IngresosPorMoneda[codigo_moneda] = moneda)
+		formatString: #,0
+		lineageTag: 707c6e4c-7afc-52c7-bbb2-29f317338c5e
+
+	column id_partido
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 897f9b18-a1b7-5073-a8fe-9cfa7a763ac8
+		summarizeBy: none
+		sourceColumn: id_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column numero_partido
+		dataType: int64
+		formatString: 0
+		lineageTag: 9c9e70b3-6a70-532c-be65-9523fccc8542
+		summarizeBy: none
+		sourceColumn: numero_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_hora_local
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: d49c94c9-439a-5d1f-90e8-a82be614f269
+		summarizeBy: none
+		sourceColumn: fecha_hora_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column partido
+		dataType: string
+		lineageTag: 0172e1c4-046e-540f-8a3c-cfecac1bdc56
+		summarizeBy: none
+		sourceColumn: partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_sede
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 56bcbed0-ea38-5998-8c12-cb7690d80664
+		summarizeBy: none
+		sourceColumn: id_sede
+
+		annotation SummarizationSetBy = Automatic
+
+	column sede
+		dataType: string
+		lineageTag: 79facc53-90c5-525e-a5af-245102456c99
+		summarizeBy: none
+		sourceColumn: sede
+
+		annotation SummarizationSetBy = Automatic
+
+	column ingresos_usd
+		dataType: double
+		formatString: #,0.00
+		lineageTag: bcef71f0-682e-55a0-9d4a-c1b36f355bc9
+		summarizeBy: sum
+		sourceColumn: ingresos_usd
+
+		annotation SummarizationSetBy = Automatic
+
+	column codigo_moneda
+		dataType: string
+		lineageTag: 8556131b-b3e5-553d-af0a-30a970a82d69
+		summarizeBy: none
+		sourceColumn: codigo_moneda
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_cotizacion
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: a3a31d93-7fdf-55d9-9756-67a1db46a282
+		summarizeBy: none
+		sourceColumn: fecha_cotizacion
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column unidades_por_usd
+		dataType: double
+		lineageTag: 173fda4f-9904-53f9-9bfd-b44cf2ac649f
+		summarizeBy: none
+		sourceColumn: unidades_por_usd
+
+		annotation SummarizationSetBy = Automatic
+
+	column ingresos_en_moneda
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 2251c75d-eb11-5fbf-9b10-cefe7e2f9743
+		summarizeBy: sum
+		sourceColumn: ingresos_en_moneda
+
+		annotation SummarizationSetBy = Automatic
+
+	partition IngresosPorMoneda = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_IngresosPublicitariosPorMoneda"]}[Data]
+				in
+				    Vista
+
+	annotation PBI_ResultType = Table
+

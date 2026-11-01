@@ -1,0 +1,235 @@
+table Tarjetas
+	lineageTag: e3b1a4db-6fa9-5564-8c3e-ddfe56025d43
+
+	measure 'Total tarjetas' = COUNTROWS(Tarjetas)
+		formatString: 0
+		lineageTag: 955d1181-1015-5798-9c44-9bba8acd1f13
+
+	measure Amarillas = CALCULATE(COUNTROWS(Tarjetas), Tarjetas[tipo_tarjeta] = "AMARILLA")
+		formatString: 0
+		lineageTag: d8011d74-b306-51f4-997c-12234bb3d323
+
+	measure Rojas = CALCULATE(COUNTROWS(Tarjetas), Tarjetas[tipo_tarjeta] = "ROJA")
+		formatString: 0
+		lineageTag: aff2210f-1198-5694-9912-7f28b9e2aabf
+
+	column id_amonestacion
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 2c3b2df6-846a-5047-8bbe-d1f030d715b9
+		summarizeBy: none
+		sourceColumn: id_amonestacion
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_partido
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: eb138a33-9441-5f42-aaf7-e18745510e13
+		summarizeBy: none
+		sourceColumn: id_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column numero_partido
+		dataType: int64
+		formatString: 0
+		lineageTag: b4ea6241-d9fe-5e90-aaba-7058f42d3b5c
+		summarizeBy: none
+		sourceColumn: numero_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column fase
+		dataType: string
+		lineageTag: 26d6e7c7-c64e-59e6-ae13-2fc90377d6c7
+		summarizeBy: none
+		sourceColumn: fase
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_hora_local
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: ee5c4a41-6ab2-5634-90c9-f7195e4ddceb
+		summarizeBy: none
+		sourceColumn: fecha_hora_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_hora_utc
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 1229554d-8f1e-5729-a9df-f183c1609487
+		summarizeBy: none
+		sourceColumn: fecha_hora_utc
+
+		annotation SummarizationSetBy = Automatic
+
+	column partido
+		dataType: string
+		lineageTag: 439994f9-1d3b-5631-a551-b43009495a05
+		summarizeBy: none
+		sourceColumn: partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_seleccion
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: a2d1c464-769a-5367-9112-038cc0673753
+		summarizeBy: none
+		sourceColumn: id_seleccion
+
+		annotation SummarizationSetBy = Automatic
+
+	column seleccion
+		dataType: string
+		lineageTag: be782528-5835-55dd-87da-f7c283565917
+		summarizeBy: none
+		sourceColumn: seleccion
+
+		annotation SummarizationSetBy = Automatic
+
+	column receptor
+		dataType: string
+		lineageTag: 070becb3-5193-5ba0-8088-26898c8bad2a
+		summarizeBy: none
+		sourceColumn: receptor
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_jugador
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 1b4700ca-eabb-5f2d-9b56-c6315d2511a6
+		summarizeBy: none
+		sourceColumn: id_jugador
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_persona_ct
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 2b943bad-dc98-5ccf-8a7b-ddb0b9f1eee0
+		summarizeBy: none
+		sourceColumn: id_persona_ct
+
+		annotation SummarizationSetBy = Automatic
+
+	column apellido
+		dataType: string
+		lineageTag: ff23c660-a53f-58fc-bc99-fcd35d998a90
+		summarizeBy: none
+		sourceColumn: apellido
+
+		annotation SummarizationSetBy = Automatic
+
+	column nombre
+		dataType: string
+		lineageTag: 6c37cdaf-35bc-5e5a-bf45-33db137ee58f
+		summarizeBy: none
+		sourceColumn: nombre
+
+		annotation SummarizationSetBy = Automatic
+
+	column persona
+		dataType: string
+		lineageTag: adfd9de9-f50c-5b0d-8784-7178d7a2a8b7
+		summarizeBy: none
+		sourceColumn: persona
+
+		annotation SummarizationSetBy = Automatic
+
+	column dorsal
+		dataType: int64
+		formatString: 0
+		lineageTag: 2e6a8084-49fe-5488-be43-6b9f5230717a
+		summarizeBy: none
+		sourceColumn: dorsal
+
+		annotation SummarizationSetBy = Automatic
+
+	column rol_cuerpo_tecnico
+		dataType: string
+		lineageTag: 8cbae328-2ef4-56be-b068-130398f405cb
+		summarizeBy: none
+		sourceColumn: rol_cuerpo_tecnico
+
+		annotation SummarizationSetBy = Automatic
+
+	column tipo_tarjeta
+		dataType: string
+		lineageTag: c5eb71dd-5ae0-5786-908b-7a831fd634e6
+		summarizeBy: none
+		sourceColumn: tipo_tarjeta
+
+		annotation SummarizationSetBy = Automatic
+
+	column es_doble_amarilla
+		dataType: boolean
+		lineageTag: 63022518-6b5b-590a-bb4b-a5bffb215ab7
+		summarizeBy: none
+		sourceColumn: es_doble_amarilla
+
+		annotation SummarizationSetBy = Automatic
+
+	column instante
+		dataType: int64
+		formatString: 0
+		lineageTag: 6522c5f2-05fd-5369-820d-12c4fc2852ec
+		summarizeBy: none
+		sourceColumn: instante
+
+		annotation SummarizationSetBy = Automatic
+
+	column minuto
+		dataType: string
+		lineageTag: c1538230-eaf2-51cc-81fd-8b248ba2c120
+		summarizeBy: none
+		sourceColumn: minuto
+
+		annotation SummarizationSetBy = Automatic
+
+	column motivo
+		dataType: string
+		lineageTag: f0e7096e-db1e-59a2-b8ae-af0a2690cd3d
+		summarizeBy: none
+		sourceColumn: motivo
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_arbitro_principal
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 1bb4f013-4577-5772-b006-7d8d969dd5d5
+		summarizeBy: none
+		sourceColumn: id_arbitro_principal
+
+		annotation SummarizationSetBy = Automatic
+
+	column arbitro_principal
+		dataType: string
+		lineageTag: 7c0a65cf-2106-55f4-beb7-abb475c0b3c4
+		summarizeBy: none
+		sourceColumn: arbitro_principal
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Tarjetas = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_Tarjetas"]}[Data]
+				in
+				    Vista
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,10 @@
+expression Servidor = "localhost" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: f732949a-fe00-55e5-a4c0-9ed1a509e7a4
+
+	annotation PBI_ResultType = Text
+
+expression BaseDeDatos = "MundialFutbol" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 8556efac-22e0-5561-99ad-7a95ac7a0204
+
+	annotation PBI_ResultType = Text
+

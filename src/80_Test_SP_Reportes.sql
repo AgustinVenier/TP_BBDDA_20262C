@@ -307,6 +307,42 @@ SET @esperado = (SELECT SUM(IIF(goles_local = goles_visitante, 2, 3)) FROM Torne
 EXEC #usp_Verificar 'V10c', N'puntos repartidos', @reporte, @esperado;
 GO
 
+-- V11. Sedes (mapa del BI): una fila por sede, y sus partidos son todos los
+-- del fixture.
+DECLARE @reporte INT = (SELECT COUNT(*) FROM Reportes.vw_Sedes);
+DECLARE @esperado INT = (SELECT COUNT(*) FROM Torneo.SEDE);
+EXEC #usp_Verificar 'V11a', N'sedes', @reporte, @esperado;
+
+SET @reporte = (SELECT SUM(partidos) FROM Reportes.vw_Sedes);
+SET @esperado = (SELECT COUNT(*) FROM Torneo.PARTIDO);
+EXEC #usp_Verificar 'V11b', N'partidos por sede', @reporte, @esperado;
+GO
+
+-- V12. Cuadro de eliminación (BI): un partido por fila, sin posiciones
+-- repetidas ni fuera del rango de su ronda, y el ganador de cada partido
+-- juega el cruce de la ronda siguiente que le toca por su posición.
+DECLARE @reporte INT = (SELECT COUNT(*) FROM Reportes.vw_CuadroEliminacion);
+DECLARE @esperado INT = (SELECT COUNT(*) FROM Torneo.PARTIDO
+                         WHERE fase IN ('DIECISEISAVOS', 'OCTAVOS', 'CUARTOS', 'SEMIFINAL', 'FINAL', 'TERCER_PUESTO'));
+EXEC #usp_Verificar 'V12a', N'partidos del cuadro', @reporte, @esperado;
+
+SET @reporte = (SELECT COUNT(*) FROM (SELECT ronda, es_tercer_puesto, posicion FROM Reportes.vw_CuadroEliminacion
+                                      GROUP BY ronda, es_tercer_puesto, posicion HAVING COUNT(*) > 1) AS repetidas)
+             + (SELECT COUNT(*) FROM Reportes.vw_CuadroEliminacion WHERE posicion >= POWER(2, rondas - 1 - ronda));
+EXEC #usp_Verificar 'V12b', N'posiciones repetidas o fuera de rango', @reporte, 0;
+
+SET @reporte = (SELECT COUNT(*)
+                FROM Reportes.vw_CuadroEliminacion AS h
+                INNER JOIN Reportes.vw_CuadroEliminacion AS p
+                        ON p.es_tercer_puesto = 0 AND p.ronda = h.ronda + 1 AND p.posicion = h.posicion / 2
+                       AND p.gana_local IS NOT NULL
+                WHERE h.es_tercer_puesto = 0
+                  AND h.gana_local IS NOT NULL
+                  AND IIF(h.gana_local = 1, h.seleccion_local, h.seleccion_visitante)
+                      NOT IN (p.seleccion_local, p.seleccion_visitante));
+EXEC #usp_Verificar 'V12c', N'ganadores que no juegan el cruce que les toca', @reporte, 0;
+GO
+
 
 /* ============================================================================
    Casos ERROR: validación de los parámetros

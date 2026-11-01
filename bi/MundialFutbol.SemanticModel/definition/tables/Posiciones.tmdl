@@ -1,0 +1,122 @@
+table Posiciones
+	lineageTag: a88fac27-23bf-558f-86d7-d40da6dfbf6a
+
+	column grupo
+		dataType: string
+		lineageTag: c1bb729b-021c-507a-b4f7-595c04bee1e6
+		summarizeBy: none
+		sourceColumn: grupo
+
+		annotation SummarizationSetBy = Automatic
+
+	column posicion
+		dataType: int64
+		formatString: 0
+		lineageTag: 2bc986bf-47c8-5f75-b320-25a08471e60e
+		summarizeBy: none
+		sourceColumn: posicion
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_seleccion
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: f2906d78-3b46-5254-a449-42d6e47dfa1a
+		summarizeBy: none
+		sourceColumn: id_seleccion
+
+		annotation SummarizationSetBy = Automatic
+
+	column seleccion
+		dataType: string
+		lineageTag: a47e64c9-31d4-56f0-883c-2859a9dd10d5
+		summarizeBy: none
+		sourceColumn: seleccion
+		sortByColumn: posicion
+
+		annotation SummarizationSetBy = Automatic
+
+	column pj
+		dataType: int64
+		formatString: 0
+		lineageTag: 7c516cf4-54db-5ad7-b605-43b9c57d3b39
+		summarizeBy: none
+		sourceColumn: pj
+
+		annotation SummarizationSetBy = Automatic
+
+	column pg
+		dataType: int64
+		formatString: 0
+		lineageTag: ad4f962d-d24b-5dd0-b07c-a4c72888cf6c
+		summarizeBy: none
+		sourceColumn: pg
+
+		annotation SummarizationSetBy = Automatic
+
+	column pe
+		dataType: int64
+		formatString: 0
+		lineageTag: 6daae0e6-ee9f-5f42-94f0-e96fb3dd1159
+		summarizeBy: none
+		sourceColumn: pe
+
+		annotation SummarizationSetBy = Automatic
+
+	column pp
+		dataType: int64
+		formatString: 0
+		lineageTag: c35937b0-b8b6-5c2c-9b15-54f8db1f10d1
+		summarizeBy: none
+		sourceColumn: pp
+
+		annotation SummarizationSetBy = Automatic
+
+	column gf
+		dataType: int64
+		formatString: 0
+		lineageTag: 9bdc766e-d323-5183-ad98-d293b3af0946
+		summarizeBy: none
+		sourceColumn: gf
+
+		annotation SummarizationSetBy = Automatic
+
+	column gc
+		dataType: int64
+		formatString: 0
+		lineageTag: 1ca6baed-3dd9-5202-b695-8a8537093a1f
+		summarizeBy: none
+		sourceColumn: gc
+
+		annotation SummarizationSetBy = Automatic
+
+	column dg
+		dataType: int64
+		formatString: 0
+		lineageTag: 18e9355c-921e-5b3c-9972-17bdff7a6576
+		summarizeBy: none
+		sourceColumn: dg
+
+		annotation SummarizationSetBy = Automatic
+
+	column pts
+		dataType: int64
+		formatString: 0
+		lineageTag: 5e34c0e2-8169-5519-b26b-4baecd592b08
+		summarizeBy: none
+		sourceColumn: pts
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Posiciones = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_TablaPosiciones"]}[Data]
+				in
+				    Vista
+
+	annotation PBI_ResultType = Table
+

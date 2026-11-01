@@ -1,0 +1,196 @@
+table Ocupacion
+	lineageTag: 0553726b-31f6-5d34-9c6a-7c5dfa6e7cbe
+
+	measure 'Ingresos USD' = SUM(Ocupacion[costo_usd])
+		formatString: $ #,0
+		lineageTag: 281859fc-560e-559b-abf7-91e3ba149b76
+
+	measure Espacios = COUNTROWS(Ocupacion)
+		formatString: 0
+		lineageTag: 97cf28d4-aea3-5a59-a436-ba336cb65cfe
+
+	measure 'Espacios ocupados' = CALCULATE(COUNTROWS(Ocupacion), Ocupacion[ocupado] = TRUE())
+		formatString: 0
+		lineageTag: dcef5e9e-86d4-51ca-b41b-9dbde83aa4e1
+
+	measure '% Ocupación' = DIVIDE([Espacios ocupados], [Espacios])
+		formatString: 0.0%
+		lineageTag: 25fc1376-4f48-53c2-ab5f-36c75e125cba
+
+	column id_partido
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: c478e0e2-ab9e-567c-b115-3d0714814124
+		summarizeBy: none
+		sourceColumn: id_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column numero_partido
+		dataType: int64
+		formatString: 0
+		lineageTag: bc2aeb63-c946-5fd3-b608-6d42203c2293
+		summarizeBy: none
+		sourceColumn: numero_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column fase
+		dataType: string
+		lineageTag: 94a60e9f-1344-58cf-81b1-bfd1bd5ab8ba
+		summarizeBy: none
+		sourceColumn: fase
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_hora_local
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: f6b539ec-0615-55e9-8b73-47f80bb48eee
+		summarizeBy: none
+		sourceColumn: fecha_hora_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column partido
+		dataType: string
+		lineageTag: 7040c74e-c8eb-5e40-b780-9bb5bc00d374
+		summarizeBy: none
+		sourceColumn: partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_sede
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: cb34fdca-09bb-5367-b929-460d4d6167b7
+		summarizeBy: none
+		sourceColumn: id_sede
+
+		annotation SummarizationSetBy = Automatic
+
+	column sede
+		dataType: string
+		lineageTag: 5d367025-b043-5806-b7cb-d8a806151372
+		summarizeBy: none
+		sourceColumn: sede
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_espacio
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: b66d0cce-60a0-59df-bfb8-c8b8f87262c6
+		summarizeBy: none
+		sourceColumn: id_espacio
+
+		annotation SummarizationSetBy = Automatic
+
+	column numero_espacio
+		dataType: int64
+		formatString: 0
+		lineageTag: 060382f0-3b46-5c68-aeb8-509f18978534
+		summarizeBy: none
+		sourceColumn: numero_espacio
+
+		annotation SummarizationSetBy = Automatic
+
+	column espacio
+		dataType: string
+		lineageTag: b3b7da49-aff1-5e77-9a25-5139cca3daf2
+		summarizeBy: none
+		sourceColumn: espacio
+
+		annotation SummarizationSetBy = Automatic
+
+	column tarifa_usd
+		dataType: double
+		formatString: #,0.00
+		lineageTag: ae672646-1edc-5012-ab51-0f0dcd4b3be2
+		summarizeBy: sum
+		sourceColumn: tarifa_usd
+
+		annotation SummarizationSetBy = Automatic
+
+	column ocupado
+		dataType: boolean
+		lineageTag: 9b6807e0-5d2f-596f-b813-f5331309d15c
+		summarizeBy: none
+		sourceColumn: ocupado
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_anunciante
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 97319f6a-f8bb-5758-af3e-4337ea7a6c99
+		summarizeBy: none
+		sourceColumn: id_anunciante
+
+		annotation SummarizationSetBy = Automatic
+
+	column anunciante
+		dataType: string
+		lineageTag: fbb75a23-c82d-5704-9749-5d7962b4413f
+		summarizeBy: none
+		sourceColumn: anunciante
+
+		annotation SummarizationSetBy = Automatic
+
+	column campania
+		dataType: string
+		lineageTag: 1e22a848-f5f5-5143-bd7d-14fe9f15c929
+		summarizeBy: none
+		sourceColumn: campania
+
+		annotation SummarizationSetBy = Automatic
+
+	column pieza
+		dataType: string
+		lineageTag: 0a45659e-1e71-57d0-b9e6-9eba00b85a88
+		summarizeBy: none
+		sourceColumn: pieza
+
+		annotation SummarizationSetBy = Automatic
+
+	column costo
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 0be2375f-f044-5f7f-8b08-32dacf5e7484
+		summarizeBy: sum
+		sourceColumn: costo
+
+		annotation SummarizationSetBy = Automatic
+
+	column codigo_moneda
+		dataType: string
+		lineageTag: 72dd9724-d71a-51a4-b66b-a2074c465b5a
+		summarizeBy: none
+		sourceColumn: codigo_moneda
+
+		annotation SummarizationSetBy = Automatic
+
+	column costo_usd
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 229aa23a-c11d-599d-a505-b72de57b3daa
+		summarizeBy: sum
+		sourceColumn: costo_usd
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Ocupacion = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_OcupacionPublicitaria"]}[Data]
+				in
+				    Vista
+
+	annotation PBI_ResultType = Table
+

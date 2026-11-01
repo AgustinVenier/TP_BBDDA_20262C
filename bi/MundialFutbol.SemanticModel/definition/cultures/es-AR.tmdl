@@ -1,0 +1,263 @@
+cultureInfo es-AR
+
+	linguisticMetadata =
+			{
+			  "Version": "2.0.0",
+			  "Language": "en-US",
+			  "Entities": {
+			    "posiciones.grupo": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Posiciones",
+			          "ConceptualProperty": "grupo"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Grupo": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "posiciones.seleccion": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Posiciones",
+			          "ConceptualProperty": "seleccion"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Selección": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "partidos.partido": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Partidos",
+			          "ConceptualProperty": "partido"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Partido": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "partidos.resultado_de_grupo": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Partidos",
+			          "ConceptualProperty": "Resultado de grupo"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Resultado": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "partidos.ganador": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Partidos",
+			          "ConceptualProperty": "ganador"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Ganador": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "partidos.goles_del_local": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Partidos",
+			          "ConceptualProperty": "goles_del_local"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Goles local": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "partidos.goles_del_visitante": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Partidos",
+			          "ConceptualProperty": "goles_del_visitante"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Goles visitante": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "partidos.fase": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Partidos",
+			          "ConceptualProperty": "fase"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Fase": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "partidos.resultado_de_eliminación": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Partidos",
+			          "ConceptualProperty": "Resultado de eliminación"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Resultado": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "partidos.campeón": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Partidos",
+			          "ConceptualProperty": "Campeón"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "🥇 Campeón": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "partidos.segundo_puesto": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Partidos",
+			          "ConceptualProperty": "Segundo puesto"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "🥈 Segundo puesto": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "partidos.tercer_puesto": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "Partidos",
+			          "ConceptualProperty": "Tercer puesto"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "🥉 Tercer puesto": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    }
+			  }
+			}
+		contentType: json
+
