@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Datos de prueba del test 75: primera página de un resultado de dos (descargado sin per_page). -->
+<wb:data page="1" pages="2" per_page="50" total="60" sourceid="2" lastupdated="2026-10-08" xmlns:wb="http://www.worldbank.org">
+  <wb:data>
+    <wb:indicator id="TP.PRUEBA.PBI">PBI de prueba del test 75</wb:indicator>
+    <wb:country id="AR">Argentina</wb:country>
+    <wb:countryiso3code>ARG</wb:countryiso3code>
+    <wb:date>2024</wb:date>
+    <wb:value>1100.25</wb:value>
+    <wb:unit />
+    <wb:obs_status />
+    <wb:decimal>1</wb:decimal>
+  </wb:data>
+</wb:data>

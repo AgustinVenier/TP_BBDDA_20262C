@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Datos de prueba del test 75 (no son reales), con el formato de la API de indicadores del Banco Mundial. -->
+<wb:data page="1" pages="1" per_page="50" total="6" sourceid="2" lastupdated="2026-10-08" xmlns:wb="http://www.worldbank.org">
+  <wb:data>
+    <wb:indicator id="TP.PRUEBA.PBI">PBI de prueba del test 75</wb:indicator>
+    <wb:country id="AR">Argentina</wb:country>
+    <wb:countryiso3code>ARG</wb:countryiso3code>
+    <wb:date>2024</wb:date>
+    <wb:value>1100.25</wb:value>
+    <wb:unit />
+    <wb:obs_status />
+    <wb:decimal>1</wb:decimal>
+  </wb:data>
+  <wb:data>
+    <wb:indicator id="TP.PRUEBA.PBI">PBI de prueba del test 75</wb:indicator>
+    <wb:country id="AR">Argentina</wb:country>
+    <wb:countryiso3code>ARG</wb:countryiso3code>
+    <wb:date>2023</wb:date>
+    <wb:value>1000.5</wb:value>
+    <wb:unit />
+    <wb:obs_status />
+    <wb:decimal>1</wb:decimal>
+  </wb:data>
+  <wb:data>
+    <wb:indicator id="TP.PRUEBA.PBI">PBI de prueba del test 75</wb:indicator>
+    <wb:country id="GB">United Kingdom</wb:country>
+    <wb:countryiso3code>GBR</wb:countryiso3code>
+    <wb:date>2024</wb:date>
+    <wb:value>2000</wb:value>
+    <wb:unit />
+    <wb:obs_status />
+    <wb:decimal>1</wb:decimal>
+  </wb:data>
+  <wb:data>
+    <wb:indicator id="TP.PRUEBA.PBI">PBI de prueba del test 75</wb:indicator>
+    <wb:country id="1W">World</wb:country>
+    <wb:countryiso3code>WLD</wb:countryiso3code>
+    <wb:date>2024</wb:date>
+    <wb:value>1500</wb:value>
+    <wb:unit />
+    <wb:obs_status />
+    <wb:decimal>1</wb:decimal>
+  </wb:data>
+  <wb:data>
+    <wb:indicator id="TP.PRUEBA.PBI">PBI de prueba del test 75</wb:indicator>
+    <wb:country id="XD">High income</wb:country>
+    <wb:countryiso3code />
+    <wb:date>2024</wb:date>
+    <wb:value>3000</wb:value>
+    <wb:unit />
+    <wb:obs_status />
+    <wb:decimal>1</wb:decimal>
+  </wb:data>
+  <wb:data>
+    <wb:indicator id="TP.PRUEBA.PBI">PBI de prueba del test 75</wb:indicator>
+    <wb:country id="BR">Brazil</wb:country>
+    <wb:countryiso3code>BRA</wb:countryiso3code>
+    <wb:date>2024</wb:date>
+    <wb:value />
+    <wb:unit />
+    <wb:obs_status />
+    <wb:decimal>1</wb:decimal>
+  </wb:data>
+</wb:data>
