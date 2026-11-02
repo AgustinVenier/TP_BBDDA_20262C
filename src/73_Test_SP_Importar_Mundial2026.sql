@@ -13,18 +13,22 @@
  Archivo: 73_Test_SP_Importar_Mundial2026.sql
  Objetivo: Probar la importación del Mundial 2026 de
            23_SP_Importar_Mundial2026.sql (sedes, selecciones y partidos en
-           JSON) y 24_SP_Importar_Jugadores.sql (jugadores en CSV), los SP en
-           bloque de 16_SP_Importacion.sql que usan y el ABM de
-           Torneo.NOMBRE_ALTERNATIVO de 05_SP_ABM_Torneo.sql, con los archivos
-           chicos de datos/pruebas/mundial_prueba_*: alta, reimportación sin
-           duplicados, actualización, importación con errores parciales,
-           reconocimiento de jugadores por nombre y los archivos que no se
-           pueden importar.
+           JSON) y 24_SP_Importar_Jugadores.sql (jugadores en CSV), y el ABM
+           de Torneo.NOMBRE_ALTERNATIVO de 05_SP_ABM_Torneo.sql, con los
+           archivos chicos de datos/pruebas/mundial_prueba_*: alta,
+           reimportación sin duplicados, actualización, importación con
+           errores parciales (con el registro de la importación y sus
+           rechazados en las tablas ERRORES_), reconocimiento de jugadores por
+           nombre y los archivos que no se pueden importar. Las reglas de cada
+           tabla las prueba 66_Test_SP_Importacion.sql, con los SP de
+           16_SP_Importacion.sql.
            Requiere haber ejecutado 00 a 24. No depende del juego de datos
            (sirve con el torneo de prueba del 31 o con el real del 32): crea
            sus propios países (códigos ZZA, ZZB y ZZC), selecciones, sede y
            partidos (números 201 a 203), y al final los borra con los SP de
-           baja, así que se puede ejecutar más de una vez.
+           baja, junto con el registro de sus importaciones
+           (DatosGenerales.usp_BorrarImportacion), así que se puede ejecutar
+           más de una vez.
 ================================================================================
 
  Antes de ejecutar: CAMBIAR @carpeta, en el primer lote, por la ruta de la
@@ -228,6 +232,20 @@ BEGIN
         SELECT TOP (1) @id = id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa IN ('ZZA', 'ZZB', 'ZZC');
         EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id;
     END;
+
+    -- El registro de las importaciones de los archivos de prueba, con sus rechazados.
+    DECLARE @carpeta NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400));
+    DECLARE @archivo NVARCHAR(400);
+    SET @archivo = @carpeta + N'mundial_prueba_estadios.json';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
+    SET @archivo = @carpeta + N'mundial_prueba_selecciones.json';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
+    SET @archivo = @carpeta + N'mundial_prueba_jugadores.csv';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
+    SET @archivo = @carpeta + N'mundial_prueba_jugadores_cambios.csv';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
+    SET @archivo = @carpeta + N'mundial_prueba_partidos.json';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
 END;
 GO
 
@@ -255,16 +273,28 @@ GO
    para ese país, la capacidad "mucha" no es un número y las coordenadas "al
    norte" no son válidas). La sede nueva queda en Eastern Standard Time
    (desfase UTC-4 en Estados Unidos), con latitud -34.586667 y longitud
-   -58.381806 (34°35'12"S 58°22'54.5"W) y sus 4 espacios publicitarios. */
+   -58.381806 (34°35'12"S 58°22'54.5"W) y sus 4 espacios publicitarios.
+   La importación queda registrada en DatosGenerales.IMPORTACION (proceso
+   Torneo.usp_ImportarSedesJSON, 2 leídos, 1 insertado y 1 rechazado) y el
+   rechazado, en Torneo.ERRORES_SEDE con el número de la importación, tal
+   como venía en el archivo (país XX, huso UTC-4, capacidad "mucha",
+   coordenadas "al norte") y con sus motivos. */
 DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_estadios.json';
+DECLARE @id_importacion INT;
 
-EXEC Torneo.usp_ImportarSedesJSON @ruta_archivo = @archivo;
+EXEC Torneo.usp_ImportarSedesJSON @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
 
 SELECT 'MI1 sede' AS caso, s.nombre_estadio, s.ciudad, p.codigo_fifa, s.capacidad, s.huso_horario, s.latitud, s.longitud,
        (SELECT COUNT(*) FROM Publicidad.ESPACIO_PUBLICITARIO AS e WHERE e.id_sede = s.id_sede) AS espacios
 FROM Torneo.SEDE AS s
 INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
 WHERE s.nombre_estadio LIKE 'Estadio Prueba%';
+
+SELECT 'MI1 registro' AS caso, i.proceso, i.leidos, i.insertados, i.rechazados, e.registro, e.nombre_estadio, e.pais,
+       e.huso_horario, e.capacidad, e.coordenadas, REPLACE(e.motivos, NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM DatosGenerales.IMPORTACION AS i
+LEFT JOIN Torneo.ERRORES_SEDE AS e ON e.id_importacion = i.id_importacion
+WHERE i.id_importacion = @id_importacion;
 GO
 
 
@@ -310,13 +340,22 @@ GO
 /* MI4 (OK) Importación con errores parciales de mundial_prueba_jugadores.csv:
    23 jugadores de ZZA y 23 de ZZB, más 4 filas con errores.
    Esperado: 50 leídos, 46 insertados y 4 rechazados (línea 25: el dorsal 150
-   no está entre 1 y 99; línea 49: la posición "XX" no es GK, DF, MF ni FW;
-   línea 50: la fecha "1999-13-40" no es una fecha; línea 51: no hay una
-   selección con lista con código QQQ). El club de ZZB, que viene entre
-   comillas porque tiene una coma, queda completo. */
+   no está entre 1 y 99; línea 49: la posición "XX" no es ARQUERO, DEFENSOR,
+   MEDIOCAMPISTA ni DELANTERO; línea 50: la fecha "1999-13-40" no es una
+   fecha; línea 51: no hay una selección con lista con código QQQ). Los
+   cuatro quedan en Torneo.ERRORES_JUGADOR con el número de la importación.
+   El club de ZZB, que viene entre comillas porque tiene una coma, queda
+   completo. */
 DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_jugadores.csv';
+DECLARE @id_importacion INT;
 
-EXEC Torneo.usp_ImportarJugadoresCSV @ruta_archivo = @archivo;
+EXEC Torneo.usp_ImportarJugadoresCSV @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
+
+SELECT 'MI4 rechazados' AS caso, registro AS linea, codigo_fifa, dorsal, posicion, nombre, apellido, fecha_nacimiento,
+       REPLACE(motivos, NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM Torneo.ERRORES_JUGADOR
+WHERE id_importacion = @id_importacion
+ORDER BY registro;
 
 SELECT 'MI4 listas' AS caso, p.codigo_fifa, COUNT(*) AS jugadores, SUM(IIF(j.posicion_habitual = 'ARQUERO', 1, 0)) AS arqueros,
        MIN(j.fecha_alta) AS fecha_alta, MIN(j.motivo_alta) AS motivo_alta, MAX(j.club_origen) AS club
@@ -368,8 +407,11 @@ GO
      en el alargue) y el 202 (cuartos, 1 a 1 y 4 a 3 en penales) quedan
      FINALIZADOS. Se rechaza el de Atlantis (la hora "tarde" no es una hora,
      no hay una selección Atlantis y el estadio no es de ninguna sede) y la
-     semifinal (asistencia 50000, más que la capacidad de 40000). La hora
-     local es la del archivo (16:00 y 20:00) y la UTC, 4 horas más.
+     semifinal (la asistencia 50000 no está entre 0 y la capacidad de la
+     sede, 40000). La hora local es la del archivo (16:00 y 20:00) y la UTC,
+     4 horas más. Los dos partidos rechazados quedan en
+     Torneo.ERRORES_PARTIDO y los 4 eventos rechazados, en
+     DesarrolloPartido.ERRORES_EVENTO, con el número de la importación.
    - Eventos: se rechazan DANILO (no coincide con ningún jugador de ZZA) y
      Diego GOMEZ (puede ser Diego Gómez o Diego Gomez) en el banco del 201, el
      cambio en el que entra DANILO y la amarilla de Diego GOMEZ. Se cargan las
@@ -382,8 +424,21 @@ GO
      Bruno Prueba como amarilla y roja por doble amarilla).
    - Ningún partido con el resultado distinto de los goles cargados. */
 DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_partidos.json';
+DECLARE @id_importacion INT;
 
-EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @primer_numero = 201;
+EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @primer_numero = 201, @id_importacion = @id_importacion OUTPUT;
+
+SELECT 'MI7 registro' AS caso, i.proceso, i.leidos, i.insertados, i.rechazados,
+       (SELECT COUNT(*) FROM Torneo.ERRORES_PARTIDO AS e WHERE e.id_importacion = i.id_importacion) AS errores_partido,
+       (SELECT COUNT(*) FROM DesarrolloPartido.ERRORES_EVENTO AS e WHERE e.id_importacion = i.id_importacion) AS errores_evento
+FROM DatosGenerales.IMPORTACION AS i
+WHERE i.id_importacion = @id_importacion;
+
+SELECT 'MI7 errores' AS caso, registro, ronda, fecha, hora, equipo_1, equipo_2, estadio, asistencia, resultado,
+       REPLACE(motivos, NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM Torneo.ERRORES_PARTIDO
+WHERE id_importacion = @id_importacion
+ORDER BY registro;
 
 SELECT 'MI7 partidos' AS caso, f.numero_partido, f.fase, f.seleccion_local, f.resultado, f.seleccion_visitante,
        f.asistencia, f.estado, p.fecha_hora_local, p.fecha_hora_utc
@@ -567,94 +622,7 @@ END CATCH;
 GO
 
 
-/* ============================================================================
-   SP EN BLOQUE CON CONJUNTOS INVÁLIDOS (sin el proceso que los filtra)
-   ============================================================================ */
-
-/* MI11 (ERROR) usp_ImportarJugadores con un conjunto con errores: una fila
-   sin nombre, la selección QQQ, la posición XX, el dorsal 0 y un jugador
-   repetido, junto con un jugador válido de ZZB.
-   Esperado: error 50001 con todas las condiciones en un solo mensaje; no se
-   carga ninguno, ni siquiera el válido. */
-DECLARE @jugadores Torneo.TT_JUGADOR;
-INSERT INTO @jugadores (codigo_fifa_seleccion, nombre, apellido, posicion, dorsal)
-VALUES ('ZZB', N'Válido', N'Visitante', 'FW', 30), ('ZZB', NULL, N'Visitante', 'FW', 31), ('QQQ', N'Sin', N'Lista', 'GK', 1),
-       ('ZZB', N'Mala', N'Posicion', 'XX', 32), ('ZZB', N'Cero', N'Visitante', 'MF', 0),
-       ('ZZB', N'Doble', N'Visitante', 'MF', 33), ('ZZB', N'Doble', N'Visitante', 'MF', 34);
-
-BEGIN TRY
-    EXEC Torneo.usp_ImportarJugadores @jugadores = @jugadores;
-    PRINT N'MI11: FALLÓ, se esperaba un error de validación.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'MI11', @error_esperado = 50001;
-END CATCH;
-
-SELECT 'MI11 después' AS caso, COUNT(*) AS jugadores_cargados
-FROM Torneo.JUGADOR WHERE apellido = N'Visitante' AND nombre IN (N'Válido', N'Cero', N'Doble');
-GO
-
-
-/* MI12 (ERROR) usp_ImportarPartidos con un conjunto con errores: número 0,
-   un estadio que no es sede, la fase MUNDIAL y un empate de eliminación
-   directa sin penales.
-   Esperado: error 50001 con las cuatro condiciones; no se carga nada. */
-DECLARE @partidos Torneo.TT_PARTIDO;
-INSERT INTO @partidos (numero_partido, nombre_estadio, fase, fecha_hora_utc, codigo_fifa_local, codigo_fifa_visitante,
-                       goles_local, goles_visitante)
-VALUES (0, 'Estadio Prueba Importacion', 'Final', '2026-08-20 20:00', 'ZZA', 'ZZB', NULL, NULL),
-       (210, 'Estadio Inexistente', 'MUNDIAL', '2026-08-21 20:00', 'ZZA', 'ZZB', NULL, NULL),
-       (211, 'Estadio Prueba Importacion', 'Final', '2026-08-25 20:00', 'ZZA', 'ZZB', 1, 1);
-
-BEGIN TRY
-    EXEC Torneo.usp_ImportarPartidos @partidos = @partidos;
-    PRINT N'MI12: FALLÓ, se esperaba un error de validación.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'MI12', @error_esperado = 50001;
-END CATCH;
-GO
-
-
-/* MI13 (ERROR) usp_ImportarDesarrolloPartidos con un conjunto con errores:
-   una formación nueva del partido 203 (no existe), un jugador de ZZA en el
-   partido 201 que ya tiene su formación completa pero como titular número
-   12, un gol en el minuto 50 del PRIMER_TIEMPO y una tarjeta VERDE.
-   Esperado: error 50001 con las condiciones; no se carga nada. */
-DECLARE @alineaciones DesarrolloPartido.TT_ALINEACION_PARTIDO;
-DECLARE @cambios DesarrolloPartido.TT_CAMBIO;
-DECLARE @goles DesarrolloPartido.TT_GOL;
-DECLARE @amonestaciones DesarrolloPartido.TT_AMONESTACION;
-DECLARE @mateo INT = (SELECT j.id_jugador FROM Torneo.JUGADOR AS j
-                      INNER JOIN Torneo.LISTA_CONVOCADOS AS lc ON lc.id_lista = j.id_lista
-                      INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = lc.id_seleccion
-                      INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
-                      WHERE p.codigo_fifa = 'ZZA' AND j.nombre = N'Mateo');
-DECLARE @bruno INT = (SELECT j.id_jugador FROM Torneo.JUGADOR AS j
-                      INNER JOIN Torneo.LISTA_CONVOCADOS AS lc ON lc.id_lista = j.id_lista
-                      INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = lc.id_seleccion
-                      INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
-                      WHERE p.codigo_fifa = 'ZZA' AND j.nombre = N'Bruno');
-
-INSERT INTO @alineaciones (numero_partido, id_jugador, es_titular, posicion_en_cancha)
-VALUES (203, @mateo, 1, 'DELANTERO'), (201, @mateo, 1, 'DELANTERO');
-INSERT INTO @goles (numero_partido, id_jugador_autor, tipo_gol, periodo, minuto)
-VALUES (201, @bruno, 'JUGADA', 'PRIMER_TIEMPO', 50);
-INSERT INTO @amonestaciones (numero_partido, id_jugador, tipo_tarjeta, minuto, motivo)
-VALUES (201, @bruno, 'VERDE', 10, 'Prueba');
-
-BEGIN TRY
-    EXEC DesarrolloPartido.usp_ImportarDesarrolloPartidos
-        @alineaciones = @alineaciones, @cambios = @cambios, @goles = @goles, @amonestaciones = @amonestaciones;
-    PRINT N'MI13: FALLÓ, se esperaba un error de validación.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'MI13', @error_esperado = 50001;
-END CATCH;
-GO
-
-
-/* MI14 (ERROR) ABM de NOMBRE_ALTERNATIVO:
+/* MI11 (ERROR) ABM de NOMBRE_ALTERNATIVO:
      a) alta de un nombre de jugador para una selección que no es la suya
         (Bruno Prueba, de ZZA, como jugador de ZZB);
      b) alta de un nombre de selección que ya tiene otra ("Testland A" para ZZB);
@@ -671,26 +639,26 @@ DECLARE @id INT = (SELECT TOP (1) id_nombre_alternativo FROM Torneo.NOMBRE_ALTER
 
 BEGIN TRY
     EXEC Torneo.usp_NOMBRE_ALTERNATIVO_Alta @id_seleccion = @zzb, @nombre = N'B. PRUEBA', @id_jugador = @bruno;
-    PRINT N'MI14a: FALLÓ, se esperaba un error de validación.';
+    PRINT N'MI11a: FALLÓ, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'MI14a', @error_esperado = 50001;
+    EXEC #usp_MostrarError @caso = 'MI11a', @error_esperado = 50001;
 END CATCH;
 
 BEGIN TRY
     EXEC Torneo.usp_NOMBRE_ALTERNATIVO_Alta @id_seleccion = @zzb, @nombre = N'Testland A';
-    PRINT N'MI14b: FALLÓ, se esperaba un error de validación.';
+    PRINT N'MI11b: FALLÓ, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'MI14b', @error_esperado = 50001;
+    EXEC #usp_MostrarError @caso = 'MI11b', @error_esperado = 50001;
 END CATCH;
 
 BEGIN TRY
     EXEC Torneo.usp_NOMBRE_ALTERNATIVO_Modificacion @id_nombre_alternativo = @id, @nombre = N' ';
-    PRINT N'MI14c: FALLÓ, se esperaba un error de validación.';
+    PRINT N'MI11c: FALLÓ, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'MI14c', @error_esperado = 50001;
+    EXEC #usp_MostrarError @caso = 'MI11c', @error_esperado = 50001;
 END CATCH;
 GO
 
@@ -709,7 +677,9 @@ SELECT 'Final' AS caso,
        (SELECT COUNT(*) FROM Torneo.SEDE WHERE nombre_estadio LIKE 'Estadio Prueba%') AS sedes_de_prueba,
        (SELECT COUNT(*) FROM DatosGenerales.PAIS WHERE codigo_fifa IN ('ZZA', 'ZZB', 'ZZC')) AS paises_de_prueba,
        (SELECT COUNT(*) FROM Torneo.NOMBRE_ALTERNATIVO
-        WHERE nombre IN (N'Testland A', N'Testland B', N'Diego GOMEZ')) AS nombres_de_prueba;
+        WHERE nombre IN (N'Testland A', N'Testland B', N'Diego GOMEZ')) AS nombres_de_prueba,
+       (SELECT COUNT(*) FROM DatosGenerales.IMPORTACION
+        WHERE origen LIKE CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial[_]prueba%') AS importaciones_de_prueba;
 GO
 
 SET NOEXEC OFF;

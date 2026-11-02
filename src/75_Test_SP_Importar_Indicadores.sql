@@ -12,20 +12,23 @@
  Fecha: 29/10/2026
  Archivo: 75_Test_SP_Importar_Indicadores.sql
  Objetivo: Probar la importación masiva de indicadores económicos de
-           25_SP_Importar_Indicadores.sql, y la carga en bloque
-           DatosGenerales.usp_ImportarIndicadoresEconomicos de
-           16_SP_Importacion.sql que usa:
+           25_SP_Importar_Indicadores.sql, con el registro de cada
+           importación y de sus rechazados
+           (DatosGenerales.ERRORES_INDICADOR_ECONOMICO):
              - desde los archivos XML chicos de datos/pruebas/ (con el formato
                de la API del Banco Mundial): alta, reimportación sin
                duplicados, actualización, importación con errores parciales y
                los archivos que no se pueden importar;
              - consultando la API del Banco Mundial (casos AP, necesitan
                internet).
+           Las reglas de los indicadores las prueba 66_Test_SP_Importacion.sql,
+           con DatosGenerales.usp_ImportarIndicadoresEconomicos.
            Requiere haber ejecutado 00 a 25. No depende del juego de datos:
            los archivos usan su propio indicador (TP.PRUEBA.PBI) y el caso de
            la API importa solo la población de Argentina en 2024
-           (SP.POP.TOTL). Al final se borra lo que cargó el test, así que se
-           puede ejecutar más de una vez.
+           (SP.POP.TOTL). Al final se borra lo que cargó el test, con el
+           registro de sus importaciones, así que se puede ejecutar más de una
+           vez.
 ================================================================================
 
  Antes de ejecutar: CAMBIAR @carpeta, en el primer lote, por la ruta de la
@@ -35,10 +38,11 @@
  have file access rights" aparece tanto si la ruta está mal como si falta el
  permiso. Cómo darlo: ver "Antes de ejecutar" en 26_ImportarIndicadores.sql.
 
- Transacciones: la importación es un solo upsert y puede correr dentro de
- una transacción, que IX9 deshace con ROLLBACK. Los demás casos no se
- deshacen: el test borra al final, con el SP de baja, los indicadores que
- cargó.
+ Transacciones: la importación puede correr dentro de una transacción del
+ que la llama, que IX9 deshace con ROLLBACK (con el registro de la
+ importación). Los demás casos no se deshacen: el test borra al final, con
+ los SP de baja, los indicadores que cargó y el registro de sus
+ importaciones.
 
  OLE Automation: los casos AP llaman a la API con OLE Automation. Si la
  instancia lo tiene deshabilitado, el test lo habilita antes de esos casos y
@@ -118,7 +122,27 @@ BEGIN
 END;
 GO
 
--- Por si una corrida anterior del test quedó a medias: los 7 valores que cargan los casos IX.
+-- Borra el registro de las importaciones de los archivos de prueba, con sus rechazados.
+IF OBJECT_ID(N'tempdb..#usp_BorrarImportacionesPrueba', N'P') IS NOT NULL
+    DROP PROCEDURE #usp_BorrarImportacionesPrueba;
+GO
+CREATE PROCEDURE #usp_BorrarImportacionesPrueba
+AS
+BEGIN
+    DECLARE @carpeta NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400));
+    DECLARE @archivo NVARCHAR(400);
+    SET @archivo = @carpeta + N'indicadores_prueba_ok.xml';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
+    SET @archivo = @carpeta + N'indicadores_prueba_cambios.xml';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
+    SET @archivo = @carpeta + N'indicadores_prueba_errores.xml';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
+    SET @archivo = @carpeta + N'indicadores_prueba_vacio.xml';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
+END;
+GO
+
+-- Por si una corrida anterior del test quedó a medias: los 7 valores que cargan los casos IX y sus importaciones.
 EXEC #usp_BorrarIndicadorPrueba @pais = 'Argentina',  @anio = 2023;
 EXEC #usp_BorrarIndicadorPrueba @pais = 'Argentina',  @anio = 2024;
 EXEC #usp_BorrarIndicadorPrueba @pais = 'Inglaterra', @anio = 2024;
@@ -126,6 +150,7 @@ EXEC #usp_BorrarIndicadorPrueba @pais = 'Escocia',    @anio = 2024;
 EXEC #usp_BorrarIndicadorPrueba @pais = 'Brasil',     @anio = 2024;
 EXEC #usp_BorrarIndicadorPrueba @pais = 'Uruguay',    @anio = 2022;
 EXEC #usp_BorrarIndicadorPrueba @pais = 'Ecuador',    @anio = 2023;
+EXEC #usp_BorrarImportacionesPrueba;
 GO
 
 
@@ -194,10 +219,20 @@ GO
      URY 2023         el valor "dos mil" no es un número.
      URY 2023Q1       el año no es un año (AAAA).
    Quedan importados Uruguay 2022 (1234.5000) y Ecuador 2023 (300.0000), y
-   nada de Colombia, Paraguay, Perú, Bolivia ni Chile. */
+   nada de Colombia, Paraguay, Perú, Bolivia ni Chile. Los 9 rechazados
+   quedan en DatosGenerales.ERRORES_INDICADOR_ECONOMICO, con el número de la
+   importación y el texto que traía el archivo. */
 DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'indicadores_prueba_errores.xml';
+DECLARE @id_importacion INT;
 
-EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
+EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
+
+SELECT 'IX4 registro' AS caso, i.leidos, i.insertados, i.omitidos, i.rechazados, e.registro, e.codigo_iso3, e.anio,
+       e.codigo_indicador, e.valor, REPLACE(e.motivos, NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM DatosGenerales.IMPORTACION AS i
+INNER JOIN DatosGenerales.ERRORES_INDICADOR_ECONOMICO AS e ON e.id_importacion = i.id_importacion
+WHERE i.id_importacion = @id_importacion
+ORDER BY e.registro;
 
 SELECT 'IX4 importados' AS caso, p.nombre AS pais, ie.anio, ie.valor
 FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
@@ -329,34 +364,6 @@ WHERE ie.codigo_indicador = 'TP.PRUEBA.PBI' AND p.nombre = 'Argentina' AND ie.an
 GO
 
 
-/* IX10 (ERROR) Carga en bloque con usp_ImportarIndicadoresEconomicos de un
-   conjunto con errores (el SP de la Entrega 5, sin el procesamiento de 25
-   que los filtra).
-   Esperado: error 50001 con 5 condiciones en un solo mensaje: 1 fila sin
-   valor, el código ISO XYZ no es de ningún país, el código "TP PRUEBA" tiene
-   espacios, el año 1950 está fuera de rango y Argentina 2020 viene
-   repetida. No se carga ninguno, ni siquiera los válidos. */
-DECLARE @indicadores DatosGenerales.TT_INDICADOR_ECONOMICO;
-
-INSERT INTO @indicadores (codigo_iso3, codigo_indicador, anio, valor)
-VALUES ('ARG', 'TP.PRUEBA.PBI', 2020, 10), ('ARG', 'TP.PRUEBA.PBI', 2020, 11), ('URY', 'TP.PRUEBA.PBI', 2020, NULL),
-       ('XYZ', 'TP.PRUEBA.PBI', 2020, 12), ('URY', 'TP PRUEBA', 2020, 13), ('BRA', 'TP.PRUEBA.PBI', 1950, 14),
-       ('CHL', 'TP.PRUEBA.PBI', 2020, 15);
-
-BEGIN TRY
-    EXEC DatosGenerales.usp_ImportarIndicadoresEconomicos @indicadores = @indicadores;
-    PRINT N'IX10: FALLÓ, se esperaba un error de validación.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'IX10', @error_esperado = 50001;
-END CATCH;
-
-SELECT 'IX10 después' AS caso, COUNT(*) AS indicadores_de_2020_y_1950
-FROM DatosGenerales.INDICADOR_ECONOMICO
-WHERE codigo_indicador IN ('TP.PRUEBA.PBI', 'TP PRUEBA') AND anio IN (2020, 1950);
-GO
-
-
 /* AP1 (ERROR) Consulta a la API con parámetros inválidos.
      a) código con espacios (no puede ir en la URL), países separados por
         coma y año 1950;
@@ -399,17 +406,20 @@ GO
    consultando la API solo por ese país.
    Esperado: 1 leído y 1 insertado (o sin cambios, si ya estaba cargado), y
    la fila con la población que publica el Banco Mundial (unos 45 millones).
-   Si no estaba antes del test, se borra al final del caso.
+   Si no estaba antes del test, se borra al final del caso, con el registro
+   de la importación.
    Sin conexión: error 50002 (no se pudo enviar el pedido). */
 DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_iso3 = 'ARG');
 DECLARE @existia BIT = IIF(EXISTS (SELECT 1 FROM DatosGenerales.INDICADOR_ECONOMICO
                                    WHERE id_pais = @id_pais AND codigo_indicador = 'SP.POP.TOTL'
                                      AND anio = 2024), 1, 0);
 DECLARE @id INT;
+DECLARE @id_importacion INT;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarIndicadoresAPI
-        @codigo_indicador = 'SP.POP.TOTL', @anio_desde = 2024, @anio_hasta = 2024, @paises = 'ARG';
+        @codigo_indicador = 'SP.POP.TOTL', @anio_desde = 2024, @anio_hasta = 2024, @paises = 'ARG',
+        @id_importacion = @id_importacion OUTPUT;
 
     SELECT 'AP2 población' AS caso, p.nombre AS pais, ie.codigo_indicador, ie.anio, ie.valor
     FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
@@ -425,6 +435,8 @@ SET @id = (SELECT id_indicador FROM DatosGenerales.INDICADOR_ECONOMICO
            WHERE id_pais = @id_pais AND codigo_indicador = 'SP.POP.TOTL' AND anio = 2024);
 IF @existia = 0 AND @id IS NOT NULL
     EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Baja @id_indicador = @id;
+IF @id_importacion IS NOT NULL
+    EXEC DatosGenerales.usp_BorrarImportacion @id_importacion = @id_importacion;
 GO
 
 
@@ -457,7 +469,7 @@ END;
 GO
 
 
--- Se borra lo que cargaron los casos IX.
+-- Se borra lo que cargaron los casos IX, con el registro de sus importaciones.
 EXEC #usp_BorrarIndicadorPrueba @pais = 'Argentina',  @anio = 2023;
 EXEC #usp_BorrarIndicadorPrueba @pais = 'Argentina',  @anio = 2024;
 EXEC #usp_BorrarIndicadorPrueba @pais = 'Inglaterra', @anio = 2024;
@@ -465,16 +477,20 @@ EXEC #usp_BorrarIndicadorPrueba @pais = 'Escocia',    @anio = 2024;
 EXEC #usp_BorrarIndicadorPrueba @pais = 'Brasil',     @anio = 2024;
 EXEC #usp_BorrarIndicadorPrueba @pais = 'Uruguay',    @anio = 2022;
 EXEC #usp_BorrarIndicadorPrueba @pais = 'Ecuador',    @anio = 2023;
+EXEC #usp_BorrarImportacionesPrueba;
 GO
 
 
 /* ============================================================================
    VERIFICACIÓN FINAL
-   Esperado: 0 indicadores de prueba, y OLE Automation y las opciones
-   avanzadas con el mismo valor que antes del test.
+   Esperado: 0 indicadores e importaciones de prueba, y OLE Automation y las
+   opciones avanzadas con el mismo valor que antes del test.
    ============================================================================ */
 SELECT 'Final' AS caso,
-       (SELECT COUNT(*) FROM DatosGenerales.INDICADOR_ECONOMICO WHERE codigo_indicador = 'TP.PRUEBA.PBI') AS indicadores_de_prueba;
+       (SELECT COUNT(*) FROM DatosGenerales.INDICADOR_ECONOMICO WHERE codigo_indicador = 'TP.PRUEBA.PBI') AS indicadores_de_prueba,
+       (SELECT COUNT(*) FROM DatosGenerales.IMPORTACION
+        WHERE origen LIKE CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'indicadores[_]prueba%'
+           OR origen LIKE N'%/country/ARG/indicator/SP.POP.TOTL?date=2024:2024%') AS importaciones_de_prueba;
 
 SELECT 'Final' AS caso, c.name AS opcion, c.value_in_use AS valor_actual,
        CAST(SESSION_CONTEXT(IIF(c.name = N'show advanced options', N'avanzadas_antes', N'ole_antes')) AS INT) AS valor_antes

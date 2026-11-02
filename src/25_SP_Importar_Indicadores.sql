@@ -45,24 +45,25 @@
                      API trae todos los países y también agregados como
                      "World" o "High income"), si no tiene valor (el Banco
                      Mundial todavía no lo publicó) o si repite otro registro
-                     del archivo con el mismo valor. No es un error.
-        RECHAZADO    si no tiene año o código de indicador, si el año o el
-                     valor no son números, si el año no está entre 1960 y el
-                     actual, si el código del indicador tiene más de 30
-                     caracteres o caracteres no admitidos, o si el archivo
-                     trae el mismo país, indicador y año con valores
-                     distintos (no se sabe cuál es el correcto).
+                     del archivo con el mismo valor (si ese registro se
+                     rechaza en el paso 4, la copia también). No es un error.
+        RECHAZADO    si el año o el valor no son números.
       Cada regla es un UPDATE sobre toda la tabla de staging, que anota el
       motivo en los registros que no la cumplen.
-   4. Los demás se cargan todos juntos con el SP de la Entrega 5
-      DatosGenerales.usp_ImportarIndicadoresEconomicos (16_SP_Importacion.sql),
-      que recibe un parámetro de tipo tabla y hace el upsert sin recorrerlos
-      de a uno. Como el paso 3 aplica las mismas reglas que ese SP, los
-      registros válidos se cargan aunque haya otros rechazados.
+   4. El SP de la Entrega 5 DatosGenerales.usp_ImportarIndicadoresEconomicos
+      (16_SP_Importacion.sql) lee #staging_indicadores, valida los demás con
+      las reglas de los indicadores y rechaza los que no las cumplen (sin
+      año o código de indicador, año fuera de 1960 al actual, código de
+      indicador de más de 30 caracteres o con caracteres no admitidos, o el
+      mismo país, indicador y año con valores distintos), y hace el upsert
+      de los válidos, todos juntos. En la misma transacción se registra la
+      importación (DatosGenerales.IMPORTACION, su número queda en
+      @id_importacion) y los rechazados, en
+      DatosGenerales.ERRORES_INDICADOR_ECONOMICO.
    5. Se devuelve el resumen, los omitidos por motivo y los rechazados con
       sus motivos.
-   La carga es un solo upsert, así que la importación puede correr dentro de
-   una transacción (los tests la deshacen con ROLLBACK).
+   La importación puede correr dentro de una transacción del que la llama
+   (los tests la deshacen con ROLLBACK).
 
  Criterios del upsert (los de usp_ImportarIndicadoresEconomicos):
    - Clave natural: país (ISO alfa-3), indicador y año.
@@ -93,15 +94,20 @@ GO
   usp_ProcesarIndicadoresXML
   Importa un documento de la API de indicadores del Banco Mundial. Lo
   llaman usp_ImportarIndicadoresXML y usp_ImportarIndicadoresAPI. @origen
-  es el archivo o la URL de donde salió, para el resumen. Devuelve el
-  resumen (leídos, insertados, actualizados, sin cambios, omitidos y
-  rechazados), los omitidos por motivo y los rechazados con sus motivos.
+  es el archivo o la URL de donde salió y @proceso, el SP que importa (el
+  que lo llama; si no viene, este). Registra la importación (su número
+  queda en @id_importacion) y los rechazados en
+  DatosGenerales.ERRORES_INDICADOR_ECONOMICO, y devuelve el resumen (leídos,
+  insertados, actualizados, sin cambios, omitidos y rechazados), los
+  omitidos por motivo y los rechazados con sus motivos.
   Si el documento no es de datos del Banco Mundial, es un mensaje de error
   de la API o le faltan páginas, no se importa nada (THROW 50002).
 */
 CREATE OR ALTER PROCEDURE DatosGenerales.usp_ProcesarIndicadoresXML
-    @xml     XML,
-    @origen  NVARCHAR(2000)
+    @xml             XML,
+    @origen          NVARCHAR(2000),
+    @proceso         VARCHAR(100) = NULL,
+    @id_importacion  INT          = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -113,11 +119,16 @@ BEGIN
     DECLARE @error_api     NVARCHAR(400);
     DECLARE @pagina        INT;
     DECLARE @paginas       INT;
-    DECLARE @anio_actual   SMALLINT = YEAR(GETDATE());
-    DECLARE @validos       DatosGenerales.TT_INDICADOR_ECONOMICO;
-    DECLARE @insertados    INT = 0;
-    DECLARE @actualizados  INT = 0;
-    DECLARE @sin_cambios   INT = 0;
+    DECLARE @tran_propia   BIT          = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @leidos        INT;
+    DECLARE @insertados    INT;
+    DECLARE @actualizados  INT;
+    DECLARE @sin_cambios   INT;
+    DECLARE @omitidos      INT;
+    DECLARE @rechazados    INT;
+
+    SET @proceso = ISNULL(NULLIF(TRIM(@proceso), ''), CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)));
+    SET @id_importacion = NULL;
 
     /* 1. El documento.
           Raíz wb:data con page y pages; si la API rechaza el pedido, la raíz
@@ -146,26 +157,29 @@ BEGIN
         THROW 50002, @mensaje, 1;
     END;
 
+    -- usp_ImportarIndicadoresEconomicos lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
     CREATE TABLE #staging_indicadores (
         id_registro       INT IDENTITY(1,1) PRIMARY KEY,
         -- Tal como vienen en el XML
-        indicador_txt     NVARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
         pais_txt          NVARCHAR(200)  COLLATE DATABASE_DEFAULT NULL,
-        iso3              NVARCHAR(50)   COLLATE DATABASE_DEFAULT NULL,
         anio_txt          NVARCHAR(50)   COLLATE DATABASE_DEFAULT NULL,
         valor_txt         NVARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
-        -- Convertidos
+        -- Lo que lee usp_ImportarIndicadoresEconomicos, ya convertido
+        codigo_iso3       NVARCHAR(50)   COLLATE DATABASE_DEFAULT NULL,
+        codigo_indicador  NVARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
         anio              SMALLINT       NULL,
         valor             DECIMAL(18,4)  NULL,
+        -- Lo que le pasa a cada registro: lo completan este SP y usp_ImportarIndicadoresEconomicos
         errores           NVARCHAR(MAX)  COLLATE DATABASE_DEFAULT NULL,
         motivo_omision    VARCHAR(60)    COLLATE DATABASE_DEFAULT NULL,
+        copia_de          INT            NULL,      -- un repetido con el mismo valor: el registro que se importa en su lugar
         accion            VARCHAR(15)    COLLATE DATABASE_DEFAULT NULL
     );
 
     /* 2. Los registros, como vienen de la api. */
     WITH XMLNAMESPACES ('http://www.worldbank.org' AS wb)
-    INSERT INTO #staging_indicadores (indicador_txt, pais_txt, iso3, anio_txt, valor_txt)
-    SELECT NULLIF(TRIM(d.value('(wb:indicator/@id)[1]', 'NVARCHAR(100)')), N''),
+    INSERT INTO #staging_indicadores (codigo_indicador, pais_txt, codigo_iso3, anio_txt, valor_txt)
+    SELECT UPPER(NULLIF(TRIM(d.value('(wb:indicator/@id)[1]', 'NVARCHAR(100)')), N'')),
            NULLIF(TRIM(d.value('(wb:country)[1]', 'NVARCHAR(200)')), N''),
            UPPER(NULLIF(TRIM(d.value('(wb:countryiso3code)[1]', 'NVARCHAR(50)')), N'')),
            NULLIF(TRIM(d.value('(wb:date)[1]', 'NVARCHAR(50)')), N''),
@@ -176,14 +190,14 @@ BEGIN
     UPDATE i
     SET accion = 'OMITIDO', motivo_omision = 'País no registrado en el sistema o agregado regional'
     FROM #staging_indicadores AS i
-    WHERE NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS AS p WHERE p.codigo_iso3 = i.iso3);
+    WHERE NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS AS p WHERE p.codigo_iso3 = i.codigo_iso3);
 
     UPDATE #staging_indicadores
     SET accion = 'OMITIDO', motivo_omision = 'Sin valor publicado para ese año'
     WHERE accion IS NULL AND valor_txt IS NULL;
 
-    -- Conversión, y las reglas de usp_ImportarIndicadoresEconomicos aplicadas a
-    -- cada registro: así ese SP recibe solo los válidos y no rechaza la carga.
+    -- Conversión y lo que no se pudo convertir. Las reglas de los indicadores las aplica
+    -- usp_ImportarIndicadoresEconomicos.
     UPDATE #staging_indicadores
     SET anio  = TRY_CONVERT(SMALLINT, anio_txt),
         valor = TRY_CONVERT(DECIMAL(18,4), valor_txt)
@@ -191,79 +205,76 @@ BEGIN
 
     UPDATE #staging_indicadores
     SET errores = NULLIF(CONCAT(
-            CASE WHEN indicador_txt IS NULL
-                     THEN @nl + N'- El código del indicador es obligatorio.'
-                 WHEN LEN(indicador_txt) > 30
-                     THEN @nl + N'- El código del indicador no puede superar los 30 caracteres.'
-                 WHEN UPPER(indicador_txt) COLLATE Latin1_General_BIN LIKE '%[^A-Z0-9._]%'
-                     THEN @nl + N'- El código del indicador solo admite letras sin acentos, números, puntos y guiones bajos.'
-            END,
-            CASE WHEN anio_txt IS NULL
-                     THEN @nl + N'- El año es obligatorio.'
-                 WHEN anio IS NULL
-                     THEN @nl + N'- El año "' + anio_txt + N'" no es un año (AAAA): el sistema guarda indicadores anuales.'
-                 WHEN anio NOT BETWEEN 1960 AND @anio_actual
-                     THEN @nl + N'- El año debe estar entre 1960 y ' + CAST(@anio_actual AS NVARCHAR(4)) + N'.'
-            END,
+            IIF(anio_txt IS NOT NULL AND anio IS NULL,
+                @nl + N'- El año "' + anio_txt + N'" no es un año (AAAA): el sistema guarda indicadores anuales.', NULL),
             IIF(valor IS NULL,
-                @nl + N'- El valor "' + valor_txt + N'" no es un número (o tiene más de 14 dígitos enteros).', N'')), N'')
+                @nl + N'- El valor "' + valor_txt + N'" no es un número (o tiene más de 14 dígitos enteros).', NULL)), N'')
     WHERE accion IS NULL;
-
-    /* Mismo país, indicador y año más de una vez en el archivo: con el mismo
-       valor se importa una vez y las copias válidas se omiten; con valores
-       distintos no se sabe cuál es el correcto y se rechazan todos los
-       registros de esa clave. Se comparan también los registros que ya tienen
-       otro error, para no perder el conflicto, y la copia que se importa es
-       una sin errores. */
-    WITH repetidos AS (
-        SELECT id_registro,
-               COUNT(*)   OVER (PARTITION BY iso3, UPPER(indicador_txt), anio) AS veces,
-               MIN(valor) OVER (PARTITION BY iso3, UPPER(indicador_txt), anio) AS valor_minimo,
-               MAX(valor) OVER (PARTITION BY iso3, UPPER(indicador_txt), anio) AS valor_maximo,
-               ROW_NUMBER() OVER (PARTITION BY iso3, UPPER(indicador_txt), anio
-                                  ORDER BY IIF(errores IS NULL, 0, 1), id_registro) AS copia
-        FROM #staging_indicadores
-        WHERE accion IS NULL
-          AND iso3 IS NOT NULL AND indicador_txt IS NOT NULL AND anio IS NOT NULL AND valor IS NOT NULL
-    )
-    UPDATE i
-    SET errores        = IIF(r.valor_minimo <> r.valor_maximo,
-                             CONCAT(i.errores, @nl, N'- El archivo trae ', r.veces,
-                                    N' veces este país, indicador y año, con valores distintos: no se sabe cuál es el correcto.'),
-                             i.errores),
-        accion         = IIF(r.valor_minimo = r.valor_maximo AND r.copia > 1 AND i.errores IS NULL, 'OMITIDO', NULL),
-        motivo_omision = IIF(r.valor_minimo = r.valor_maximo AND r.copia > 1 AND i.errores IS NULL,
-                             'Repetido en el archivo con el mismo valor', NULL)
-    FROM #staging_indicadores AS i
-    INNER JOIN repetidos AS r ON r.id_registro = i.id_registro
-    WHERE r.veces > 1;
 
     UPDATE #staging_indicadores
     SET accion = 'RECHAZADO'
     WHERE accion IS NULL AND errores IS NOT NULL;
 
-    /* 4. Carga de los válidos, todos juntos, con el SP de la Entrega 5. */
-    INSERT INTO @validos (codigo_iso3, codigo_indicador, anio, valor)
-    SELECT iso3, indicador_txt, anio, valor
-    FROM #staging_indicadores
-    WHERE accion IS NULL;
+    -- Mismo país, indicador y año más de una vez con el mismo valor: se importa una vez y las
+    -- copias se omiten (si ese registro se rechaza, las copias también, en el paso 4). Con
+    -- valores distintos los rechaza usp_ImportarIndicadoresEconomicos.
+    WITH repetidos AS (
+        SELECT accion, motivo_omision, copia_de,
+               MIN(valor) OVER (PARTITION BY codigo_iso3, codigo_indicador, anio) AS valor_minimo,
+               MAX(valor) OVER (PARTITION BY codigo_iso3, codigo_indicador, anio) AS valor_maximo,
+               MIN(id_registro) OVER (PARTITION BY codigo_iso3, codigo_indicador, anio) AS primero,
+               ROW_NUMBER() OVER (PARTITION BY codigo_iso3, codigo_indicador, anio ORDER BY id_registro) AS copia
+        FROM #staging_indicadores
+        WHERE accion IS NULL AND codigo_indicador IS NOT NULL AND anio IS NOT NULL
+    )
+    UPDATE repetidos
+    SET accion = 'OMITIDO', motivo_omision = 'Repetido en el archivo con el mismo valor', copia_de = primero
+    WHERE copia > 1 AND valor_minimo = valor_maximo;
 
-    IF EXISTS (SELECT 1 FROM @validos)
-        EXEC DatosGenerales.usp_ImportarIndicadoresEconomicos
-            @indicadores  = @validos,
-            @insertados   = @insertados   OUTPUT,
-            @actualizados = @actualizados OUTPUT,
-            @sin_cambios  = @sin_cambios  OUTPUT;
+    /* 4. El SP de la Entrega 5 valida los demás y carga los válidos, todos juntos; después se
+          registran la importación y sus rechazados, en la misma transacción. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        EXEC DatosGenerales.usp_ImportarIndicadoresEconomicos;
+
+        -- Las copias de un registro que se rechazó también se rechazan, con sus mismos motivos.
+        UPDATE c
+        SET accion = 'RECHAZADO', motivo_omision = NULL, errores = r.errores
+        FROM #staging_indicadores AS c
+        INNER JOIN #staging_indicadores AS r ON r.id_registro = c.copia_de
+        WHERE c.accion = 'OMITIDO' AND r.accion = 'RECHAZADO';
+
+        SELECT @leidos       = COUNT(*),
+               @insertados   = ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+               @actualizados = ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
+               @sin_cambios  = ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
+               @omitidos     = ISNULL(SUM(IIF(accion = 'OMITIDO', 1, 0)), 0),
+               @rechazados   = ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
+        FROM #staging_indicadores;
+
+        EXEC DatosGenerales.usp_RegistrarImportacion
+            @proceso = @proceso, @origen = @origen, @leidos = @leidos, @insertados = @insertados,
+            @actualizados = @actualizados, @sin_cambios = @sin_cambios, @omitidos = @omitidos,
+            @rechazados = @rechazados, @id_importacion = @id_importacion OUTPUT;
+
+        INSERT INTO DatosGenerales.ERRORES_INDICADOR_ECONOMICO (id_importacion, registro, codigo_indicador, pais,
+                                                                codigo_iso3, anio, valor, motivos)
+        SELECT @id_importacion, id_registro, codigo_indicador, pais_txt, codigo_iso3, anio_txt, valor_txt,
+               STUFF(errores, 1, 2, N'')
+        FROM #staging_indicadores
+        WHERE accion = 'RECHAZADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
 
     /* 5. Resultado. */
-    SELECT @origen AS origen,
-           COUNT(*)                                          AS leidos,
-           @insertados                                       AS insertados,
-           @actualizados                                     AS actualizados,
-           @sin_cambios                                      AS sin_cambios,
-           ISNULL(SUM(IIF(accion = 'OMITIDO',   1, 0)), 0)   AS omitidos,
-           ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)   AS rechazados
-    FROM #staging_indicadores;
+    SELECT @id_importacion AS id_importacion, @origen AS origen, @leidos AS leidos, @insertados AS insertados,
+           @actualizados AS actualizados, @sin_cambios AS sin_cambios, @omitidos AS omitidos, @rechazados AS rechazados;
 
     SELECT motivo_omision AS omitidos_por, COUNT(*) AS registros
     FROM #staging_indicadores
@@ -271,11 +282,11 @@ BEGIN
     GROUP BY motivo_omision
     ORDER BY registros DESC;
 
-    SELECT CONCAT(ISNULL(iso3, N'(sin país)'), N' ', ISNULL(anio_txt, N'(sin año)'), N' ',
-                  ISNULL(indicador_txt, N'(sin indicador)'), IIF(pais_txt IS NULL, N'', N' - ' + pais_txt)) AS rechazado,
-           STUFF(errores, 1, 2, N'') AS motivos
-    FROM #staging_indicadores
-    WHERE accion = 'RECHAZADO'
+    SELECT CONCAT(ISNULL(codigo_iso3, N'(sin país)'), N' ', ISNULL(anio, N'(sin año)'), N' ',
+                  ISNULL(codigo_indicador, N'(sin indicador)'), IIF(pais IS NULL, N'', N' - ' + pais)) AS rechazado,
+           motivos
+    FROM DatosGenerales.ERRORES_INDICADOR_ECONOMICO
+    WHERE id_importacion = @id_importacion
     ORDER BY rechazado;
 END;
 GO
@@ -289,12 +300,14 @@ GO
   usp_ImportarIndicadoresXML
   Importa el archivo XML @ruta_archivo, descargado de la API de indicadores
   del Banco Mundial sin modificar (ver datos/fuentes/bancomundial/README.md),
-  con usp_ProcesarIndicadoresXML.
+  con usp_ProcesarIndicadoresXML. El número de la importación queda en
+  @id_importacion.
   Valida: ruta obligatoria y terminada en .xml. Si el archivo no se puede
   leer o no tiene un XML válido, no se importa nada (THROW 50002).
 */
 CREATE OR ALTER PROCEDURE DatosGenerales.usp_ImportarIndicadoresXML
-    @ruta_archivo  NVARCHAR(400)
+    @ruta_archivo    NVARCHAR(400),
+    @id_importacion  INT = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -305,6 +318,7 @@ BEGIN
     DECLARE @contenido  VARBINARY(MAX);
     DECLARE @xml        XML;
     DECLARE @mensaje    NVARCHAR(2048);
+    DECLARE @proceso    VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
 
     SET @ruta_archivo = NULLIF(TRIM(@ruta_archivo), N'');
 
@@ -345,7 +359,8 @@ BEGIN
         THROW 50002, @mensaje, 1;
     END;
 
-    EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = @ruta_archivo;
+    EXEC DatosGenerales.usp_ProcesarIndicadoresXML
+        @xml = @xml, @origen = @ruta_archivo, @proceso = @proceso, @id_importacion = @id_importacion OUTPUT;
 END;
 GO
 
@@ -368,13 +383,14 @@ GO
   países solo con letras y punto y coma; años entre 1960 y el actual, el
   primero no mayor que el segundo. Si la API no responde, responde con un
   código HTTP distinto de 200 o no devuelve un XML válido, no se importa
-  nada (THROW 50002).
+  nada (THROW 50002). El número de la importación queda en @id_importacion.
 */
 CREATE OR ALTER PROCEDURE DatosGenerales.usp_ImportarIndicadoresAPI
     @codigo_indicador  VARCHAR(60)  = 'NY.GDP.PCAP.CD',
     @anio_desde        SMALLINT     = NULL,
     @anio_hasta        SMALLINT     = NULL,
-    @paises            VARCHAR(400) = NULL
+    @paises            VARCHAR(400) = NULL,
+    @id_importacion    INT          = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -387,6 +403,7 @@ BEGIN
     DECLARE @respuesta    NVARCHAR(MAX);
     DECLARE @xml          XML;
     DECLARE @mensaje      NVARCHAR(2048);
+    DECLARE @proceso      VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
 
     SET @codigo_indicador = UPPER(NULLIF(TRIM(@codigo_indicador), ''));
     SET @paises           = UPPER(NULLIF(REPLACE(@paises, ' ', ''), ''));
@@ -448,7 +465,8 @@ BEGIN
         THROW 50002, @mensaje, 1;
     END;
 
-    EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = @url;
+    EXEC DatosGenerales.usp_ProcesarIndicadoresXML
+        @xml = @xml, @origen = @url, @proceso = @proceso, @id_importacion = @id_importacion OUTPUT;
 END;
 GO
 

@@ -30,18 +30,22 @@
            en 32_ImportarMundial2026.sql.
 ================================================================================
 
- Cómo importa cada SP (igual que 25, 27 y 28):
+ Cómo importa cada SP (igual que 24, 25, 27 y 28):
    1. Se controla el archivo: que se pueda leer, que sea JSON y que tenga la
       estructura del archivo de openfootball que corresponde. Si no, no se
       importa nada (THROW 50002).
-   2. OPENJSON pasa los registros, tal como vienen, a una tabla de staging, y
-      ahí se convierten. Todas las transformaciones se hacen acá, en T-SQL.
-   3. Cada regla es un UPDATE sobre toda la tabla de staging, que anota el
-      motivo en los registros que no la cumplen (RECHAZADO).
-   4. Los demás se cargan todos juntos con el SP de la Entrega 5 que
-      corresponde (16_SP_Importacion.sql), que recibe un parámetro de tipo
-      tabla. Como el paso 3 aplica las mismas reglas que ese SP, los
-      registros válidos se cargan aunque haya otros rechazados.
+   2. OPENJSON pasa los registros, tal como vienen, a la tabla de staging
+      que lee el SP de la Entrega 5 (#staging_sedes, por ejemplo), y ahí se
+      convierten. Todas las transformaciones se hacen acá, en T-SQL.
+   3. Se rechazan los registros que no se pudieron convertir: un UPDATE
+      sobre toda la tabla anota el motivo y los marca RECHAZADO.
+   4. El SP de la Entrega 5 que corresponde (16_SP_Importacion.sql) valida
+      los demás con las reglas de la tabla, marca los que no las cumplen y
+      carga los válidos, todos juntos. Así los registros válidos se cargan
+      aunque haya otros rechazados. En la misma transacción se registra la
+      importación (DatosGenerales.IMPORTACION, su número queda en el
+      parámetro @id_importacion) y sus registros rechazados, en la tabla
+      ERRORES_ de lo que se importó (Torneo.ERRORES_SEDE, por ejemplo).
    5. Se devuelve el resumen y los rechazados con sus motivos.
    Importar dos veces el mismo archivo no duplica nada.
 
@@ -393,19 +397,23 @@ GO
 /*
   usp_ImportarSedesJSON
   Importa las sedes del archivo worldcup.stadiums.json de openfootball
-  (@ruta_archivo), con usp_ImportarSedes. Las tarifas son las de los 4
+  (@ruta_archivo) con usp_ImportarSedes. Las tarifas son las de los 4
   espacios publicitarios de las sedes nuevas, que el archivo no trae.
   Valida: ruta obligatoria y terminada en .json; tarifas no negativas. Si el
   archivo no se puede leer, no es JSON o no tiene la lista "stadiums", no se
-  importa nada (THROW 50002). Devuelve el resumen y los rechazados con sus
-  motivos.
+  importa nada (THROW 50002). Rechaza los registros que no puede convertir
+  (país, huso, capacidad y coordenadas); las reglas de las sedes las aplica
+  usp_ImportarSedes. Registra la importación (su número queda en
+  @id_importacion) y los rechazados en Torneo.ERRORES_SEDE, y devuelve el
+  resumen y los rechazados con sus motivos.
 */
 CREATE OR ALTER PROCEDURE Torneo.usp_ImportarSedesJSON
     @ruta_archivo      NVARCHAR(400),
     @tarifa_espacio_1  DECIMAL(9,2) = 120000,
     @tarifa_espacio_2  DECIMAL(9,2) = 100000,
     @tarifa_espacio_3  DECIMAL(9,2) = 90000,
-    @tarifa_espacio_4  DECIMAL(9,2) = 80000
+    @tarifa_espacio_4  DECIMAL(9,2) = 80000,
+    @id_importacion    INT          = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -414,12 +422,16 @@ BEGIN
     DECLARE @nl            NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @contenido     NVARCHAR(MAX);
     DECLARE @mensaje       NVARCHAR(2048);
-    DECLARE @validas       Torneo.TT_SEDE;
-    DECLARE @insertados    INT = 0;
-    DECLARE @actualizados  INT = 0;
-    DECLARE @sin_cambios   INT = 0;
+    DECLARE @tran_propia   BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @proceso       VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @leidos        INT;
+    DECLARE @insertados    INT;
+    DECLARE @actualizados  INT;
+    DECLARE @sin_cambios   INT;
+    DECLARE @rechazados    INT;
 
     SET @ruta_archivo = NULLIF(TRIM(@ruta_archivo), N'');
+    SET @id_importacion = NULL;
 
     IF @ruta_archivo IS NULL
         SET @errores += @nl + N'- La ruta del archivo es obligatoria.';
@@ -450,31 +462,39 @@ BEGIN
         THROW 50002, @mensaje, 1;
     END;
 
+    -- usp_ImportarSedes lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
     CREATE TABLE #staging_sedes (
         id_registro     INT PRIMARY KEY,
         -- Tal como vienen en el archivo
-        nombre_txt      NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
-        ciudad_txt      NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
         pais_txt        NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
         huso_txt        NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
         capacidad_txt   NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
         coordenadas     NVARCHAR(100) COLLATE DATABASE_DEFAULT NULL,
-        -- Convertidos
+        -- Lo que lee usp_ImportarSedes, ya convertido
+        nombre_estadio  VARCHAR(400)  COLLATE DATABASE_DEFAULT NULL,
+        ciudad          VARCHAR(400)  COLLATE DATABASE_DEFAULT NULL,
         codigo_fifa     VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
-        huso_horario    VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
         capacidad       INT           NULL,
+        huso_horario    VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
         latitud         DECIMAL(12,6) NULL,
         longitud        DECIMAL(12,6) NULL,
+        tarifa_1        DECIMAL(9,2)  NULL,
+        tarifa_2        DECIMAL(9,2)  NULL,
+        tarifa_3        DECIMAL(9,2)  NULL,
+        tarifa_4        DECIMAL(9,2)  NULL,
+        -- Lo que le pasa a cada registro: lo completan este SP y usp_ImportarSedes
         errores         NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
         accion          VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
     );
 
-    /* 2. Los registros, como vienen en el archivo. */
-    INSERT INTO #staging_sedes (id_registro, nombre_txt, ciudad_txt, pais_txt, huso_txt, capacidad_txt, coordenadas)
+    /* 2. Los registros, como vienen en el archivo, y su conversión. */
+    INSERT INTO #staging_sedes (id_registro, nombre_estadio, ciudad, pais_txt, huso_txt, capacidad_txt, coordenadas,
+                                tarifa_1, tarifa_2, tarifa_3, tarifa_4)
     SELECT CAST(s.[key] AS INT) + 1,
            NULLIF(TRIM(d.nombre), N''), NULLIF(TRIM(d.ciudad), N''), UPPER(NULLIF(TRIM(d.pais), N'')),
            UPPER(REPLACE(NULLIF(TRIM(d.huso), N''), N' ', N'')), NULLIF(TRIM(d.capacidad), N''),
-           NULLIF(TRIM(d.coordenadas), N'')
+           NULLIF(TRIM(d.coordenadas), N''),
+           @tarifa_espacio_1, @tarifa_espacio_2, @tarifa_espacio_3, @tarifa_espacio_4
     FROM OPENJSON(@contenido, N'$.stadiums') AS s
     CROSS APPLY OPENJSON(s.value)
         WITH (nombre NVARCHAR(400) '$.name', ciudad NVARCHAR(400) '$.city', pais NVARCHAR(50) '$.cc',
@@ -501,7 +521,7 @@ BEGIN
                AS h (pais, desfase, huso_horario)
             ON h.pais = st.pais_txt AND h.desfase = st.huso_txt;
 
-    -- Coordenadas: "49°16'36"N 123°6'43"W" o "37.403°N 121.970°W".
+    -- Capacidad y coordenadas: "49°16'36"N 123°6'43"W" o "37.403°N 121.970°W".
     UPDATE st
     SET capacidad = TRY_CONVERT(INT, st.capacidad_txt),
         latitud   = Torneo.fn_CoordenadaDecimal(c.lat, N'NS'),
@@ -510,59 +530,62 @@ BEGIN
     CROSS APPLY (SELECT LEFT(st.coordenadas, CHARINDEX(N' ', st.coordenadas + N' ') - 1) AS lat,
                         TRIM(SUBSTRING(st.coordenadas, CHARINDEX(N' ', st.coordenadas + N' ') + 1, 100)) AS lon) AS c;
 
-    /* 3. Validaciones, con las reglas de usp_ImportarSedes. */
+    /* 3. Lo que no se pudo convertir. Las reglas de las sedes las aplica usp_ImportarSedes. */
     UPDATE st
     SET errores = NULLIF(CONCAT(
-            IIF(st.nombre_txt IS NULL, @nl + N'- El nombre del estadio es obligatorio.', NULL),
-            IIF(LEN(st.nombre_txt) > 100, @nl + N'- El nombre del estadio no puede superar los 100 caracteres.', NULL),
-            IIF(st.ciudad_txt IS NULL, @nl + N'- La ciudad es obligatoria.', NULL),
-            IIF(LEN(st.ciudad_txt) > 80, @nl + N'- La ciudad no puede superar los 80 caracteres.', NULL),
-            IIF(st.codigo_fifa IS NULL,
-                @nl + N'- El país "' + ISNULL(st.pais_txt, N'') + N'" no es un código ISO alfa-2 de un país registrado.', NULL),
-            IIF(st.huso_horario IS NULL, @nl + N'- No se reconoce el huso "' + ISNULL(st.huso_txt, N'') + N'" para ese país.', NULL),
-            IIF(st.capacidad IS NULL OR st.capacidad <= 0,
-                @nl + N'- La capacidad "' + ISNULL(st.capacidad_txt, N'') + N'" no es un número mayor que cero.', NULL),
-            IIF(st.coordenadas IS NOT NULL AND (st.latitud IS NULL OR st.longitud IS NULL OR st.latitud NOT BETWEEN -90 AND 90
-                                                OR st.longitud NOT BETWEEN -180 AND 180),
-                @nl + N'- Las coordenadas "' + st.coordenadas + N'" no son una latitud y una longitud válidas.', NULL),
-            IIF(st.capacidad > 0 AND EXISTS (SELECT 1 FROM Torneo.SEDE AS s
-                                             INNER JOIN Torneo.PARTIDO AS p ON p.id_sede = s.id_sede
-                                             WHERE s.nombre_estadio = st.nombre_txt AND p.asistencia > st.capacidad),
-                @nl + N'- La capacidad es menor que la asistencia de un partido ya jugado en la sede.', NULL)), N'')
+            IIF(st.pais_txt IS NOT NULL AND st.codigo_fifa IS NULL,
+                @nl + N'- El país "' + st.pais_txt + N'" no es un código ISO alfa-2 de un país registrado.', NULL),
+            IIF(st.huso_txt IS NOT NULL AND st.huso_horario IS NULL,
+                @nl + N'- No se reconoce el huso "' + st.huso_txt + N'" para ese país.', NULL),
+            IIF(st.capacidad_txt IS NOT NULL AND st.capacidad IS NULL,
+                @nl + N'- La capacidad "' + st.capacidad_txt + N'" no es un número entero.', NULL),
+            IIF(st.coordenadas IS NOT NULL AND (st.latitud IS NULL OR st.longitud IS NULL),
+                @nl + N'- Las coordenadas "' + st.coordenadas + N'" no son una latitud y una longitud.', NULL)), N'')
     FROM #staging_sedes AS st;
-
-    UPDATE st
-    SET errores = CONCAT(st.errores, @nl, N'- El archivo trae ', r.veces, N' veces este estadio.')
-    FROM #staging_sedes AS st
-    INNER JOIN (SELECT nombre_txt, COUNT(*) AS veces FROM #staging_sedes
-                WHERE nombre_txt IS NOT NULL GROUP BY nombre_txt HAVING COUNT(*) > 1) AS r
-            ON r.nombre_txt = st.nombre_txt;
 
     UPDATE #staging_sedes SET accion = 'RECHAZADO' WHERE errores IS NOT NULL;
 
-    /* 4. Carga de las válidas, todas juntas, con el SP de la Entrega 5. */
-    INSERT INTO @validas (nombre_estadio, ciudad, codigo_fifa_pais, capacidad, huso_horario, latitud, longitud,
-                          tarifa_espacio_1, tarifa_espacio_2, tarifa_espacio_3, tarifa_espacio_4)
-    SELECT nombre_txt, ciudad_txt, codigo_fifa, capacidad, huso_horario, latitud, longitud,
-           @tarifa_espacio_1, @tarifa_espacio_2, @tarifa_espacio_3, @tarifa_espacio_4
-    FROM #staging_sedes
-    WHERE accion IS NULL;
+    /* 4. El SP de la Entrega 5 valida las demás y carga las válidas, todas juntas; después se
+          registran la importación y sus rechazados, en la misma transacción. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
 
-    IF EXISTS (SELECT 1 FROM @validas)
-        EXEC Torneo.usp_ImportarSedes
-            @sedes = @validas, @insertados = @insertados OUTPUT,
-            @actualizados = @actualizados OUTPUT, @sin_cambios = @sin_cambios OUTPUT;
+        EXEC Torneo.usp_ImportarSedes;
+
+        SELECT @leidos       = COUNT(*),
+               @insertados   = ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+               @actualizados = ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
+               @sin_cambios  = ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
+               @rechazados   = ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
+        FROM #staging_sedes;
+
+        EXEC DatosGenerales.usp_RegistrarImportacion
+            @proceso = @proceso, @origen = @ruta_archivo, @leidos = @leidos, @insertados = @insertados,
+            @actualizados = @actualizados, @sin_cambios = @sin_cambios, @rechazados = @rechazados,
+            @id_importacion = @id_importacion OUTPUT;
+
+        INSERT INTO Torneo.ERRORES_SEDE (id_importacion, registro, nombre_estadio, ciudad, pais, huso_horario, capacidad,
+                                         coordenadas, motivos)
+        SELECT @id_importacion, id_registro, nombre_estadio, ciudad, pais_txt, huso_txt, capacidad_txt, coordenadas,
+               STUFF(errores, 1, 2, N'')
+        FROM #staging_sedes
+        WHERE accion = 'RECHAZADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
 
     /* 5. Resultado. */
-    SELECT @ruta_archivo AS origen, COUNT(*) AS leidos, @insertados AS insertados, @actualizados AS actualizados,
-           @sin_cambios AS sin_cambios, ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0) AS rechazados
-    FROM #staging_sedes;
+    SELECT @id_importacion AS id_importacion, @ruta_archivo AS origen, @leidos AS leidos, @insertados AS insertados,
+           @actualizados AS actualizados, @sin_cambios AS sin_cambios, @rechazados AS rechazados;
 
-    SELECT CONCAT(id_registro, N'. ', ISNULL(nombre_txt, N'(sin nombre)')) AS rechazado,
-           STUFF(errores, 1, 2, N'') AS motivos
-    FROM #staging_sedes
-    WHERE accion = 'RECHAZADO'
-    ORDER BY id_registro;
+    SELECT CONCAT(registro, N'. ', ISNULL(nombre_estadio, N'(sin nombre)')) AS rechazado, motivos
+    FROM Torneo.ERRORES_SEDE
+    WHERE id_importacion = @id_importacion
+    ORDER BY registro;
 END;
 GO
 
@@ -574,18 +597,21 @@ GO
 /*
   usp_ImportarSeleccionesJSON
   Importa las selecciones del archivo worldcup.teams.json de openfootball
-  (@ruta_archivo), con usp_ImportarSelecciones: código FIFA, confederación,
+  (@ruta_archivo) con usp_ImportarSelecciones: código FIFA, confederación,
   grupo y el nombre en inglés, que queda como nombre alternativo. Las listas
   de convocados nuevas se presentan en @fecha_presentacion.
-  Valida: ruta obligatoria y terminada en .json; si hay que crear alguna
-  lista, fecha de presentación obligatoria y no futura. Si el archivo no se
-  puede leer, no es JSON o no es una lista de selecciones con código FIFA, no
-  se importa nada (THROW 50002). Devuelve el resumen y las rechazadas con sus
-  motivos.
+  Valida: ruta obligatoria y terminada en .json. Si el archivo no se puede
+  leer, no es JSON o no es una lista de selecciones con código FIFA, no se
+  importa nada (THROW 50002); tampoco si hay que crear alguna lista y la
+  fecha de presentación falta o es futura (THROW 50001, de
+  usp_ImportarSelecciones). Registra la importación (su número queda en
+  @id_importacion) y las rechazadas en Torneo.ERRORES_SELECCION, y devuelve
+  el resumen y las rechazadas con sus motivos.
 */
 CREATE OR ALTER PROCEDURE Torneo.usp_ImportarSeleccionesJSON
     @ruta_archivo        NVARCHAR(400),
-    @fecha_presentacion  DATE = NULL
+    @fecha_presentacion  DATE = NULL,
+    @id_importacion      INT  = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -594,14 +620,16 @@ BEGIN
     DECLARE @nl            NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @contenido     NVARCHAR(MAX);
     DECLARE @mensaje       NVARCHAR(2048);
-    DECLARE @cupo_grupo    TINYINT        = (SELECT valor FROM DatosGenerales.PARAMETRO_REGLAMENTO
-                                             WHERE codigo = 'SELECCIONES_POR_GRUPO');
-    DECLARE @validas       Torneo.TT_SELECCION;
-    DECLARE @insertados    INT = 0;
-    DECLARE @actualizados  INT = 0;
-    DECLARE @sin_cambios   INT = 0;
+    DECLARE @tran_propia   BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @proceso       VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @leidos        INT;
+    DECLARE @insertados    INT;
+    DECLARE @actualizados  INT;
+    DECLARE @sin_cambios   INT;
+    DECLARE @rechazados    INT;
 
     SET @ruta_archivo = NULLIF(TRIM(@ruta_archivo), N'');
+    SET @id_importacion = NULL;
 
     IF @ruta_archivo IS NULL
         SET @errores += @nl + N'- La ruta del archivo es obligatoria.';
@@ -628,24 +656,19 @@ BEGIN
         THROW 50002, @mensaje, 1;
     END;
 
+    -- usp_ImportarSelecciones lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
     CREATE TABLE #staging_selecciones (
-        id_registro     INT PRIMARY KEY,
-        -- Tal como vienen en el archivo
-        nombre_txt      NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
-        codigo_fifa     NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
-        grupo           NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
-        confederacion   NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
-        -- Lo que ya está registrado
-        id_pais         SMALLINT      NULL,
-        id_seleccion    INT           NULL,
-        grupo_actual    CHAR(1)       COLLATE DATABASE_DEFAULT NULL,
-        tiene_lista     BIT           NULL,
-        errores         NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
-        accion          VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+        id_registro         INT PRIMARY KEY,
+        codigo_fifa         NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        confederacion       NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        grupo               NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        nombre_alternativo  NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,   -- el nombre que trae el archivo
+        errores             NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+        accion              VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
     );
 
-    /* 2. Los registros, como vienen en el archivo. */
-    INSERT INTO #staging_selecciones (id_registro, nombre_txt, codigo_fifa, grupo, confederacion)
+    /* 2. Los registros, como vienen en el archivo: no hay nada que convertir. */
+    INSERT INTO #staging_selecciones (id_registro, nombre_alternativo, codigo_fifa, grupo, confederacion)
     SELECT CAST(s.[key] AS INT) + 1, NULLIF(TRIM(d.nombre), N''), UPPER(NULLIF(TRIM(d.codigo), N'')),
            UPPER(NULLIF(TRIM(d.grupo), N'')), UPPER(NULLIF(TRIM(d.confederacion), N''))
     FROM OPENJSON(@contenido) AS s
@@ -653,105 +676,45 @@ BEGIN
         WITH (nombre NVARCHAR(400) '$.name', codigo NVARCHAR(50) '$.fifa_code',
               grupo NVARCHAR(50) '$.group', confederacion NVARCHAR(50) '$.confed') AS d;
 
-    UPDATE st
-    SET id_pais = p.id_pais, id_seleccion = s.id_seleccion, grupo_actual = s.grupo,
-        tiene_lista = IIF(EXISTS (SELECT 1 FROM Torneo.LISTA_CONVOCADOS AS lc
-                                  WHERE lc.id_seleccion = s.id_seleccion), 1, 0)
-    FROM #staging_selecciones AS st
-    INNER JOIN DatosGenerales.PAIS AS p ON p.codigo_fifa = st.codigo_fifa
-    LEFT JOIN Torneo.SELECCION AS s ON s.id_pais = p.id_pais;
+    /* 3. El SP de la Entrega 5 valida y carga las válidas, todas juntas; después se registran la
+          importación y sus rechazadas, en la misma transacción. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
 
-    /* 3. Validaciones, con las reglas de usp_ImportarSelecciones. */
-    UPDATE st
-    SET errores = NULLIF(CONCAT(
-            CASE WHEN st.codigo_fifa IS NULL THEN @nl + N'- El código FIFA es obligatorio.'
-                 WHEN st.id_pais IS NULL     THEN @nl + N'- No hay un país con código FIFA "' + st.codigo_fifa + N'".'
-            END,
-            CASE WHEN st.confederacion IS NULL AND st.id_seleccion IS NULL
-                     THEN @nl + N'- La confederación es obligatoria.'
-                 WHEN st.confederacion NOT IN (N'AFC', N'CAF', N'CONCACAF', N'CONMEBOL', N'OFC', N'UEFA')
-                     THEN @nl + N'- La confederación "' + st.confederacion + N'" no es AFC, CAF, CONCACAF, CONMEBOL, OFC ni UEFA.'
-            END,
-            IIF(st.grupo COLLATE Latin1_General_BIN NOT LIKE N'[A-L]',
-                @nl + N'- El grupo "' + st.grupo + N'" no es una letra de la A a la L.', NULL),
-            IIF(st.grupo <> ISNULL(st.grupo_actual, N'')
-                AND EXISTS (SELECT 1 FROM Torneo.PARTIDO AS p
-                            WHERE p.fase = 'GRUPOS' AND st.id_seleccion IN (p.id_seleccion_local, p.id_seleccion_visitante)),
-                @nl + N'- La selección ya tiene partidos de la fase de grupos: no se le puede cambiar el grupo.', NULL),
-            IIF(LEN(st.nombre_txt) > 120, @nl + N'- El nombre no puede superar los 120 caracteres.', NULL),
-            IIF(EXISTS (SELECT 1 FROM Torneo.NOMBRE_ALTERNATIVO AS na
-                        WHERE na.id_jugador IS NULL AND na.nombre = st.nombre_txt
-                          AND na.id_seleccion <> ISNULL(st.id_seleccion, 0)),
-                @nl + N'- El nombre "' + st.nombre_txt + N'" ya es de otra selección.', NULL)), N'')
-    FROM #staging_selecciones AS st;
+        EXEC Torneo.usp_ImportarSelecciones @fecha_presentacion = @fecha_presentacion;
 
-    UPDATE st
-    SET errores = CONCAT(st.errores, @nl, N'- El archivo trae ', r.veces, N' veces esta selección.')
-    FROM #staging_selecciones AS st
-    INNER JOIN (SELECT codigo_fifa, COUNT(*) AS veces FROM #staging_selecciones
-                WHERE codigo_fifa IS NOT NULL GROUP BY codigo_fifa HAVING COUNT(*) > 1) AS r
-            ON r.codigo_fifa = st.codigo_fifa;
+        SELECT @leidos       = COUNT(*),
+               @insertados   = ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+               @actualizados = ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
+               @sin_cambios  = ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
+               @rechazados   = ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
+        FROM #staging_selecciones;
 
-    UPDATE st
-    SET errores = CONCAT(st.errores, @nl, N'- El archivo usa el nombre "', st.nombre_txt, N'" para más de una selección.')
-    FROM #staging_selecciones AS st
-    WHERE EXISTS (SELECT 1 FROM #staging_selecciones AS o
-                  WHERE o.nombre_txt = st.nombre_txt AND o.codigo_fifa <> st.codigo_fifa);
+        EXEC DatosGenerales.usp_RegistrarImportacion
+            @proceso = @proceso, @origen = @ruta_archivo, @leidos = @leidos, @insertados = @insertados,
+            @actualizados = @actualizados, @sin_cambios = @sin_cambios, @rechazados = @rechazados,
+            @id_importacion = @id_importacion OUTPUT;
 
-    -- Grupos como quedarían con las selecciones válidas: si uno se pasa del cupo, se rechazan las suyas.
-    WITH grupos AS (
-        SELECT ISNULL(st.grupo, st.grupo_actual) AS grupo
-        FROM #staging_selecciones AS st
-        WHERE st.errores IS NULL
-        UNION ALL
-        SELECT s.grupo
-        FROM Torneo.SELECCION AS s
-        WHERE NOT EXISTS (SELECT 1 FROM #staging_selecciones AS st
-                          WHERE st.errores IS NULL AND st.id_seleccion = s.id_seleccion)
-    ),
-    excedidos AS (
-        SELECT grupo, COUNT(*) AS selecciones FROM grupos
-        WHERE grupo IS NOT NULL GROUP BY grupo HAVING COUNT(*) > @cupo_grupo
-    )
-    UPDATE st
-    SET errores = CONCAT(@nl, N'- El grupo ', e.grupo, N' quedaría con ', e.selecciones, N' selecciones y el máximo es ',
-                         @cupo_grupo, N' (SELECCIONES_POR_GRUPO).')
-    FROM #staging_selecciones AS st
-    INNER JOIN excedidos AS e ON e.grupo = ISNULL(st.grupo, st.grupo_actual)
-    WHERE st.errores IS NULL;
+        INSERT INTO Torneo.ERRORES_SELECCION (id_importacion, registro, nombre, codigo_fifa, grupo, confederacion, motivos)
+        SELECT @id_importacion, id_registro, nombre_alternativo, codigo_fifa, grupo, confederacion, STUFF(errores, 1, 2, N'')
+        FROM #staging_selecciones
+        WHERE accion = 'RECHAZADO';
 
-    UPDATE #staging_selecciones SET accion = 'RECHAZADO' WHERE errores IS NOT NULL;
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
 
-    -- La fecha es un dato de la importación, no de cada registro: si falta, no se importa nada.
-    IF EXISTS (SELECT 1 FROM #staging_selecciones WHERE accion IS NULL AND ISNULL(tiene_lista, 0) = 0)
-       AND (@fecha_presentacion IS NULL OR @fecha_presentacion > CONVERT(DATE, GETDATE()))
-    BEGIN
-        SET @errores = N'Torneo.usp_ImportarSeleccionesJSON: no se importó nada.' + @nl
-                     + N'- Hay selecciones sin lista de convocados: la fecha de presentación es obligatoria y no puede ser futura.';
-        THROW 50001, @errores, 1;
-    END;
+    /* 4. Resultado. */
+    SELECT @id_importacion AS id_importacion, @ruta_archivo AS origen, @leidos AS leidos, @insertados AS insertados,
+           @actualizados AS actualizados, @sin_cambios AS sin_cambios, @rechazados AS rechazados;
 
-    /* 4. Carga de las válidas, todas juntas, con el SP de la Entrega 5. */
-    INSERT INTO @validas (codigo_fifa, confederacion, grupo, nombre_alternativo)
-    SELECT codigo_fifa, confederacion, grupo, nombre_txt
-    FROM #staging_selecciones
-    WHERE accion IS NULL;
-
-    IF EXISTS (SELECT 1 FROM @validas)
-        EXEC Torneo.usp_ImportarSelecciones
-            @selecciones = @validas, @fecha_presentacion = @fecha_presentacion,
-            @insertados = @insertados OUTPUT, @actualizados = @actualizados OUTPUT, @sin_cambios = @sin_cambios OUTPUT;
-
-    /* 5. Resultado. */
-    SELECT @ruta_archivo AS origen, COUNT(*) AS leidos, @insertados AS insertados, @actualizados AS actualizados,
-           @sin_cambios AS sin_cambios, ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0) AS rechazados
-    FROM #staging_selecciones;
-
-    SELECT CONCAT(id_registro, N'. ', ISNULL(codigo_fifa, N'(sin código)'), N' ', ISNULL(nombre_txt, N'')) AS rechazado,
-           STUFF(errores, 1, 2, N'') AS motivos
-    FROM #staging_selecciones
-    WHERE accion = 'RECHAZADO'
-    ORDER BY id_registro;
+    SELECT CONCAT(registro, N'. ', ISNULL(codigo_fifa, N'(sin código)'), N' ', ISNULL(nombre, N'')) AS rechazado, motivos
+    FROM Torneo.ERRORES_SELECCION
+    WHERE id_importacion = @id_importacion
+    ORDER BY registro;
 END;
 GO
 
@@ -771,36 +734,40 @@ GO
   otro número si el archivo es solo una parte, para no pisar los que ya
   tienen esos números).
   Valida: ruta obligatoria y terminada en .json; primer número entre 1 y
-  255. Si el archivo no se puede
-  leer, no es JSON o no tiene la lista "matches", no se importa nada
-  (THROW 50002). Devuelve el resumen de partidos y de eventos, los
-  rechazados con sus motivos, y los partidos cuyo resultado no coincide con
-  los goles cargados (porque se rechazó alguno).
+  255. Si el archivo no se puede leer, no es JSON o no tiene la lista
+  "matches", no se importa nada (THROW 50002). Rechaza los registros que no
+  puede convertir (ronda, fecha, selecciones y estadio que no reconoce,
+  números que no son números, jugadores que no reconoce, minutos y
+  tarjetas); las reglas las aplican los SP de la Entrega 5. Registra la
+  importación (su número queda en @id_importacion) y los rechazados en
+  Torneo.ERRORES_PARTIDO y DesarrolloPartido.ERRORES_EVENTO. Devuelve el
+  resumen de partidos y de eventos, los rechazados con sus motivos, y los
+  partidos cuyo resultado no coincide con los goles cargados (porque se
+  rechazó alguno).
 */
 CREATE OR ALTER PROCEDURE Torneo.usp_ImportarPartidosJSON
-    @ruta_archivo   NVARCHAR(400),
-    @primer_numero  TINYINT = 1
+    @ruta_archivo    NVARCHAR(400),
+    @primer_numero   TINYINT = 1,
+    @id_importacion  INT     = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores              NVARCHAR(2048) = N'';
-    DECLARE @nl                   NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @contenido            NVARCHAR(MAX);
-    DECLARE @mensaje              NVARCHAR(2048);
-    DECLARE @partidos_grupos      INT;
-    DECLARE @partidos             Torneo.TT_PARTIDO;
-    DECLARE @alineaciones         DesarrolloPartido.TT_ALINEACION_PARTIDO;
-    DECLARE @cambios              DesarrolloPartido.TT_CAMBIO;
-    DECLARE @goles                DesarrolloPartido.TT_GOL;
-    DECLARE @amonestaciones       DesarrolloPartido.TT_AMONESTACION;
-    DECLARE @insertados           INT = 0;
-    DECLARE @actualizados         INT = 0;
-    DECLARE @sin_cambios          INT = 0;
-    DECLARE @eventos_insertados   INT = 0;
-    DECLARE @eventos_sin_cambios  INT = 0;
+    DECLARE @errores          NVARCHAR(2048) = N'';
+    DECLARE @nl               NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @contenido        NVARCHAR(MAX);
+    DECLARE @mensaje          NVARCHAR(2048);
+    DECLARE @partidos_grupos  INT;
+    DECLARE @tran_propia      BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @proceso          VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @leidos           INT;
+    DECLARE @insertados       INT;
+    DECLARE @actualizados     INT;
+    DECLARE @sin_cambios      INT;
+    DECLARE @rechazados       INT;
 
     SET @ruta_archivo = NULLIF(TRIM(@ruta_archivo), N'');
+    SET @id_importacion = NULL;
 
     IF @ruta_archivo IS NULL
         SET @errores += @nl + N'- La ruta del archivo es obligatoria.';
@@ -830,45 +797,88 @@ BEGIN
         THROW 50002, @mensaje, 1;
     END;
 
+    -- usp_ImportarPartidos lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
     CREATE TABLE #staging_partidos (
-        id_registro       INT PRIMARY KEY,
+        id_registro            INT PRIMARY KEY,
         -- Tal como vienen en el archivo
-        ronda             NVARCHAR(100) COLLATE DATABASE_DEFAULT NULL,
-        fecha_txt         NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
-        hora_txt          NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
-        equipo_1          NVARCHAR(200) COLLATE DATABASE_DEFAULT NULL,
-        equipo_2          NVARCHAR(200) COLLATE DATABASE_DEFAULT NULL,
-        estadio_txt       NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
-        asistencia_txt    NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
-        ft_1              NVARCHAR(10)  COLLATE DATABASE_DEFAULT NULL,
-        ft_2              NVARCHAR(10)  COLLATE DATABASE_DEFAULT NULL,
-        et_1              NVARCHAR(10)  COLLATE DATABASE_DEFAULT NULL,
-        et_2              NVARCHAR(10)  COLLATE DATABASE_DEFAULT NULL,
-        pen_1             NVARCHAR(10)  COLLATE DATABASE_DEFAULT NULL,
-        pen_2             NVARCHAR(10)  COLLATE DATABASE_DEFAULT NULL,
-        detalle           NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,   -- el partido completo, para leer sus eventos
-        -- Convertidos
-        fase              VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
-        grupo             CHAR(1)       COLLATE DATABASE_DEFAULT NULL,
-        fecha_hora_local  DATETIME2(0)  NULL,
-        fecha_hora_utc    DATETIME2(0)  NULL,
-        id_seleccion_1    INT           NULL,
-        id_seleccion_2    INT           NULL,
-        codigo_1          VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
-        codigo_2          VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
-        id_sede           INT           NULL,
-        sedes_posibles    INT           NULL,
-        nombre_estadio    VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
-        capacidad         INT           NULL,
-        goles_1           TINYINT       NULL,
-        goles_2           TINYINT       NULL,
-        penales_1         TINYINT       NULL,
-        penales_2         TINYINT       NULL,
-        asistencia        INT           NULL,
-        numero_partido    TINYINT       NULL,
-        id_partido        INT           NULL,
-        errores           NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
-        accion            VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+        ronda                  NVARCHAR(100) COLLATE DATABASE_DEFAULT NULL,
+        fecha_txt              NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        hora_txt               NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        equipo_1               NVARCHAR(200) COLLATE DATABASE_DEFAULT NULL,
+        equipo_2               NVARCHAR(200) COLLATE DATABASE_DEFAULT NULL,
+        estadio_txt            NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        asistencia_txt         NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        ft_1                   NVARCHAR(10)  COLLATE DATABASE_DEFAULT NULL,
+        ft_2                   NVARCHAR(10)  COLLATE DATABASE_DEFAULT NULL,
+        et_1                   NVARCHAR(10)  COLLATE DATABASE_DEFAULT NULL,
+        et_2                   NVARCHAR(10)  COLLATE DATABASE_DEFAULT NULL,
+        pen_1                  NVARCHAR(10)  COLLATE DATABASE_DEFAULT NULL,
+        pen_2                  NVARCHAR(10)  COLLATE DATABASE_DEFAULT NULL,
+        detalle                NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,   -- el partido completo, para leer sus eventos
+        -- Para convertir
+        grupo                  CHAR(1)       COLLATE DATABASE_DEFAULT NULL,
+        id_seleccion_1         INT           NULL,
+        id_seleccion_2         INT           NULL,
+        sedes_posibles         INT           NULL,
+        -- Lo que lee usp_ImportarPartidos, ya convertido
+        numero_partido         TINYINT       NULL,
+        nombre_estadio         VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
+        fase                   VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
+        fecha_hora_utc         DATETIME2(0)  NULL,
+        codigo_fifa_local      VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+        codigo_fifa_visitante  VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+        goles_local            TINYINT       NULL,
+        goles_visitante        TINYINT       NULL,
+        penales_local          TINYINT       NULL,
+        penales_visitante      TINYINT       NULL,
+        asistencia             INT           NULL,
+        -- Lo que le pasa a cada registro: lo completan este SP y usp_ImportarPartidos
+        errores                NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+        accion                 VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+    );
+
+    -- usp_ImportarDesarrolloPartidos lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
+    CREATE TABLE #staging_eventos (
+        id_evento           INT IDENTITY(1,1) PRIMARY KEY,
+        tipo                VARCHAR(12)   COLLATE DATABASE_DEFAULT NOT NULL,  -- FORMACION, CAMBIO, GOL, PENAL, TARJETA
+        id_registro         INT           NOT NULL,                           -- partido en el archivo
+        numero_partido      TINYINT       NOT NULL,
+        lado                TINYINT       NULL,                               -- selección del jugador: 1 = team1, 2 = team2
+        orden               INT           NULL,                               -- posición en su lista del archivo
+        -- Tal como vienen en el archivo
+        nombre_txt          NVARCHAR(200) COLLATE DATABASE_DEFAULT NULL,      -- en los cambios, el que sale
+        nombre_entra_txt    NVARCHAR(200) COLLATE DATABASE_DEFAULT NULL,
+        minuto_txt          NVARCHAR(20)  COLLATE DATABASE_DEFAULT NULL,
+        tipo_txt            NVARCHAR(20)  COLLATE DATABASE_DEFAULT NULL,
+        de_penal            BIT           NULL,
+        en_contra           BIT           NULL,
+        marcador_1          TINYINT       NULL,
+        -- Lo que lee usp_ImportarDesarrolloPartidos, ya convertido
+        codigo_fifa         VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+        id_jugador          INT           NULL,
+        id_jugador_entra    INT           NULL,
+        es_titular          BIT           NULL,
+        posicion_en_cancha  VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
+        minuto              TINYINT       NULL,
+        minuto_adicional    TINYINT       NULL,
+        en_entretiempo      BIT           NULL,
+        motivo              VARCHAR(200)  COLLATE DATABASE_DEFAULT NULL,
+        periodo             VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL,
+        tipo_gol            VARCHAR(40)   COLLATE DATABASE_DEFAULT NULL,
+        tipo_tarjeta        VARCHAR(8)    COLLATE DATABASE_DEFAULT NULL,
+        es_doble_amarilla   BIT           NULL,
+        errores             NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+        accion              VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+    );
+
+    -- Jugadores que nombra el archivo: Torneo.usp_IdentificarJugadores los reconoce.
+    CREATE TABLE #nombres_fuente (
+        id_nombre      INT IDENTITY(1,1) PRIMARY KEY,
+        codigo_fifa    VARCHAR(10)    COLLATE DATABASE_DEFAULT NOT NULL,
+        nombre_fuente  NVARCHAR(200)  COLLATE DATABASE_DEFAULT NOT NULL,
+        id_jugador     INT            NULL,
+        paso           TINYINT        NULL,
+        error          NVARCHAR(1000) COLLATE DATABASE_DEFAULT NULL
     );
 
     /* 2. Los partidos, como vienen en el archivo. */
@@ -886,7 +896,7 @@ BEGIN
               et_1 NVARCHAR(10) '$.score.et[0]', et_2 NVARCHAR(10) '$.score.et[1]',
               pen_1 NVARCHAR(10) '$.score.p[0]', pen_2 NVARCHAR(10) '$.score.p[1]') AS d;
 
-    -- Fase (como la traduce usp_ImportarPartidos) y grupo; hora local y UTC ("13:00 UTC-6").
+    -- Fase y grupo (para numerar); hora UTC ("13:00 UTC-6"); resultado y asistencia.
     UPDATE st
     SET fase = CASE WHEN r.ronda LIKE '%GROUP%' OR r.ronda LIKE 'GRUPO%'                           THEN 'GRUPOS'
                     WHEN r.ronda IN ('ROUND OF 32', 'DIECISEISAVOS DE FINAL')                      THEN 'DIECISEISAVOS'
@@ -896,14 +906,13 @@ BEGIN
                     WHEN r.ronda LIKE '%THIRD%' OR r.ronda LIKE 'BRONZE%' OR r.ronda LIKE 'TERCER%' THEN 'TERCER_PUESTO'
                     WHEN r.ronda = 'FINAL'                                                          THEN 'FINAL'
                END,
-        grupo = IIF(r.ronda LIKE '%GROUP [A-L]', RIGHT(r.ronda, 1), NULL),
-        fecha_hora_local = h.local,
-        fecha_hora_utc   = DATEADD(HOUR, -h.desfase, h.local),
-        goles_1          = TRY_CONVERT(TINYINT, ISNULL(st.et_1, st.ft_1)),
-        goles_2          = TRY_CONVERT(TINYINT, ISNULL(st.et_2, st.ft_2)),
-        penales_1        = TRY_CONVERT(TINYINT, st.pen_1),
-        penales_2        = TRY_CONVERT(TINYINT, st.pen_2),
-        asistencia       = TRY_CONVERT(INT, st.asistencia_txt)
+        grupo             = IIF(r.ronda LIKE '%GROUP [A-L]', RIGHT(r.ronda, 1), NULL),
+        fecha_hora_utc    = DATEADD(HOUR, -h.desfase, h.local),
+        goles_local       = TRY_CONVERT(TINYINT, ISNULL(st.et_1, st.ft_1)),
+        goles_visitante   = TRY_CONVERT(TINYINT, ISNULL(st.et_2, st.ft_2)),
+        penales_local     = TRY_CONVERT(TINYINT, st.pen_1),
+        penales_visitante = TRY_CONVERT(TINYINT, st.pen_2),
+        asistencia        = TRY_CONVERT(INT, st.asistencia_txt)
     FROM #staging_partidos AS st
     CROSS APPLY (SELECT UPPER(st.ronda) AS ronda) AS r
     CROSS APPLY (SELECT TRY_CONVERT(DATETIME2(0), st.fecha_txt + N' ' + LEFT(st.hora_txt, CHARINDEX(N' ', st.hora_txt + N' ') - 1), 120) AS local,
@@ -932,7 +941,7 @@ BEGIN
     FROM #staging_partidos AS st;
 
     UPDATE st
-    SET codigo_1 = p1.codigo_fifa, codigo_2 = p2.codigo_fifa
+    SET codigo_fifa_local = p1.codigo_fifa, codigo_fifa_visitante = p2.codigo_fifa
     FROM #staging_partidos AS st
     LEFT JOIN Torneo.SELECCION AS s1 ON s1.id_seleccion = st.id_seleccion_1
     LEFT JOIN DatosGenerales.PAIS AS p1 ON p1.id_pais = s1.id_pais
@@ -941,18 +950,13 @@ BEGIN
 
     -- Sede: la que tiene su ciudad (lo que está antes del paréntesis) o su nombre en el texto del archivo.
     UPDATE st
-    SET id_sede = x.id_sede, sedes_posibles = x.sedes
+    SET sedes_posibles = x.sedes,
+        nombre_estadio = IIF(x.sedes = 1, x.nombre_estadio, NULL)
     FROM #staging_partidos AS st
-    CROSS APPLY (SELECT MAX(s.id_sede) AS id_sede, COUNT(*) AS sedes
+    CROSS APPLY (SELECT MAX(s.nombre_estadio) AS nombre_estadio, COUNT(*) AS sedes
                  FROM Torneo.SEDE AS s
                  WHERE CHARINDEX(LEFT(s.ciudad, CHARINDEX(' (', s.ciudad + ' (') - 1), st.estadio_txt) > 0
                     OR CHARINDEX(s.nombre_estadio, st.estadio_txt) > 0) AS x;
-
-    UPDATE st
-    SET nombre_estadio = s.nombre_estadio, capacidad = s.capacidad
-    FROM #staging_partidos AS st
-    INNER JOIN Torneo.SEDE AS s ON s.id_sede = st.id_sede
-    WHERE st.sedes_posibles = 1;
 
     -- Número: por fecha y hora UTC, grupo y orden en el archivo; la fase de grupos primero.
     SELECT @partidos_grupos = COUNT(*)
@@ -972,10 +976,7 @@ BEGIN
     INNER JOIN orden AS o ON o.id_registro = st.id_registro
     CROSS APPLY (SELECT @primer_numero - 1 + o.n + IIF(o.fase = 'GRUPOS', 0, @partidos_grupos) AS numero) AS n;
 
-    UPDATE st SET id_partido = p.id_partido
-    FROM #staging_partidos AS st INNER JOIN Torneo.PARTIDO AS p ON p.numero_partido = st.numero_partido;
-
-    /* 3. Validaciones, con las reglas de usp_ImportarPartidos. */
+    /* 3. Lo que no se pudo convertir. Las reglas de los partidos las aplica usp_ImportarPartidos. */
     UPDATE st
     SET errores = NULLIF(CONCAT(
             IIF(st.fase IS NULL, @nl + N'- La ronda "' + ISNULL(st.ronda, N'') + N'" no es una fase reconocida.', NULL),
@@ -988,395 +989,230 @@ BEGIN
                 @nl + N'- No hay una selección registrada con el nombre "' + st.equipo_1 + N'" (se puede registrar como nombre alternativo).', NULL),
             IIF(st.equipo_2 IS NOT NULL AND st.id_seleccion_2 IS NULL,
                 @nl + N'- No hay una selección registrada con el nombre "' + st.equipo_2 + N'" (se puede registrar como nombre alternativo).', NULL),
-            IIF(st.id_seleccion_1 = st.id_seleccion_2, @nl + N'- La selección local y la visitante son la misma.', NULL),
-            IIF(st.fase = 'GRUPOS'
-                AND (st.id_seleccion_1 IS NULL OR st.id_seleccion_2 IS NULL
-                     OR NOT EXISTS (SELECT 1 FROM Torneo.SELECCION AS s1
-                                    INNER JOIN Torneo.SELECCION AS s2 ON s2.grupo = s1.grupo
-                                    WHERE s1.id_seleccion = st.id_seleccion_1 AND s2.id_seleccion = st.id_seleccion_2)),
-                @nl + N'- En la fase de grupos tienen que estar las dos selecciones y ser del mismo grupo.', NULL),
-            CASE WHEN st.estadio_txt IS NULL THEN @nl + N'- El estadio es obligatorio.'
-                 WHEN st.sedes_posibles = 0  THEN @nl + N'- El estadio "' + st.estadio_txt + N'" no corresponde a ninguna sede registrada.'
-                 WHEN st.sedes_posibles > 1  THEN @nl + N'- El estadio "' + st.estadio_txt + N'" puede ser más de una sede.'
+            CASE WHEN st.estadio_txt IS NULL    THEN @nl + N'- El estadio es obligatorio.'
+                 WHEN st.sedes_posibles = 0     THEN @nl + N'- El estadio "' + st.estadio_txt + N'" no corresponde a ninguna sede registrada.'
+                 WHEN st.sedes_posibles > 1     THEN @nl + N'- El estadio "' + st.estadio_txt + N'" puede ser más de una sede.'
             END,
-            IIF((st.ft_1 IS NOT NULL OR st.ft_2 IS NOT NULL OR st.et_1 IS NOT NULL OR st.et_2 IS NOT NULL)
-                AND (st.goles_1 IS NULL OR st.goles_2 IS NULL),
-                @nl + N'- El resultado no tiene los goles de las dos selecciones (o no son números).', NULL),
-            IIF((st.pen_1 IS NOT NULL OR st.pen_2 IS NOT NULL) AND (st.penales_1 IS NULL OR st.penales_2 IS NULL),
-                @nl + N'- Los penales no son de las dos selecciones (o no son números).', NULL),
-            IIF(st.penales_1 IS NOT NULL
-                AND (st.fase = 'GRUPOS' OR st.goles_1 <> st.goles_2 OR st.penales_1 = st.penales_2),
-                @nl + N'- Hay penales solo en eliminación directa, con empate en goles, y no pueden terminar empatados.', NULL),
-            IIF(st.fase <> 'GRUPOS' AND st.goles_1 = st.goles_2 AND st.penales_1 IS NULL,
-                @nl + N'- Un empate de eliminación directa se define por penales y el archivo no los trae.', NULL),
-            IIF(st.goles_1 IS NOT NULL AND (st.id_seleccion_1 IS NULL OR st.id_seleccion_2 IS NULL),
-                @nl + N'- Un partido con resultado tiene que tener las dos selecciones.', NULL),
-            -- usp_ImportarPartidos no reprograma un partido ya jugado: se rechaza en vez de ignorar el cambio.
-            IIF(EXISTS (SELECT 1 FROM Torneo.PARTIDO AS p
-                        WHERE p.id_partido = st.id_partido AND p.estado NOT IN ('PROGRAMADO', 'SUSPENDIDO')
-                          AND (ISNULL(p.id_seleccion_local, 0) <> ISNULL(st.id_seleccion_1, 0)
-                               OR ISNULL(p.id_seleccion_visitante, 0) <> ISNULL(st.id_seleccion_2, 0)
-                               OR p.id_sede <> ISNULL(st.id_sede, 0) OR p.fecha_hora_utc <> ISNULL(st.fecha_hora_utc, '19000101'))),
-                @nl + N'- El partido ' + CAST(st.numero_partido AS NVARCHAR(3)) + N' ya se jugó con otras selecciones, '
-                    + N'sede o fecha: no se puede cambiar.', NULL),
-            IIF(st.asistencia_txt IS NOT NULL AND (st.asistencia IS NULL OR st.asistencia < 0 OR st.asistencia > st.capacidad),
-                @nl + N'- La asistencia "' + st.asistencia_txt + N'" no es un número entre 0 y la capacidad de la sede.', NULL),
-            IIF(EXISTS (SELECT 1 FROM DesarrolloPartido.fn_MarcadorSegunGoles(st.id_partido) AS m
-                        INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = st.id_partido
-                        WHERE st.goles_1 IS NOT NULL AND m.goles_registrados > m.penales_registrados
-                          AND (st.goles_1 <> ISNULL(p.goles_local, 255) OR st.goles_2 <> ISNULL(p.goles_visitante, 255))
-                          AND (st.goles_1 <> m.goles_local OR st.goles_2 <> m.goles_visitante)),
-                @nl + N'- El resultado cambia y no coincide con los goles ya cargados del partido.', NULL)), N'')
+            IIF((ISNULL(st.et_1, st.ft_1) IS NOT NULL AND st.goles_local IS NULL)
+                OR (ISNULL(st.et_2, st.ft_2) IS NOT NULL AND st.goles_visitante IS NULL),
+                @nl + N'- Los goles del resultado no son números.', NULL),
+            IIF((st.pen_1 IS NOT NULL AND st.penales_local IS NULL) OR (st.pen_2 IS NOT NULL AND st.penales_visitante IS NULL),
+                @nl + N'- Los penales no son números.', NULL),
+            IIF(st.asistencia_txt IS NOT NULL AND st.asistencia IS NULL,
+                @nl + N'- La asistencia "' + st.asistencia_txt + N'" no es un número.', NULL)), N'')
     FROM #staging_partidos AS st;
-
-    -- El fixture como quedaría con los partidos válidos: ninguna selección juega dos partidos
-    -- a menos de 24 horas y ninguna sede tiene dos partidos el mismo día.
-    WITH fixture AS (
-        SELECT numero_partido, id_sede, fecha_hora_utc, fecha_hora_local, id_seleccion_1 AS id_local,
-               id_seleccion_2 AS id_visitante
-        FROM #staging_partidos
-        WHERE errores IS NULL
-        UNION ALL
-        SELECT p.numero_partido, p.id_sede, p.fecha_hora_utc, p.fecha_hora_local, p.id_seleccion_local,
-               p.id_seleccion_visitante
-        FROM Torneo.PARTIDO AS p
-        WHERE NOT EXISTS (SELECT 1 FROM #staging_partidos AS st
-                          WHERE st.errores IS NULL AND st.numero_partido = p.numero_partido)
-    ),
-    jugados AS (
-        SELECT f.numero_partido, f.fecha_hora_utc, s.id_seleccion
-        FROM fixture AS f
-        CROSS APPLY (VALUES (f.id_local), (f.id_visitante)) AS s (id_seleccion)
-        WHERE s.id_seleccion IS NOT NULL
-    ),
-    conflictos AS (
-        SELECT a.numero_partido, b.numero_partido AS otro, N'una de sus selecciones juega ese otro partido a menos de 24 horas' AS motivo
-        FROM jugados AS a
-        INNER JOIN jugados AS b ON b.id_seleccion = a.id_seleccion AND b.numero_partido <> a.numero_partido
-        WHERE ABS(DATEDIFF(MINUTE, a.fecha_hora_utc, b.fecha_hora_utc)) < 1440
-        UNION
-        SELECT a.numero_partido, b.numero_partido, N'la sede tiene ese otro partido el mismo día'
-        FROM fixture AS a
-        INNER JOIN fixture AS b ON b.id_sede = a.id_sede AND b.numero_partido <> a.numero_partido
-        WHERE CAST(a.fecha_hora_local AS DATE) = CAST(b.fecha_hora_local AS DATE)
-    )
-    UPDATE st
-    SET errores = (SELECT STRING_AGG(CONCAT(@nl, N'- Con el partido ', c.otro, N': ', c.motivo, N'.'), N'')
-                   FROM conflictos AS c WHERE c.numero_partido = st.numero_partido)
-    FROM #staging_partidos AS st
-    WHERE st.errores IS NULL
-      AND EXISTS (SELECT 1 FROM conflictos AS c WHERE c.numero_partido = st.numero_partido);
 
     UPDATE #staging_partidos SET accion = 'RECHAZADO' WHERE errores IS NOT NULL;
 
-    /* 4. Carga de los partidos válidos, todos juntos, con el SP de la Entrega 5. */
-    INSERT INTO @partidos (numero_partido, nombre_estadio, fase, fecha_hora_utc, codigo_fifa_local, codigo_fifa_visitante,
-                           goles_local, goles_visitante, penales_local, penales_visitante, asistencia)
-    SELECT numero_partido, nombre_estadio, fase, fecha_hora_utc, codigo_1, codigo_2,
-           goles_1, goles_2, penales_1, penales_2, asistencia
-    FROM #staging_partidos
-    WHERE accion IS NULL;
+    /* 4. Los SP de la Entrega 5 validan y cargan los partidos y, de los válidos, lo que pasó en cada
+          uno; después se registran la importación y sus rechazados. Todo en una transacción. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
 
-    IF EXISTS (SELECT 1 FROM @partidos)
-        EXEC Torneo.usp_ImportarPartidos
-            @partidos = @partidos, @insertados = @insertados OUTPUT,
-            @actualizados = @actualizados OUTPUT, @sin_cambios = @sin_cambios OUTPUT;
+        EXEC Torneo.usp_ImportarPartidos;
 
-    /* 2 a 4 para lo que pasó en cada partido válido. */
-    CREATE TABLE #staging_eventos (
-        id_evento           INT IDENTITY(1,1) PRIMARY KEY,
-        tipo                VARCHAR(12)   COLLATE DATABASE_DEFAULT NOT NULL,  -- FORMACION, CAMBIO, GOL, PENAL, TARJETA
-        id_registro         INT           NOT NULL,                           -- partido en el archivo
-        numero_partido      TINYINT       NOT NULL,
-        lado                TINYINT       NULL,                               -- selección del jugador: 1 = team1, 2 = team2
-        orden               INT           NULL,                               -- posición en su lista del archivo
-        -- Tal como vienen en el archivo
-        nombre_txt          NVARCHAR(200) COLLATE DATABASE_DEFAULT NULL,      -- en los cambios, el que sale
-        nombre_entra_txt    NVARCHAR(200) COLLATE DATABASE_DEFAULT NULL,
-        minuto_txt          NVARCHAR(20)  COLLATE DATABASE_DEFAULT NULL,
-        tipo_txt            NVARCHAR(20)  COLLATE DATABASE_DEFAULT NULL,
-        es_titular          BIT           NULL,
-        de_penal            BIT           NULL,
-        en_contra           BIT           NULL,
-        marcador_1          TINYINT       NULL,
-        -- Convertidos
-        codigo_fifa         VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
-        id_jugador          INT           NULL,
-        id_jugador_entra    INT           NULL,
-        minuto              TINYINT       NULL,
-        minuto_adicional    TINYINT       NULL,
-        periodo             VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL,
-        tipo_gol            VARCHAR(40)   COLLATE DATABASE_DEFAULT NULL,
-        tipo_tarjeta        VARCHAR(8)    COLLATE DATABASE_DEFAULT NULL,
-        es_doble_amarilla   BIT           NULL,
-        errores             NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
-        accion              VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
-    );
-
-    -- Formaciones: titulares y suplentes de cada selección (lineup[0] es team1).
-    INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, es_titular)
-    SELECT 'FORMACION', st.id_registro, st.numero_partido, CAST(l.[key] AS INT) + 1, CAST(j.[key] AS INT) + 1,
-           NULLIF(TRIM(JSON_VALUE(j.value, N'$.name')), N''), 1
-    FROM #staging_partidos AS st
-    CROSS APPLY OPENJSON(st.detalle, N'$.lineup') AS l
-    CROSS APPLY OPENJSON(l.value, N'$.starter') AS j
-    WHERE st.accion IS NULL AND l.[key] IN (N'0', N'1')
-    UNION ALL
-    SELECT 'FORMACION', st.id_registro, st.numero_partido, CAST(l.[key] AS INT) + 1, 100 + CAST(j.[key] AS INT) + 1,
-           NULLIF(TRIM(JSON_VALUE(j.value, N'$.name')), N''), 0
-    FROM #staging_partidos AS st
-    CROSS APPLY OPENJSON(st.detalle, N'$.lineup') AS l
-    CROSS APPLY OPENJSON(l.value, N'$.bench') AS j
-    WHERE st.accion IS NULL AND l.[key] IN (N'0', N'1');
-
-    -- Cambios.
-    INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, nombre_entra_txt, minuto_txt)
-    SELECT 'CAMBIO', st.id_registro, st.numero_partido, CAST(l.[key] AS INT) + 1, CAST(c.[key] AS INT) + 1,
-           NULLIF(TRIM(d.sale), N''), NULLIF(TRIM(d.entra), N''), NULLIF(TRIM(d.minuto), N'')
-    FROM #staging_partidos AS st
-    CROSS APPLY OPENJSON(st.detalle, N'$.lineup') AS l
-    CROSS APPLY OPENJSON(l.value, N'$.subs') AS c
-    CROSS APPLY OPENJSON(c.value)
-        WITH (sale NVARCHAR(200) '$.off', entra NVARCHAR(200) '$.on', minuto NVARCHAR(20) '$.minute') AS d
-    WHERE st.accion IS NULL AND l.[key] IN (N'0', N'1');
-
-    -- Goles: goals1 son los que suman para team1; un gol en contra lo hizo un jugador del rival.
-    INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, minuto_txt, de_penal, en_contra)
-    SELECT 'GOL', st.id_registro, st.numero_partido, IIF(d.en_contra = N'true', 3 - x.lado, x.lado),
-           CAST(g.[key] AS INT) + 1, NULLIF(TRIM(d.nombre), N''), NULLIF(TRIM(d.minuto), N''),
-           IIF(d.de_penal = N'true', 1, 0), IIF(d.en_contra = N'true', 1, 0)
-    FROM #staging_partidos AS st
-    CROSS APPLY (VALUES (1, JSON_QUERY(st.detalle, N'$.goals1')), (2, JSON_QUERY(st.detalle, N'$.goals2'))) AS x (lado, goles)
-    CROSS APPLY OPENJSON(x.goles) AS g
-    CROSS APPLY OPENJSON(g.value)
-        WITH (nombre NVARCHAR(200) '$.name', minuto NVARCHAR(20) '$.minute',
-              de_penal NVARCHAR(10) '$.penalty', en_contra NVARCHAR(10) '$.owngoal') AS d
-    WHERE st.accion IS NULL;
-
-    -- Penales convertidos en la definición: el equipo sale de cómo cambia el marcador.
-    WITH penales AS (
-        SELECT st.id_registro, st.numero_partido, CAST(p.[key] AS INT) + 1 AS orden, NULLIF(TRIM(d.nombre), N'') AS nombre,
-               d.marcador_1,
-               LAG(d.marcador_1, 1, 0) OVER (PARTITION BY st.id_registro ORDER BY CAST(p.[key] AS INT)) AS marcador_1_antes
+        -- Formaciones: titulares y suplentes de cada selección (lineup[0] es team1).
+        INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, es_titular)
+        SELECT 'FORMACION', st.id_registro, st.numero_partido, CAST(l.[key] AS INT) + 1, CAST(j.[key] AS INT) + 1,
+               NULLIF(TRIM(JSON_VALUE(j.value, N'$.name')), N''), 1
         FROM #staging_partidos AS st
-        CROSS APPLY OPENJSON(st.detalle, N'$.penalties') AS p
-        CROSS APPLY OPENJSON(p.value) WITH (nombre NVARCHAR(200) '$.name', marcador_1 TINYINT '$.score[0]') AS d
-        WHERE st.accion IS NULL AND d.marcador_1 IS NOT NULL
-    )
-    INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, marcador_1)
-    SELECT 'PENAL', id_registro, numero_partido, IIF(marcador_1 > marcador_1_antes, 1, 2), orden, nombre, marcador_1
-    FROM penales;
-
-    -- Tarjetas: bookings[0] son las de team1. Y/R se registra como amarilla y como roja por doble amarilla.
-    INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, minuto_txt, tipo_txt,
-                                  tipo_tarjeta, es_doble_amarilla)
-    SELECT 'TARJETA', st.id_registro, st.numero_partido, CAST(b.[key] AS INT) + 1, CAST(t.[key] AS INT) + 1,
-           NULLIF(TRIM(d.nombre), N''), NULLIF(TRIM(d.minuto), N''), d.tipo, c.tarjeta, c.doble
-    FROM #staging_partidos AS st
-    CROSS APPLY OPENJSON(st.detalle, N'$.bookings') AS b
-    CROSS APPLY OPENJSON(b.value) AS t
-    CROSS APPLY OPENJSON(t.value)
-        WITH (tipo NVARCHAR(20) '$.type', nombre NVARCHAR(200) '$.name', minuto NVARCHAR(20) '$.minute') AS d
-    OUTER APPLY (SELECT v.tarjeta, v.doble
-                 FROM (VALUES (N'Y', 'AMARILLA', 0), (N'R', 'ROJA', 0), (N'Y/R', 'AMARILLA', 0), (N'Y/R', 'ROJA', 1))
-                      AS v (codigo, tarjeta, doble)
-                 WHERE v.codigo = UPPER(TRIM(d.tipo))) AS c
-    WHERE st.accion IS NULL AND b.[key] IN (N'0', N'1');
-
-    -- Selección del jugador y minuto ("45+2": minuto 45 y 2 de adicional).
-    UPDATE e
-    SET codigo_fifa      = IIF(e.lado = 1, st.codigo_1, st.codigo_2),
-        minuto           = TRY_CONVERT(TINYINT, LEFT(e.minuto_txt, CHARINDEX(N'+', e.minuto_txt + N'+') - 1)),
-        minuto_adicional = IIF(CHARINDEX(N'+', e.minuto_txt) > 0,
-                               TRY_CONVERT(TINYINT, SUBSTRING(e.minuto_txt, CHARINDEX(N'+', e.minuto_txt) + 1, 10)), 0)
-    FROM #staging_eventos AS e
-    INNER JOIN #staging_partidos AS st ON st.id_registro = e.id_registro;
-
-    -- Un minuto después del 120 es tiempo adicional del alargue: 121 es 120+1.
-    UPDATE #staging_eventos
-    SET minuto_adicional = minuto - 120, minuto = 120
-    WHERE minuto > 120 AND minuto_adicional = 0;
-
-    -- Jugadores: se reconocen dentro de la lista de su selección.
-    CREATE TABLE #nombres_fuente (
-        id_nombre      INT IDENTITY(1,1) PRIMARY KEY,
-        codigo_fifa    VARCHAR(10)    COLLATE DATABASE_DEFAULT NOT NULL,
-        nombre_fuente  NVARCHAR(200)  COLLATE DATABASE_DEFAULT NOT NULL,
-        id_jugador     INT            NULL,
-        paso           TINYINT        NULL,
-        error          NVARCHAR(1000) COLLATE DATABASE_DEFAULT NULL
-    );
-
-    INSERT INTO #nombres_fuente (codigo_fifa, nombre_fuente)
-    SELECT codigo_fifa, nombre_txt FROM #staging_eventos WHERE codigo_fifa IS NOT NULL AND nombre_txt IS NOT NULL
-    UNION
-    SELECT codigo_fifa, nombre_entra_txt FROM #staging_eventos WHERE codigo_fifa IS NOT NULL AND nombre_entra_txt IS NOT NULL;
-
-    EXEC Torneo.usp_IdentificarJugadores;
-
-    UPDATE e
-    SET id_jugador       = ns.id_jugador,
-        id_jugador_entra = ne.id_jugador,
-        errores          = NULLIF(CONCAT(
-            IIF(e.nombre_txt IS NULL, @nl + N'- Falta el nombre del jugador.', NULL),
-            IIF(ns.error IS NOT NULL, @nl + N'- ' + ns.error, NULL),
-            IIF(e.tipo = 'CAMBIO' AND e.nombre_entra_txt IS NULL, @nl + N'- Falta el jugador que entra.', NULL),
-            IIF(ne.error IS NOT NULL, @nl + N'- ' + ne.error, NULL)), N'')
-    FROM #staging_eventos AS e
-    LEFT JOIN #nombres_fuente AS ns ON ns.codigo_fifa = e.codigo_fifa AND ns.nombre_fuente = e.nombre_txt
-    LEFT JOIN #nombres_fuente AS ne ON ne.codigo_fifa = e.codigo_fifa AND ne.nombre_fuente = e.nombre_entra_txt;
-
-    -- Lo que sale de cada dato, con las reglas de usp_ImportarDesarrolloPartidos.
-    UPDATE e
-    SET periodo  = CASE WHEN e.tipo = 'PENAL'              THEN 'PENALES'
-                        WHEN e.minuto_adicional > 0        THEN 'ADICIONALES'
-                        WHEN e.minuto BETWEEN 1 AND 45     THEN 'PRIMER_TIEMPO'
-                        WHEN e.minuto BETWEEN 46 AND 90    THEN 'SEGUNDO_TIEMPO'
-                        WHEN e.minuto BETWEEN 91 AND 120   THEN 'ALARGUE'
-                   END,
-        tipo_gol = CASE WHEN e.en_contra = 1 THEN 'EN CONTRA'
-                        WHEN e.de_penal = 1 OR e.tipo = 'PENAL' THEN 'PENAL'
-                        ELSE 'JUGADA'
-                   END
-    FROM #staging_eventos AS e
-    WHERE e.tipo IN ('GOL', 'PENAL');
-
-    UPDATE #staging_eventos
-    SET errores = NULLIF(CONCAT(errores,
-            CASE WHEN tipo IN ('CAMBIO', 'GOL', 'TARJETA') AND minuto_txt IS NULL
-                     THEN @nl + N'- Falta el minuto.'
-                 WHEN tipo IN ('CAMBIO', 'GOL', 'TARJETA') AND (minuto IS NULL OR minuto_adicional IS NULL)
-                     THEN @nl + N'- El minuto "' + minuto_txt + N'" no es un número (o número+adicional).'
-                 WHEN tipo = 'CAMBIO' AND (minuto NOT BETWEEN 1 AND 120 OR minuto_adicional > 30)
-                     THEN @nl + N'- El minuto de un cambio va del 1 al 120, con hasta 30 de adicional.'
-                 WHEN tipo = 'TARJETA' AND (minuto > 120 OR minuto_adicional > 30)
-                     THEN @nl + N'- El minuto de una tarjeta va del 0 al 120, con hasta 30 de adicional.'
-                 WHEN tipo = 'GOL' AND (periodo IS NULL OR minuto_adicional > 30
-                                        OR (periodo = 'ADICIONALES' AND minuto NOT IN (45, 90, 105, 120)))
-                     THEN @nl + N'- El minuto "' + minuto_txt + N'" no corresponde a ningún período '
-                              + N'(1 a 120; los adicionales, después del 45, 90, 105 o 120).'
-            END,
-            IIF(tipo = 'CAMBIO' AND id_jugador = id_jugador_entra, @nl + N'- Sale y entra el mismo jugador.', NULL),
-            IIF(tipo = 'TARJETA' AND tipo_tarjeta IS NULL,
-                @nl + N'- La tarjeta "' + ISNULL(tipo_txt, N'') + N'" no es Y, R ni Y/R.', NULL)), N'');
-
-    -- Formaciones: un jugador una sola vez, y cada formación tiene que quedar con
-    -- 11 titulares (los ya cargados más los nuevos).
-    UPDATE e
-    SET errores = CONCAT(e.errores, @nl, N'- El jugador figura más de una vez en la formación.')
-    FROM #staging_eventos AS e
-    WHERE e.tipo = 'FORMACION' AND e.id_jugador IS NOT NULL
-      AND EXISTS (SELECT 1 FROM #staging_eventos AS o
-                  WHERE o.tipo = 'FORMACION' AND o.numero_partido = e.numero_partido
-                    AND o.id_jugador = e.id_jugador AND o.id_evento <> e.id_evento);
-
-    WITH formaciones AS (
-        SELECT e.numero_partido, e.lado,
-               SUM(IIF(e.es_titular = 1 AND e.errores IS NULL AND ya.alineado IS NULL, 1, 0))
-               + MAX(cargados.titulares) AS titulares
-        FROM #staging_eventos AS e
-        INNER JOIN #staging_partidos AS st ON st.id_registro = e.id_registro
-        CROSS APPLY (SELECT COUNT(*) AS titulares
-                     FROM DesarrolloPartido.ALINEACION AS al
-                     INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = al.id_formacion
-                     INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = f.id_partido
-                     WHERE p.numero_partido = e.numero_partido AND al.es_titular = 1
-                       AND f.id_seleccion = IIF(e.lado = 1, st.id_seleccion_1, st.id_seleccion_2)) AS cargados
-        OUTER APPLY (SELECT TOP (1) 1 AS alineado
-                     FROM DesarrolloPartido.ALINEACION AS al
-                     INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = al.id_formacion
-                     INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = f.id_partido
-                     WHERE p.numero_partido = e.numero_partido AND al.id_jugador = e.id_jugador) AS ya
-        WHERE e.tipo = 'FORMACION'
-        GROUP BY e.numero_partido, e.lado
-    )
-    UPDATE e
-    SET errores = CONCAT(e.errores, @nl, N'- La formación de la selección quedaría con ', f.titulares,
-                         N' titulares reconocidos y tienen que ser 11: no se carga ningún jugador de esa formación.')
-    FROM #staging_eventos AS e
-    INNER JOIN formaciones AS f ON f.numero_partido = e.numero_partido AND f.lado = e.lado
-    WHERE e.tipo = 'FORMACION' AND f.titulares <> 11;
-
-    -- Cambios, goles, penales y tarjetas: el jugador tiene que estar en la formación del partido.
-    UPDATE e
-    SET errores = CONCAT(e.errores, @nl, N'- El jugador no está en la formación del partido (o se rechazó).')
-    FROM #staging_eventos AS e
-    WHERE e.tipo <> 'FORMACION'
-      AND EXISTS (SELECT 1 FROM (VALUES (e.id_jugador), (e.id_jugador_entra)) AS j (id_jugador)
-                  WHERE j.id_jugador IS NOT NULL
-                    AND NOT EXISTS (SELECT 1 FROM #staging_eventos AS f
-                                    WHERE f.tipo = 'FORMACION' AND f.errores IS NULL
-                                      AND f.numero_partido = e.numero_partido AND f.id_jugador = j.id_jugador)
-                    AND NOT EXISTS (SELECT 1 FROM DesarrolloPartido.ALINEACION AS a
-                                    INNER JOIN DesarrolloPartido.FORMACION AS fo ON fo.id_formacion = a.id_formacion
-                                    INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = fo.id_partido
-                                    WHERE p.numero_partido = e.numero_partido AND a.id_jugador = j.id_jugador));
-
-    -- Cada jugador sale y entra una sola vez por partido, contando los cambios ya cargados.
-    WITH cambios AS (
-        SELECT numero_partido, id_jugador, id_jugador_entra
-        FROM #staging_eventos
-        WHERE tipo = 'CAMBIO' AND errores IS NULL
+        CROSS APPLY OPENJSON(st.detalle, N'$.lineup') AS l
+        CROSS APPLY OPENJSON(l.value, N'$.starter') AS j
+        WHERE st.accion <> 'RECHAZADO' AND l.[key] IN (N'0', N'1')
         UNION ALL
-        SELECT p.numero_partido, ca.id_jugador_sale, ca.id_jugador_entra
-        FROM DesarrolloPartido.CAMBIO AS ca
-        INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = ca.id_partido
-        WHERE NOT EXISTS (SELECT 1 FROM #staging_eventos AS e
-                          WHERE e.tipo = 'CAMBIO' AND e.errores IS NULL AND e.numero_partido = p.numero_partido
-                            AND e.id_jugador = ca.id_jugador_sale AND e.id_jugador_entra = ca.id_jugador_entra)
-    ),
-    repetidos AS (
-        SELECT c.numero_partido, v.tipo, v.id_jugador
-        FROM cambios AS c
-        CROSS APPLY (VALUES ('S', c.id_jugador), ('E', c.id_jugador_entra)) AS v (tipo, id_jugador)
-        GROUP BY c.numero_partido, v.tipo, v.id_jugador
-        HAVING COUNT(*) > 1
-    )
-    UPDATE e
-    SET errores = CONCAT(e.errores, @nl, N'- Un jugador de este cambio sale o entra más de una vez en el partido.')
-    FROM #staging_eventos AS e
-    WHERE e.tipo = 'CAMBIO' AND e.errores IS NULL
-      AND EXISTS (SELECT 1 FROM repetidos AS r
-                  WHERE r.numero_partido = e.numero_partido
-                    AND ((r.tipo = 'S' AND r.id_jugador = e.id_jugador) OR (r.tipo = 'E' AND r.id_jugador = e.id_jugador_entra)));
+        SELECT 'FORMACION', st.id_registro, st.numero_partido, CAST(l.[key] AS INT) + 1, 100 + CAST(j.[key] AS INT) + 1,
+               NULLIF(TRIM(JSON_VALUE(j.value, N'$.name')), N''), 0
+        FROM #staging_partidos AS st
+        CROSS APPLY OPENJSON(st.detalle, N'$.lineup') AS l
+        CROSS APPLY OPENJSON(l.value, N'$.bench') AS j
+        WHERE st.accion <> 'RECHAZADO' AND l.[key] IN (N'0', N'1');
 
-    UPDATE #staging_eventos SET accion = 'RECHAZADO' WHERE errores IS NOT NULL;
+        -- Cambios: el archivo no dice el motivo.
+        INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, nombre_entra_txt, minuto_txt, motivo)
+        SELECT 'CAMBIO', st.id_registro, st.numero_partido, CAST(l.[key] AS INT) + 1, CAST(c.[key] AS INT) + 1,
+               NULLIF(TRIM(d.sale), N''), NULLIF(TRIM(d.entra), N''), NULLIF(TRIM(d.minuto), N''), 'TACTICO'
+        FROM #staging_partidos AS st
+        CROSS APPLY OPENJSON(st.detalle, N'$.lineup') AS l
+        CROSS APPLY OPENJSON(l.value, N'$.subs') AS c
+        CROSS APPLY OPENJSON(c.value)
+            WITH (sale NVARCHAR(200) '$.off', entra NVARCHAR(200) '$.on', minuto NVARCHAR(20) '$.minute') AS d
+        WHERE st.accion <> 'RECHAZADO' AND l.[key] IN (N'0', N'1');
 
-    /* 4. Carga de los eventos válidos, todos juntos, con el SP de la Entrega 5. */
-    INSERT INTO @alineaciones (numero_partido, id_jugador, es_titular, posicion_en_cancha)
-    SELECT e.numero_partido, e.id_jugador, e.es_titular, IIF(e.es_titular = 1, j.posicion_habitual, NULL)
-    FROM #staging_eventos AS e
-    INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = e.id_jugador
-    WHERE e.tipo = 'FORMACION' AND e.accion IS NULL;
+        -- Goles: goals1 son los que suman para team1; un gol en contra lo hizo un jugador del rival.
+        INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, minuto_txt, de_penal, en_contra)
+        SELECT 'GOL', st.id_registro, st.numero_partido, IIF(d.en_contra = N'true', 3 - x.lado, x.lado),
+               CAST(g.[key] AS INT) + 1, NULLIF(TRIM(d.nombre), N''), NULLIF(TRIM(d.minuto), N''),
+               IIF(d.de_penal = N'true', 1, 0), IIF(d.en_contra = N'true', 1, 0)
+        FROM #staging_partidos AS st
+        CROSS APPLY (VALUES (1, JSON_QUERY(st.detalle, N'$.goals1')), (2, JSON_QUERY(st.detalle, N'$.goals2'))) AS x (lado, goles)
+        CROSS APPLY OPENJSON(x.goles) AS g
+        CROSS APPLY OPENJSON(g.value)
+            WITH (nombre NVARCHAR(200) '$.name', minuto NVARCHAR(20) '$.minute',
+                  de_penal NVARCHAR(10) '$.penalty', en_contra NVARCHAR(10) '$.owngoal') AS d
+        WHERE st.accion <> 'RECHAZADO';
 
-    INSERT INTO @cambios (numero_partido, id_jugador_sale, id_jugador_entra, minuto, minuto_adicional, en_entretiempo, motivo)
-    SELECT numero_partido, id_jugador, id_jugador_entra, minuto, minuto_adicional,
-           IIF(minuto IN (46, 91, 106) AND minuto_adicional = 0, 1, 0), 'TACTICO'
-    FROM #staging_eventos
-    WHERE tipo = 'CAMBIO' AND accion IS NULL;
+        -- Penales convertidos en la definición: el equipo sale de cómo cambia el marcador.
+        WITH penales AS (
+            SELECT st.id_registro, st.numero_partido, CAST(p.[key] AS INT) + 1 AS orden, NULLIF(TRIM(d.nombre), N'') AS nombre,
+                   d.marcador_1,
+                   LAG(d.marcador_1, 1, 0) OVER (PARTITION BY st.id_registro ORDER BY CAST(p.[key] AS INT)) AS marcador_1_antes
+            FROM #staging_partidos AS st
+            CROSS APPLY OPENJSON(st.detalle, N'$.penalties') AS p
+            CROSS APPLY OPENJSON(p.value) WITH (nombre NVARCHAR(200) '$.name', marcador_1 TINYINT '$.score[0]') AS d
+            WHERE st.accion <> 'RECHAZADO' AND d.marcador_1 IS NOT NULL
+        )
+        INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, marcador_1)
+        SELECT 'PENAL', id_registro, numero_partido, IIF(marcador_1 > marcador_1_antes, 1, 2), orden, nombre, marcador_1
+        FROM penales;
 
-    INSERT INTO @goles (numero_partido, id_jugador_autor, tipo_gol, periodo, minuto, minuto_adicional)
-    SELECT numero_partido, id_jugador, tipo_gol, periodo, IIF(tipo = 'PENAL', NULL, minuto), ISNULL(minuto_adicional, 0)
-    FROM #staging_eventos
-    WHERE tipo IN ('GOL', 'PENAL') AND accion IS NULL;
+        -- Tarjetas: bookings[0] son las de team1. Y/R se registra como amarilla y como roja por doble
+        -- amarilla. El archivo no tiene el motivo.
+        INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, minuto_txt, tipo_txt,
+                                      tipo_tarjeta, es_doble_amarilla, motivo)
+        SELECT 'TARJETA', st.id_registro, st.numero_partido, CAST(b.[key] AS INT) + 1, CAST(t.[key] AS INT) + 1,
+               NULLIF(TRIM(d.nombre), N''), NULLIF(TRIM(d.minuto), N''), d.tipo, c.tarjeta, c.doble, 'Sin detalle en la fuente'
+        FROM #staging_partidos AS st
+        CROSS APPLY OPENJSON(st.detalle, N'$.bookings') AS b
+        CROSS APPLY OPENJSON(b.value) AS t
+        CROSS APPLY OPENJSON(t.value)
+            WITH (tipo NVARCHAR(20) '$.type', nombre NVARCHAR(200) '$.name', minuto NVARCHAR(20) '$.minute') AS d
+        OUTER APPLY (SELECT v.tarjeta, v.doble
+                     FROM (VALUES (N'Y', 'AMARILLA', 0), (N'R', 'ROJA', 0), (N'Y/R', 'AMARILLA', 0), (N'Y/R', 'ROJA', 1))
+                          AS v (codigo, tarjeta, doble)
+                     WHERE v.codigo = UPPER(TRIM(d.tipo))) AS c
+        WHERE st.accion <> 'RECHAZADO' AND b.[key] IN (N'0', N'1');
 
-    INSERT INTO @amonestaciones (numero_partido, id_jugador, tipo_tarjeta, es_doble_amarilla, minuto, minuto_adicional, motivo)
-    SELECT numero_partido, id_jugador, tipo_tarjeta, es_doble_amarilla, minuto, minuto_adicional, 'Sin detalle en la fuente'
-    FROM #staging_eventos
-    WHERE tipo = 'TARJETA' AND accion IS NULL;
+        -- Selección del jugador y minuto ("45+2": minuto 45 y 2 de adicional).
+        UPDATE e
+        SET codigo_fifa      = IIF(e.lado = 1, st.codigo_fifa_local, st.codigo_fifa_visitante),
+            minuto           = TRY_CONVERT(TINYINT, LEFT(e.minuto_txt, CHARINDEX(N'+', e.minuto_txt + N'+') - 1)),
+            minuto_adicional = IIF(CHARINDEX(N'+', e.minuto_txt) > 0,
+                                   TRY_CONVERT(TINYINT, SUBSTRING(e.minuto_txt, CHARINDEX(N'+', e.minuto_txt) + 1, 10)), 0)
+        FROM #staging_eventos AS e
+        INNER JOIN #staging_partidos AS st ON st.id_registro = e.id_registro;
 
-    IF EXISTS (SELECT 1 FROM #staging_eventos WHERE accion IS NULL)
-        EXEC DesarrolloPartido.usp_ImportarDesarrolloPartidos
-            @alineaciones = @alineaciones, @cambios = @cambios, @goles = @goles, @amonestaciones = @amonestaciones,
-            @insertados = @eventos_insertados OUTPUT, @sin_cambios = @eventos_sin_cambios OUTPUT;
+        -- Un minuto después del 120 es tiempo adicional del alargue: 121 es 120+1.
+        UPDATE #staging_eventos
+        SET minuto_adicional = minuto - 120, minuto = 120
+        WHERE minuto > 120 AND minuto_adicional = 0;
+
+        -- Jugadores: se reconocen dentro de la lista de su selección.
+        INSERT INTO #nombres_fuente (codigo_fifa, nombre_fuente)
+        SELECT codigo_fifa, nombre_txt FROM #staging_eventos WHERE codigo_fifa IS NOT NULL AND nombre_txt IS NOT NULL
+        UNION
+        SELECT codigo_fifa, nombre_entra_txt FROM #staging_eventos WHERE codigo_fifa IS NOT NULL AND nombre_entra_txt IS NOT NULL;
+
+        EXEC Torneo.usp_IdentificarJugadores;
+
+        UPDATE e
+        SET id_jugador       = ns.id_jugador,
+            id_jugador_entra = ne.id_jugador,
+            errores          = NULLIF(CONCAT(
+                IIF(e.nombre_txt IS NULL, @nl + N'- Falta el nombre del jugador.', NULL),
+                IIF(ns.error IS NOT NULL, @nl + N'- ' + ns.error, NULL),
+                IIF(e.tipo = 'CAMBIO' AND e.nombre_entra_txt IS NULL, @nl + N'- Falta el jugador que entra.', NULL),
+                IIF(ne.error IS NOT NULL, @nl + N'- ' + ne.error, NULL)), N'')
+        FROM #staging_eventos AS e
+        LEFT JOIN #nombres_fuente AS ns ON ns.codigo_fifa = e.codigo_fifa AND ns.nombre_fuente = e.nombre_txt
+        LEFT JOIN #nombres_fuente AS ne ON ne.codigo_fifa = e.codigo_fifa AND ne.nombre_fuente = e.nombre_entra_txt;
+
+        -- Lo que sale de cada dato: la posición de los titulares es la habitual; el período sale del
+        -- minuto; el tipo de gol, de si fue de penal o en contra; un cambio en el 46, 91 o 106 se hizo
+        -- en el entretiempo.
+        UPDATE e
+        SET posicion_en_cancha = IIF(e.tipo = 'FORMACION' AND e.es_titular = 1, j.posicion_habitual, NULL),
+            periodo  = CASE WHEN e.tipo = 'PENAL'                                  THEN 'PENALES'
+                            WHEN e.tipo <> 'GOL'                                   THEN NULL
+                            WHEN e.minuto_adicional > 0                            THEN 'ADICIONALES'
+                            WHEN e.minuto BETWEEN 1 AND 45                         THEN 'PRIMER_TIEMPO'
+                            WHEN e.minuto BETWEEN 46 AND 90                        THEN 'SEGUNDO_TIEMPO'
+                            WHEN e.minuto BETWEEN 91 AND 120                       THEN 'ALARGUE'
+                       END,
+            tipo_gol = CASE WHEN e.tipo NOT IN ('GOL', 'PENAL')                    THEN NULL
+                            WHEN e.en_contra = 1                                   THEN 'EN CONTRA'
+                            WHEN e.de_penal = 1 OR e.tipo = 'PENAL'                THEN 'PENAL'
+                            ELSE 'JUGADA'
+                       END,
+            minuto           = IIF(e.tipo = 'PENAL', NULL, e.minuto),
+            minuto_adicional = IIF(e.tipo = 'PENAL', 0, e.minuto_adicional),
+            en_entretiempo   = IIF(e.tipo = 'CAMBIO', IIF(e.minuto IN (46, 91, 106) AND e.minuto_adicional = 0, 1, 0), NULL)
+        FROM #staging_eventos AS e
+        LEFT JOIN Torneo.JUGADOR AS j ON j.id_jugador = e.id_jugador;
+
+        UPDATE #staging_eventos
+        SET errores = NULLIF(CONCAT(errores,
+                CASE WHEN tipo IN ('CAMBIO', 'GOL', 'TARJETA') AND minuto_txt IS NULL
+                         THEN @nl + N'- Falta el minuto.'
+                     WHEN tipo IN ('CAMBIO', 'GOL', 'TARJETA') AND (minuto IS NULL OR minuto_adicional IS NULL)
+                         THEN @nl + N'- El minuto "' + minuto_txt + N'" no es un número (o número+adicional).'
+                END,
+                IIF(tipo = 'TARJETA' AND tipo_tarjeta IS NULL,
+                    @nl + N'- La tarjeta "' + ISNULL(tipo_txt, N'') + N'" no es Y, R ni Y/R.', NULL)), N'');
+
+        UPDATE #staging_eventos SET accion = 'RECHAZADO' WHERE errores IS NOT NULL;
+
+        EXEC DesarrolloPartido.usp_ImportarDesarrolloPartidos;
+
+        -- Registro: los totales cuentan los partidos y sus eventos.
+        SELECT @leidos       = SUM(leidos),       @insertados  = SUM(insertados), @actualizados = SUM(actualizados),
+               @sin_cambios  = SUM(sin_cambios),  @rechazados  = SUM(rechazados)
+        FROM (SELECT COUNT(*) AS leidos,
+                     ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0)   AS insertados,
+                     ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0) AS actualizados,
+                     ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0) AS sin_cambios,
+                     ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)   AS rechazados
+              FROM #staging_partidos
+              UNION ALL
+              SELECT COUNT(*),
+                     ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+                     ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
+                     ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
+                     ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
+              FROM #staging_eventos) AS t;
+
+        EXEC DatosGenerales.usp_RegistrarImportacion
+            @proceso = @proceso, @origen = @ruta_archivo, @leidos = @leidos, @insertados = @insertados,
+            @actualizados = @actualizados, @sin_cambios = @sin_cambios, @rechazados = @rechazados,
+            @id_importacion = @id_importacion OUTPUT;
+
+        INSERT INTO Torneo.ERRORES_PARTIDO (id_importacion, registro, ronda, fecha, hora, equipo_1, equipo_2, estadio,
+                                            asistencia, resultado, motivos)
+        SELECT @id_importacion, id_registro, ronda, fecha_txt, hora_txt, equipo_1, equipo_2, estadio_txt, asistencia_txt,
+               -- Cada marcador como viene; si falta uno de los dos números, va un "?".
+               NULLIF(CONCAT_WS(N', ',
+                   IIF(ft_1 IS NULL AND ft_2 IS NULL, NULL, CONCAT(N'ft ', ISNULL(ft_1, N'?'), N'-', ISNULL(ft_2, N'?'))),
+                   IIF(et_1 IS NULL AND et_2 IS NULL, NULL, CONCAT(N'et ', ISNULL(et_1, N'?'), N'-', ISNULL(et_2, N'?'))),
+                   IIF(pen_1 IS NULL AND pen_2 IS NULL, NULL, CONCAT(N'p ', ISNULL(pen_1, N'?'), N'-', ISNULL(pen_2, N'?')))), N''),
+               STUFF(errores, 1, 2, N'')
+        FROM #staging_partidos
+        WHERE accion = 'RECHAZADO';
+
+        INSERT INTO DesarrolloPartido.ERRORES_EVENTO (id_importacion, registro, registro_partido, numero_partido, tipo,
+                                                      codigo_fifa, jugador, jugador_entra, minuto, tarjeta, motivos)
+        SELECT @id_importacion, id_evento, id_registro, numero_partido, tipo, codigo_fifa, nombre_txt, nombre_entra_txt,
+               minuto_txt, tipo_txt, STUFF(errores, 1, 2, N'')
+        FROM #staging_eventos
+        WHERE accion = 'RECHAZADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
 
     /* 5. Resultado. */
-    SELECT N'Partidos' AS registros, COUNT(*) AS leidos, @insertados AS insertados, @actualizados AS actualizados,
-           @sin_cambios AS sin_cambios, ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0) AS rechazados
+    SELECT @id_importacion AS id_importacion, N'Partidos' AS registros, COUNT(*) AS leidos,
+           ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0) AS insertados,
+           ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0) AS actualizados,
+           ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0) AS sin_cambios,
+           ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0) AS rechazados
     FROM #staging_partidos
     UNION ALL
-    SELECT N'Formaciones, cambios, goles, penales y tarjetas', COUNT(*), @eventos_insertados, 0,
-           @eventos_sin_cambios, ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
+    SELECT @id_importacion, N'Formaciones, cambios, goles, penales y tarjetas', COUNT(*),
+           ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0), 0,
+           ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
+           ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
     FROM #staging_eventos;
 
     SELECT tipo, COUNT(*) AS leidos, SUM(IIF(accion = 'RECHAZADO', 1, 0)) AS rechazados
@@ -1384,12 +1220,11 @@ BEGIN
     GROUP BY tipo
     ORDER BY tipo;
 
-    SELECT CONCAT(N'Registro ', id_registro, N': ', ISNULL(fecha_txt, N''), N' ', ISNULL(equipo_1, N'?'), N' - ',
-                  ISNULL(equipo_2, N'?')) AS rechazado,
-           STUFF(errores, 1, 2, N'') AS motivos
-    FROM #staging_partidos
-    WHERE accion = 'RECHAZADO'
-    ORDER BY id_registro;
+    SELECT CONCAT(N'Registro ', registro, N': ', ISNULL(fecha, N''), N' ', ISNULL(equipo_1, N'?'), N' - ',
+                  ISNULL(equipo_2, N'?')) AS rechazado, motivos
+    FROM Torneo.ERRORES_PARTIDO
+    WHERE id_importacion = @id_importacion
+    ORDER BY registro;
 
     SELECT CONCAT(N'Partido ', e.numero_partido, N' (', st.equipo_1, N' - ', st.equipo_2, N'), ', LOWER(e.tipo),
                   N' de ', e.codigo_fifa, N': ', e.nombre_txt, IIF(e.nombre_entra_txt IS NULL, N'', N' por ' + e.nombre_entra_txt),
@@ -1407,7 +1242,7 @@ BEGIN
     INNER JOIN Torneo.PARTIDO AS p ON p.numero_partido = st.numero_partido
     INNER JOIN Torneo.vw_Fixture AS f ON f.id_partido = p.id_partido
     CROSS APPLY DesarrolloPartido.fn_MarcadorSegunGoles(p.id_partido) AS m
-    WHERE st.accion IS NULL
+    WHERE st.accion <> 'RECHAZADO'
       AND (p.goles_local <> m.goles_local OR p.goles_visitante <> m.goles_visitante
            OR ISNULL(p.penales_local, 0) <> m.penales_local OR ISNULL(p.penales_visitante, 0) <> m.penales_visitante)
     ORDER BY p.numero_partido;

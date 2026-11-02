@@ -37,7 +37,7 @@
      hCard, formato ISO) y el orden "Apellido, Nombre" del atributo
      data-sort-value, que se usa para separar el nombre del apellido.
  La posición se guarda como la publica la página (GK, DF, MF, FW): la
- traduce Torneo.usp_ImportarJugador.
+ traduce Torneo.usp_ImportarJugadores.
 
  Límites de uso: Wikipedia no pide clave, pero exige un User-Agent que
  identifique al cliente y pide no hacer muchos pedidos seguidos. El script

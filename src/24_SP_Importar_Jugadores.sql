@@ -25,21 +25,21 @@
    codigo_fifa,dorsal,posicion,nombre,apellido,fecha_nacimiento,club
  La posición viene como GK, DF, MF o FW y la fecha como AAAA-MM-DD.
 
- Cómo importa (igual que 25, 27 y 28):
+ Cómo importa (igual que 23, 25, 27 y 28):
    1. Se controla el archivo: que se pueda leer y que su primera fila tenga
       esas columnas. Si no, o si alguna fila no es CSV válido, no se importa
       nada (THROW 50002).
-   2. BULK INSERT pasa las filas, tal como vienen, a la tabla de staging, y
-      ahí se convierten (la posición y el dorsal).
-   3. Cada regla es un UPDATE sobre toda la tabla de staging, que anota el
-      motivo en los registros que no la cumplen (RECHAZADO). Primero las de
-      cada jugador; después las de cada lista como quedaría, con los
-      jugadores válidos: un dorsal que se repite rechaza a los jugadores que
-      lo traen, y una lista que no cumple el reglamento rechaza a todos los
-      jugadores de esa selección.
-   4. Los demás se cargan todos juntos con el SP de la Entrega 5
-      Torneo.usp_ImportarJugadores (16_SP_Importacion.sql), con las mismas
-      reglas.
+   2. BULK INSERT pasa las filas, tal como vienen, a una tabla temporal, y
+      de ahí a #staging_jugadores, la tabla que lee el SP de la Entrega 5,
+      donde se convierten el dorsal y la fecha de nacimiento.
+   3. Se rechazan las filas que no se pudieron convertir: un UPDATE sobre
+      toda la tabla anota el motivo y las marca RECHAZADO.
+   4. Torneo.usp_ImportarJugadores (16_SP_Importacion.sql) valida las demás
+      con las reglas de los jugadores y de cada lista de convocados, marca
+      las que no las cumplen y carga las válidas, todas juntas. En la misma
+      transacción se registra la importación (DatosGenerales.IMPORTACION, su
+      número queda en @id_importacion) y las filas rechazadas, en
+      Torneo.ERRORES_JUGADOR.
    5. Se devuelve el resumen y los rechazados con sus motivos.
    Importar dos veces el mismo archivo no duplica nada: un jugador se
    reconoce por su selección, apellido y nombre.
@@ -60,30 +60,35 @@ GO
   Importa los jugadores del CSV @ruta_archivo con usp_ImportarJugadores.
   Valida: ruta obligatoria y terminada en .csv. Si el archivo no se puede
   leer, no tiene las columnas esperadas o alguna fila no es CSV válido, no se
-  importa nada (THROW 50002). Devuelve el resumen y los rechazados con sus
-  motivos.
+  importa nada (THROW 50002). Rechaza las filas con un dorsal o una fecha de
+  nacimiento que no se pueden convertir; las reglas de los jugadores las
+  aplica usp_ImportarJugadores. Registra la importación (su número queda en
+  @id_importacion) y los rechazados en Torneo.ERRORES_JUGADOR, y devuelve el
+  resumen y los rechazados con sus motivos.
 */
 CREATE OR ALTER PROCEDURE Torneo.usp_ImportarJugadoresCSV
-    @ruta_archivo  NVARCHAR(400)
+    @ruta_archivo    NVARCHAR(400),
+    @id_importacion  INT = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores         NVARCHAR(2048) = N'';
-    DECLARE @nl              NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @contenido       NVARCHAR(MAX);
-    DECLARE @encabezado      NVARCHAR(400);
-    DECLARE @mensaje         NVARCHAR(2048);
-    DECLARE @sql             NVARCHAR(MAX);
-    DECLARE @min_convocados  TINYINT = (SELECT valor FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'MIN_CONVOCADOS');
-    DECLARE @max_convocados  TINYINT = (SELECT valor FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'MAX_CONVOCADOS');
-    DECLARE @min_arqueros    TINYINT = (SELECT valor FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'MIN_ARQUEROS_CONVOCADOS');
-    DECLARE @validos         Torneo.TT_JUGADOR;
-    DECLARE @insertados      INT = 0;
-    DECLARE @actualizados    INT = 0;
-    DECLARE @sin_cambios     INT = 0;
+    DECLARE @errores       NVARCHAR(2048) = N'';
+    DECLARE @nl            NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @contenido     NVARCHAR(MAX);
+    DECLARE @encabezado    NVARCHAR(400);
+    DECLARE @mensaje       NVARCHAR(2048);
+    DECLARE @sql           NVARCHAR(MAX);
+    DECLARE @tran_propia   BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @proceso       VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @leidos        INT;
+    DECLARE @insertados    INT;
+    DECLARE @actualizados  INT;
+    DECLARE @sin_cambios   INT;
+    DECLARE @rechazados    INT;
 
     SET @ruta_archivo = NULLIF(TRIM(@ruta_archivo), N'');
+    SET @id_importacion = NULL;
 
     IF @ruta_archivo IS NULL
         SET @errores += @nl + N'- La ruta del archivo es obligatoria.';
@@ -134,28 +139,27 @@ BEGIN
         THROW 50002, @mensaje, 1;
     END CATCH;
 
+    -- usp_ImportarJugadores lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
     CREATE TABLE #staging_jugadores (
         id_registro       INT PRIMARY KEY,   -- línea del archivo
-        codigo_fifa       NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        -- Tal como vienen en el archivo
         dorsal_txt        NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
         posicion_txt      NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        fecha_txt         NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        -- Lo que lee usp_ImportarJugadores, ya convertido
+        codigo_fifa       NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
         nombre            NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
         apellido          NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
-        fecha_txt         NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
-        club              NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
-        -- Convertidos
-        dorsal            TINYINT       NULL,
         posicion          VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
+        dorsal            TINYINT       NULL,
         fecha_nacimiento  DATE          NULL,
-        id_lista          INT           NULL,
-        lista_vacia       BIT           NULL,
-        id_jugador        INT           NULL,
-        activo            BIT           NULL,
+        club_origen       NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        -- Lo que le pasa a cada registro: lo completan este SP y usp_ImportarJugadores
         errores           NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
         accion            VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
     );
 
-    INSERT INTO #staging_jugadores (id_registro, codigo_fifa, dorsal_txt, posicion_txt, nombre, apellido, fecha_txt, club)
+    INSERT INTO #staging_jugadores (id_registro, codigo_fifa, dorsal_txt, posicion_txt, nombre, apellido, fecha_txt, club_origen)
     SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + 1,
            UPPER(NULLIF(TRIM(codigo_fifa), N'')), NULLIF(TRIM(dorsal_txt), N''), UPPER(NULLIF(TRIM(posicion_txt), N'')),
            NULLIF(TRIM(nombre), N''), NULLIF(TRIM(apellido), N''), NULLIF(TRIM(fecha_txt), N''),
@@ -163,142 +167,65 @@ BEGIN
     FROM #crudo
     WHERE CONCAT(codigo_fifa, dorsal_txt, posicion_txt, nombre, apellido, fecha_txt, REPLACE(club, NCHAR(13), N'')) <> N'';
 
-    UPDATE st
-    SET dorsal           = TRY_CONVERT(TINYINT, st.dorsal_txt),
-        fecha_nacimiento = TRY_CONVERT(DATE, st.fecha_txt, 23),
-        posicion         = CASE st.posicion_txt
-                               WHEN N'GK' THEN 'ARQUERO'       WHEN N'GOALKEEPER' THEN 'ARQUERO'
-                               WHEN N'DF' THEN 'DEFENSOR'      WHEN N'DEFENDER'   THEN 'DEFENSOR'
-                               WHEN N'MF' THEN 'MEDIOCAMPISTA' WHEN N'MIDFIELDER' THEN 'MEDIOCAMPISTA'
-                               WHEN N'FW' THEN 'DELANTERO'     WHEN N'FORWARD'    THEN 'DELANTERO'
-                               ELSE LEFT(st.posicion_txt, 30)
-                           END,
-        id_lista         = lc.id_lista,
-        lista_vacia      = IIF(lc.id_lista IS NOT NULL
-                               AND NOT EXISTS (SELECT 1 FROM Torneo.JUGADOR AS j WHERE j.id_lista = lc.id_lista), 1, 0)
-    FROM #staging_jugadores AS st
-    LEFT JOIN DatosGenerales.PAIS AS pa ON pa.codigo_fifa = st.codigo_fifa
-    LEFT JOIN Torneo.SELECCION AS s ON s.id_pais = pa.id_pais
-    LEFT JOIN Torneo.LISTA_CONVOCADOS AS lc ON lc.id_seleccion = s.id_seleccion;
+    -- La posición pasa como viene (GK, DF, MF o FW): la traduce usp_ImportarJugadores.
+    UPDATE #staging_jugadores
+    SET dorsal           = TRY_CONVERT(TINYINT, dorsal_txt),
+        fecha_nacimiento = TRY_CONVERT(DATE, fecha_txt, 23),
+        posicion         = LEFT(posicion_txt, 30);
 
-    UPDATE st
-    SET id_jugador = j.id_jugador, activo = IIF(j.fecha_baja IS NULL, 1, 0)
-    FROM #staging_jugadores AS st
-    INNER JOIN Torneo.JUGADOR AS j ON j.id_lista = st.id_lista AND j.apellido = st.apellido AND j.nombre = st.nombre;
-
-    /* 3. Validaciones, con las reglas de usp_ImportarJugadores. Primero las de cada jugador. */
+    /* 3. Lo que no se pudo convertir. Las reglas de los jugadores las aplica usp_ImportarJugadores. */
     UPDATE #staging_jugadores
     SET errores = NULLIF(CONCAT(
-            CASE WHEN codigo_fifa IS NULL THEN @nl + N'- El código FIFA de la selección es obligatorio.'
-                 WHEN id_lista IS NULL    THEN @nl + N'- No hay una selección con lista de convocados con código FIFA "'
-                                                   + codigo_fifa + N'".'
-            END,
-            CASE WHEN nombre IS NULL OR apellido IS NULL THEN @nl + N'- El nombre y el apellido son obligatorios.'
-                 WHEN LEN(nombre) > 60 OR LEN(apellido) > 60
-                     THEN @nl + N'- El nombre y el apellido no pueden superar los 60 caracteres.'
-            END,
-            CASE WHEN posicion_txt IS NULL THEN @nl + N'- La posición es obligatoria.'
-                 WHEN posicion NOT IN ('ARQUERO', 'DEFENSOR', 'MEDIOCAMPISTA', 'DELANTERO')
-                     THEN @nl + N'- La posición "' + posicion_txt + N'" no es GK, DF, MF ni FW.'
-            END,
-            CASE WHEN dorsal_txt IS NULL THEN @nl + N'- El dorsal es obligatorio.'
-                 WHEN dorsal IS NULL OR dorsal NOT BETWEEN 1 AND 99
-                     THEN @nl + N'- El dorsal "' + dorsal_txt + N'" no es un número entre 1 y 99.'
-            END,
-            CASE WHEN fecha_txt IS NOT NULL AND fecha_nacimiento IS NULL
-                     THEN @nl + N'- La fecha de nacimiento "' + fecha_txt + N'" no es una fecha AAAA-MM-DD.'
-                 WHEN fecha_nacimiento > CONVERT(DATE, GETDATE())
-                     THEN @nl + N'- La fecha de nacimiento no puede ser futura.'
-            END,
-            IIF(LEN(club) > 100, @nl + N'- El club no puede superar los 100 caracteres.', NULL)), N'');
-
-    UPDATE st
-    SET errores = CONCAT(st.errores, @nl, N'- El archivo trae ', r.veces, N' veces este jugador.')
-    FROM #staging_jugadores AS st
-    INNER JOIN (SELECT codigo_fifa, nombre, apellido, COUNT(*) AS veces FROM #staging_jugadores
-                WHERE codigo_fifa IS NOT NULL AND nombre IS NOT NULL AND apellido IS NOT NULL
-                GROUP BY codigo_fifa, nombre, apellido HAVING COUNT(*) > 1) AS r
-            ON r.codigo_fifa = st.codigo_fifa AND r.nombre = st.nombre AND r.apellido = st.apellido;
-
-    -- Después, cada lista como quedaría con los jugadores válidos. Un dorsal repetido
-    -- entre los activos rechaza a los jugadores del archivo que lo traen.
-    WITH plantel AS (
-        SELECT st.id_lista, st.dorsal, st.id_registro
-        FROM #staging_jugadores AS st
-        WHERE st.errores IS NULL AND ISNULL(st.activo, 1) = 1
-        UNION ALL
-        SELECT j.id_lista, j.dorsal, NULL
-        FROM Torneo.JUGADOR AS j
-        WHERE j.fecha_baja IS NULL
-          AND j.id_lista IN (SELECT id_lista FROM #staging_jugadores)
-          AND NOT EXISTS (SELECT 1 FROM #staging_jugadores AS st
-                          WHERE st.errores IS NULL AND st.id_jugador = j.id_jugador)
-    ),
-    repetidos AS (
-        SELECT id_lista, dorsal, COUNT(*) AS veces FROM plantel GROUP BY id_lista, dorsal HAVING COUNT(*) > 1
-    )
-    UPDATE st
-    SET errores = CONCAT(@nl, N'- El dorsal ', st.dorsal, N' lo tendrían ', r.veces, N' convocados activos de la selección.')
-    FROM #staging_jugadores AS st
-    INNER JOIN repetidos AS r ON r.id_lista = st.id_lista AND r.dorsal = st.dorsal
-    WHERE st.errores IS NULL AND ISNULL(st.activo, 1) = 1;
-
-    -- Una lista que no cumple el reglamento rechaza a todos los jugadores de esa selección.
-    WITH plantel AS (
-        SELECT st.id_lista, st.lista_vacia, st.posicion
-        FROM #staging_jugadores AS st
-        WHERE st.errores IS NULL AND ISNULL(st.activo, 1) = 1
-        UNION ALL
-        SELECT j.id_lista, 0, j.posicion_habitual
-        FROM Torneo.JUGADOR AS j
-        WHERE j.fecha_baja IS NULL
-          AND j.id_lista IN (SELECT id_lista FROM #staging_jugadores)
-          AND NOT EXISTS (SELECT 1 FROM #staging_jugadores AS st
-                          WHERE st.errores IS NULL AND st.id_jugador = j.id_jugador)
-    ),
-    listas AS (
-        SELECT id_lista, MAX(CAST(lista_vacia AS TINYINT)) AS vacia, COUNT(*) AS jugadores,
-               SUM(IIF(posicion = 'ARQUERO', 1, 0)) AS arqueros
-        FROM plantel
-        GROUP BY id_lista
-    )
-    UPDATE st
-    SET errores = CONCAT(st.errores, @nl,
-                         IIF(l.jugadores > @max_convocados,
-                             CONCAT(N'- La lista de la selección quedaría con ', l.jugadores, N' convocados activos y el máximo es ',
-                                    @max_convocados, N' (MAX_CONVOCADOS).'),
-                             CONCAT(N'- La lista inicial de la selección tendría ', l.jugadores, N' jugadores y ', l.arqueros,
-                                    N' arqueros: tienen que ser entre ', @min_convocados, N' y ', @max_convocados,
-                                    N', con al menos ', @min_arqueros, N' arqueros.')))
-    FROM #staging_jugadores AS st
-    INNER JOIN listas AS l ON l.id_lista = st.id_lista
-    WHERE l.jugadores > @max_convocados
-       OR (l.vacia = 1 AND (l.jugadores < @min_convocados OR l.arqueros < @min_arqueros));
+            IIF(dorsal_txt IS NOT NULL AND dorsal IS NULL,
+                @nl + N'- El dorsal "' + dorsal_txt + N'" no es un número entre 1 y 99.', NULL),
+            IIF(fecha_txt IS NOT NULL AND fecha_nacimiento IS NULL,
+                @nl + N'- La fecha de nacimiento "' + fecha_txt + N'" no es una fecha AAAA-MM-DD.', NULL)), N'');
 
     UPDATE #staging_jugadores SET accion = 'RECHAZADO' WHERE errores IS NOT NULL;
 
-    /* 4. Carga de los válidos, todos juntos, con el SP de la Entrega 5. */
-    INSERT INTO @validos (codigo_fifa_seleccion, nombre, apellido, posicion, dorsal, fecha_nacimiento, club_origen)
-    SELECT codigo_fifa, nombre, apellido, posicion, dorsal, fecha_nacimiento, club
-    FROM #staging_jugadores
-    WHERE accion IS NULL;
+    /* 4. El SP de la Entrega 5 valida las demás y carga las válidas, todas juntas; después se
+          registran la importación y sus rechazados, en la misma transacción. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
 
-    IF EXISTS (SELECT 1 FROM @validos)
-        EXEC Torneo.usp_ImportarJugadores
-            @jugadores = @validos, @insertados = @insertados OUTPUT,
-            @actualizados = @actualizados OUTPUT, @sin_cambios = @sin_cambios OUTPUT;
+        EXEC Torneo.usp_ImportarJugadores;
+
+        SELECT @leidos       = COUNT(*),
+               @insertados   = ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+               @actualizados = ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
+               @sin_cambios  = ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
+               @rechazados   = ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
+        FROM #staging_jugadores;
+
+        EXEC DatosGenerales.usp_RegistrarImportacion
+            @proceso = @proceso, @origen = @ruta_archivo, @leidos = @leidos, @insertados = @insertados,
+            @actualizados = @actualizados, @sin_cambios = @sin_cambios, @rechazados = @rechazados,
+            @id_importacion = @id_importacion OUTPUT;
+
+        INSERT INTO Torneo.ERRORES_JUGADOR (id_importacion, registro, codigo_fifa, dorsal, posicion, nombre, apellido,
+                                            fecha_nacimiento, club, motivos)
+        SELECT @id_importacion, id_registro, codigo_fifa, dorsal_txt, posicion_txt, nombre, apellido, fecha_txt, club_origen,
+               STUFF(errores, 1, 2, N'')
+        FROM #staging_jugadores
+        WHERE accion = 'RECHAZADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
 
     /* 5. Resultado. */
-    SELECT @ruta_archivo AS origen, COUNT(*) AS leidos, @insertados AS insertados, @actualizados AS actualizados,
-           @sin_cambios AS sin_cambios, ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0) AS rechazados
-    FROM #staging_jugadores;
+    SELECT @id_importacion AS id_importacion, @ruta_archivo AS origen, @leidos AS leidos, @insertados AS insertados,
+           @actualizados AS actualizados, @sin_cambios AS sin_cambios, @rechazados AS rechazados;
 
-    SELECT CONCAT(N'Línea ', id_registro, N': ', ISNULL(codigo_fifa, N'(sin selección)'), N' ',
-                  ISNULL(dorsal_txt, N'(sin dorsal)'), N' ', ISNULL(nombre, N''), N' ', ISNULL(apellido, N'')) AS rechazado,
-           STUFF(errores, 1, 2, N'') AS motivos
-    FROM #staging_jugadores
-    WHERE accion = 'RECHAZADO'
-    ORDER BY id_registro;
+    SELECT CONCAT(N'Línea ', registro, N': ', ISNULL(codigo_fifa, N'(sin selección)'), N' ',
+                  ISNULL(dorsal, N'(sin dorsal)'), N' ', ISNULL(nombre, N''), N' ', ISNULL(apellido, N'')) AS rechazado,
+           motivos
+    FROM Torneo.ERRORES_JUGADOR
+    WHERE id_importacion = @id_importacion
+    ORDER BY registro;
 END;
 GO
 

@@ -33,7 +33,9 @@
  Qué hace:
    1. Importa sedes, selecciones, jugadores y partidos, en ese orden (cada
       uno necesita lo anterior). Es una importación con errores parciales:
-      se cargan los registros válidos y se informan los rechazados.
+      se cargan los registros válidos y se informan los rechazados, que
+      quedan en las tablas ERRORES_ con el número de su importación (ver el
+      resumen, al final).
       - 13 partidos se rechazan porque el archivo de partidos nombra a tres
         selecciones distinto que el de selecciones ("Bosnia and Herzegovina",
         "Côte d'Ivoire", "Congo DR").
@@ -80,6 +82,10 @@ GO
 -- CAMBIAR: ruta de la carpeta del repositorio en tu máquina, terminada en \ (ver "Antes de ejecutar").
 DECLARE @repositorio NVARCHAR(400) = N'C:\Users\Rodrigo\Desktop\TP_BBDDA_20262C\';
 EXEC sp_set_session_context @key = N'repositorio', @value = @repositorio;
+
+-- Las importaciones de esta ejecución son las que se registren desde acá (para el resumen del final).
+DECLARE @importacion_desde INT = ISNULL((SELECT MAX(id_importacion) FROM DatosGenerales.IMPORTACION), 0);
+EXEC sp_set_session_context @key = N'importacion_desde', @value = @importacion_desde;
 GO
 
 DECLARE @carpeta NVARCHAR(400) = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHAR(400)) + N'datos\fuentes\openfootball\';
@@ -208,6 +214,18 @@ ORDER BY s.name, t.name;
 SELECT numero_partido, fase, seleccion_local, resultado, seleccion_visitante, asistencia, estado
 FROM Torneo.vw_Fixture
 ORDER BY numero_partido;
+
+-- Las importaciones de esta ejecución, con cuántos rechazados quedaron en cada tabla ERRORES_.
+SELECT i.id_importacion, i.proceso, i.origen, i.fecha_hora, i.leidos, i.insertados, i.actualizados, i.sin_cambios,
+       i.rechazados,
+       (SELECT COUNT(*) FROM Torneo.ERRORES_SEDE AS e WHERE e.id_importacion = i.id_importacion)          AS errores_sede,
+       (SELECT COUNT(*) FROM Torneo.ERRORES_SELECCION AS e WHERE e.id_importacion = i.id_importacion)     AS errores_seleccion,
+       (SELECT COUNT(*) FROM Torneo.ERRORES_JUGADOR AS e WHERE e.id_importacion = i.id_importacion)       AS errores_jugador,
+       (SELECT COUNT(*) FROM Torneo.ERRORES_PARTIDO AS e WHERE e.id_importacion = i.id_importacion)       AS errores_partido,
+       (SELECT COUNT(*) FROM DesarrolloPartido.ERRORES_EVENTO AS e WHERE e.id_importacion = i.id_importacion) AS errores_evento
+FROM DatosGenerales.IMPORTACION AS i
+WHERE i.id_importacion > CAST(SESSION_CONTEXT(N'importacion_desde') AS INT)
+ORDER BY i.id_importacion;
 GO
 
 SET NOEXEC OFF;

@@ -20,7 +20,7 @@ Para verlo desde una consola:
 curl "https://date.nager.at/api/v3/PublicHolidays/2026/AR"
 ```
 
-Cada respuesta se carga con el SP de la Entrega 5 `DatosGenerales.usp_ImportarFeriados` (`src/16_SP_Importacion.sql`). Recibe todos los feriados válidos en un parámetro de tipo tabla y hace el upsert de una vez.
+Cada respuesta se carga con el SP de la Entrega 5 `DatosGenerales.usp_ImportarFeriados` (`src/16_SP_Importacion.sql`). Lee la tabla de staging que arma el proceso, con un feriado por país y día, valida cada uno con las reglas de los feriados y hace el upsert de los válidos de una vez. Los registros rechazados quedan en `DatosGenerales.ERRORES_FERIADO`, con el número de la importación (`DatosGenerales.IMPORTACION`).
 
 ## Formato
 

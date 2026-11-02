@@ -11,9 +11,11 @@
 
  Fecha: 31/10/2026
  Archivo: 78_Test_SP_Importar_Feriados.sql
- Objetivo: Probar la importación de feriados de 28_SP_Importar_Feriados.sql
-           y la carga en bloque DatosGenerales.usp_ImportarFeriados de
-           16_SP_Importacion.sql:
+ Objetivo: Probar la importación de feriados de 28_SP_Importar_Feriados.sql,
+           con el registro de cada importación y de sus rechazados
+           (DatosGenerales.ERRORES_FERIADO). Las reglas de los feriados las
+           prueba 66_Test_SP_Importacion.sql, con
+           DatosGenerales.usp_ImportarFeriados:
              - procesando respuestas con el formato de la API Nager.Date
                escritas en el test: alta (con Inglaterra y Escocia por
                separado), reimportación sin duplicados, actualización, dos
@@ -25,7 +27,8 @@
            las respuestas escritas son de 2001, un año que no importa
            29_ImportarCotizacionesYFeriados.sql, y el caso de la API corre
            dentro de una transacción que se deshace. Al final se borra lo que
-           cargó el test, así que se puede ejecutar más de una vez.
+           cargó el test, con el registro de sus importaciones, así que se
+           puede ejecutar más de una vez.
 ================================================================================
 
  OLE Automation: los casos AP llaman a la API con OLE Automation. Si la
@@ -102,7 +105,21 @@ BEGIN
 END;
 GO
 
--- Por si una corrida anterior del test quedó a medias: los 7 feriados que cargan los casos FX.
+-- Borra el registro de las importaciones de los casos FX (su origen es el nombre del caso), con sus rechazados.
+IF OBJECT_ID(N'tempdb..#usp_BorrarImportacionesPrueba', N'P') IS NOT NULL
+    DROP PROCEDURE #usp_BorrarImportacionesPrueba;
+GO
+CREATE PROCEDURE #usp_BorrarImportacionesPrueba
+AS
+BEGIN
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'FX1';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'FX2';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'FX3';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'FX4';
+END;
+GO
+
+-- Por si una corrida anterior del test quedó a medias: los 7 feriados que cargan los casos FX y sus importaciones.
 EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-05-25';
 EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-06-20';
 EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-07-09';
@@ -110,6 +127,7 @@ EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-12-25';
 EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ENG', @fecha = '2001-01-01';
 EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'SCO', @fecha = '2001-01-01';
 EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'SCO', @fecha = '2001-01-02';
+EXEC #usp_BorrarImportacionesPrueba;
 GO
 
 
@@ -188,7 +206,9 @@ GO
      AR 09/07/2001        la fecha no es una fecha (AAAA-MM-DD).
      AR (sin fecha)       la fecha es obligatoria.
      AR 2001-08-17        el nombre es obligatorio (no vienen localName ni name).
-     AR 2001-10-12        el nombre supera los 200 caracteres. */
+     AR 2001-10-12        el nombre supera los 200 caracteres.
+   Los 4 rechazados quedan en DatosGenerales.ERRORES_FERIADO, con el número
+   de la importación y el texto que traía la respuesta. */
 DECLARE @json NVARCHAR(MAX) = CONCAT(N'[
     {"date":"2001-06-20","localName":"Día de la Bandera","name":"Flag Day","countryCode":"AR","global":true,"counties":null,"types":["Public"]},
     {"date":"09/07/2001","localName":"Independencia","name":"Independence Day","countryCode":"AR","global":true,"counties":null,"types":["Public"]},
@@ -196,7 +216,16 @@ DECLARE @json NVARCHAR(MAX) = CONCAT(N'[
     {"date":"2001-08-17","countryCode":"AR","global":true,"counties":null,"types":["Public"]},
     {"date":"2001-10-12","localName":"', REPLICATE(N'x', 201), N'","countryCode":"AR","global":true,"counties":null,"types":["Public"]}]');
 
-EXEC DatosGenerales.usp_ProcesarFeriadosJSON @json = @json, @origen = N'FX4';
+DECLARE @id_importacion INT;
+
+EXEC DatosGenerales.usp_ProcesarFeriadosJSON @json = @json, @origen = N'FX4', @id_importacion = @id_importacion OUTPUT;
+
+SELECT 'FX4 registro' AS caso, i.leidos, i.insertados, i.rechazados, e.registro, e.codigo_iso2, e.fecha,
+       LEFT(e.nombre_local, 20) AS nombre_local, e.nombre_ingles, REPLACE(e.motivos, NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM DatosGenerales.IMPORTACION AS i
+INNER JOIN DatosGenerales.ERRORES_FERIADO AS e ON e.id_importacion = i.id_importacion
+WHERE i.id_importacion = @id_importacion
+ORDER BY e.registro;
 
 SELECT 'FX4 importados' AS caso, p.nombre AS pais, f.fecha, f.nombre
 FROM DatosGenerales.FERIADO AS f
@@ -237,33 +266,6 @@ END TRY
 BEGIN CATCH
     EXEC #usp_MostrarError @caso = 'FX5c', @error_esperado = 50002;
 END CATCH;
-GO
-
-
-/* FX6 (ERROR) Carga en bloque con usp_ImportarFeriados de un conjunto con
-   errores (el SP de la Entrega 5, sin el procesamiento que los filtra).
-   Esperado: error 50001 con 4 condiciones en un solo mensaje: 1 fila sin
-   nombre, no existe el país con id -1, un nombre de más de 200 caracteres
-   y Argentina 01/03/2001 repetido. No se carga ninguno, ni siquiera los
-   válidos. */
-DECLARE @feriados DatosGenerales.TT_FERIADO;
-DECLARE @id_arg SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'ARG');
-
-INSERT INTO @feriados (id_pais, fecha, nombre)
-VALUES (@id_arg, '2001-03-01', N'Uno'), (@id_arg, '2001-03-01', N'Otro'), (@id_arg, '2001-03-02', NULL),
-       (-1, '2001-03-03', N'País inexistente'), (@id_arg, '2001-03-04', REPLICATE(N'x', 201));
-
-BEGIN TRY
-    EXEC DatosGenerales.usp_ImportarFeriados @feriados = @feriados;
-    PRINT N'FX6: FALLÓ, se esperaba un error de validación.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'FX6', @error_esperado = 50001;
-END CATCH;
-
-SELECT 'FX6 después' AS caso, COUNT(*) AS feriados_de_marzo_2001
-FROM DatosGenerales.FERIADO
-WHERE fecha BETWEEN '2001-03-01' AND '2001-03-04';
 GO
 
 
@@ -358,7 +360,7 @@ END;
 GO
 
 
--- Se borra lo que cargaron los casos FX.
+-- Se borra lo que cargaron los casos FX, con el registro de sus importaciones.
 EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-05-25';
 EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-06-20';
 EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-07-09';
@@ -366,16 +368,18 @@ EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-12-25';
 EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ENG', @fecha = '2001-01-01';
 EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'SCO', @fecha = '2001-01-01';
 EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'SCO', @fecha = '2001-01-02';
+EXEC #usp_BorrarImportacionesPrueba;
 GO
 
 
 /* ============================================================================
    VERIFICACIÓN FINAL
-   Esperado: 0 feriados de prueba (de 2001), y OLE Automation y las opciones
-   avanzadas con el mismo valor que antes del test.
+   Esperado: 0 feriados (de 2001) e importaciones de prueba, y OLE Automation
+   y las opciones avanzadas con el mismo valor que antes del test.
    ============================================================================ */
 SELECT 'Final' AS caso,
-       (SELECT COUNT(*) FROM DatosGenerales.FERIADO WHERE YEAR(fecha) = 2001) AS feriados_de_prueba;
+       (SELECT COUNT(*) FROM DatosGenerales.FERIADO WHERE YEAR(fecha) = 2001) AS feriados_de_prueba,
+       (SELECT COUNT(*) FROM DatosGenerales.IMPORTACION WHERE origen IN (N'FX1', N'FX2', N'FX3', N'FX4')) AS importaciones_de_prueba;
 
 SELECT 'Final' AS caso, c.name AS opcion, c.value_in_use AS valor_actual,
        CAST(SESSION_CONTEXT(IIF(c.name = N'show advanced options', N'avanzadas_antes', N'ole_antes')) AS INT) AS valor_antes

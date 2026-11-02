@@ -12,7 +12,7 @@ El script genera **`jugadores.csv`**: los 1248 convocados de las 48 selecciones 
 
 | Columna del CSV | Columna de `JUGADOR` | Observación |
 |---|---|---|
-| `codigo_fifa` | `id_lista` | `usp_ImportarJugador` busca la lista de convocados de la selección de ese país |
+| `codigo_fifa` | `id_lista` | `usp_ImportarJugadores` busca la lista de convocados de la selección de ese país |
 | `dorsal` | `dorsal` | |
 | `posicion` | `posicion_habitual` | Viene como GK / DF / MF / FW; el SP la traduce a ARQUERO / DEFENSOR / MEDIOCAMPISTA / DELANTERO |
 | `nombre`, `apellido` | `nombre`, `apellido` | Ver [separación de nombre y apellido](#44-separación-de-nombre-y-apellido) |
@@ -23,7 +23,7 @@ Las demás columnas de `JUGADOR` no vienen en el archivo:
 
 | Columna | Valor | Motivo |
 |---|---|---|
-| `fecha_alta`, `motivo_alta` | Fecha de presentación de la lista y "Importación" | Los pone `usp_ImportarJugador` |
+| `fecha_alta`, `motivo_alta` | Fecha de presentación de la lista y "Importación" | Los pone `usp_ImportarJugadores` |
 | `fecha_baja`, `motivo_baja` | NULL | No es un dato faltante: NULL significa que el jugador está activo en la lista |
 | `id_pais_nacimiento` | NULL | La fuente no lo publica. La consigna no lo pide y ninguna vista, función ni reporte lo usa |
 

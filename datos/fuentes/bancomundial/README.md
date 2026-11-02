@@ -27,7 +27,7 @@ curl -o pbi_per_capita_2015_2025.xml "https://api.worldbank.org/v2/country/all/i
 
 `DatosGenerales.usp_ImportarIndicadoresAPI` hace el mismo pedido desde T-SQL y procesa la respuesta con el mismo SP que el archivo. Por defecto trae el PBI per cápita de los últimos 10 años. Se puede pedir otro indicador anual del Banco Mundial, otro rango de años o solo algunos países (`@paises = 'ARG;BRA'`).
 
-En los dos casos, los registros válidos se cargan con el SP de la Entrega 5 `DatosGenerales.usp_ImportarIndicadoresEconomicos` (`src/16_SP_Importacion.sql`). Recibe todos los registros válidos en un parámetro de tipo tabla y hace el upsert de una vez.
+En los dos casos, los registros se cargan con el SP de la Entrega 5 `DatosGenerales.usp_ImportarIndicadoresEconomicos` (`src/16_SP_Importacion.sql`). Lee la tabla de staging que arma el proceso, valida cada registro con las reglas de los indicadores y hace el upsert de los válidos de una vez. Los rechazados quedan en `DatosGenerales.ERRORES_INDICADOR_ECONOMICO`, con el número de la importación (`DatosGenerales.IMPORTACION`).
 
 SQL Server 2022 no trae un procedimiento para llamar a una API REST (`sp_invoke_external_rest_endpoint` recién está en SQL Server 2025), así que el pedido se hace con OLE Automation (`MSXML2.ServerXMLHTTP`) en `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`), que sirve para cualquier API REST sin clave. Hace falta la opción de instancia `Ole Automation Procedures`, que viene deshabilitada. `src/26_ImportarIndicadores.sql` la habilita solo mientras consulta la API y después la deja como estaba.
 

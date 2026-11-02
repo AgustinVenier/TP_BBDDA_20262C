@@ -80,6 +80,16 @@ GO
    BORRADO EN ORDEN INVERSO DE DEPENDENCIAS
    ============================================================================ */
 
+DROP TABLE IF EXISTS DesarrolloPartido.ERRORES_EVENTO;
+DROP TABLE IF EXISTS Torneo.ERRORES_PARTIDO;
+DROP TABLE IF EXISTS Torneo.ERRORES_JUGADOR;
+DROP TABLE IF EXISTS Torneo.ERRORES_SELECCION;
+DROP TABLE IF EXISTS Torneo.ERRORES_SEDE;
+DROP TABLE IF EXISTS DatosGenerales.ERRORES_FERIADO;
+DROP TABLE IF EXISTS DatosGenerales.ERRORES_COTIZACION;
+DROP TABLE IF EXISTS DatosGenerales.ERRORES_INDICADOR_ECONOMICO;
+DROP TABLE IF EXISTS DatosGenerales.IMPORTACION;
+
 DROP TABLE IF EXISTS Publicidad.EXHIBICION;
 DROP TABLE IF EXISTS Publicidad.PIEZA_PAIS_INTERES;
 DROP TABLE IF EXISTS Publicidad.PIEZA_PUBLICITARIA;
@@ -934,6 +944,209 @@ CREATE TABLE Publicidad.EXHIBICION (
     CONSTRAINT UQ_EXHIBICION_partido_pieza UNIQUE (id_partido, id_pieza),
     CONSTRAINT CK_EXHIBICION_costo CHECK (costo >= 0),
     CONSTRAINT CK_EXHIBICION_codigo_moneda CHECK (codigo_moneda LIKE '[A-Z][A-Z][A-Z]')
+);
+GO
+
+
+/* ============================================================================
+   REGISTRO DE LAS IMPORTACIONES
+   No figuran en el DER: son el registro tecnico de los procesos de
+   importacion de la Entrega 6 (23 a 28), como PARAMETRO_REGLAMENTO es
+   configuracion. Cada corrida de un proceso queda en IMPORTACION, y los
+   registros que rechazo, en la tabla ERRORES_ de lo que importo (en el
+   esquema de esa tabla), tal como venian en el origen y con todos los
+   motivos. Se escriben y se borran con los SP de 16_SP_Importacion.sql.
+   ============================================================================ */
+
+/*
+  IMPORTACION
+  Una fila por cada vez que un proceso importa un archivo o una respuesta de
+  una API: el SP que importo (o el script, en una carga a mano como la de
+  29), el origen (ruta del archivo o URL), cuando y el resumen. Los totales cuentan los registros del origen (en
+  usp_ImportarPartidosJSON, los partidos y lo que paso en cada uno), salvo
+  insertados, actualizados y sin cambios de los feriados, que cuentan
+  feriados por pais y dia. Una importacion que falla entera (archivo que no
+  se puede leer o con otro formato) no se registra: el proceso informa el
+  error y no carga nada.
+*/
+CREATE TABLE DatosGenerales.IMPORTACION (
+    id_importacion  INT IDENTITY(1,1) NOT NULL,
+    proceso         VARCHAR(100)      NOT NULL,
+    origen          NVARCHAR(2000)    NOT NULL,
+    fecha_hora      DATETIME2(0)      NOT NULL
+        CONSTRAINT DF_IMPORTACION_fecha_hora DEFAULT (SYSDATETIME()),
+    leidos          INT               NOT NULL,
+    insertados      INT               NOT NULL,
+    actualizados    INT               NOT NULL,
+    sin_cambios     INT               NOT NULL,
+    omitidos        INT               NOT NULL,
+    rechazados      INT               NOT NULL,
+
+    CONSTRAINT PK_IMPORTACION PRIMARY KEY (id_importacion),
+    CONSTRAINT CK_IMPORTACION_totales CHECK (
+        leidos >= 0 AND insertados >= 0 AND actualizados >= 0 AND sin_cambios >= 0
+        AND omitidos >= 0 AND rechazados >= 0 AND omitidos + rechazados <= leidos
+    )
+);
+GO
+
+
+/*
+  ERRORES_INDICADOR_ECONOMICO, ERRORES_COTIZACION y ERRORES_FERIADO
+  Registros rechazados de la API del Banco Mundial, de Frankfurter y de
+  Nager.Date. registro es su posicion en el origen (desde 1); los demas
+  datos, el texto que traia.
+*/
+CREATE TABLE DatosGenerales.ERRORES_INDICADOR_ECONOMICO (
+    id_importacion    INT            NOT NULL,
+    registro          INT            NOT NULL,
+    codigo_indicador  NVARCHAR(100)  NULL,
+    pais              NVARCHAR(200)  NULL,
+    codigo_iso3       NVARCHAR(50)   NULL,
+    anio              NVARCHAR(50)   NULL,
+    valor             NVARCHAR(100)  NULL,
+    motivos           NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_INDICADOR_ECONOMICO PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_INDICADOR_ECONOMICO_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+CREATE TABLE DatosGenerales.ERRORES_COTIZACION (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    fecha           NVARCHAR(50)   NULL,
+    moneda_base     NVARCHAR(50)   NULL,
+    codigo_moneda   NVARCHAR(50)   NULL,
+    valor           NVARCHAR(100)  NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_COTIZACION PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_COTIZACION_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+CREATE TABLE DatosGenerales.ERRORES_FERIADO (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    codigo_iso2     NVARCHAR(50)   NULL,
+    fecha           NVARCHAR(50)   NULL,
+    nombre_local    NVARCHAR(400)  NULL,
+    nombre_ingles   NVARCHAR(400)  NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_FERIADO PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_FERIADO_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+
+/*
+  ERRORES_SEDE, ERRORES_SELECCION, ERRORES_JUGADOR y ERRORES_PARTIDO
+  Registros rechazados de los archivos del torneo: estadios, selecciones y
+  partidos de openfootball, y jugadores del CSV del scraping. registro es su
+  posicion en el archivo (en los jugadores, la linea); los demas datos, el
+  texto que traia. resultado junta el marcador de los 90 minutos (ft), del
+  alargue (et) y de los penales (p).
+*/
+CREATE TABLE Torneo.ERRORES_SEDE (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    nombre_estadio  NVARCHAR(400)  NULL,
+    ciudad          NVARCHAR(400)  NULL,
+    pais            NVARCHAR(50)   NULL,
+    huso_horario    NVARCHAR(50)   NULL,
+    capacidad       NVARCHAR(50)   NULL,
+    coordenadas     NVARCHAR(100)  NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_SEDE PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_SEDE_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+CREATE TABLE Torneo.ERRORES_SELECCION (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    nombre          NVARCHAR(400)  NULL,
+    codigo_fifa     NVARCHAR(50)   NULL,
+    grupo           NVARCHAR(50)   NULL,
+    confederacion   NVARCHAR(50)   NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_SELECCION PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_SELECCION_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+CREATE TABLE Torneo.ERRORES_JUGADOR (
+    id_importacion    INT            NOT NULL,
+    registro          INT            NOT NULL,
+    codigo_fifa       NVARCHAR(50)   NULL,
+    dorsal            NVARCHAR(50)   NULL,
+    posicion          NVARCHAR(50)   NULL,
+    nombre            NVARCHAR(400)  NULL,
+    apellido          NVARCHAR(400)  NULL,
+    fecha_nacimiento  NVARCHAR(50)   NULL,
+    club              NVARCHAR(400)  NULL,
+    motivos           NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_JUGADOR PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_JUGADOR_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+CREATE TABLE Torneo.ERRORES_PARTIDO (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    ronda           NVARCHAR(100)  NULL,
+    fecha           NVARCHAR(50)   NULL,
+    hora            NVARCHAR(50)   NULL,
+    equipo_1        NVARCHAR(200)  NULL,
+    equipo_2        NVARCHAR(200)  NULL,
+    estadio         NVARCHAR(400)  NULL,
+    asistencia      NVARCHAR(50)   NULL,
+    resultado       NVARCHAR(100)  NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_PARTIDO PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_PARTIDO_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+
+/*
+  ERRORES_EVENTO
+  Lo que paso en un partido y se rechazo: jugadores de las formaciones,
+  cambios, goles, penales de la definicion y tarjetas. registro numera los
+  eventos de la importacion; registro_partido es la posicion del partido en
+  el archivo. jugador es el que forma, sale, convierte o recibe la tarjeta;
+  jugador_entra, el que entra en un cambio.
+*/
+CREATE TABLE DesarrolloPartido.ERRORES_EVENTO (
+    id_importacion    INT            NOT NULL,
+    registro          INT            NOT NULL,
+    registro_partido  INT            NOT NULL,
+    numero_partido    TINYINT        NULL,
+    tipo              VARCHAR(12)    NOT NULL,
+    codigo_fifa       VARCHAR(10)    NULL,
+    jugador           NVARCHAR(200)  NULL,
+    jugador_entra     NVARCHAR(200)  NULL,
+    minuto            NVARCHAR(20)   NULL,
+    tarjeta           NVARCHAR(20)   NULL,
+    motivos           NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_EVENTO PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_EVENTO_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion),
+    CONSTRAINT CK_ERRORES_EVENTO_tipo CHECK (tipo IN ('FORMACION', 'CAMBIO', 'GOL', 'PENAL', 'TARJETA'))
 );
 GO
 

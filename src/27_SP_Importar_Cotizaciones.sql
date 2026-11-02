@@ -39,21 +39,23 @@
       transformaciones se hacen acá, en T-SQL.
    3. Antes de cargar, cada registro puede quedar:
         OMITIDO      si es el dólar contra sí mismo (vale siempre 1) o si
-                     repite otro registro con el mismo valor. No es un error.
-        RECHAZADO    si no es una cotización contra el dólar, si la moneda no
-                     es un código de 3 letras, si la fecha no es una fecha o
-                     es futura, si el valor no es un número mayor que cero, o
-                     si viene la misma moneda y fecha con valores distintos
-                     (no se sabe cuál es el correcto).
-   4. Los demás se cargan todos juntos con el SP de la Entrega 5
-      DatosGenerales.usp_ImportarCotizaciones (16_SP_Importacion.sql), que
-      recibe un parámetro de tipo tabla y hace el upsert sin recorrerlos de a
-      uno. Como el paso 3 aplica las mismas reglas que ese SP, los registros
-      válidos se cargan aunque haya otros rechazados.
+                     repite otro registro con el mismo valor (si ese registro
+                     se rechaza en el paso 4, la copia también). No es un
+                     error.
+        RECHAZADO    si no es una cotización contra el dólar o si la fecha o
+                     el valor no se pueden convertir.
+   4. El SP de la Entrega 5 DatosGenerales.usp_ImportarCotizaciones
+      (16_SP_Importacion.sql) lee #staging_cotizaciones, valida los demás con
+      las reglas de las cotizaciones y rechaza los que no las cumplen (moneda
+      que no es un código de 3 letras, fecha futura, valor que no es mayor
+      que cero, o la misma moneda y fecha con valores distintos), y hace el
+      upsert de los válidos, todos juntos. En la misma transacción se
+      registra la importación (DatosGenerales.IMPORTACION, su número queda en
+      @id_importacion) y los rechazados, en DatosGenerales.ERRORES_COTIZACION.
    5. Se devuelve el resumen, los omitidos por motivo y los rechazados con
       sus motivos.
-   La carga es un solo upsert, así que la importación puede correr dentro de
-   una transacción (los tests la deshacen con ROLLBACK).
+   La importación puede correr dentro de una transacción del que la llama
+   (los tests la deshacen con ROLLBACK).
 
  Criterios del upsert (los de usp_ImportarCotizaciones):
    - Clave natural: moneda y fecha. Cada día es un registro, así que se
@@ -79,26 +81,36 @@ GO
   usp_ProcesarCotizacionesJSON
   Importa una respuesta de la API Frankfurter v2 (/v2/rates con base=USD).
   La llama usp_ImportarCotizacionesAPI. @origen es la URL o el texto que
-  identifica de dónde salió, para el resumen. Devuelve el resumen (leídos,
-  insertados, actualizados, sin cambios, omitidos y rechazados), los
-  omitidos por motivo y los rechazados con sus motivos.
+  identifica de dónde salió y @proceso, el SP que importa (el que lo llama;
+  si no viene, este). Registra la importación (su número queda en
+  @id_importacion) y los rechazados en DatosGenerales.ERRORES_COTIZACION, y
+  devuelve el resumen (leídos, insertados, actualizados, sin cambios,
+  omitidos y rechazados), los omitidos por motivo y los rechazados con sus
+  motivos.
   Si el documento no es JSON, es un mensaje de error de la API o no es un
   arreglo de cotizaciones, no se importa nada (THROW 50002).
 */
 CREATE OR ALTER PROCEDURE DatosGenerales.usp_ProcesarCotizacionesJSON
-    @json    NVARCHAR(MAX),
-    @origen  NVARCHAR(1000)
+    @json            NVARCHAR(MAX),
+    @origen          NVARCHAR(1000),
+    @proceso         VARCHAR(100) = NULL,
+    @id_importacion  INT          = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @nl            NCHAR(2) = NCHAR(13) + NCHAR(10);
-    DECLARE @hoy           DATE     = CONVERT(DATE, GETDATE());
+    DECLARE @nl            NCHAR(2)     = NCHAR(13) + NCHAR(10);
     DECLARE @mensaje       NVARCHAR(2048);
-    DECLARE @validas       DatosGenerales.TT_COTIZACION;
-    DECLARE @insertados    INT = 0;
-    DECLARE @actualizados  INT = 0;
-    DECLARE @sin_cambios   INT = 0;
+    DECLARE @tran_propia   BIT          = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @leidos        INT;
+    DECLARE @insertados    INT;
+    DECLARE @actualizados  INT;
+    DECLARE @sin_cambios   INT;
+    DECLARE @omitidos      INT;
+    DECLARE @rechazados    INT;
+
+    SET @proceso = ISNULL(NULLIF(TRIM(@proceso), ''), CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)));
+    SET @id_importacion = NULL;
 
     /* 1. El documento.
           Si la API rechaza el pedido responde un objeto con status y message
@@ -118,23 +130,26 @@ BEGIN
         THROW 50002, @mensaje, 1;
     END;
 
+    -- usp_ImportarCotizaciones lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
     CREATE TABLE #staging_cotizaciones (
         id_registro       INT IDENTITY(1,1) PRIMARY KEY,
         -- Tal como vienen en el JSON
         fecha_txt         NVARCHAR(50)   COLLATE DATABASE_DEFAULT NULL,
         base_txt          NVARCHAR(50)   COLLATE DATABASE_DEFAULT NULL,
-        moneda            NVARCHAR(50)   COLLATE DATABASE_DEFAULT NULL,
         valor_txt         NVARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
-        -- Convertidos
+        -- Lo que lee usp_ImportarCotizaciones, ya convertido
+        codigo_moneda     NVARCHAR(50)   COLLATE DATABASE_DEFAULT NULL,
         fecha             DATE           NULL,
-        valor             DECIMAL(19,6)  NULL,
+        unidades_por_usd  DECIMAL(19,6)  NULL,
+        -- Lo que le pasa a cada registro: lo completan este SP y usp_ImportarCotizaciones
         errores           NVARCHAR(MAX)  COLLATE DATABASE_DEFAULT NULL,
         motivo_omision    VARCHAR(60)    COLLATE DATABASE_DEFAULT NULL,
+        copia_de          INT            NULL,      -- un repetido con el mismo valor: el registro que se importa en su lugar
         accion            VARCHAR(15)    COLLATE DATABASE_DEFAULT NULL
     );
 
     /* 2. Los registros, como vienen de la API. */
-    INSERT INTO #staging_cotizaciones (fecha_txt, base_txt, moneda, valor_txt)
+    INSERT INTO #staging_cotizaciones (fecha_txt, base_txt, codigo_moneda, valor_txt)
     SELECT NULLIF(TRIM(fecha_txt), N''),
            UPPER(NULLIF(TRIM(base_txt), N'')),
            UPPER(NULLIF(TRIM(moneda), N'')),
@@ -148,15 +163,16 @@ BEGIN
     /* 3. Omitidos: el dólar contra sí mismo. */
     UPDATE #staging_cotizaciones
     SET accion = 'OMITIDO', motivo_omision = 'Dólar contra dólar (vale siempre 1)'
-    WHERE base_txt = N'USD' AND moneda = N'USD';
+    WHERE base_txt = N'USD' AND codigo_moneda = N'USD';
 
-    /* Conversión y errores de formato. La fecha viene como AAAA-MM-DD (estilo
-       23). El valor puede venir en notación científica (1.5e-05), que
-       DECIMAL no acepta: en ese caso se convierte pasando por FLOAT. */
+    /* Conversión y lo que no se pudo convertir. La fecha viene como AAAA-MM-DD
+       (estilo 23). El valor puede venir en notación científica (1.5e-05), que
+       DECIMAL no acepta: en ese caso se convierte pasando por FLOAT. Las reglas
+       de las cotizaciones las aplica usp_ImportarCotizaciones. */
     UPDATE #staging_cotizaciones
-    SET fecha = TRY_CONVERT(DATE, fecha_txt, 23),
-        valor = ISNULL(TRY_CONVERT(DECIMAL(19,6), valor_txt),
-                       TRY_CONVERT(DECIMAL(19,6), TRY_CONVERT(FLOAT, valor_txt)))
+    SET fecha            = TRY_CONVERT(DATE, fecha_txt, 23),
+        unidades_por_usd = ISNULL(TRY_CONVERT(DECIMAL(19,6), valor_txt),
+                                  TRY_CONVERT(DECIMAL(19,6), TRY_CONVERT(FLOAT, valor_txt)))
     WHERE accion IS NULL;
 
     UPDATE #staging_cotizaciones
@@ -164,71 +180,74 @@ BEGIN
             IIF(base_txt IS DISTINCT FROM N'USD',
                 @nl + N'- La cotización es contra ' + ISNULL(base_txt, N'(sin moneda base)')
                 + N' y no contra el dólar (la URL tiene que pedir base=USD).', N''),
-            IIF(moneda IS NULL,
-                @nl + N'- La moneda es obligatoria.', N''),
-            IIF(moneda COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]',
-                @nl + N'- La moneda "' + moneda + N'" no es un código de 3 letras (ISO 4217).', N''),
-            IIF(fecha_txt IS NULL,
-                @nl + N'- La fecha es obligatoria.', N''),
             IIF(fecha_txt IS NOT NULL AND fecha IS NULL,
                 @nl + N'- La fecha "' + fecha_txt + N'" no es una fecha (AAAA-MM-DD).', N''),
-            IIF(fecha > @hoy,
-                @nl + N'- La fecha ' + CONVERT(NVARCHAR(10), fecha, 103) + N' es futura.', N''),
-            IIF(valor_txt IS NULL,
-                @nl + N'- El valor es obligatorio.', N''),
-            IIF(valor_txt IS NOT NULL AND valor IS NULL,
-                @nl + N'- El valor "' + valor_txt + N'" no es un número (o tiene más de 13 dígitos enteros).', N''),
-            IIF(valor <= 0,
-                @nl + N'- El valor tiene que ser mayor que cero.', N'')), N'')
+            IIF(valor_txt IS NOT NULL AND unidades_por_usd IS NULL,
+                @nl + N'- El valor "' + valor_txt + N'" no es un número (o tiene más de 13 dígitos enteros).', N'')), N'')
     WHERE accion IS NULL;
-
-    /* Misma moneda y fecha más de una vez: con el mismo valor se importa una
-       vez y las copias se omiten; con valores distintos no se sabe cuál es el
-       correcto y se rechazan todas. */
-    WITH repetidos AS (
-        SELECT accion, motivo_omision, errores,
-               COUNT(*)   OVER (PARTITION BY moneda, fecha) AS veces,
-               MIN(valor) OVER (PARTITION BY moneda, fecha) AS valor_minimo,
-               MAX(valor) OVER (PARTITION BY moneda, fecha) AS valor_maximo,
-               ROW_NUMBER() OVER (PARTITION BY moneda, fecha ORDER BY id_registro) AS copia
-        FROM #staging_cotizaciones
-        WHERE accion IS NULL AND errores IS NULL
-    )
-    UPDATE repetidos
-    SET errores        = IIF(valor_minimo <> valor_maximo,
-                             @nl + N'- La respuesta trae ' + CAST(veces AS NVARCHAR(10))
-                             + N' veces esta moneda y fecha, con valores distintos: no se sabe cuál es el correcto.',
-                             NULL),
-        accion         = IIF(valor_minimo = valor_maximo AND copia > 1, 'OMITIDO', NULL),
-        motivo_omision = IIF(valor_minimo = valor_maximo AND copia > 1, 'Repetido con el mismo valor', NULL)
-    WHERE veces > 1;
 
     UPDATE #staging_cotizaciones
     SET accion = 'RECHAZADO'
     WHERE accion IS NULL AND errores IS NOT NULL;
 
-    /* 4. Carga de los válidos, todos juntos, con el SP de la Entrega 5. */
-    INSERT INTO @validas (codigo_moneda, fecha, unidades_por_usd)
-    SELECT moneda, fecha, valor
-    FROM #staging_cotizaciones
-    WHERE accion IS NULL;
+    /* Misma moneda y fecha más de una vez con el mismo valor: se importa una vez y las copias
+       se omiten (si ese registro se rechaza, las copias también, en el paso 4). Con valores
+       distintos las rechaza usp_ImportarCotizaciones. */
+    WITH repetidos AS (
+        SELECT accion, motivo_omision, copia_de,
+               MIN(unidades_por_usd) OVER (PARTITION BY codigo_moneda, fecha) AS valor_minimo,
+               MAX(unidades_por_usd) OVER (PARTITION BY codigo_moneda, fecha) AS valor_maximo,
+               MIN(id_registro) OVER (PARTITION BY codigo_moneda, fecha) AS primero,
+               ROW_NUMBER() OVER (PARTITION BY codigo_moneda, fecha ORDER BY id_registro) AS copia
+        FROM #staging_cotizaciones
+        WHERE accion IS NULL AND codigo_moneda IS NOT NULL AND fecha IS NOT NULL AND unidades_por_usd IS NOT NULL
+    )
+    UPDATE repetidos
+    SET accion = 'OMITIDO', motivo_omision = 'Repetido con el mismo valor', copia_de = primero
+    WHERE copia > 1 AND valor_minimo = valor_maximo;
 
-    IF EXISTS (SELECT 1 FROM @validas)
-        EXEC DatosGenerales.usp_ImportarCotizaciones
-            @cotizaciones = @validas,
-            @insertados   = @insertados   OUTPUT,
-            @actualizados = @actualizados OUTPUT,
-            @sin_cambios  = @sin_cambios  OUTPUT;
+    /* 4. El SP de la Entrega 5 valida las demás y carga las válidas, todas juntas; después se
+          registran la importación y sus rechazados, en la misma transacción. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        EXEC DatosGenerales.usp_ImportarCotizaciones;
+
+        -- Las copias de una cotización que se rechazó también se rechazan, con sus mismos motivos.
+        UPDATE c
+        SET accion = 'RECHAZADO', motivo_omision = NULL, errores = r.errores
+        FROM #staging_cotizaciones AS c
+        INNER JOIN #staging_cotizaciones AS r ON r.id_registro = c.copia_de
+        WHERE c.accion = 'OMITIDO' AND r.accion = 'RECHAZADO';
+
+        SELECT @leidos       = COUNT(*),
+               @insertados   = ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+               @actualizados = ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
+               @sin_cambios  = ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
+               @omitidos     = ISNULL(SUM(IIF(accion = 'OMITIDO', 1, 0)), 0),
+               @rechazados   = ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
+        FROM #staging_cotizaciones;
+
+        EXEC DatosGenerales.usp_RegistrarImportacion
+            @proceso = @proceso, @origen = @origen, @leidos = @leidos, @insertados = @insertados,
+            @actualizados = @actualizados, @sin_cambios = @sin_cambios, @omitidos = @omitidos,
+            @rechazados = @rechazados, @id_importacion = @id_importacion OUTPUT;
+
+        INSERT INTO DatosGenerales.ERRORES_COTIZACION (id_importacion, registro, fecha, moneda_base, codigo_moneda, valor, motivos)
+        SELECT @id_importacion, id_registro, fecha_txt, base_txt, codigo_moneda, valor_txt, STUFF(errores, 1, 2, N'')
+        FROM #staging_cotizaciones
+        WHERE accion = 'RECHAZADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
 
     /* 5. Resultado. */
-    SELECT @origen AS origen,
-           COUNT(*)                                          AS leidos,
-           @insertados                                       AS insertados,
-           @actualizados                                     AS actualizados,
-           @sin_cambios                                      AS sin_cambios,
-           ISNULL(SUM(IIF(accion = 'OMITIDO',   1, 0)), 0)   AS omitidos,
-           ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)   AS rechazados
-    FROM #staging_cotizaciones;
+    SELECT @id_importacion AS id_importacion, @origen AS origen, @leidos AS leidos, @insertados AS insertados,
+           @actualizados AS actualizados, @sin_cambios AS sin_cambios, @omitidos AS omitidos, @rechazados AS rechazados;
 
     SELECT motivo_omision AS omitidos_por, COUNT(*) AS registros
     FROM #staging_cotizaciones
@@ -236,10 +255,9 @@ BEGIN
     GROUP BY motivo_omision
     ORDER BY registros DESC;
 
-    SELECT CONCAT(ISNULL(moneda, N'(sin moneda)'), N' ', ISNULL(fecha_txt, N'(sin fecha)')) AS rechazado,
-           STUFF(errores, 1, 2, N'') AS motivos
-    FROM #staging_cotizaciones
-    WHERE accion = 'RECHAZADO'
+    SELECT CONCAT(ISNULL(codigo_moneda, N'(sin moneda)'), N' ', ISNULL(fecha, N'(sin fecha)')) AS rechazado, motivos
+    FROM DatosGenerales.ERRORES_COTIZACION
+    WHERE id_importacion = @id_importacion
     ORDER BY rechazado;
 END;
 GO
@@ -262,12 +280,14 @@ GO
   consultar; fecha hasta no futura; fecha desde no mayor que la fecha hasta y
   a no más de un año (366 días), para que la respuesta no sea demasiado
   grande. Si la API no responde, responde con un código HTTP distinto de 200
-  o no devuelve un JSON válido, no se importa nada (THROW 50002).
+  o no devuelve un JSON válido, no se importa nada (THROW 50002). El número
+  de la importación queda en @id_importacion.
 */
 CREATE OR ALTER PROCEDURE DatosGenerales.usp_ImportarCotizacionesAPI
-    @fecha_desde  DATE         = NULL,
-    @fecha_hasta  DATE         = NULL,
-    @monedas      VARCHAR(400) = NULL
+    @fecha_desde     DATE         = NULL,
+    @fecha_hasta     DATE         = NULL,
+    @monedas         VARCHAR(400) = NULL,
+    @id_importacion  INT          = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -279,6 +299,7 @@ BEGIN
     DECLARE @estado_http  SMALLINT;
     DECLARE @respuesta    NVARCHAR(MAX);
     DECLARE @mensaje      NVARCHAR(2048);
+    DECLARE @proceso      VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
 
     SET @monedas     = UPPER(NULLIF(REPLACE(@monedas, ' ', ''), ''));
     SET @fecha_hasta = ISNULL(@fecha_hasta, @hoy);
@@ -334,7 +355,8 @@ BEGIN
         THROW 50002, @mensaje, 1;
     END;
 
-    EXEC DatosGenerales.usp_ProcesarCotizacionesJSON @json = @respuesta, @origen = @url;
+    EXEC DatosGenerales.usp_ProcesarCotizacionesJSON
+        @json = @respuesta, @origen = @url, @proceso = @proceso, @id_importacion = @id_importacion OUTPUT;
 END;
 GO
 

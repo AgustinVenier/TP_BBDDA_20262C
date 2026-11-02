@@ -24,7 +24,7 @@ Para verlo desde una consola:
 curl "https://api.frankfurter.dev/v2/rates?base=USD&quotes=ARS,EUR&from=2026-06-11&to=2026-06-12"
 ```
 
-Cada registro se carga con el SP de la Entrega 5 `DatosGenerales.usp_ImportarCotizaciones` (`src/16_SP_Importacion.sql`). Recibe todos los registros válidos en un parámetro de tipo tabla y hace el upsert de una vez.
+Cada registro se carga con el SP de la Entrega 5 `DatosGenerales.usp_ImportarCotizaciones` (`src/16_SP_Importacion.sql`). Lee la tabla de staging que arma el proceso, valida cada registro con las reglas de las cotizaciones y hace el upsert de los válidos de una vez. Los rechazados quedan en `DatosGenerales.ERRORES_COTIZACION`, con el número de la importación (`DatosGenerales.IMPORTACION`).
 
 ## Por qué la v2 y no la v1
 

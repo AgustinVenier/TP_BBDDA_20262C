@@ -57,6 +57,12 @@ GO
 SET NOCOUNT ON;
 GO
 
+-- La tabla de la carga a mano (parte 3) no puede existir durante las consultas a la API: si
+-- quedó de una ejecución anterior en esta sesión, se borra. Va en un lote aparte porque el
+-- lote siguiente se compila entero antes de ejecutarse, contra la tabla que ya exista.
+DROP TABLE IF EXISTS #staging_feriados;
+GO
+
 DECLARE @ole_antes        INT = (SELECT CAST(value_in_use AS INT) FROM sys.configurations
                                  WHERE name = N'Ole Automation Procedures');
 DECLARE @avanzadas_antes  INT = (SELECT CAST(value_in_use AS INT) FROM sys.configurations
@@ -69,7 +75,7 @@ DECLARE @i                INT = 1;
 DECLARE @total            INT;
 DECLARE @codigo_iso2      CHAR(2);
 DECLARE @leidos INT, @insertados INT, @actualizados INT, @sin_cambios INT, @omitidos INT, @rechazados INT;
-DECLARE @a_mano           DatosGenerales.TT_FERIADO;
+DECLARE @id_importacion   INT;
 
 DECLARE @paises TABLE (orden INT IDENTITY(1,1) PRIMARY KEY, codigo_iso2 CHAR(2));
 DECLARE @resultados TABLE (
@@ -166,9 +172,24 @@ CROSS APPLY (SELECT STRING_AGG(nombre, ', ') AS paises FROM DatosGenerales.PAIS
 ORDER BY IIF(r.error IS NULL, 1, 0), r.codigo_iso2;
 
 /* 3. Carga a mano, con el SP de la Entrega 5, de los países que la API no
-      cubrió en esta ejecución (ver "Feriados cargados a mano"). */
-INSERT INTO @a_mano (id_pais, fecha, nombre)
-SELECT p.id_pais, f.fecha, f.nombre
+      cubrió en esta ejecución (ver "Feriados cargados a mano"). Se registra
+      como una importación más, con sus rechazados en
+      DatosGenerales.ERRORES_FERIADO. La tabla que lee usp_ImportarFeriados
+      se crea recién acá y se borra al terminar: si existiera durante las
+      consultas a la API, usp_ProcesarFeriadosJSON crearía otra con el mismo
+      nombre y no se sabría cuál lee ese SP. */
+CREATE TABLE #staging_feriados (
+    id_registro  INT IDENTITY(1,1) PRIMARY KEY,
+    codigo_iso2  CHAR(2)        COLLATE DATABASE_DEFAULT NOT NULL,
+    id_pais      SMALLINT       NOT NULL,
+    fecha        DATE           NOT NULL,
+    nombre       NVARCHAR(200)  COLLATE DATABASE_DEFAULT NULL,
+    errores      NVARCHAR(MAX)  COLLATE DATABASE_DEFAULT NULL,
+    accion       VARCHAR(15)    COLLATE DATABASE_DEFAULT NULL
+);
+
+INSERT INTO #staging_feriados (codigo_iso2, id_pais, fecha, nombre)
+SELECT f.codigo_iso2, p.id_pais, f.fecha, f.nombre
 FROM (VALUES
         ('IR', CAST('2026-06-24' AS DATE), N'Tasua'),
         ('IR', CAST('2026-06-25' AS DATE), N'Ashura'),
@@ -180,23 +201,54 @@ INNER JOIN DatosGenerales.PAIS AS p ON p.codigo_iso2 = f.codigo_iso2
 INNER JOIN @resultados AS r ON r.codigo_iso2 = f.codigo_iso2
 WHERE r.error IS NOT NULL;
 
-SELECT @insertados = 0, @actualizados = 0, @sin_cambios = 0;
+SET @id_importacion = NULL;
 BEGIN TRY
-    IF EXISTS (SELECT 1 FROM @a_mano)
-        EXEC DatosGenerales.usp_ImportarFeriados
-            @feriados     = @a_mano,
-            @insertados   = @insertados   OUTPUT,
-            @actualizados = @actualizados OUTPUT,
-            @sin_cambios  = @sin_cambios  OUTPUT;
+    IF EXISTS (SELECT 1 FROM #staging_feriados)
+    BEGIN
+        BEGIN TRANSACTION;
+
+        EXEC DatosGenerales.usp_ImportarFeriados;
+
+        SELECT @leidos       = COUNT(*),
+               @insertados   = ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+               @actualizados = ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
+               @sin_cambios  = ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
+               @rechazados   = ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
+        FROM #staging_feriados;
+
+        EXEC DatosGenerales.usp_RegistrarImportacion
+            @proceso = '29_ImportarCotizacionesYFeriados.sql', @origen = N'Feriados cargados a mano (parte 3 del script)',
+            @leidos = @leidos, @insertados = @insertados, @actualizados = @actualizados, @sin_cambios = @sin_cambios,
+            @rechazados = @rechazados, @id_importacion = @id_importacion OUTPUT;
+
+        INSERT INTO DatosGenerales.ERRORES_FERIADO (id_importacion, registro, codigo_iso2, fecha, nombre_local, motivos)
+        SELECT @id_importacion, id_registro, codigo_iso2, CONVERT(NVARCHAR(10), fecha, 23), nombre, STUFF(errores, 1, 2, N'')
+        FROM #staging_feriados
+        WHERE accion = 'RECHAZADO';
+
+        COMMIT TRANSACTION;
+    END;
 END TRY
 BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
     -- Si fallan también las cotizaciones, se informa ese error, que es el primero.
     IF @mensaje_error IS NULL
         SELECT @numero_error = ERROR_NUMBER(), @mensaje_error = ERROR_MESSAGE();
 END CATCH;
 
-SELECT N'Carga a mano' AS origen, (SELECT COUNT(*) FROM @a_mano) AS feriados,
-       @insertados AS insertados, @actualizados AS actualizados, @sin_cambios AS sin_cambios;
+SELECT @id_importacion AS id_importacion, N'Carga a mano' AS origen, COUNT(*) AS feriados,
+       ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0)   AS insertados,
+       ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0) AS actualizados,
+       ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0) AS sin_cambios,
+       ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)   AS rechazados
+FROM #staging_feriados;
+
+SELECT pa.nombre AS pais, sf.fecha, sf.nombre, STUFF(sf.errores, 1, 2, N'') AS motivos
+FROM #staging_feriados AS sf
+INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = sf.id_pais
+WHERE sf.accion = 'RECHAZADO';
+
+DROP TABLE #staging_feriados;
 
 -- El error se informa después de restaurar la configuración.
 IF @mensaje_error IS NOT NULL

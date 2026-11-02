@@ -11,20 +11,23 @@
 
  Fecha: 31/10/2026
  Archivo: 77_Test_SP_Importar_Cotizaciones.sql
- Objetivo: Probar la importación de cotizaciones de 27_SP_Importar_Cotizaciones.sql
-           y la carga en bloque DatosGenerales.usp_ImportarCotizaciones de
-           16_SP_Importacion.sql:
+ Objetivo: Probar la importación de cotizaciones de 27_SP_Importar_Cotizaciones.sql,
+           con el registro de cada importación y de sus rechazados
+           (DatosGenerales.ERRORES_COTIZACION):
              - procesando respuestas con el formato de la API Frankfurter
                escritas en el test: alta, reimportación sin duplicados,
                actualización, importación con errores parciales y los
                documentos que no se pueden importar;
              - consultando la API Frankfurter (casos AP, necesitan internet).
+           Las reglas de las cotizaciones las prueba 66_Test_SP_Importacion.sql,
+           con DatosGenerales.usp_ImportarCotizaciones.
            Requiere haber ejecutado 00 a 27. No depende del juego de datos:
            las respuestas escritas usan XTS y XXX, los códigos de ISO 4217
            para pruebas y para "sin moneda", que ninguna API cotiza, y el
            caso de la API trae ARS y EUR de dos días de 2024 dentro de una
            transacción que se deshace. Al final se borra lo que cargó el
-           test, así que se puede ejecutar más de una vez.
+           test, con el registro de sus importaciones, así que se puede
+           ejecutar más de una vez.
 ================================================================================
 
  OLE Automation: los casos AP llaman a la API con OLE Automation. Si la
@@ -97,13 +100,28 @@ BEGIN
 END;
 GO
 
--- Por si una corrida anterior del test quedó a medias: las 6 cotizaciones que cargan los casos CX.
+-- Borra el registro de las importaciones de los casos CX (su origen es el nombre del caso), con sus rechazados.
+IF OBJECT_ID(N'tempdb..#usp_BorrarImportacionesPrueba', N'P') IS NOT NULL
+    DROP PROCEDURE #usp_BorrarImportacionesPrueba;
+GO
+CREATE PROCEDURE #usp_BorrarImportacionesPrueba
+AS
+BEGIN
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'CX1';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'CX2';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'CX3';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'CX4';
+END;
+GO
+
+-- Por si una corrida anterior del test quedó a medias: las 6 cotizaciones que cargan los casos CX y sus importaciones.
 EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-11';
 EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-12';
 EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-15';
 EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-16';
 EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XXX', @fecha = '2026-06-11';
 EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XXX', @fecha = '2026-06-12';
+EXEC #usp_BorrarImportacionesPrueba;
 GO
 
 
@@ -174,7 +192,9 @@ GO
      XTS 2026-06-20   el valor es obligatorio (no viene rate).
      XXX 2026-06-15 (x2)  la respuesta trae 2 veces XXX del 15/06 con valores
                           distintos: se rechazan las dos.
-   No queda importado nada de XXX del 15/06. */
+   No queda importado nada de XXX del 15/06. Los 9 rechazados quedan en
+   DatosGenerales.ERRORES_COTIZACION, con el número de la importación y el
+   texto que traía la respuesta. */
 DECLARE @manana CHAR(10) = CONVERT(CHAR(10), DATEADD(DAY, 1, CONVERT(DATE, GETDATE())), 23);
 DECLARE @json NVARCHAR(MAX) = CONCAT(N'[
     {"date":"2026-06-15","base":"USD","quote":"XTS","rate":1020},
@@ -190,7 +210,16 @@ DECLARE @json NVARCHAR(MAX) = CONCAT(N'[
     {"date":"2026-06-15","base":"USD","quote":"XXX","rate":2.7},
     {"date":"2026-06-15","base":"USD","quote":"XXX","rate":2.8}]');
 
-EXEC DatosGenerales.usp_ProcesarCotizacionesJSON @json = @json, @origen = N'CX4';
+DECLARE @id_importacion INT;
+
+EXEC DatosGenerales.usp_ProcesarCotizacionesJSON @json = @json, @origen = N'CX4', @id_importacion = @id_importacion OUTPUT;
+
+SELECT 'CX4 registro' AS caso, i.leidos, i.insertados, i.omitidos, i.rechazados, e.registro, e.fecha, e.moneda_base,
+       e.codigo_moneda, e.valor, REPLACE(e.motivos, NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM DatosGenerales.IMPORTACION AS i
+INNER JOIN DatosGenerales.ERRORES_COTIZACION AS e ON e.id_importacion = i.id_importacion
+WHERE i.id_importacion = @id_importacion
+ORDER BY e.registro;
 
 SELECT 'CX4 importados' AS caso, codigo_moneda, fecha, unidades_por_usd
 FROM DatosGenerales.COTIZACION
@@ -229,33 +258,6 @@ END TRY
 BEGIN CATCH
     EXEC #usp_MostrarError @caso = 'CX5c', @error_esperado = 50002;
 END CATCH;
-GO
-
-
-/* CX6 (ERROR) Carga en bloque con usp_ImportarCotizaciones de un conjunto con
-   errores (el SP de la Entrega 5, sin el procesamiento que los filtra).
-   Esperado: error 50001 con 5 condiciones en un solo mensaje: 1 fila sin
-   unidades por dólar, la moneda "PESOS" no es un código de 3 letras, el
-   dólar no lleva cotización, una fecha futura y XTS del 13/06/2026
-   repetida. No se carga ninguna, ni siquiera las válidas. */
-DECLARE @cotizaciones DatosGenerales.TT_COTIZACION;
-DECLARE @manana DATE = DATEADD(DAY, 1, CONVERT(DATE, GETDATE()));
-
-INSERT INTO @cotizaciones (codigo_moneda, fecha, unidades_por_usd)
-VALUES ('XTS', '2026-06-13', 1000), ('XTS', '2026-06-13', 1001), ('XXX', '2026-06-13', NULL),
-       ('PESOS', '2026-06-13', 5), ('USD', '2026-06-13', 1), ('XXX', @manana, 3);
-
-BEGIN TRY
-    EXEC DatosGenerales.usp_ImportarCotizaciones @cotizaciones = @cotizaciones;
-    PRINT N'CX6: FALLÓ, se esperaba un error de validación.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'CX6', @error_esperado = 50001;
-END CATCH;
-
-SELECT 'CX6 después' AS caso, COUNT(*) AS cotizaciones_del_13_06
-FROM DatosGenerales.COTIZACION
-WHERE codigo_moneda IN ('XTS', 'XXX') AND fecha = '2026-06-13';
 GO
 
 
@@ -359,23 +361,25 @@ END;
 GO
 
 
--- Se borra lo que cargaron los casos CX.
+-- Se borra lo que cargaron los casos CX, con el registro de sus importaciones.
 EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-11';
 EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-12';
 EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-15';
 EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-16';
 EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XXX', @fecha = '2026-06-11';
 EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XXX', @fecha = '2026-06-12';
+EXEC #usp_BorrarImportacionesPrueba;
 GO
 
 
 /* ============================================================================
    VERIFICACIÓN FINAL
-   Esperado: 0 cotizaciones de prueba, y OLE Automation y las opciones
-   avanzadas con el mismo valor que antes del test.
+   Esperado: 0 cotizaciones e importaciones de prueba, y OLE Automation y las
+   opciones avanzadas con el mismo valor que antes del test.
    ============================================================================ */
 SELECT 'Final' AS caso,
-       (SELECT COUNT(*) FROM DatosGenerales.COTIZACION WHERE codigo_moneda IN ('XTS', 'XXX')) AS cotizaciones_de_prueba;
+       (SELECT COUNT(*) FROM DatosGenerales.COTIZACION WHERE codigo_moneda IN ('XTS', 'XXX')) AS cotizaciones_de_prueba,
+       (SELECT COUNT(*) FROM DatosGenerales.IMPORTACION WHERE origen IN (N'CX1', N'CX2', N'CX3', N'CX4')) AS importaciones_de_prueba;
 
 SELECT 'Final' AS caso, c.name AS opcion, c.value_in_use AS valor_actual,
        CAST(SESSION_CONTEXT(IIF(c.name = N'show advanced options', N'avanzadas_antes', N'ole_antes')) AS INT) AS valor_antes
