@@ -14,7 +14,7 @@
  Objetivo: Crear el proceso de importación masiva de indicadores económicos
            por país del Banco Mundial, como el PBI per cápita
            (NY.GDP.PCAP.CD) con el que la asignación de publicidad estima el
-           poder adquisitivo de cada mercado. Se importa desde un archivo XMLk
+           poder adquisitivo de cada mercado. Se importa desde un archivo XML
            descargado de la API o consultando la API directamente. Los SP,
            en el orden en que se crean (primero el que usan los otros dos):
              DatosGenerales.usp_ProcesarIndicadoresXML  valida el XML de la API y carga sus registros
