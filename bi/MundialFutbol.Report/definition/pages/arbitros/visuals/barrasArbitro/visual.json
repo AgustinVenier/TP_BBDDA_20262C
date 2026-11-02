@@ -1,0 +1,128 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "barrasArbitro",
+  "position": {
+    "x": 20,
+    "y": 130,
+    "z": 3000,
+    "height": 570,
+    "width": 420,
+    "tabOrder": 3000
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "arbitro"
+                }
+              },
+              "queryRef": "Designaciones.arbitro",
+              "nativeQueryRef": "arbitro",
+              "displayName": "Árbitro",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "Partidos dirigidos"
+                }
+              },
+              "queryRef": "Designaciones.Partidos dirigidos",
+              "nativeQueryRef": "Partidos dirigidos",
+              "displayName": "Dirigidos"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "Amarillas señaladas"
+                }
+              },
+              "queryRef": "Designaciones.Amarillas señaladas",
+              "nativeQueryRef": "Amarillas señaladas",
+              "displayName": "Amarillas"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "Rojas señaladas"
+                }
+              },
+              "queryRef": "Designaciones.Rojas señaladas",
+              "nativeQueryRef": "Rojas señaladas",
+              "displayName": "Rojas"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Designaciones"
+                  }
+                },
+                "Property": "Partidos dirigidos"
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Partidos dirigidos y tarjetas señaladas por árbitro'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

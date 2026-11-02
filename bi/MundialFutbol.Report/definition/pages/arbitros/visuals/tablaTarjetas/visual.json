@@ -1,0 +1,283 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "tablaTarjetas",
+  "position": {
+    "x": 460,
+    "y": 420,
+    "z": 5000,
+    "height": 280,
+    "width": 800,
+    "tabOrder": 5000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "arbitro_principal"
+                }
+              },
+              "queryRef": "Tarjetas.arbitro_principal",
+              "nativeQueryRef": "arbitro_principal",
+              "displayName": "Árbitro"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "numero_partido"
+                }
+              },
+              "queryRef": "Tarjetas.numero_partido",
+              "nativeQueryRef": "numero_partido",
+              "displayName": "Partido"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "minuto"
+                }
+              },
+              "queryRef": "Tarjetas.minuto",
+              "nativeQueryRef": "minuto",
+              "displayName": "Minuto"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "tipo_tarjeta"
+                }
+              },
+              "queryRef": "Tarjetas.tipo_tarjeta",
+              "nativeQueryRef": "tipo_tarjeta",
+              "displayName": "Tarjeta"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "persona"
+                }
+              },
+              "queryRef": "Tarjetas.persona",
+              "nativeQueryRef": "persona",
+              "displayName": "A quién"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "seleccion"
+                }
+              },
+              "queryRef": "Tarjetas.seleccion",
+              "nativeQueryRef": "seleccion",
+              "displayName": "Selección"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "motivo"
+                }
+              },
+              "queryRef": "Tarjetas.motivo",
+              "nativeQueryRef": "motivo",
+              "displayName": "Motivo"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Tarjetas"
+                  }
+                },
+                "Property": "numero_partido"
+              }
+            },
+            "direction": "Ascending"
+          },
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Tarjetas"
+                  }
+                },
+                "Property": "minuto"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ]
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Tarjetas que mostró como árbitro principal'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "a96c82a2c0d1c1324eed",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Tarjetas"
+              }
+            },
+            "Property": "arbitro_principal"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "abdec5d27e94260439d1",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Tarjetas"
+              }
+            },
+            "Property": "numero_partido"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "0aa4612d92443a4a5ba0",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Tarjetas"
+              }
+            },
+            "Property": "minuto"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "edf2bd4c2c07a7840690",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Tarjetas"
+              }
+            },
+            "Property": "tipo_tarjeta"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "276de7d1cd820a454e24",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Tarjetas"
+              }
+            },
+            "Property": "persona"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "61cf4afe0ce4d444a38e",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Tarjetas"
+              }
+            },
+            "Property": "seleccion"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "47c31bec03315c1d80b2",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Tarjetas"
+              }
+            },
+            "Property": "motivo"
+          }
+        },
+        "type": "Categorical"
+      }
+    ]
+  }
+}

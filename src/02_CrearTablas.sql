@@ -100,6 +100,7 @@ DROP TABLE IF EXISTS DesarrolloPartido.FORMACION;
 
 DROP TABLE IF EXISTS Torneo.PARTIDO;
 DROP TABLE IF EXISTS Torneo.PERSONA_CUERPO_TECNICO;
+DROP TABLE IF EXISTS Torneo.NOMBRE_ALTERNATIVO;
 DROP TABLE IF EXISTS Torneo.JUGADOR;
 DROP TABLE IF EXISTS Torneo.LISTA_CONVOCADOS;
 DROP TABLE IF EXISTS Torneo.SELECCION;
@@ -389,6 +390,42 @@ GO
 CREATE UNIQUE NONCLUSTERED INDEX UX_JUGADOR_lista_dorsal_activo
     ON Torneo.JUGADOR (id_lista, dorsal)
     WHERE fecha_baja IS NULL;
+GO
+
+
+/*
+  NOMBRE_ALTERNATIVO
+  Otras formas en que las fuentes externas escriben el nombre de una
+  seleccion (en ingles, por ejemplo) o de uno de sus jugadores (otra
+  transliteracion, el apodo). La importacion las usa cuando el nombre del
+  archivo no coincide con el registrado.
+  Relacion N:1 con SELECCION y, si es el nombre de un jugador, N:1 con JUGADOR
+  (id_jugador NULL: es un nombre de la seleccion). Que el jugador sea de esa
+  seleccion se valida en el SP de alta.
+  El nombre de una seleccion no se repite entre selecciones; el de un jugador
+  no se repite dentro de su seleccion.
+*/
+CREATE TABLE Torneo.NOMBRE_ALTERNATIVO (
+    id_nombre_alternativo  INT IDENTITY(1,1) NOT NULL,
+    id_seleccion           INT               NOT NULL,
+    id_jugador             INT               NULL,
+    nombre                 NVARCHAR(120)     NOT NULL,
+
+    CONSTRAINT PK_NOMBRE_ALTERNATIVO PRIMARY KEY (id_nombre_alternativo),
+    CONSTRAINT FK_NOMBRE_ALTERNATIVO_SELECCION
+        FOREIGN KEY (id_seleccion) REFERENCES Torneo.SELECCION (id_seleccion),
+    CONSTRAINT FK_NOMBRE_ALTERNATIVO_JUGADOR
+        FOREIGN KEY (id_jugador) REFERENCES Torneo.JUGADOR (id_jugador)
+);
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX UX_NOMBRE_ALTERNATIVO_seleccion
+    ON Torneo.NOMBRE_ALTERNATIVO (nombre)
+    WHERE id_jugador IS NULL;
+
+CREATE UNIQUE NONCLUSTERED INDEX UX_NOMBRE_ALTERNATIVO_jugador
+    ON Torneo.NOMBRE_ALTERNATIVO (id_seleccion, nombre)
+    WHERE id_jugador IS NOT NULL;
 GO
 
 
@@ -914,6 +951,8 @@ GO
    ============================================================================ */
 CREATE INDEX IX_SEDE_id_pais                        ON Torneo.SEDE (id_pais);
 CREATE INDEX IX_JUGADOR_id_pais_nacimiento          ON Torneo.JUGADOR (id_pais_nacimiento);
+CREATE INDEX IX_NOMBRE_ALTERNATIVO_id_seleccion     ON Torneo.NOMBRE_ALTERNATIVO (id_seleccion);
+CREATE INDEX IX_NOMBRE_ALTERNATIVO_id_jugador       ON Torneo.NOMBRE_ALTERNATIVO (id_jugador);
 CREATE INDEX IX_PERSONA_CUERPO_TECNICO_id_seleccion ON Torneo.PERSONA_CUERPO_TECNICO (id_seleccion);
 CREATE INDEX IX_PERSONA_CUERPO_TECNICO_id_pais_nacimiento
     ON Torneo.PERSONA_CUERPO_TECNICO (id_pais_nacimiento);

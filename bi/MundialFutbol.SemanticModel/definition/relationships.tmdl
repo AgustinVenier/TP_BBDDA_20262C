@@ -26,3 +26,11 @@ relationship 33568700-d39f-5d42-a83c-5f3d68b69534
 	fromColumn: IngresosPorMoneda.id_sede
 	toColumn: Sedes.id_sede
 
+relationship 2afbed1a-4b8c-4a8b-ae73-47ae323ea74f
+	fromColumn: Designaciones.id_arbitro
+	toColumn: Arbitros.id_arbitro
+
+relationship c7e80574-b5f6-47a2-8181-e9fb15f7a204
+	fromColumn: Tarjetas.id_arbitro_principal
+	toColumn: Arbitros.id_arbitro
+

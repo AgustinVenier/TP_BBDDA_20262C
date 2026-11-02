@@ -124,6 +124,58 @@
             "width": 234
           },
           "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1737.9734258531012,
+            "y": 353.40287088488219
+          },
+          "nodeIndex": "Suspensiones",
+          "nodeLineageTag": "1bfeb950-7d0d-49a0-919a-64021f360930",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 2305.9734258531012,
+            "y": 389.40287088488219
+          },
+          "nodeIndex": "Arbitros",
+          "nodeLineageTag": "2500096b-06d1-4424-8170-a461f54fd2f2",
+          "size": {
+            "height": 128,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 2021.9734258531012,
+            "y": 303.40287088488219
+          },
+          "nodeIndex": "Designaciones",
+          "nodeLineageTag": "236e1c9b-06ad-4536-b7df-feac9aa2c5e9",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 2539.9734258531012,
+            "y": 353.40287088488219
+          },
+          "nodeIndex": "Plantillas",
+          "nodeLineageTag": "e11624a6-f68d-4756-9234-48d32a53d128",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
         }
       ],
       "name": "Todas las tablas",

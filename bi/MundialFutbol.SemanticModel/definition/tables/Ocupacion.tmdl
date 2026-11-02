@@ -17,6 +17,22 @@ table Ocupacion
 		formatString: 0.0%
 		lineageTag: 25fc1376-4f48-53c2-ab5f-36c75e125cba
 
+	measure 'Espacio 1' = IF(HASONEVALUE(Partidos[id_partido]), CALCULATE(IF(NOT ISEMPTY(Ocupacion), COALESCE(MAX(Ocupacion[anunciante]), "(libre)")), Ocupacion[numero_espacio] = 1))
+		lineageTag: ea3318b0-1031-44d2-b370-3ffd70506b20
+
+	measure 'Espacio 2' = IF(HASONEVALUE(Partidos[id_partido]), CALCULATE(IF(NOT ISEMPTY(Ocupacion), COALESCE(MAX(Ocupacion[anunciante]), "(libre)")), Ocupacion[numero_espacio] = 2))
+		lineageTag: 275e7ec6-20bd-403d-996b-e785a9735c84
+
+	measure 'Espacio 3' = IF(HASONEVALUE(Partidos[id_partido]), CALCULATE(IF(NOT ISEMPTY(Ocupacion), COALESCE(MAX(Ocupacion[anunciante]), "(libre)")), Ocupacion[numero_espacio] = 3))
+		lineageTag: 9650d37a-69f5-4ef7-bc35-65ffebfcf2db
+
+	measure 'Espacio 4' = IF(HASONEVALUE(Partidos[id_partido]), CALCULATE(IF(NOT ISEMPTY(Ocupacion), COALESCE(MAX(Ocupacion[anunciante]), "(libre)")), Ocupacion[numero_espacio] = 4))
+		lineageTag: a4089865-0f34-46c2-9168-824ac7caf5da
+
+	measure Anunciantes = DISTINCTCOUNTNOBLANK(Ocupacion[id_anunciante])
+		formatString: 0
+		lineageTag: 3c1f6b2e-8d4a-4f0e-9b57-6e2a1d9c4f80
+
 	column id_partido
 		dataType: int64
 		isHidden

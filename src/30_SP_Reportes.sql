@@ -22,7 +22,9 @@
              Reportes.usp_SeleccionesYPlantillasXML  selecciones con sus convocados anidados (XML)
              Reportes.usp_Resultados                 tabla de posiciones y resultados
            Las vistas son la fuente de datos de Power BI: devuelven el detalle
-           sin filtrar y los SP las filtran y les dan forma. Las cotizaciones
+           sin filtrar y los SP las filtran y les dan forma. Las suspensiones
+           activas, que dependen de la fecha de corte, están para Power BI en
+           Reportes.vw_SuspensionesActivas, una vez antes de cada partido. Las cotizaciones
            (27) y los feriados (28) de las APIs se usan para convertir los
            ingresos a otras monedas y para marcar los feriados de cada mercado.
            Requiere haber ejecutado 00 a 20. Su script de testing es
@@ -175,6 +177,48 @@ RETURN
                  ORDER BY q.fecha_hora_utc) AS px
     WHERE o.fecha_hora_utc <= @fecha_corte
       AND c.cumplidos < s.partidos_de_suspension;
+GO
+
+
+/*
+  vw_SuspensionesActivas
+  Las suspensiones activas (Reportes.fn_SuspensionesActivas) en cada momento
+  del torneo en que importan: un segundo antes de cada partido, y hoy. Así
+  Power BI, que no puede pasarle la fecha de corte a una función, muestra las
+  de cualquier momento con un segmentador sobre "momento" (orden_momento lo
+  ordena). Una fila por momento y suspensión activa: en ese momento el
+  jugador no puede jugar su proximo_partido.
+*/
+CREATE OR ALTER VIEW Reportes.vw_SuspensionesActivas
+AS
+WITH momentos AS (
+    SELECT CAST(f.numero_partido AS INT) AS orden_momento,
+           CONCAT(N'Antes del partido ', f.numero_partido, N'. ', f.seleccion_local, N' vs ', f.seleccion_visitante) AS momento,
+           DATEADD(SECOND, -1, p.fecha_hora_utc) AS fecha_corte_utc
+    FROM Torneo.vw_Fixture AS f
+    INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = f.id_partido
+    WHERE p.estado <> 'SUSPENDIDO'
+    UNION ALL
+    SELECT 1000, N'Hoy', CAST(SYSUTCDATETIME() AS DATETIME2(0))
+)
+SELECT m.orden_momento,
+       m.momento,
+       m.fecha_corte_utc,
+       pa.nombre                                     AS seleccion,
+       j.id_jugador,
+       j.dorsal,
+       CONCAT(j.apellido, N', ', j.nombre)           AS jugador,
+       sa.motivo,
+       sa.numero_partido_origen,
+       sa.partidos_de_suspension,
+       sa.partidos_cumplidos,
+       sa.partidos_pendientes,
+       sa.proximo_partido
+FROM momentos AS m
+CROSS APPLY Reportes.fn_SuspensionesActivas(m.fecha_corte_utc) AS sa
+INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = sa.id_jugador
+INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = sa.id_seleccion
+INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais;
 GO
 
 

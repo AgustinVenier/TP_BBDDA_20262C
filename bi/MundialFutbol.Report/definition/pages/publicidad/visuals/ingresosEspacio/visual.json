@@ -1,6 +1,6 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
-  "name": "tablaPartidos",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "ingresosEspacio",
   "position": {
     "x": 660,
     "y": 425,
@@ -10,53 +10,30 @@
     "tabOrder": 5000
   },
   "visual": {
-    "visualType": "tableEx",
+    "visualType": "clusteredBarChart",
     "query": {
       "queryState": {
-        "Values": {
+        "Category": {
           "projections": [
             {
               "field": {
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
-                    }
-                  },
-                  "Property": "partido"
-                }
-              },
-              "queryRef": "Partidos.partido",
-              "nativeQueryRef": "partido"
-            },
-            {
-              "field": {
-                "Column": {
-                  "Expression": {
-                    "SourceRef": {
                       "Entity": "Ocupacion"
                     }
                   },
-                  "Property": "sede"
+                  "Property": "espacio"
                 }
               },
-              "queryRef": "Ocupacion.sede",
-              "nativeQueryRef": "sede"
-            },
-            {
-              "field": {
-                "Measure": {
-                  "Expression": {
-                    "SourceRef": {
-                      "Entity": "Ocupacion"
-                    }
-                  },
-                  "Property": "Espacios ocupados"
-                }
-              },
-              "queryRef": "Ocupacion.Espacios ocupados",
-              "nativeQueryRef": "Espacios ocupados"
-            },
+              "queryRef": "Ocupacion.espacio",
+              "nativeQueryRef": "espacio",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
             {
               "field": {
                 "Measure": {
@@ -81,10 +58,10 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Partidos"
+                    "Entity": "Ocupacion"
                   }
                 },
-                "Property": "partido"
+                "Property": "espacio"
               }
             },
             "direction": "Ascending"
@@ -106,7 +83,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Ocupación por partido'"
+                  "Value": "'Ingresos por espacio publicitario'"
                 }
               }
             }

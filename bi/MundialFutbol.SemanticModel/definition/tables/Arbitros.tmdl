@@ -1,0 +1,29 @@
+table Arbitros
+	lineageTag: 2500096b-06d1-4424-8170-a461f54fd2f2
+
+	column id_arbitro
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 4f34e8cd-5eb3-457e-848a-f07a3b9a22af
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [id_arbitro]
+
+		annotation SummarizationSetBy = Automatic
+
+	column arbitro
+		dataType: string
+		lineageTag: 922bdd52-0420-46a2-81bf-11f8710bbd06
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [arbitro]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Arbitros = calculated
+		mode: import
+		source = DISTINCT(SELECTCOLUMNS(Designaciones, "id_arbitro", Designaciones[id_arbitro], "arbitro", Designaciones[arbitro]))
+
+	annotation PBI_Id = 457f56530f874080a12dde05c4438773
+

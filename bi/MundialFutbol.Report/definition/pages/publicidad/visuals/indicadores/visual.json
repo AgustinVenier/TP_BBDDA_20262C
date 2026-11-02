@@ -37,11 +37,11 @@
                       "Entity": "Ocupacion"
                     }
                   },
-                  "Property": "% Ocupación"
+                  "Property": "Anunciantes"
                 }
               },
-              "queryRef": "Ocupacion.% Ocupación",
-              "nativeQueryRef": "% Ocupación"
+              "queryRef": "Ocupacion.Anunciantes",
+              "nativeQueryRef": "Anunciantes"
             },
             {
               "field": {

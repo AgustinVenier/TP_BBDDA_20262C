@@ -22,9 +22,13 @@ La página **Sedes** usa el objeto visual de mapa, que Power BI trae deshabilita
 
 | Página | Qué muestra | Vistas |
 |---|---|---|
+| Plantillas | Selecciones con sus convocados anidados (dorsal, nombre, posición y club), por puesto y dorsal como `Reportes.usp_SeleccionesYPlantillasXML`. El segmentador **Estado** arranca en los convocados; sin elegir, suma los dados de baja con su motivo | `vw_Plantillas` |
 | Goleadores | Goleadores del torneo, goles por selección y por fase | `vw_Goles`, `vw_Resultados` |
 | Tarjetas | Amarillas y rojas por selección y por jugador | `vw_Tarjetas` |
-| Publicidad | Ingresos y ocupación de los 4 espacios por sede, anunciante y partido | `vw_OcupacionPublicitaria` |
+| Suspensiones | Jugadores suspendidos por acumulación de amarillas, doble amarilla o roja directa, antes del partido que se elige en el segmentador **Momento** (sin elegir, las de todo el torneo): motivo, partido de la sanción, fechas cumplidas y pendientes, y el partido que no juega | `vw_SuspensionesActivas` |
+| Árbitros | Partidos dirigidos por cada árbitro (como principal), sus designaciones en todos los roles, las amarillas y rojas que señaló y el detalle de cada tarjeta (partido, minuto, a quién y por qué), con segmentadores de árbitro y de rol. Las tarjetas se atribuyen al árbitro principal del partido, porque la base no guarda quién mostró cada una. El segmentador de árbitro usa la tabla calculada `Arbitros`, relacionada con las designaciones y con las tarjetas | `vw_DesignacionesArbitrales`, `vw_Tarjetas` |
+| Publicidad | Ingresos en dólares, espacios ocupados y anunciantes; ocupación por sede (cuántos de sus espacios tuvo cada anunciante, apilado); ingresos por sede, por anunciante y por espacio. No se muestra un porcentaje de ocupación: el sistema asigna siempre las cuatro piezas de cada partido (sección H), así que daría 100 % | `vw_OcupacionPublicitaria` |
+| Publicidad por partido | Matriz sede → partido con el anunciante exhibido en cada uno de los cuatro espacios ("(libre)" si no tiene), los espacios ocupados y los ingresos en dólares, con subtotales por sede y total; segmentadores de fase y de sede. Las medidas `Espacio 1` a `Espacio 4` (tabla `Ocupacion`) arman las columnas, igual que `espacio_1` a `espacio_4` de `Reportes.usp_OcupacionPublicitaria` | `vw_OcupacionPublicitaria` |
 | Monedas | Ingresos convertidos a la moneda elegida, con la cotización del día del partido (API Frankfurter) | `vw_IngresosPublicitariosPorMoneda` |
 | Prime time | Matriz partido × mercado (prime time y feriados, API Nager.Date) e ingresos por partido frente a mercados en prime time | `vw_PrimeTimePorMercado` |
 | Resultados de grupos | Posiciones separadas por grupo y los partidos de la fase de grupos, con un segmentador de grupo que filtra las dos | `vw_TablaPosiciones`, `vw_Resultados` |

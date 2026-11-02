@@ -1,0 +1,158 @@
+table Designaciones
+	lineageTag: 236e1c9b-06ad-4536-b7df-feac9aa2c5e9
+
+	measure 'Partidos dirigidos' = CALCULATE(DISTINCTCOUNT(Designaciones[id_partido]), Designaciones[rol] = "PRINCIPAL")
+		formatString: 0
+		lineageTag: c734287c-4f72-4827-a729-0eca35548336
+
+	measure Designaciones = COUNTROWS(Designaciones)
+		formatString: 0
+		lineageTag: 4527835e-679f-4e8f-b035-0ecf7df1141b
+
+	measure 'Amarillas señaladas' = SUM(Designaciones[amarillas_senaladas])
+		formatString: 0
+		lineageTag: 31ec9623-cdb2-4b5c-a897-7c3041537db2
+
+	measure 'Rojas señaladas' = SUM(Designaciones[rojas_senaladas])
+		formatString: 0
+		lineageTag: f1a59438-3e64-4e06-bb38-d110ec721ce1
+
+	column id_arbitro
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 6d77ad20-af2f-44d7-9463-e61f9a519fa0
+		summarizeBy: none
+		sourceColumn: id_arbitro
+
+		annotation SummarizationSetBy = Automatic
+
+	column arbitro
+		dataType: string
+		lineageTag: 466d048a-b151-44d9-8d3c-61c0eb2942e1
+		summarizeBy: none
+		sourceColumn: arbitro
+
+		annotation SummarizationSetBy = Automatic
+
+	column pais
+		dataType: string
+		lineageTag: b5d97eb4-300a-4618-8caf-8eed27f8261f
+		summarizeBy: none
+		sourceColumn: pais
+
+		annotation SummarizationSetBy = Automatic
+
+	column categoria
+		dataType: string
+		lineageTag: 5160f3d5-2d8a-40df-a787-bdd73504627f
+		summarizeBy: none
+		sourceColumn: categoria
+
+		annotation SummarizationSetBy = Automatic
+
+	column rol
+		dataType: string
+		lineageTag: 7796abad-6083-461f-b3b1-bd9c5702e588
+		summarizeBy: none
+		sourceColumn: rol
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_partido
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: a796fba2-6b04-4ff2-b2c3-3f42a3388081
+		summarizeBy: none
+		sourceColumn: id_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column numero_partido
+		dataType: int64
+		formatString: 0
+		lineageTag: 08bfcea8-2af4-4efe-b521-13351c1fb37d
+		summarizeBy: none
+		sourceColumn: numero_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column fase
+		dataType: string
+		lineageTag: be2aa66b-75c9-423a-9a28-96284832f330
+		summarizeBy: none
+		sourceColumn: fase
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_hora_local
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 155bba96-6e36-4899-bb0f-dac7085b5e24
+		summarizeBy: none
+		sourceColumn: fecha_hora_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column nombre_estadio
+		dataType: string
+		lineageTag: 1990e325-36d1-492d-86f5-13605e356580
+		summarizeBy: none
+		sourceColumn: nombre_estadio
+
+		annotation SummarizationSetBy = Automatic
+
+	column partido
+		dataType: string
+		lineageTag: ddbcb5b7-70ad-439c-bdcf-34aeb6f32a52
+		summarizeBy: none
+		sourceColumn: partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column resultado
+		dataType: string
+		lineageTag: 306e6cb1-08d1-463f-ac85-7d1c2218b54c
+		summarizeBy: none
+		sourceColumn: resultado
+
+		annotation SummarizationSetBy = Automatic
+
+	column estado
+		dataType: string
+		lineageTag: d3621855-97c5-42be-8f92-94ff70383c3c
+		summarizeBy: none
+		sourceColumn: estado
+
+		annotation SummarizationSetBy = Automatic
+
+	column amarillas_senaladas
+		dataType: int64
+		formatString: 0
+		lineageTag: cdcee990-7382-4ef0-9c38-58dc63062fff
+		summarizeBy: none
+		sourceColumn: amarillas_senaladas
+
+		annotation SummarizationSetBy = Automatic
+
+	column rojas_senaladas
+		dataType: int64
+		formatString: 0
+		lineageTag: cc9f9792-3a11-4dad-940e-b1092a74a4b1
+		summarizeBy: none
+		sourceColumn: rojas_senaladas
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Designaciones = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_DesignacionesArbitrales"]}[Data]
+				in
+				    Vista
+
+	annotation PBI_ResultType = Table
+

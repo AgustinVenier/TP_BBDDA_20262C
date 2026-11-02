@@ -70,8 +70,9 @@ CREATE PROCEDURE #usp_Verificar
     @esperado     DECIMAL(19,2)
 AS
 BEGIN
+    -- Una suma sobre ninguna fila (NULL) vale 0: la base puede no tener, por ejemplo, publicidad.
     PRINT CONCAT(@caso, N' ', @descripcion, N': ',
-                 IIF(@obtenido = @esperado, N'OK', N'FALLÓ'),
+                 IIF(ISNULL(@obtenido, 0) = ISNULL(@esperado, 0), N'OK', N'FALLÓ'),
                  N' (reporte ', ISNULL(CAST(@obtenido AS NVARCHAR(30)), N'NULL'),
                  N', esperado ', ISNULL(CAST(@esperado AS NVARCHAR(30)), N'NULL'), N')');
 END;
@@ -115,8 +116,12 @@ GO
 EXEC Reportes.usp_OcupacionPublicitaria;
 GO
 
--- R5. Matriz de prime time de los mercados publicitarios.
-EXEC Reportes.usp_MatrizPrimeTime;
+-- R5. Matriz de prime time de los mercados publicitarios (si la base tiene piezas
+-- con mercados de interés; la carga del torneo real, por ejemplo, no tiene publicidad).
+IF EXISTS (SELECT 1 FROM Publicidad.PIEZA_PAIS_INTERES)
+    EXEC Reportes.usp_MatrizPrimeTime;
+ELSE
+    PRINT N'R5: la base no tiene piezas publicitarias con mercados de interés: no hay matriz de prime time.';
 GO
 
 -- R6. Selecciones y plantillas (XML), con y sin las bajas.
@@ -175,7 +180,7 @@ SET @esperado = (SELECT COUNT(*) FROM DesarrolloPartido.AMONESTACION AS a
                  WHERE a.id_jugador IS NOT NULL AND p.fecha_hora_utc <= @corte);
 EXEC #usp_Verificar 'V2a', N'tarjetas a jugadores en el XML', @reporte, @esperado;
 
-SET @reporte = @x.value('sum(//Persona/@amarillas) + sum(//Persona/@rojas)', 'INT');
+SET @reporte = CAST(@x.value('sum(//Persona/@amarillas) + sum(//Persona/@rojas)', 'FLOAT') AS INT);
 SET @esperado = (SELECT COUNT(*) FROM DesarrolloPartido.AMONESTACION AS a
                  INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = a.id_partido
                  WHERE a.id_persona_ct IS NOT NULL AND p.fecha_hora_utc <= @corte);
@@ -341,6 +346,26 @@ SET @reporte = (SELECT COUNT(*)
                   AND IIF(h.gana_local = 1, h.seleccion_local, h.seleccion_visitante)
                       NOT IN (p.seleccion_local, p.seleccion_visitante));
 EXEC #usp_Verificar 'V12c', N'ganadores que no juegan el cruce que les toca', @reporte, 0;
+GO
+
+-- V13. Suspensiones activas (BI): antes de cada partido, la vista tiene las
+-- mismas suspensiones que fn_SuspensionesActivas un segundo antes del partido
+-- (las que usa el XML de tarjetas). Se cuentan las diferencias en los dos sentidos.
+DECLARE @diferencias INT;
+WITH segun_vista AS (
+    SELECT v.orden_momento, v.id_jugador, v.numero_partido_origen
+    FROM Reportes.vw_SuspensionesActivas AS v
+    WHERE v.orden_momento < 1000
+),
+segun_funcion AS (
+    SELECT CAST(p.numero_partido AS INT) AS orden_momento, sa.id_jugador, sa.numero_partido_origen
+    FROM Torneo.PARTIDO AS p
+    CROSS APPLY Reportes.fn_SuspensionesActivas(DATEADD(SECOND, -1, p.fecha_hora_utc)) AS sa
+    WHERE p.estado <> 'SUSPENDIDO'
+)
+SELECT @diferencias = (SELECT COUNT(*) FROM (SELECT * FROM segun_vista EXCEPT SELECT * FROM segun_funcion) AS a)
+                    + (SELECT COUNT(*) FROM (SELECT * FROM segun_funcion EXCEPT SELECT * FROM segun_vista) AS b);
+EXEC #usp_Verificar 'V13', N'diferencias entre vw_SuspensionesActivas y fn_SuspensionesActivas', @diferencias, 0;
 GO
 
 

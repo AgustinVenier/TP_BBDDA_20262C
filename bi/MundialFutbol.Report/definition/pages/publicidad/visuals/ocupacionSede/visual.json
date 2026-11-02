@@ -10,7 +10,7 @@
     "tabOrder": 3000
   },
   "visual": {
-    "visualType": "clusteredColumnChart",
+    "visualType": "columnChart",
     "query": {
       "queryState": {
         "Category": {
@@ -42,11 +42,30 @@
                       "Entity": "Ocupacion"
                     }
                   },
-                  "Property": "% Ocupación"
+                  "Property": "Espacios ocupados"
                 }
               },
-              "queryRef": "Ocupacion.% Ocupación",
-              "nativeQueryRef": "% Ocupación"
+              "queryRef": "Ocupacion.Espacios ocupados",
+              "nativeQueryRef": "Espacios ocupados"
+            }
+          ]
+        },
+        "Series": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "anunciante"
+                }
+              },
+              "queryRef": "Ocupacion.anunciante",
+              "nativeQueryRef": "anunciante",
+              "active": true
             }
           ]
         }
@@ -83,7 +102,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Ocupación de los 4 espacios por sede'"
+                  "Value": "'Ocupación por sede: espacios de cada anunciante'"
                 }
               }
             }

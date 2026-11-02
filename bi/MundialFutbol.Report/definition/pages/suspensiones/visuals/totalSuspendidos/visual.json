@@ -1,0 +1,53 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "totalSuspendidos",
+  "position": {
+    "x": 740,
+    "y": 20,
+    "z": 1000,
+    "height": 100,
+    "width": 420,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Suspensiones"
+                    }
+                  },
+                  "Property": "Jugadores suspendidos"
+                }
+              },
+              "queryRef": "Suspensiones.Jugadores suspendidos",
+              "nativeQueryRef": "Jugadores suspendidos"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

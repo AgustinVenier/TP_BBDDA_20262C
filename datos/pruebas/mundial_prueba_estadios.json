@@ -1,0 +1,20 @@
+{
+ "stadiums": [
+  {
+   "city": "Ciudad Prueba Importacion (Centro)",
+   "timezone": "UTC-4",
+   "cc": "us",
+   "name": "Estadio Prueba Importacion",
+   "capacity": 40000,
+   "coords": "34°35'12\"S 58°22'54.5\"W"
+  },
+  {
+   "city": "Lugar Inventado",
+   "timezone": "UTC-4",
+   "cc": "xx",
+   "name": "Estadio Prueba Invalido",
+   "capacity": "mucha",
+   "coords": "al norte"
+  }
+ ]
+}

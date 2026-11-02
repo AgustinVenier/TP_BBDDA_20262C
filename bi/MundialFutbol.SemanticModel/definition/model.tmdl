@@ -8,7 +8,7 @@ model Model
 
 annotation __PBI_TimeIntelligenceEnabled = 0
 
-annotation PBI_QueryOrder = ["Servidor", "BaseDeDatos", "Partidos", "Sedes", "Goles", "Tarjetas", "Ocupacion", "IngresosPorMoneda", "PrimeTime", "Posiciones", "Cuadro"]
+annotation PBI_QueryOrder = ["Servidor", "BaseDeDatos", "Partidos", "Sedes", "Goles", "Tarjetas", "Suspensiones", "Designaciones", "Ocupacion", "IngresosPorMoneda", "PrimeTime", "Posiciones", "Cuadro", "Plantillas"]
 
 annotation PBI_ProTooling = ["DevMode"]
 
@@ -21,6 +21,10 @@ ref table IngresosPorMoneda
 ref table PrimeTime
 ref table Posiciones
 ref table Cuadro
+ref table Suspensiones
+ref table Designaciones
+ref table Arbitros
+ref table Plantillas
 
 ref cultureInfo es-AR
 
