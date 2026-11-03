@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Datos de prueba del test 75: un XML que no es de la API del Banco Mundial. -->
-<paises>
-  <pais codigo="ARG" pbi="13969.78">Argentina</pais>
-</paises>
