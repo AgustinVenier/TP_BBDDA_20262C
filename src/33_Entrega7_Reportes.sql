@@ -14,9 +14,9 @@
  Objetivo: Entrega 7. Ejecutar de punta a punta los reportes de
            30_SP_Reportes.sql para verlos a mano, sin verificaciones ni datos
            de prueba (para eso está 80_Test_SP_Reportes.sql).
-           Requiere haber ejecutado 00 a 20 y 30, y tener cargado el torneo:
-           31_DatosDePrueba.sql (torneo de prueba) o 32_ImportarMundial2026.sql
-           (torneo real).
+           Requiere haber ejecutado 00 a 32: el torneo real
+           (31_ImportarMundial2026.sql) con sus datos complementarios
+           (32_DatosComplementarios.sql), que traen la publicidad.
 ================================================================================
 
  Cómo leer los resultados:
@@ -26,9 +26,8 @@
      abrirlo en una ventana nueva.
    - Los parámetros no tienen valores fijos: se eligen de los datos cargados
      (el goleador, el corte con más suspensiones, un árbitro, una selección),
-     así que el script sirve para el torneo de prueba y para el real.
-   - La base del torneo real no tiene publicidad: R4 y R5 salen vacíos o con un
-     aviso.
+     así que el script sirve con cualquier juego de datos.
+   - Sin publicidad cargada (sin el 32), R4 y R5 salen vacíos o con un aviso.
 
  Reportes:
    R1. Goleadores por selección, fase y torneo.            usp_Goleadores
@@ -51,7 +50,7 @@ GO
 IF OBJECT_ID(N'Reportes.usp_Goleadores', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM Torneo.PARTIDO WHERE estado = 'FINALIZADO')
 BEGIN
-    RAISERROR(N'Faltan los reportes o los datos: ejecutar 00 a 20 y 30, y cargar el torneo (31 o 32).', 16, 1);
+    RAISERROR(N'Faltan los reportes o los datos: ejecutar 00 a 32.', 16, 1);
     SET NOEXEC ON;
 END;
 GO
@@ -147,7 +146,7 @@ BEGIN
     EXEC Reportes.usp_OcupacionPublicitaria @codigo_moneda = 'ARS';
 END
 ELSE
-    SELECT N'R4. No hay cotizaciones de ARS cargadas (ver 29_ImportarCotizacionesYFeriados.sql): no se muestran los ingresos en pesos.' AS reporte;
+    SELECT N'R4. No hay cotizaciones de ARS cargadas (ver 29_ImportarAPIs.sql): no se muestran los ingresos en pesos.' AS reporte;
 GO
 
 

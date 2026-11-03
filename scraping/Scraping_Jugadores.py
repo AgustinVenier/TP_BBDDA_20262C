@@ -16,9 +16,10 @@
            convocado: selección (código FIFA), dorsal, posición, nombre,
            apellido, fecha de nacimiento y club. De la misma página sale
            cuerpo_tecnico.csv, con el director técnico de cada selección
-           (Torneo.usp_ImportarCuerpoTecnicoCSV). El archivo de jugadores lo importa
-           21_Importacion_Jugadores.sql, después de que 20_DatosIniciales.sql
-           creó las selecciones y sus listas de convocados.
+           (Torneo.usp_ImportarCuerpoTecnicoCSV). Los dos los importa
+           src/31_ImportarMundial2026.sql (con los SP de
+           24_SP_Importar_Jugadores.sql), después de importar las selecciones
+           y sus listas de convocados.
 ================================================================================
 
  Páginas de origen (Wikipedia en inglés, licencia CC BY-SA 4.0):
