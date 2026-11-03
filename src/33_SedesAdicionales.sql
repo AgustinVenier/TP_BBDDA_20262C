@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 03/11/2026
- Archivo: 34_SedesAdicionales.sql
+ Archivo: 33_SedesAdicionales.sql
  Objetivo: Cargar 8 sedes propias del juego de datos, además de las 16 que
            importa el 31, para el criterio de aceptación "al menos 8 sedes,
            con huso horario distinto entre al menos tres de ellas (además de
@@ -18,8 +18,9 @@
            husos distintos: Argentina (UTC-3), Brasil (UTC-3, otro huso),
            Chile (UTC-4 en junio y julio), Bolivia (UTC-4) y Colombia y Perú
            (UTC-5). Cada sede se registra con sus 4 espacios publicitarios.
-           No es obligatorio ejecutarlo: el torneo real no juega en estas
-           sedes y nada de lo demás depende de ellas.
+           Hay que ejecutarlo para cumplir ese criterio, aunque el torneo
+           real no juega en estas sedes y ningún otro script depende de
+           ellas.
            Requiere haber ejecutado 00 a 20 (usa los países de
            20_DatosIniciales.sql y el SP de 16_SP_Importacion.sql). Se puede
            ejecutar más de una vez: las sedes ya cargadas quedan SIN CAMBIOS.
@@ -46,7 +47,7 @@ GO
 IF OBJECT_ID(N'Torneo.usp_ImportarSedes', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE codigo_fifa = 'BOL')
 BEGIN
-    PRINT N'34_SedesAdicionales.sql: la base tiene que tener los SP de importación (16) y los datos '
+    PRINT N'33_SedesAdicionales.sql: la base tiene que tener los SP de importación (16) y los datos '
         + N'iniciales (20). Ejecutá los scripts 00 a 20 y volvé a ejecutar este.';
     SET NOEXEC ON;
 END;

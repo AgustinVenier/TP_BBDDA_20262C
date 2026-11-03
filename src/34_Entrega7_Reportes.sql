@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 03/11/2026
- Archivo: 33_Entrega7_Reportes.sql
+ Archivo: 34_Entrega7_Reportes.sql
  Objetivo: Entrega 7. Ejecutar de punta a punta los reportes de
            30_SP_Reportes.sql para verlos a mano, sin verificaciones ni datos
            de prueba (para eso está 80_Test_SP_Reportes.sql).

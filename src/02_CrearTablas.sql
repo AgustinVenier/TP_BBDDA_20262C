@@ -9,12 +9,13 @@
    Tavella, Tomás - TomasTavella
    Venier, Agustin - AgustinVenier
 
-  Fecha:        25/10/2026
-  Objetivo:     Crear todas las tablas del sistema con sus claves primarias,
-                claves foraneas, restricciones UNIQUE, CHECK y DEFAULT, y los
-                indices sobre claves foraneas.
-                Requiere haber ejecutado 00_CrearBaseDeDatos.sql y
-                01_CrearEsquemas.sql.
+ Fecha: 25/10/2026
+ Archivo: 02_CrearTablas.sql
+ Objetivo: Crear todas las tablas del sistema con sus claves primarias,
+           claves foraneas, restricciones UNIQUE, CHECK y DEFAULT, y los
+           indices sobre claves foraneas.
+           Requiere haber ejecutado 00_CrearBaseDeDatos.sql y
+           01_CrearEsquemas.sql.
 
 ================================================================================
 
@@ -32,7 +33,7 @@
                                 (ej. Torneo.usp_SEDE_Alta)
     SP de negocio               ESQUEMA.usp_<Verbo><Objeto> en PascalCase
                                 (ej. Torneo.usp_RegistrarSede,
-                                Torneo.usp_ImportarFixture)
+                                Torneo.usp_ImportarPartidosJSON)
                                 No se usa el prefijo sp_, que es el de los
                                 SP del sistema.
     Funcion                     ESQUEMA.fn_<Nombre> (ej. fn_EquipoEnCancha)

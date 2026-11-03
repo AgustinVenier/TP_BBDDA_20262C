@@ -1,12 +1,22 @@
 """
-Universidad Nacional de La Matanza - 3641 Bases de Datos Aplicada
-Comision 01, Grupo 2
+================================================================================
+ Universidad Nacional de La Matanza
+ Materia: 3641 - Bases de Datos Aplicada
+ Comisión: 01    Grupo: 2
+ Integrantes:
+   Caruso Dellisanti, Carolina Belen - CarolinaCaruso
+   D'Ambrosio, Rodrigo - rodrigoDambrosio
+   Tavella, Tomás - TomasTavella
+   Venier, Agustin - AgustinVenier
 
-ABM de paises (DatosGenerales.PAIS) como aplicacion de escritorio.
-
-Todas las operaciones pasan por los stored procedures del proyecto
-(usp_PAIS_Alta, usp_PAIS_Modificacion, usp_PAIS_Baja): las validaciones viven
-en la base y la aplicacion solo muestra lo que ellas informan.
+ Fecha: 03/11/2026
+ Archivo: abm_paises.py
+ Objetivo: ABM de paises (DatosGenerales.PAIS) como aplicacion de escritorio.
+           Todas las operaciones pasan por los stored procedures del proyecto
+           (usp_PAIS_Alta, usp_PAIS_Modificacion, usp_PAIS_Baja): las
+           validaciones viven en la base y la aplicacion solo muestra lo que
+           ellas informan.
+================================================================================
 
 Configuracion de la conexion (variables de entorno opcionales):
     MUNDIAL_SERVER    por defecto localhost\\SQLEXPRESS

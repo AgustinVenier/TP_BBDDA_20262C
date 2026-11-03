@@ -238,17 +238,23 @@
           <AssociatedConnUserName />
           <FullPath>32_DatosComplementarios.sql</FullPath>
         </FileNode>
-        <FileNode Name="33_Entrega7_Reportes.sql">
+        <FileNode Name="33_SedesAdicionales.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>33_Entrega7_Reportes.sql</FullPath>
+          <FullPath>33_SedesAdicionales.sql</FullPath>
         </FileNode>
-        <FileNode Name="34_SedesAdicionales.sql">
+        <FileNode Name="34_Entrega7_Reportes.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>34_SedesAdicionales.sql</FullPath>
+          <FullPath>34_Entrega7_Reportes.sql</FullPath>
+        </FileNode>
+        <FileNode Name="35_Entrega9_ConsultasToBe.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>35_Entrega9_ConsultasToBe.sql</FullPath>
         </FileNode>
         <FileNode Name="53_Test_FuncionesYVistas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>

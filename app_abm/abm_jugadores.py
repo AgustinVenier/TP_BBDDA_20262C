@@ -1,15 +1,24 @@
 """
-Universidad Nacional de La Matanza - 3641 Bases de Datos Aplicada
-Comision 01, Grupo 2
+================================================================================
+ Universidad Nacional de La Matanza
+ Materia: 3641 - Bases de Datos Aplicada
+ Comisión: 01    Grupo: 2
+ Integrantes:
+   Caruso Dellisanti, Carolina Belen - CarolinaCaruso
+   D'Ambrosio, Rodrigo - rodrigoDambrosio
+   Tavella, Tomás - TomasTavella
+   Venier, Agustin - AgustinVenier
 
-Plantillas del Mundial: alta de jugadores y reemplazos de ultima hora.
-
-Se elige una seleccion, se ve su plantilla por posicion y se agrega un
-jugador (Torneo.usp_JUGADOR_Alta). Al hacer clic en un jugador de la
-plantilla, el formulario pasa a modo reemplazo y usa
-Torneo.usp_ReemplazarJugador (baja con motivo + alta del reemplazante en una
-sola transaccion). Las validaciones las hacen los SP; la aplicacion solo
-muestra lo que informan.
+ Fecha: 03/11/2026
+ Archivo: abm_jugadores.py
+ Objetivo: Plantillas del Mundial: alta de jugadores y reemplazos de ultima
+           hora. Se elige una seleccion, se ve su plantilla por posicion y se
+           agrega un jugador (Torneo.usp_JUGADOR_Alta). Al hacer clic en un
+           jugador de la plantilla, el formulario pasa a modo reemplazo y usa
+           Torneo.usp_ReemplazarJugador (baja con motivo + alta del
+           reemplazante en una sola transaccion). Las validaciones las hacen
+           los SP; la aplicacion solo muestra lo que informan.
+================================================================================
 
 Usa la misma conexion que abm_paises.py (variables MUNDIAL_SERVER,
 MUNDIAL_DATABASE y MUNDIAL_DRIVER).
