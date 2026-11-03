@@ -9,12 +9,13 @@
    Tavella, Tomás - TomasTavella
    Venier, Agustin - AgustinVenier
 
-  Fecha:        25/10/2026
-  Objetivo:     Crear todas las tablas del sistema con sus claves primarias,
-                claves foraneas, restricciones UNIQUE, CHECK y DEFAULT, y los
-                indices sobre claves foraneas.
-                Requiere haber ejecutado 00_CrearBaseDeDatos.sql y
-                01_CrearEsquemas.sql.
+ Fecha: 25/10/2026
+ Archivo: 02_CrearTablas.sql
+ Objetivo: Crear todas las tablas del sistema con sus claves primarias,
+           claves foraneas, restricciones UNIQUE, CHECK y DEFAULT, y los
+           indices sobre claves foraneas.
+           Requiere haber ejecutado 00_CrearBaseDeDatos.sql y
+           01_CrearEsquemas.sql.
 
 ================================================================================
 
@@ -32,7 +33,7 @@
                                 (ej. Torneo.usp_SEDE_Alta)
     SP de negocio               ESQUEMA.usp_<Verbo><Objeto> en PascalCase
                                 (ej. Torneo.usp_RegistrarSede,
-                                Torneo.usp_ImportarFixture)
+                                Torneo.usp_ImportarPartidosJSON)
                                 No se usa el prefijo sp_, que es el de los
                                 SP del sistema.
     Funcion                     ESQUEMA.fn_<Nombre> (ej. fn_EquipoEnCancha)
@@ -80,6 +81,19 @@ GO
    BORRADO EN ORDEN INVERSO DE DEPENDENCIAS
    ============================================================================ */
 
+DROP TABLE IF EXISTS Publicidad.ERRORES_CAMPANIA;
+DROP TABLE IF EXISTS Arbitraje.ERRORES_DESIGNACION;
+DROP TABLE IF EXISTS DesarrolloPartido.ERRORES_EVENTO;
+DROP TABLE IF EXISTS Torneo.ERRORES_PARTIDO;
+DROP TABLE IF EXISTS Torneo.ERRORES_CUERPO_TECNICO;
+DROP TABLE IF EXISTS Torneo.ERRORES_JUGADOR;
+DROP TABLE IF EXISTS Torneo.ERRORES_SELECCION;
+DROP TABLE IF EXISTS Torneo.ERRORES_SEDE;
+DROP TABLE IF EXISTS DatosGenerales.ERRORES_FERIADO;
+DROP TABLE IF EXISTS DatosGenerales.ERRORES_COTIZACION;
+DROP TABLE IF EXISTS DatosGenerales.ERRORES_INDICADOR_ECONOMICO;
+DROP TABLE IF EXISTS DatosGenerales.IMPORTACION;
+
 DROP TABLE IF EXISTS Publicidad.EXHIBICION;
 DROP TABLE IF EXISTS Publicidad.PIEZA_PAIS_INTERES;
 DROP TABLE IF EXISTS Publicidad.PIEZA_PUBLICITARIA;
@@ -100,12 +114,15 @@ DROP TABLE IF EXISTS DesarrolloPartido.FORMACION;
 
 DROP TABLE IF EXISTS Torneo.PARTIDO;
 DROP TABLE IF EXISTS Torneo.PERSONA_CUERPO_TECNICO;
+DROP TABLE IF EXISTS Torneo.NOMBRE_ALTERNATIVO;
 DROP TABLE IF EXISTS Torneo.JUGADOR;
 DROP TABLE IF EXISTS Torneo.LISTA_CONVOCADOS;
 DROP TABLE IF EXISTS Torneo.SELECCION;
 DROP TABLE IF EXISTS Torneo.SEDE;
 
 DROP TABLE IF EXISTS DatosGenerales.PARAMETRO_REGLAMENTO;
+DROP TABLE IF EXISTS DatosGenerales.FERIADO;
+DROP TABLE IF EXISTS DatosGenerales.COTIZACION;
 DROP TABLE IF EXISTS DatosGenerales.INDICADOR_ECONOMICO;
 DROP TABLE IF EXISTS DatosGenerales.IDIOMA;
 DROP TABLE IF EXISTS DatosGenerales.PAIS;
@@ -183,6 +200,58 @@ CREATE TABLE DatosGenerales.INDICADOR_ECONOMICO (
     CONSTRAINT UQ_INDICADOR_ECONOMICO_pais_codigo_anio
         UNIQUE (id_pais, codigo_indicador, anio),
     CONSTRAINT CK_INDICADOR_ECONOMICO_anio CHECK (anio BETWEEN 1960 AND 2100)
+);
+GO
+
+
+/*
+  COTIZACION
+  Un registro por moneda y fecha: cuantas unidades de la moneda vale un dolar.
+  Las tarifas de los espacios publicitarios estan en dolares, asi que con la
+  cotizacion se convierte la pauta a la moneda de cada mercado (y la
+  exhibicion facturada en otra moneda, a dolares). El UNIQUE es la clave
+  natural que usa el upsert de la importacion desde la API Frankfurter. Los
+  dias sin cotizacion (fines de semana y feriados bancarios) no tienen
+  registro: vale la ultima cotizacion anterior (fn_CotizacionVigente).
+  unidades_por_usd es DECIMAL(19,6): hay monedas que pasan el millon por
+  dolar (IRR) y otras que valen mas que el dolar (GBP, 0,74).
+*/
+CREATE TABLE DatosGenerales.COTIZACION (
+    id_cotizacion       INT IDENTITY(1,1) NOT NULL,
+    codigo_moneda       CHAR(3)           NOT NULL,
+    fecha               DATE              NOT NULL,
+    unidades_por_usd    DECIMAL(19,6)     NOT NULL,
+    fecha_actualizacion DATETIME2(0)      NOT NULL
+        CONSTRAINT DF_COTIZACION_fecha_actualizacion DEFAULT (SYSDATETIME()),
+
+    CONSTRAINT PK_COTIZACION PRIMARY KEY (id_cotizacion),
+    CONSTRAINT UQ_COTIZACION_moneda_fecha UNIQUE (codigo_moneda, fecha),
+    CONSTRAINT CK_COTIZACION_codigo_moneda CHECK (codigo_moneda LIKE '[A-Z][A-Z][A-Z]'),
+    CONSTRAINT CK_COTIZACION_unidades_por_usd CHECK (unidades_por_usd > 0)
+);
+GO
+
+
+/*
+  FERIADO
+  Feriados nacionales de cada pais, para saber si un partido cae en dia
+  feriado en un mercado de la publicidad. Un registro por pais y fecha (el
+  UNIQUE es la clave natural del upsert de la importacion desde la API
+  Nager.Date): si un pais tiene dos feriados el mismo dia, el nombre los
+  junta. Nombre NVARCHAR porque es el nombre en el idioma del pais.
+*/
+CREATE TABLE DatosGenerales.FERIADO (
+    id_feriado          INT IDENTITY(1,1) NOT NULL,
+    id_pais             SMALLINT          NOT NULL,
+    fecha               DATE              NOT NULL,
+    nombre              NVARCHAR(200)     NOT NULL,
+    fecha_actualizacion DATETIME2(0)      NOT NULL
+        CONSTRAINT DF_FERIADO_fecha_actualizacion DEFAULT (SYSDATETIME()),
+
+    CONSTRAINT PK_FERIADO PRIMARY KEY (id_feriado),
+    CONSTRAINT FK_FERIADO_PAIS
+        FOREIGN KEY (id_pais) REFERENCES DatosGenerales.PAIS (id_pais),
+    CONSTRAINT UQ_FERIADO_pais_fecha UNIQUE (id_pais, fecha)
 );
 GO
 
@@ -335,6 +404,42 @@ GO
 CREATE UNIQUE NONCLUSTERED INDEX UX_JUGADOR_lista_dorsal_activo
     ON Torneo.JUGADOR (id_lista, dorsal)
     WHERE fecha_baja IS NULL;
+GO
+
+
+/*
+  NOMBRE_ALTERNATIVO
+  Otras formas en que las fuentes externas escriben el nombre de una
+  seleccion (en ingles, por ejemplo) o de uno de sus jugadores (otra
+  transliteracion, el apodo). La importacion las usa cuando el nombre del
+  archivo no coincide con el registrado.
+  Relacion N:1 con SELECCION y, si es el nombre de un jugador, N:1 con JUGADOR
+  (id_jugador NULL: es un nombre de la seleccion). Que el jugador sea de esa
+  seleccion se valida en el SP de alta.
+  El nombre de una seleccion no se repite entre selecciones; el de un jugador
+  no se repite dentro de su seleccion.
+*/
+CREATE TABLE Torneo.NOMBRE_ALTERNATIVO (
+    id_nombre_alternativo  INT IDENTITY(1,1) NOT NULL,
+    id_seleccion           INT               NOT NULL,
+    id_jugador             INT               NULL,
+    nombre                 NVARCHAR(120)     NOT NULL,
+
+    CONSTRAINT PK_NOMBRE_ALTERNATIVO PRIMARY KEY (id_nombre_alternativo),
+    CONSTRAINT FK_NOMBRE_ALTERNATIVO_SELECCION
+        FOREIGN KEY (id_seleccion) REFERENCES Torneo.SELECCION (id_seleccion),
+    CONSTRAINT FK_NOMBRE_ALTERNATIVO_JUGADOR
+        FOREIGN KEY (id_jugador) REFERENCES Torneo.JUGADOR (id_jugador)
+);
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX UX_NOMBRE_ALTERNATIVO_seleccion
+    ON Torneo.NOMBRE_ALTERNATIVO (nombre)
+    WHERE id_jugador IS NULL;
+
+CREATE UNIQUE NONCLUSTERED INDEX UX_NOMBRE_ALTERNATIVO_jugador
+    ON Torneo.NOMBRE_ALTERNATIVO (id_seleccion, nombre)
+    WHERE id_jugador IS NOT NULL;
 GO
 
 
@@ -688,12 +793,15 @@ GO
   DESIGNACION_ARBITRAL
   Resuelve la relacion N:N "dirige" entre PARTIDO y ARBITRO.
   Un arbitro cumple un solo rol por partido y cada rol lo cubre un solo arbitro.
+  Los cinco que pide la consigna (principal, asistentes, cuarto y VAR) mas los
+  tres que publica la FIFA en el Mundial 2026: el asistente de reserva, el
+  asistente del VAR (AVAR) y el VAR de apoyo.
   El conflicto de nacionalidad se valida en el SP de designacion.
 */
 CREATE TABLE Arbitraje.DESIGNACION_ARBITRAL (
     id_partido          INT             NOT NULL,
     id_arbitro          INT             NOT NULL,
-    rol                 VARCHAR(12)     NOT NULL,
+    rol                 VARCHAR(17)     NOT NULL,
     informe_postpartido VARCHAR(MAX)    NULL,
     sancion             VARCHAR(500)    NULL,
     fecha_designacion   DATETIME2(0)    NOT NULL
@@ -706,7 +814,8 @@ CREATE TABLE Arbitraje.DESIGNACION_ARBITRAL (
         FOREIGN KEY (id_arbitro) REFERENCES Arbitraje.ARBITRO (id_arbitro),
     CONSTRAINT UQ_DESIGNACION_ARBITRAL_partido_rol UNIQUE (id_partido, rol),
     CONSTRAINT CK_DESIGNACION_ARBITRAL_rol CHECK (rol IN (
-        'PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR'))
+        'PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR',
+        'ASISTENTE_RESERVA', 'AVAR', 'VAR_APOYO'))
 );
 GO
 
@@ -848,6 +957,275 @@ GO
 
 
 /* ============================================================================
+   REGISTRO DE LAS IMPORTACIONES
+   No figuran en el DER: son el registro tecnico de los procesos de
+   importacion de la Entrega 6 (23 a 28), como PARAMETRO_REGLAMENTO es
+   configuracion. Cada corrida de un proceso queda en IMPORTACION, y los
+   registros que rechazo, en la tabla ERRORES_ de lo que importo (en el
+   esquema de esa tabla), tal como venian en el origen y con todos los
+   motivos. Se escriben y se borran con los SP de 16_SP_Importacion.sql.
+   ============================================================================ */
+
+/*
+  IMPORTACION
+  Una fila por cada vez que un proceso importa un archivo o una respuesta de
+  una API: el SP que importo (o el script, en una carga a mano como la de
+  29), el origen (ruta del archivo o URL), cuando y el resumen. Los totales cuentan los registros del origen (en
+  usp_ImportarPartidosJSON, los partidos y lo que paso en cada uno; en un
+  reproceso, solo los partidos que se reprocesan; en
+  usp_ImportarDesignacionesCSV, las designaciones, sin los arbitros), salvo
+  insertados, actualizados y sin cambios de los feriados, que cuentan
+  feriados por pais y dia. Una importacion que falla entera (archivo que no
+  se puede leer o con otro formato) no se registra: el proceso informa el
+  error y no carga nada.
+*/
+CREATE TABLE DatosGenerales.IMPORTACION (
+    id_importacion  INT IDENTITY(1,1) NOT NULL,
+    proceso         VARCHAR(100)      NOT NULL,
+    origen          NVARCHAR(2000)    NOT NULL,
+    fecha_hora      DATETIME2(0)      NOT NULL
+        CONSTRAINT DF_IMPORTACION_fecha_hora DEFAULT (SYSDATETIME()),
+    leidos          INT               NOT NULL,
+    insertados      INT               NOT NULL,
+    actualizados    INT               NOT NULL,
+    sin_cambios     INT               NOT NULL,
+    omitidos        INT               NOT NULL,
+    rechazados      INT               NOT NULL,
+
+    CONSTRAINT PK_IMPORTACION PRIMARY KEY (id_importacion),
+    CONSTRAINT CK_IMPORTACION_totales CHECK (
+        leidos >= 0 AND insertados >= 0 AND actualizados >= 0 AND sin_cambios >= 0
+        AND omitidos >= 0 AND rechazados >= 0 AND omitidos + rechazados <= leidos
+    )
+);
+GO
+
+
+/*
+  ERRORES_INDICADOR_ECONOMICO, ERRORES_COTIZACION y ERRORES_FERIADO
+  Registros rechazados de la API del Banco Mundial, de Frankfurter y de
+  Nager.Date. registro es su posicion en el origen (desde 1); los demas
+  datos, el texto que traia.
+*/
+CREATE TABLE DatosGenerales.ERRORES_INDICADOR_ECONOMICO (
+    id_importacion    INT            NOT NULL,
+    registro          INT            NOT NULL,
+    codigo_indicador  NVARCHAR(100)  NULL,
+    pais              NVARCHAR(200)  NULL,
+    codigo_iso3       NVARCHAR(50)   NULL,
+    anio              NVARCHAR(50)   NULL,
+    valor             NVARCHAR(100)  NULL,
+    motivos           NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_INDICADOR_ECONOMICO PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_INDICADOR_ECONOMICO_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+CREATE TABLE DatosGenerales.ERRORES_COTIZACION (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    fecha           NVARCHAR(50)   NULL,
+    moneda_base     NVARCHAR(50)   NULL,
+    codigo_moneda   NVARCHAR(50)   NULL,
+    valor           NVARCHAR(100)  NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_COTIZACION PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_COTIZACION_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+CREATE TABLE DatosGenerales.ERRORES_FERIADO (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    codigo_iso2     NVARCHAR(50)   NULL,
+    fecha           NVARCHAR(50)   NULL,
+    nombre_local    NVARCHAR(400)  NULL,
+    nombre_ingles   NVARCHAR(400)  NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_FERIADO PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_FERIADO_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+
+/*
+  ERRORES_SEDE, ERRORES_SELECCION, ERRORES_JUGADOR, ERRORES_CUERPO_TECNICO y
+  ERRORES_PARTIDO
+  Registros rechazados de los archivos del torneo: estadios, selecciones y
+  partidos de openfootball, y jugadores y directores técnicos de los CSV del
+  scraping. registro es su
+  posicion en el archivo (en los jugadores, la linea); los demas datos, el
+  texto que traia. resultado junta el marcador de los 90 minutos (ft), del
+  alargue (et) y de los penales (p).
+*/
+CREATE TABLE Torneo.ERRORES_SEDE (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    nombre_estadio  NVARCHAR(400)  NULL,
+    ciudad          NVARCHAR(400)  NULL,
+    pais            NVARCHAR(50)   NULL,
+    huso_horario    NVARCHAR(50)   NULL,
+    capacidad       NVARCHAR(50)   NULL,
+    coordenadas     NVARCHAR(100)  NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_SEDE PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_SEDE_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+CREATE TABLE Torneo.ERRORES_SELECCION (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    nombre          NVARCHAR(400)  NULL,
+    codigo_fifa     NVARCHAR(50)   NULL,
+    grupo           NVARCHAR(50)   NULL,
+    confederacion   NVARCHAR(50)   NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_SELECCION PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_SELECCION_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+CREATE TABLE Torneo.ERRORES_JUGADOR (
+    id_importacion    INT            NOT NULL,
+    registro          INT            NOT NULL,
+    codigo_fifa       NVARCHAR(50)   NULL,
+    dorsal            NVARCHAR(50)   NULL,
+    posicion          NVARCHAR(50)   NULL,
+    nombre            NVARCHAR(400)  NULL,
+    apellido          NVARCHAR(400)  NULL,
+    fecha_nacimiento  NVARCHAR(50)   NULL,
+    club              NVARCHAR(400)  NULL,
+    motivos           NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_JUGADOR PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_JUGADOR_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+CREATE TABLE Torneo.ERRORES_CUERPO_TECNICO (
+    id_importacion          INT            NOT NULL,
+    registro                INT            NOT NULL,
+    codigo_fifa             NVARCHAR(50)   NULL,
+    rol                     NVARCHAR(50)   NULL,
+    nombre                  NVARCHAR(400)  NULL,
+    apellido                NVARCHAR(400)  NULL,
+    codigo_pais_nacimiento  NVARCHAR(50)   NULL,
+    motivos                 NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_CUERPO_TECNICO PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_CUERPO_TECNICO_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+CREATE TABLE Torneo.ERRORES_PARTIDO (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    ronda           NVARCHAR(100)  NULL,
+    fecha           NVARCHAR(50)   NULL,
+    hora            NVARCHAR(50)   NULL,
+    equipo_1        NVARCHAR(200)  NULL,
+    equipo_2        NVARCHAR(200)  NULL,
+    estadio         NVARCHAR(400)  NULL,
+    asistencia      NVARCHAR(50)   NULL,
+    resultado       NVARCHAR(100)  NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_PARTIDO PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_PARTIDO_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+
+/*
+  ERRORES_EVENTO
+  Lo que paso en un partido y se rechazo: jugadores de las formaciones,
+  cambios, goles, penales de la definicion y tarjetas. registro numera los
+  eventos de la importacion; registro_partido es la posicion del partido en
+  el archivo. jugador es el que forma, sale, convierte o recibe la tarjeta;
+  jugador_entra, el que entra en un cambio.
+*/
+CREATE TABLE DesarrolloPartido.ERRORES_EVENTO (
+    id_importacion    INT            NOT NULL,
+    registro          INT            NOT NULL,
+    registro_partido  INT            NOT NULL,
+    numero_partido    TINYINT        NULL,
+    tipo              VARCHAR(12)    NOT NULL,
+    codigo_fifa       VARCHAR(10)    NULL,
+    jugador           NVARCHAR(200)  NULL,
+    jugador_entra     NVARCHAR(200)  NULL,
+    minuto            NVARCHAR(20)   NULL,
+    tarjeta           NVARCHAR(20)   NULL,
+    motivos           NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_EVENTO PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_EVENTO_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion),
+    CONSTRAINT CK_ERRORES_EVENTO_tipo CHECK (tipo IN ('FORMACION', 'CAMBIO', 'GOL', 'PENAL', 'TARJETA'))
+);
+GO
+
+
+/*
+  ERRORES_DESIGNACION
+  Designaciones arbitrales rechazadas del CSV del scraping: registro es la
+  linea del archivo; los demas datos, el texto que traia (el partido por su
+  fecha y sus dos selecciones, y el arbitro por su nombre y su pais).
+*/
+CREATE TABLE Arbitraje.ERRORES_DESIGNACION (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    fecha           NVARCHAR(50)   NULL,
+    local           NVARCHAR(50)   NULL,
+    visitante       NVARCHAR(50)   NULL,
+    rol             NVARCHAR(100)  NULL,
+    nombre          NVARCHAR(400)  NULL,
+    apellido        NVARCHAR(400)  NULL,
+    pais            NVARCHAR(50)   NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_DESIGNACION PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_DESIGNACION_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+
+/*
+  ERRORES_CAMPANIA
+  Campañas rechazadas del Dossier Mundial: registro es la posicion de la
+  campaña en la respuesta de la API; documento, su id en Firestore; los demas
+  datos, el texto que traia.
+*/
+CREATE TABLE Publicidad.ERRORES_CAMPANIA (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    documento       NVARCHAR(200)  NULL,
+    anunciante      NVARCHAR(400)  NULL,
+    titulo          NVARCHAR(400)  NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_CAMPANIA PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_CAMPANIA_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+
+/* ============================================================================
    INDICES
    Regla: un indice por cada clave foranea que no sea la primera columna de
    la PK o de un UNIQUE (esas ya tienen el suyo). SQL Server no los crea
@@ -860,6 +1238,8 @@ GO
    ============================================================================ */
 CREATE INDEX IX_SEDE_id_pais                        ON Torneo.SEDE (id_pais);
 CREATE INDEX IX_JUGADOR_id_pais_nacimiento          ON Torneo.JUGADOR (id_pais_nacimiento);
+CREATE INDEX IX_NOMBRE_ALTERNATIVO_id_seleccion     ON Torneo.NOMBRE_ALTERNATIVO (id_seleccion);
+CREATE INDEX IX_NOMBRE_ALTERNATIVO_id_jugador       ON Torneo.NOMBRE_ALTERNATIVO (id_jugador);
 CREATE INDEX IX_PERSONA_CUERPO_TECNICO_id_seleccion ON Torneo.PERSONA_CUERPO_TECNICO (id_seleccion);
 CREATE INDEX IX_PERSONA_CUERPO_TECNICO_id_pais_nacimiento
     ON Torneo.PERSONA_CUERPO_TECNICO (id_pais_nacimiento);

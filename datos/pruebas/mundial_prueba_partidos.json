@@ -1,0 +1,417 @@
+{
+ "name": "Prueba",
+ "matches": [
+  {
+   "round": "Round of 16",
+   "date": "2026-08-01",
+   "time": "16:00 UTC-4",
+   "team1": "Testland A",
+   "team2": "Testland B",
+   "score": {
+    "ft": [
+     2,
+     2
+    ],
+    "et": [
+     3,
+     2
+    ],
+    "ht": [
+     1,
+     0
+    ]
+   },
+   "goals1": [
+    {
+     "name": "Juergen RUEDIGER",
+     "minute": "9"
+    },
+    {
+     "name": "Mostafa ZICO",
+     "minute": "45+2",
+     "penalty": true
+    },
+    {
+     "name": "Maxi ARAUJO",
+     "minute": "105"
+    }
+   ],
+   "goals2": [
+    {
+     "name": "Yago VISITANTE",
+     "minute": "60"
+    },
+    {
+     "name": "Bruno PRUEBA",
+     "minute": "88",
+     "owngoal": true
+    }
+   ],
+   "ground": "Estadio Prueba Importacion, Ciudad Prueba Importacion",
+   "attendance": 35000,
+   "lineup": [
+    {
+     "starter": [
+      {
+       "name": "Arturo PRUEBA"
+      },
+      {
+       "name": "Bruno PRUEBA"
+      },
+      {
+       "name": "Carlos PRUEBA"
+      },
+      {
+       "name": "Dario PRUEBA"
+      },
+      {
+       "name": "Esteban PRUEBA"
+      },
+      {
+       "name": "MOUSA ALTAMARI"
+      },
+      {
+       "name": "CASEMIRO"
+      },
+      {
+       "name": "Maxi ARAUJO"
+      },
+      {
+       "name": "Juergen RUEDIGER"
+      },
+      {
+       "name": "Mostafa ZICO"
+      },
+      {
+       "name": "Kevin PRUEBA"
+      }
+     ],
+     "bench": [
+      {
+       "name": "Fabian PRUEBA"
+      },
+      {
+       "name": "DANILO"
+      },
+      {
+       "name": "Diego GOMEZ"
+      },
+      {
+       "name": "Lucas PRUEBA"
+      }
+     ],
+     "subs": [
+      {
+       "on": "Lucas PRUEBA",
+       "off": "Kevin PRUEBA",
+       "minute": "46"
+      },
+      {
+       "on": "DANILO",
+       "off": "Esteban PRUEBA",
+       "minute": "70"
+      },
+      {
+       "on": "Fabian PRUEBA",
+       "off": "Arturo PRUEBA",
+       "minute": "121"
+      }
+     ]
+    },
+    {
+     "starter": [
+      {
+       "name": "Pablo VISITANTE"
+      },
+      {
+       "name": "Ramiro VISITANTE"
+      },
+      {
+       "name": "Santiago VISITANTE"
+      },
+      {
+       "name": "Tomas VISITANTE"
+      },
+      {
+       "name": "Ulises VISITANTE"
+      },
+      {
+       "name": "Victor VISITANTE"
+      },
+      {
+       "name": "Walter VISITANTE"
+      },
+      {
+       "name": "Xavier VISITANTE"
+      },
+      {
+       "name": "Yago VISITANTE"
+      },
+      {
+       "name": "Zacarias VISITANTE"
+      },
+      {
+       "name": "Alan VISITANTE"
+      }
+     ],
+     "bench": [
+      {
+       "name": "Benjamin VISITANTE"
+      },
+      {
+       "name": "Damian VISITANTE"
+      },
+      {
+       "name": "Emilio VISITANTE"
+      }
+     ],
+     "subs": [
+      {
+       "on": "Damian VISITANTE",
+       "off": "Alan VISITANTE",
+       "minute": "75"
+      }
+     ]
+    }
+   ],
+   "bookings": [
+    [
+     {
+      "type": "Y",
+      "name": "Bruno PRUEBA",
+      "minute": "30"
+     },
+     {
+      "type": "Y/R",
+      "name": "Bruno PRUEBA",
+      "minute": "90+3"
+     },
+     {
+      "type": "Y",
+      "name": "Diego GOMEZ",
+      "minute": "50"
+     }
+    ],
+    [
+     {
+      "type": "R",
+      "name": "Walter VISITANTE",
+      "minute": "67"
+     }
+    ]
+   ]
+  },
+  {
+   "round": "Quarter-final",
+   "date": "2026-08-05",
+   "time": "20:00 UTC-4",
+   "team1": "Testland B",
+   "team2": "Testland A",
+   "score": {
+    "ft": [
+     1,
+     1
+    ],
+    "et": [
+     1,
+     1
+    ],
+    "p": [
+     4,
+     3
+    ],
+    "ht": [
+     1,
+     0
+    ]
+   },
+   "goals1": [
+    {
+     "name": "Ramiro VISITANTE",
+     "minute": "30"
+    }
+   ],
+   "goals2": [
+    {
+     "name": "CASEMIRO",
+     "minute": "75"
+    }
+   ],
+   "penalties": [
+    {
+     "name": "Yago VISITANTE",
+     "score": [
+      1,
+      0
+     ]
+    },
+    {
+     "name": "Juergen RUEDIGER",
+     "note": "missed"
+    },
+    {
+     "name": "Pablo VISITANTE",
+     "score": [
+      2,
+      0
+     ]
+    },
+    {
+     "name": "Mostafa ZICO",
+     "score": [
+      2,
+      1
+     ]
+    },
+    {
+     "name": "Alan VISITANTE",
+     "score": [
+      3,
+      1
+     ]
+    },
+    {
+     "name": "Maxi ARAUJO",
+     "score": [
+      3,
+      2
+     ]
+    },
+    {
+     "name": "Xavier VISITANTE",
+     "score": [
+      4,
+      2
+     ]
+    },
+    {
+     "name": "Kevin PRUEBA",
+     "score": [
+      4,
+      3
+     ]
+    }
+   ],
+   "ground": "Estadio Prueba Importacion, Ciudad Prueba Importacion",
+   "attendance": 38000,
+   "lineup": [
+    {
+     "starter": [
+      {
+       "name": "Pablo VISITANTE"
+      },
+      {
+       "name": "Ramiro VISITANTE"
+      },
+      {
+       "name": "Santiago VISITANTE"
+      },
+      {
+       "name": "Tomas VISITANTE"
+      },
+      {
+       "name": "Ulises VISITANTE"
+      },
+      {
+       "name": "Victor VISITANTE"
+      },
+      {
+       "name": "Walter VISITANTE"
+      },
+      {
+       "name": "Xavier VISITANTE"
+      },
+      {
+       "name": "Yago VISITANTE"
+      },
+      {
+       "name": "Zacarias VISITANTE"
+      },
+      {
+       "name": "Alan VISITANTE"
+      }
+     ],
+     "bench": [
+      {
+       "name": "Benjamin VISITANTE"
+      }
+     ],
+     "subs": []
+    },
+    {
+     "starter": [
+      {
+       "name": "Arturo PRUEBA"
+      },
+      {
+       "name": "Bruno PRUEBA"
+      },
+      {
+       "name": "Carlos PRUEBA"
+      },
+      {
+       "name": "Dario PRUEBA"
+      },
+      {
+       "name": "Esteban PRUEBA"
+      },
+      {
+       "name": "MOUSA ALTAMARI"
+      },
+      {
+       "name": "CASEMIRO"
+      },
+      {
+       "name": "Maxi ARAUJO"
+      },
+      {
+       "name": "Juergen RUEDIGER"
+      },
+      {
+       "name": "Mostafa ZICO"
+      },
+      {
+       "name": "Kevin PRUEBA"
+      }
+     ],
+     "bench": [
+      {
+       "name": "Fabian PRUEBA"
+      }
+     ],
+     "subs": []
+    }
+   ]
+  },
+  {
+   "round": "Round of 16",
+   "date": "2026-08-02",
+   "time": "tarde",
+   "team1": "Atlantis",
+   "team2": "Testland A",
+   "score": {
+    "ft": [
+     1,
+     0
+    ]
+   },
+   "ground": "Estadio Desconocido, Lugar Desconocido",
+   "attendance": 1000
+  },
+  {
+   "round": "Semi-final",
+   "date": "2026-08-09",
+   "time": "20:00 UTC-4",
+   "team1": "Testland A",
+   "team2": "Testland B",
+   "score": {
+    "ft": [
+     2,
+     0
+    ]
+   },
+   "ground": "Estadio Prueba Importacion, Ciudad Prueba Importacion",
+   "attendance": 50000
+  }
+ ]
+}

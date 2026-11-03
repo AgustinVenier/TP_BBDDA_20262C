@@ -13,7 +13,8 @@
  Archivo: 05_SP_ABM_Torneo.sql
  Objetivo: Crear los stored procedures de alta, baja y modificación de las
            tablas del esquema Torneo: SEDE, SELECCION, LISTA_CONVOCADOS,
-           JUGADOR, PERSONA_CUERPO_TECNICO y PARTIDO. Siguen las convenciones
+           JUGADOR, NOMBRE_ALTERNATIVO, PERSONA_CUERPO_TECNICO y PARTIDO.
+           Siguen las convenciones
            descriptas en 04_SP_ABM_DatosGenerales.sql. Requiere haber
            ejecutado 00 a 04. Su script de testing es 55_Test_SP_ABM_Torneo.sql.
 ================================================================================
@@ -439,6 +440,9 @@ BEGIN
                 UNION ALL
                 SELECT N'DesarrolloPartido.FORMACION', COUNT(*)
                 FROM DesarrolloPartido.FORMACION WHERE id_seleccion = @id_seleccion
+                UNION ALL
+                SELECT N'Torneo.NOMBRE_ALTERNATIVO', COUNT(*)
+                FROM Torneo.NOMBRE_ALTERNATIVO WHERE id_seleccion = @id_seleccion
             ) AS r (tabla, cantidad)
             WHERE r.cantidad > 0), N'');
 
@@ -920,6 +924,9 @@ BEGIN
                 UNION ALL
                 SELECT N'DesarrolloPartido.AMONESTACION', COUNT(*)
                 FROM DesarrolloPartido.AMONESTACION WHERE id_jugador = @id_jugador
+                UNION ALL
+                SELECT N'Torneo.NOMBRE_ALTERNATIVO', COUNT(*)
+                FROM Torneo.NOMBRE_ALTERNATIVO WHERE id_jugador = @id_jugador
             ) AS r (tabla, cantidad)
             WHERE r.cantidad > 0), N'');
 
@@ -936,6 +943,162 @@ BEGIN
         SET fecha_baja  = @fecha_baja,
             motivo_baja = @motivo_baja
         WHERE id_jugador = @id_jugador;
+END;
+GO
+
+
+/* ============================================================================
+   NOMBRE_ALTERNATIVO
+   ============================================================================ */
+
+/*
+  usp_NOMBRE_ALTERNATIVO_Alta
+  Registra otra forma de escribir el nombre de una selección (sin
+  @id_jugador) o de uno de sus jugadores, para la importación. Valida:
+  selección obligatoria y existente; jugador existente y de esa selección;
+  nombre obligatorio, de hasta 120 caracteres; que el nombre no lo tenga ya
+  otra selección (si es de la selección) u otro jugador de la misma
+  selección (si es de un jugador).
+*/
+CREATE OR ALTER PROCEDURE Torneo.usp_NOMBRE_ALTERNATIVO_Alta
+    @id_seleccion           INT,
+    @nombre                 NVARCHAR(200),
+    @id_jugador             INT = NULL,
+    @id_nombre_alternativo  INT = NULL OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores           NVARCHAR(2048) = N'';
+    DECLARE @nl                NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @seleccion_jugador INT;
+
+    SET @nombre = NULLIF(TRIM(@nombre), N'');
+
+    SELECT @seleccion_jugador = l.id_seleccion
+    FROM Torneo.JUGADOR AS j
+    INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
+    WHERE j.id_jugador = @id_jugador;
+
+    IF @id_seleccion IS NULL
+        SET @errores += @nl + N'- La selección es obligatoria.';
+    ELSE IF NOT EXISTS (SELECT 1 FROM Torneo.SELECCION WHERE id_seleccion = @id_seleccion)
+        SET @errores += @nl + N'- No existe una selección con id ' + CAST(@id_seleccion AS NVARCHAR(10)) + N'.';
+
+    IF @id_jugador IS NOT NULL AND @seleccion_jugador IS NULL
+        SET @errores += @nl + N'- No existe un jugador con id ' + CAST(@id_jugador AS NVARCHAR(10)) + N'.';
+    ELSE IF @seleccion_jugador <> @id_seleccion
+        SET @errores += @nl + N'- El jugador no es de esa selección.';
+
+    IF @nombre IS NULL
+        SET @errores += @nl + N'- El nombre es obligatorio.';
+    ELSE IF LEN(@nombre) > 120
+        SET @errores += @nl + N'- El nombre no puede superar los 120 caracteres.';
+    ELSE IF @id_jugador IS NULL
+            AND EXISTS (SELECT 1 FROM Torneo.NOMBRE_ALTERNATIVO WHERE id_jugador IS NULL AND nombre = @nombre)
+        SET @errores += @nl + N'- Ya hay una selección registrada con el nombre "' + @nombre + N'".';
+    ELSE IF @id_jugador IS NOT NULL
+            AND EXISTS (SELECT 1 FROM Torneo.NOMBRE_ALTERNATIVO
+                        WHERE id_jugador IS NOT NULL AND id_seleccion = @id_seleccion AND nombre = @nombre)
+        SET @errores += @nl + N'- Ya hay un jugador de la selección registrado con el nombre "' + @nombre + N'".';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'Torneo.usp_NOMBRE_ALTERNATIVO_Alta: no se pudo registrar el nombre alternativo.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    INSERT INTO Torneo.NOMBRE_ALTERNATIVO (id_seleccion, id_jugador, nombre)
+    VALUES (@id_seleccion, @id_jugador, @nombre);
+
+    SET @id_nombre_alternativo = SCOPE_IDENTITY();
+END;
+GO
+
+
+/*
+  usp_NOMBRE_ALTERNATIVO_Modificacion
+  Corrige el nombre. Valida: que el registro exista; nombre obligatorio, de
+  hasta 120 caracteres y no repetido, con las reglas del alta. La selección y
+  el jugador no se modifican: si están mal, se da de baja y se vuelve a dar
+  de alta.
+*/
+CREATE OR ALTER PROCEDURE Torneo.usp_NOMBRE_ALTERNATIVO_Modificacion
+    @id_nombre_alternativo  INT,
+    @nombre                 NVARCHAR(200)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores      NVARCHAR(2048) = N'';
+    DECLARE @nl           NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @existe       BIT            = 0;
+    DECLARE @id_seleccion INT;
+    DECLARE @id_jugador   INT;
+
+    SET @nombre = NULLIF(TRIM(@nombre), N'');
+
+    SELECT @existe = 1, @id_seleccion = id_seleccion, @id_jugador = id_jugador
+    FROM Torneo.NOMBRE_ALTERNATIVO
+    WHERE id_nombre_alternativo = @id_nombre_alternativo;
+
+    IF @id_nombre_alternativo IS NULL
+        SET @errores += @nl + N'- El id del nombre alternativo es obligatorio.';
+    ELSE IF @existe = 0
+        SET @errores += @nl + N'- No existe un nombre alternativo con id '
+                      + CAST(@id_nombre_alternativo AS NVARCHAR(10)) + N'.';
+
+    IF @nombre IS NULL
+        SET @errores += @nl + N'- El nombre es obligatorio.';
+    ELSE IF LEN(@nombre) > 120
+        SET @errores += @nl + N'- El nombre no puede superar los 120 caracteres.';
+    ELSE IF @existe = 1 AND EXISTS (
+            SELECT 1 FROM Torneo.NOMBRE_ALTERNATIVO
+            WHERE nombre = @nombre
+              AND id_nombre_alternativo <> @id_nombre_alternativo
+              AND ((@id_jugador IS NULL AND id_jugador IS NULL)
+                   OR (@id_jugador IS NOT NULL AND id_jugador IS NOT NULL AND id_seleccion = @id_seleccion)))
+        SET @errores += @nl + N'- El nombre "' + @nombre + N'" ya está registrado.';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'Torneo.usp_NOMBRE_ALTERNATIVO_Modificacion: no se pudo modificar el nombre alternativo.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    UPDATE Torneo.NOMBRE_ALTERNATIVO
+    SET nombre = @nombre
+    WHERE id_nombre_alternativo = @id_nombre_alternativo;
+END;
+GO
+
+
+/*
+  usp_NOMBRE_ALTERNATIVO_Baja
+  Valida: que el registro exista. Nada lo referencia.
+*/
+CREATE OR ALTER PROCEDURE Torneo.usp_NOMBRE_ALTERNATIVO_Baja
+    @id_nombre_alternativo INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores NVARCHAR(2048) = N'';
+    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+
+    IF @id_nombre_alternativo IS NULL
+        SET @errores += @nl + N'- El id del nombre alternativo es obligatorio.';
+    ELSE IF NOT EXISTS (SELECT 1 FROM Torneo.NOMBRE_ALTERNATIVO WHERE id_nombre_alternativo = @id_nombre_alternativo)
+        SET @errores += @nl + N'- No existe un nombre alternativo con id '
+                      + CAST(@id_nombre_alternativo AS NVARCHAR(10)) + N'.';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'Torneo.usp_NOMBRE_ALTERNATIVO_Baja: no se pudo dar de baja el nombre alternativo.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    DELETE FROM Torneo.NOMBRE_ALTERNATIVO WHERE id_nombre_alternativo = @id_nombre_alternativo;
 END;
 GO
 

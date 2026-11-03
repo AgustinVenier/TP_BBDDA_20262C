@@ -372,18 +372,20 @@ GO
 
 -- D4 necesita un partido jugado: se prueba después de D8, cuando el partido 215 termina.
 
-/* D5 (ERROR) Dos partidos a menos de 24 horas.
-   Esperado: error 50001 con 1 condición: el árbitro ya está designado en el
-   partido 215, a menos de 24 horas del 216. */
+/* D5 (OK) Uno de los roles opcionales, en un partido 18 horas después de otro
+   del mismo árbitro: no hay un descanso mínimo entre partidos (la consigna
+   no lo pide).
+   El árbitro de prueba, designado en el 215, se designa como AVAR del 216.
+   Para que los casos siguientes lo encuentren solo en el 215, después se da
+   de baja esa designación (el 216 sigue PROGRAMADO).
+   Esperado: 1 designación en el 216, con rol AVAR, y 0 después de la baja. */
 DECLARE @id_partido INT = (SELECT id_partido FROM Torneo.PARTIDO WHERE numero_partido = 216);
 DECLARE @id INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE apellido = N'Prueba Mensah');
-BEGIN TRY
-    EXEC Arbitraje.usp_DESIGNACION_ARBITRAL_Alta @id_partido = @id_partido, @id_arbitro = @id, @rol = 'VAR';
-    PRINT N'D5: FALLÓ, se esperaba un error de validación.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'D5';
-END CATCH;
+EXEC Arbitraje.usp_DESIGNACION_ARBITRAL_Alta @id_partido = @id_partido, @id_arbitro = @id, @rol = 'avar';
+SELECT 'D5 designado' AS caso, d.rol, a.apellido FROM Arbitraje.DESIGNACION_ARBITRAL AS d
+INNER JOIN Arbitraje.ARBITRO AS a ON a.id_arbitro = d.id_arbitro WHERE d.id_partido = @id_partido;
+EXEC Arbitraje.usp_DESIGNACION_ARBITRAL_Baja @id_partido = @id_partido, @id_arbitro = @id;
+SELECT 'D5 después' AS caso, COUNT(*) AS designaciones_en_216 FROM Arbitraje.DESIGNACION_ARBITRAL WHERE id_partido = @id_partido;
 GO
 
 /* AR6 (ERROR) Cambio de país que crea un conflicto de nacionalidad.
@@ -515,8 +517,7 @@ END CATCH;
 GO
 
 /* D10 (ERROR) Designación de un árbitro inactivo.
-   Esperado: error 50001 con 2 condiciones: el árbitro no está activo y ya
-   está designado en el partido 215, a menos de 24 horas del 216. */
+   Esperado: error 50001 con 1 condición: el árbitro no está activo. */
 DECLARE @id_partido INT = (SELECT id_partido FROM Torneo.PARTIDO WHERE numero_partido = 216);
 DECLARE @id INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE apellido = N'Prueba Mensah');
 BEGIN TRY

@@ -13,7 +13,8 @@
  Archivo: 15_SP_Negocio_Publicidad.sql
  Objetivo: Crear los SP de lógica de negocio para la publicidad:
              Publicidad.usp_RegistrarPiezaPublicitaria  pieza con sus mercados de interés
-             Publicidad.usp_AsignarPublicidadPartido     las 4 piezas de un partido
+             Publicidad.usp_AsignarPublicidadPartido     las 4 piezas de un partido, o de todos
+                                                         los que no tienen publicidad
            La simulación de prime time es Publicidad.fn_MercadosEnPrimeTime y
            el criterio de prioridad está documentado en
            Publicidad.fn_PrioridadPiezas (03_CrearFuncionesYVistas.sql).
@@ -124,16 +125,24 @@ GO
   un partido, según la prioridad de Publicidad.fn_PrioridadPiezas: la pieza
   de mayor prioridad va al espacio de mayor tarifa, y así sucesivamente. El
   costo de cada exhibición es la tarifa del espacio en ese momento.
-  Valida: partido existente y PROGRAMADO; que la sede tenga sus 4 espacios;
-  que haya al menos 4 piezas candidatas; que el partido no tenga ya
-  publicidad asignada, salvo que se pida reasignar (@reasignar = 1), en cuyo
-  caso se reemplaza en la misma transacción. Con eso cubre las reglas de
-  Publicidad.usp_EXHIBICION_Baja y usp_EXHIBICION_Alta (los espacios son de la
-  sede y fn_PrioridadPiezas solo devuelve piezas vigentes y sin repetir), así
-  que borra y carga las exhibiciones con un DELETE y un INSERT.
+  Sin @id_partido, la asigna de una vez en todos los partidos que todavía no
+  tienen publicidad: los que no cumplen las reglas quedan sin asignar y se
+  informan con sus motivos, y los demás se asignan igual.
+  Un partido que ya empezó o se jugó recibe su publicidad si no tiene
+  ninguna: es el registro histórico de lo que se exhibió, como en la carga
+  del torneo real, que trae los partidos ya jugados. La que ya tiene no se
+  cambia.
+  Valida: partido existente; que la sede tenga sus 4 espacios; que haya al
+  menos 4 piezas candidatas; que el partido no tenga ya publicidad asignada,
+  salvo que esté PROGRAMADO y se pida reasignar (@reasignar = 1), en cuyo
+  caso se reemplaza en la misma transacción. Las demás reglas de
+  Publicidad.usp_EXHIBICION_Baja y usp_EXHIBICION_Alta las cumple la
+  propuesta (los espacios son de la sede y fn_PrioridadPiezas solo devuelve
+  piezas vigentes y sin repetir), así que borra y carga las exhibiciones con
+  un DELETE y un INSERT.
 */
 CREATE OR ALTER PROCEDURE Publicidad.usp_AsignarPublicidadPartido
-    @id_partido  INT,
+    @id_partido  INT = NULL,
     @reasignar   BIT = 0,
     @mostrar     BIT = 1
 AS
@@ -141,64 +150,90 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    DECLARE @errores      NVARCHAR(2048) = N'';
-    DECLARE @nl           NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @tran_propia  BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
-    DECLARE @estado       VARCHAR(12);
-    DECLARE @id_sede      INT;
-    DECLARE @espacios     INT;
-    DECLARE @candidatas   INT;
-    DECLARE @asignadas    INT;
+    DECLARE @errores      NVARCHAR(2048);
+    DECLARE @nl           NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia  BIT      = IIF(@@TRANCOUNT = 0, 1, 0);
 
-    DECLARE @propuesta TABLE (orden INT PRIMARY KEY, id_espacio INT, id_pieza INT, costo DECIMAL(9,2));
+    -- El partido indicado, o todos los que no tienen publicidad, con lo que validan las reglas.
+    DECLARE @partidos TABLE (
+        id_partido  INT PRIMARY KEY,
+        id_sede     INT,
+        estado      VARCHAR(12),
+        espacios    INT,
+        candidatas  INT,
+        asignadas   INT,
+        errores     NVARCHAR(2048)
+    );
 
-    SELECT @estado = estado, @id_sede = id_sede FROM Torneo.PARTIDO WHERE id_partido = @id_partido;
-    SELECT @espacios = COUNT(*) FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id_sede;
-    SELECT @candidatas = COUNT(*) FROM Publicidad.fn_PrioridadPiezas(@id_partido);
-    SELECT @asignadas = COUNT(*) FROM Publicidad.EXHIBICION WHERE id_partido = @id_partido;
+    DECLARE @propuesta TABLE (
+        id_partido  INT,
+        orden       INT,
+        id_espacio  INT,
+        id_pieza    INT,
+        costo       DECIMAL(9,2),
+        PRIMARY KEY (id_partido, orden)
+    );
 
-    IF @id_partido IS NULL
-        SET @errores += @nl + N'- El partido es obligatorio.';
-    ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
-    ELSE
+    IF @id_partido IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Torneo.PARTIDO WHERE id_partido = @id_partido)
     BEGIN
-        IF @estado <> 'PROGRAMADO'
-            SET @errores += @nl + N'- La publicidad se asigna antes de que empiece el partido (estado actual: '
-                          + @estado + N').';
-        IF @espacios <> 4
-            SET @errores += @nl + N'- La sede tiene ' + CAST(@espacios AS NVARCHAR(3))
-                          + N' espacios publicitarios: tienen que ser 4.';
-        IF @candidatas < 4
-            SET @errores += @nl + N'- Hay ' + CAST(@candidatas AS NVARCHAR(3))
-                          + N' piezas candidatas (de campañas vigentes y con mercados de interés): hacen falta 4.';
-        IF @asignadas > 0 AND ISNULL(@reasignar, 0) = 0
-            SET @errores += @nl + N'- El partido ya tiene publicidad asignada: para reemplazarla, @reasignar = 1.';
+        SET @errores = N'Publicidad.usp_AsignarPublicidadPartido: no se pudo asignar la publicidad.'
+                     + @nl + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
+        THROW 50001, @errores, 1;
     END;
 
-    IF @errores <> N''
+    INSERT INTO @partidos (id_partido, id_sede, estado, espacios, candidatas, asignadas)
+    SELECT p.id_partido, p.id_sede, p.estado,
+           (SELECT COUNT(*) FROM Publicidad.ESPACIO_PUBLICITARIO AS e WHERE e.id_sede = p.id_sede),
+           (SELECT COUNT(*) FROM Publicidad.fn_PrioridadPiezas(p.id_partido)),
+           (SELECT COUNT(*) FROM Publicidad.EXHIBICION AS ex WHERE ex.id_partido = p.id_partido)
+    FROM Torneo.PARTIDO AS p
+    WHERE p.id_partido = @id_partido
+       OR (@id_partido IS NULL
+           AND NOT EXISTS (SELECT 1 FROM Publicidad.EXHIBICION AS ex WHERE ex.id_partido = p.id_partido));
+
+    UPDATE @partidos
+    SET errores = NULLIF(CONCAT(
+            IIF(asignadas > 0 AND estado <> 'PROGRAMADO',
+                @nl + N'- El partido ya empezó (estado actual: ' + estado
+                    + N') y tiene su publicidad: la que se exhibió no se cambia.', NULL),
+            IIF(espacios <> 4,
+                CONCAT(@nl, N'- La sede tiene ', espacios, N' espacios publicitarios: tienen que ser 4.'), NULL),
+            IIF(candidatas < 4,
+                CONCAT(@nl, N'- Hay ', candidatas,
+                       N' piezas candidatas (de campañas vigentes y con mercados de interés): hacen falta 4.'), NULL),
+            IIF(asignadas > 0 AND estado = 'PROGRAMADO' AND ISNULL(@reasignar, 0) = 0,
+                @nl + N'- El partido ya tiene publicidad asignada: para reemplazarla, @reasignar = 1.', NULL)), N'');
+
+    -- Un partido indicado que no cumple las reglas: no se asigna nada.
+    SELECT @errores = errores FROM @partidos WHERE @id_partido IS NOT NULL;
+    IF @errores IS NOT NULL
     BEGIN
         SET @errores = N'Publicidad.usp_AsignarPublicidadPartido: no se pudo asignar la publicidad.' + @errores;
         THROW 50001, @errores, 1;
     END;
 
-    -- Las 4 piezas de mayor prioridad, en los espacios de mayor a menor tarifa.
-    INSERT INTO @propuesta (orden, id_espacio, id_pieza, costo)
-    SELECT e.orden, e.id_espacio, pz.id_pieza, e.tarifa_usd
-    FROM (SELECT id_espacio, tarifa_usd, ROW_NUMBER() OVER (ORDER BY tarifa_usd DESC, numero_espacio) AS orden
-          FROM Publicidad.ESPACIO_PUBLICITARIO
-          WHERE id_sede = @id_sede) AS e
-    INNER JOIN Publicidad.fn_PrioridadPiezas(@id_partido) AS pz ON pz.prioridad = e.orden;
+    -- En cada partido, las 4 piezas de mayor prioridad, en los espacios de mayor a menor tarifa.
+    INSERT INTO @propuesta (id_partido, orden, id_espacio, id_pieza, costo)
+    SELECT pt.id_partido, e.orden, e.id_espacio, pz.id_pieza, e.tarifa_usd
+    FROM @partidos AS pt
+    CROSS APPLY (SELECT id_espacio, tarifa_usd, ROW_NUMBER() OVER (ORDER BY tarifa_usd DESC, numero_espacio) AS orden
+                 FROM Publicidad.ESPACIO_PUBLICITARIO
+                 WHERE id_sede = pt.id_sede) AS e
+    CROSS APPLY Publicidad.fn_PrioridadPiezas(pt.id_partido) AS pz
+    WHERE pt.errores IS NULL AND pz.prioridad = e.orden;
 
     BEGIN TRY
         IF @tran_propia = 1 BEGIN TRANSACTION;
 
         -- Reasignación: se quitan las exhibiciones anteriores.
-        DELETE FROM Publicidad.EXHIBICION WHERE id_partido = @id_partido;
+        DELETE ex
+        FROM Publicidad.EXHIBICION AS ex
+        INNER JOIN @partidos AS pt ON pt.id_partido = ex.id_partido
+        WHERE pt.errores IS NULL;
 
         -- El costo de cada exhibición es la tarifa del espacio en ese momento.
         INSERT INTO Publicidad.EXHIBICION (id_partido, id_espacio, id_pieza, costo, codigo_moneda)
-        SELECT @id_partido, id_espacio, id_pieza, costo, 'USD'
+        SELECT id_partido, id_espacio, id_pieza, costo, 'USD'
         FROM @propuesta;
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
@@ -208,7 +243,22 @@ BEGIN
         THROW;
     END CATCH;
 
-    IF @mostrar = 1
+    -- Todos los que no tenían: cuántos se asignaron y los que no, con sus motivos.
+    IF @mostrar = 1 AND @id_partido IS NULL
+    BEGIN
+        SELECT COUNT(*)                                   AS partidos_sin_publicidad,
+               ISNULL(SUM(IIF(errores IS NULL, 1, 0)), 0) AS asignados,
+               ISNULL(SUM(IIF(errores IS NULL, 0, 1)), 0) AS sin_asignar
+        FROM @partidos;
+
+        SELECT p.numero_partido, STUFF(pt.errores, 1, 2, N'') AS motivos
+        FROM @partidos AS pt
+        INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = pt.id_partido
+        WHERE pt.errores IS NOT NULL
+        ORDER BY p.numero_partido;
+    END;
+
+    IF @mostrar = 1 AND @id_partido IS NOT NULL
         SELECT ep.numero_espacio, ex.costo, ex.codigo_moneda, pr.prioridad, pr.anunciante, pr.campania,
                pr.titulo, pr.dirigida_a_seleccion, pr.franja_pbi, pr.mercados_en_prime_time, pr.pbi_per_capita_max
         FROM Publicidad.EXHIBICION AS ex

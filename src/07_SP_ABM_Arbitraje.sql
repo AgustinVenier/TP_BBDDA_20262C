@@ -27,7 +27,11 @@
      que no haya forma de designar a un árbitro del país de una de las
      selecciones. La designación completa (los cinco roles juntos) y la
      advertencia por posible cruce desde dieciseisavos están en
-     Arbitraje.usp_DesignarTernaArbitral (14_SP_Negocio_Arbitraje.sql).
+     Arbitraje.usp_DesignarTernaArbitral (14_SP_Negocio_Arbitraje.sql). Los
+     otros tres roles (ASISTENTE_RESERVA, AVAR y VAR_APOYO) son opcionales y
+     se designan acá. No hay un descanso mínimo entre partidos: la consigna
+     no lo pide, y el VAR trabaja desde una sala central y puede estar en
+     partidos de días seguidos.
 */
 
 USE MundialFutbol;
@@ -347,9 +351,10 @@ GO
 /*
   usp_DESIGNACION_ARBITRAL_Alta
   Valida: partido existente y PROGRAMADO; árbitro existente y activo; rol
-  válido y libre en el partido; que el árbitro no esté ya designado en el
-  partido; que su país no sea el de ninguna de las dos selecciones (conflicto
-  de nacionalidad); que no tenga otro partido a menos de 24 horas.
+  válido (PRINCIPAL, ASISTENTE_1, ASISTENTE_2, CUARTO, VAR, ASISTENTE_RESERVA,
+  AVAR o VAR_APOYO) y libre en el partido; que el árbitro no esté ya
+  designado en el partido; que su país no sea el de ninguna de las dos
+  selecciones (conflicto de nacionalidad).
 */
 CREATE OR ALTER PROCEDURE Arbitraje.usp_DESIGNACION_ARBITRAL_Alta
     @id_partido  INT,
@@ -362,18 +367,16 @@ BEGIN
     DECLARE @errores        NVARCHAR(2048) = N'';
     DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @estado         VARCHAR(12);
-    DECLARE @utc            DATETIME2(0);
     DECLARE @local          INT;
     DECLARE @visitante      INT;
     DECLARE @activo         BIT;
     DECLARE @id_pais        SMALLINT;
     DECLARE @arbitro        NVARCHAR(130);
     DECLARE @pais_conflicto VARCHAR(60);
-    DECLARE @otro_partido   TINYINT;
 
     SET @rol = UPPER(NULLIF(TRIM(@rol), ''));
 
-    SELECT @estado = estado, @utc = fecha_hora_utc, @local = id_seleccion_local, @visitante = id_seleccion_visitante
+    SELECT @estado = estado, @local = id_seleccion_local, @visitante = id_seleccion_visitante
     FROM Torneo.PARTIDO
     WHERE id_partido = @id_partido;
 
@@ -398,8 +401,9 @@ BEGIN
 
     IF @rol IS NULL
         SET @errores += @nl + N'- El rol es obligatorio.';
-    ELSE IF @rol NOT IN ('PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR')
-        SET @errores += @nl + N'- El rol debe ser PRINCIPAL, ASISTENTE_1, ASISTENTE_2, CUARTO o VAR.';
+    ELSE IF @rol NOT IN ('PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR', 'ASISTENTE_RESERVA', 'AVAR', 'VAR_APOYO')
+        SET @errores += @nl + N'- El rol debe ser PRINCIPAL, ASISTENTE_1, ASISTENTE_2, CUARTO, VAR, ASISTENTE_RESERVA, '
+                      + N'AVAR o VAR_APOYO.';
     ELSE IF EXISTS (SELECT 1 FROM Arbitraje.DESIGNACION_ARBITRAL WHERE id_partido = @id_partido AND rol = @rol)
         SET @errores += @nl + N'- El rol ' + @rol + N' ya está cubierto en ese partido.';
 
@@ -415,16 +419,6 @@ BEGIN
         IF @pais_conflicto IS NOT NULL
             SET @errores += @nl + N'- Conflicto de nacionalidad: ' + @arbitro + N' es de ' + @pais_conflicto
                           + N', que juega este partido.';
-
-        SELECT TOP (1) @otro_partido = p.numero_partido
-        FROM Arbitraje.DESIGNACION_ARBITRAL AS d
-        INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = d.id_partido
-        WHERE d.id_arbitro = @id_arbitro
-          AND d.id_partido <> @id_partido
-          AND ABS(DATEDIFF(MINUTE, p.fecha_hora_utc, @utc)) < 1440;
-        IF @otro_partido IS NOT NULL
-            SET @errores += @nl + N'- ' + @arbitro + N' ya está designado en el partido '
-                          + CAST(@otro_partido AS NVARCHAR(3)) + N', a menos de 24 horas.';
     END;
 
     IF @errores <> N''
@@ -479,8 +473,9 @@ BEGIN
 
     IF @rol IS NOT NULL
     BEGIN
-        IF @rol NOT IN ('PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR')
-            SET @errores += @nl + N'- El rol debe ser PRINCIPAL, ASISTENTE_1, ASISTENTE_2, CUARTO o VAR.';
+        IF @rol NOT IN ('PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR', 'ASISTENTE_RESERVA', 'AVAR', 'VAR_APOYO')
+            SET @errores += @nl + N'- El rol debe ser PRINCIPAL, ASISTENTE_1, ASISTENTE_2, CUARTO, VAR, ASISTENTE_RESERVA, '
+                          + N'AVAR o VAR_APOYO.';
         ELSE IF EXISTS (SELECT 1 FROM Arbitraje.DESIGNACION_ARBITRAL
                         WHERE id_partido = @id_partido AND rol = @rol AND id_arbitro <> @id_arbitro)
             SET @errores += @nl + N'- El rol ' + @rol + N' ya está cubierto en ese partido.';

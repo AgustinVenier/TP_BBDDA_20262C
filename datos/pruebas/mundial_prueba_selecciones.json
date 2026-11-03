@@ -1,0 +1,22 @@
+[
+ {
+  "name": "Testland A",
+  "fifa_code": "ZZA",
+  "confed": "UEFA"
+ },
+ {
+  "name": "Testland B",
+  "fifa_code": "ZZB",
+  "confed": "CONMEBOL"
+ },
+ {
+  "name": "Testland C",
+  "fifa_code": "ZZC",
+  "confed": "MARS"
+ },
+ {
+  "name": "Nowhere",
+  "fifa_code": "QQQ",
+  "confed": "UEFA"
+ }
+]

@@ -1,0 +1,51 @@
+codigo_fifa,dorsal,posicion,nombre,apellido,fecha_nacimiento,club
+ZZA,1,GK,Arturo,Prueba,1998-02-15,Club Prueba A
+ZZA,2,DF,Bruno,Prueba,1998-03-15,Club Prueba A
+ZZA,3,DF,Carlos,Prueba,1998-04-15,Club Prueba A
+ZZA,4,DF,Darío,Prueba,1998-05-15,Club Prueba A
+ZZA,5,DF,Danilo,Luiz,1998-06-15,Club Prueba A
+ZZA,6,DF,Esteban,Prueba,1998-07-15,Club Prueba A
+ZZA,7,MF,Musa,Al-Taamari,1998-08-15,Club Prueba A
+ZZA,8,MF,Casemiro,Casemiro,1998-09-15,Club Prueba A
+ZZA,9,FW,Jürgen,Rüdiger,1998-01-15,Club Prueba A
+ZZA,10,MF,Maximiliano,Araújo,1998-02-15,Club Prueba A
+ZZA,11,FW,Mostafa,Ziko,1998-03-15,Club Prueba A
+ZZA,12,GK,Fabián,Prueba,1998-04-15,Club Prueba A
+ZZA,13,MF,Diego,Gómez,1998-05-15,Club Prueba A
+ZZA,14,MF,Diego,Gomez,1998-06-15,Club Prueba A
+ZZA,15,DF,Gabriel,Prueba,1998-07-15,Club Prueba A
+ZZA,16,DF,Hugo,Prueba,1998-08-15,Club Prueba A
+ZZA,17,MF,Ignacio,Prueba,1998-09-15,Club Prueba A
+ZZA,18,MF,Julián,Prueba,1998-01-15,Club Prueba A
+ZZA,19,FW,Kevin,Prueba,1998-02-15,Club Prueba A
+ZZA,20,FW,Lucas,Prueba,1998-03-15,Club Prueba A
+ZZA,21,FW,Mateo,Prueba,1998-04-15,Club Prueba A
+ZZA,22,MF,Nicolás,Prueba,1998-05-15,Club Prueba A
+ZZA,23,GK,Óscar,Prueba,1998-06-15,Club Prueba A
+ZZA,150,DF,Error,Dorsal,1999-01-01,Club Prueba A
+ZZB,1,GK,Pablo,Visitante,1997-02-20,"Club Prueba B, Sociedad Civil"
+ZZB,2,DF,Ramiro,Visitante,1997-03-20,"Club Prueba B, Sociedad Civil"
+ZZB,3,DF,Santiago,Visitante,1997-04-20,"Club Prueba B, Sociedad Civil"
+ZZB,4,DF,Tomás,Visitante,1997-05-20,"Club Prueba B, Sociedad Civil"
+ZZB,5,DF,Ulises,Visitante,1997-06-20,"Club Prueba B, Sociedad Civil"
+ZZB,6,MF,Víctor,Visitante,1997-07-20,"Club Prueba B, Sociedad Civil"
+ZZB,7,MF,Walter,Visitante,1997-08-20,"Club Prueba B, Sociedad Civil"
+ZZB,8,MF,Xavier,Visitante,1997-09-20,"Club Prueba B, Sociedad Civil"
+ZZB,9,FW,Yago,Visitante,1997-01-20,"Club Prueba B, Sociedad Civil"
+ZZB,10,FW,Zacarías,Visitante,1997-02-20,"Club Prueba B, Sociedad Civil"
+ZZB,11,FW,Alan,Visitante,1997-03-20,"Club Prueba B, Sociedad Civil"
+ZZB,12,GK,Benjamín,Visitante,1997-04-20,"Club Prueba B, Sociedad Civil"
+ZZB,13,GK,Ciro,Visitante,1997-05-20,"Club Prueba B, Sociedad Civil"
+ZZB,14,DF,Damián,Visitante,1997-06-20,"Club Prueba B, Sociedad Civil"
+ZZB,15,MF,Emilio,Visitante,1997-07-20,"Club Prueba B, Sociedad Civil"
+ZZB,16,MF,Felipe,Visitante,1997-08-20,"Club Prueba B, Sociedad Civil"
+ZZB,17,FW,Gael,Visitante,1997-09-20,"Club Prueba B, Sociedad Civil"
+ZZB,18,DF,Héctor,Visitante,1997-01-20,"Club Prueba B, Sociedad Civil"
+ZZB,19,MF,Iván,Visitante,1997-02-20,"Club Prueba B, Sociedad Civil"
+ZZB,20,FW,Joaquín,Visitante,1997-03-20,"Club Prueba B, Sociedad Civil"
+ZZB,21,DF,Kevin,Visitante,1997-04-20,"Club Prueba B, Sociedad Civil"
+ZZB,22,MF,Leandro,Visitante,1997-05-20,"Club Prueba B, Sociedad Civil"
+ZZB,23,FW,Marcos,Visitante,1997-06-20,"Club Prueba B, Sociedad Civil"
+ZZB,24,XX,Error,Posicion,1999-01-01,Club Prueba B
+ZZB,25,MF,Error,Fecha,1999-13-40,Club Prueba B
+QQQ,1,GK,Sin,Seleccion,1999-01-01,Club Inexistente

@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 20_DatosIniciales.sql
+ Archivo: 20_Ejecutar_DatosIniciales.sql
  Objetivo: Cargar los datos que el sistema necesita para funcionar: los
            parámetros del reglamento, los idiomas, los países y los tipos de
            gol. Todo se carga con los SP de ABM, nunca con INSERT directo
@@ -24,10 +24,11 @@
    - Parámetros: 5 cambios en 3 ventanas, más un cambio y una ventana extra en
      el alargue; suspensión de un partido por 2 amarillas en partidos
      distintos, por doble amarilla o por roja directa; las amarillas sueltas
-     se anulan después de cuartos de final, como en el reglamento del
-     Mundial 2022 (LIMPIEZA_AMARILLAS_TRAS_GRUPOS en 1 las anularía también
-     al terminar la fase de grupos); listas de 23 a 26 jugadores con al menos
-     3 arqueros; grupos de 4 selecciones; prime time de 19 a 23 hs; el PBI
+     se anulan al terminar la fase de grupos y al terminar los cuartos de
+     final, como en el reglamento del Mundial 2026 (en el de 2022 solo se
+     anulaban después de cuartos: LIMPIEZA_AMARILLAS_TRAS_GRUPOS en 0);
+     listas de 23 a 26 jugadores con al menos 3 arqueros; grupos de 4
+     selecciones; prime time de 19 a 23 hs; el PBI
      per cápita se compara por franjas de 10.000 USD. Se pueden cambiar con
      usp_PARAMETRO_REGLAMENTO_Modificacion sin tocar código.
    - Países: no es la lista de clasificados (las selecciones se cargan en el
@@ -69,7 +70,7 @@ VALUES
     ('FECHAS_SUSPENSION_ACUMULACION',    'Partidos de suspensión por acumulación de amarillas', 1),
     ('FECHAS_SUSPENSION_DOBLE_AMARILLA', 'Partidos de suspensión por expulsión con doble amarilla', 1),
     ('FECHAS_SUSPENSION_ROJA_DIRECTA',   'Partidos de suspensión por roja directa (mínimo)', 1),
-    ('LIMPIEZA_AMARILLAS_TRAS_GRUPOS',   '1 = las amarillas sueltas se anulan al terminar la fase de grupos', 0),
+    ('LIMPIEZA_AMARILLAS_TRAS_GRUPOS',   '1 = las amarillas sueltas se anulan al terminar la fase de grupos', 1),
     ('LIMPIEZA_AMARILLAS_TRAS_CUARTOS',  '1 = las amarillas sueltas se anulan al terminar los cuartos de final', 1),
     ('MAX_CAMBIOS',                      'Cambios por equipo en el tiempo reglamentario', 5),
     ('MAX_VENTANAS',                     'Ventanas de cambio por equipo en el tiempo reglamentario, sin contar el entretiempo', 3),
@@ -140,7 +141,12 @@ VALUES
     ('Chino',      'zh'),
     ('Persa',      'fa'),
     ('Croata',     'hr'),
-    ('Noruego',    'no');
+    ('Noruego',    'no'),
+    ('Polaco',     'pl'),
+    ('Rumano',     'ro'),
+    ('Esloveno',   'sl'),
+    ('Sueco',      'sv'),
+    ('Uzbeko',     'uz');
 
 DECLARE @i INT = 1, @total INT = (SELECT COUNT(*) FROM @idiomas);
 DECLARE @cargados INT = 0, @existentes INT = 0, @rechazados INT = 0;
@@ -247,7 +253,30 @@ VALUES
     ('Haití',                  'HAI', 'HT', 'HTI', 'Haiti Standard Time',             'HTG'),
     ('Costa Rica',             'CRC', 'CR', 'CRI', 'Central America Standard Time',   'CRC'),
     -- OFC
-    ('Nueva Zelanda',          'NZL', 'NZ', 'NZL', 'New Zealand Standard Time',       'NZD');
+    ('Nueva Zelanda',          'NZL', 'NZ', 'NZL', 'New Zealand Standard Time',       'NZD'),
+    -- Selecciones del Mundial 2026 que no están en las listas de arriba
+    ('Bosnia y Herzegovina',   'BIH', 'BA', 'BIH', 'Central European Standard Time',  'BAM'),
+    ('República Checa',        'CZE', 'CZ', 'CZE', 'Central Europe Standard Time',    'CZK'),
+    ('Suecia',                 'SWE', 'SE', 'SWE', 'W. Europe Standard Time',         'SEK'),
+    ('Turquía',                'TUR', 'TR', 'TUR', 'Turkey Standard Time',            'TRY'),
+    ('Irak',                   'IRQ', 'IQ', 'IRQ', 'Arabic Standard Time',            'IQD'),
+    ('República Democrática del Congo', 'COD', 'CD', 'COD', 'W. Central Africa Standard Time', 'CDF'),
+    ('Curazao',                'CUW', 'CW', 'CUW', 'SA Western Standard Time',        'XCG'),
+    -- Países de los árbitros y directores técnicos del Mundial 2026 que no están en las listas de arriba
+    ('Venezuela',              'VEN', 'VE', 'VEN', 'Venezuela Standard Time',         'VES'),
+    ('Eslovenia',              'SVN', 'SI', 'SVN', 'Central Europe Standard Time',    'EUR'),
+    ('Polonia',                'POL', 'PL', 'POL', 'Central European Standard Time',  'PLN'),
+    ('Rumania',                'ROU', 'RO', 'ROU', 'GTB Standard Time',               'RON'),
+    ('Honduras',               'HON', 'HN', 'HND', 'Central America Standard Time',   'HNL'),
+    ('El Salvador',            'SLV', 'SV', 'SLV', 'Central America Standard Time',   'USD'),
+    ('Nicaragua',              'NCA', 'NI', 'NIC', 'Central America Standard Time',   'NIO'),
+    ('Jamaica',                'JAM', 'JM', 'JAM', 'SA Pacific Standard Time',        'JMD'),
+    ('Trinidad y Tobago',      'TRI', 'TT', 'TTO', 'SA Western Standard Time',        'TTD'),
+    ('Gabón',                  'GAB', 'GA', 'GAB', 'W. Central Africa Standard Time', 'XAF'),
+    ('Camerún',                'CMR', 'CM', 'CMR', 'W. Central Africa Standard Time', 'XAF'),
+    ('Angola',                 'ANG', 'AO', 'AGO', 'W. Central Africa Standard Time', 'AOA'),
+    ('Mauritania',             'MTN', 'MR', 'MRT', 'Greenwich Standard Time',         'MRU'),
+    ('Grecia',                 'GRE', 'GR', 'GRC', 'GTB Standard Time',               'EUR');
 
 DECLARE @i INT = 1, @total INT = (SELECT COUNT(*) FROM @paises);
 DECLARE @cargados INT = 0, @existentes INT = 0, @rechazados INT = 0;

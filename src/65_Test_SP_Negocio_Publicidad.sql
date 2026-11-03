@@ -24,7 +24,7 @@
            Negocio" con cinco campañas de febrero y marzo de 2027 (una pieza
            cada una), las sedes "Estadio Prueba Publicidad Negocio" (con sus 4
            espacios) y "Estadio Prueba Sin Espacios", y los partidos 250 a
-           252. Los partidos son de 2027 para que las únicas piezas candidatas
+           253. Los partidos son de 2027 para que las únicas piezas candidatas
            sean las del test; si hay otras campañas vigentes en febrero o marzo
            de 2027, el test lo avisa al empezar.
            Todo se borra al empezar y al terminar.
@@ -39,7 +39,7 @@
    - Al final, la verificación tiene que mostrar 0 datos de prueba.
 
  Mercados de prueba (partido 250: 20/02/2027 a las 19:00 UTC; prime time de
- 19 a 23 hs y franjas de PBI de 10.000 USD, según 20_DatosIniciales.sql):
+ 19 a 23 hs y franjas de PBI de 10.000 USD, según 20_Ejecutar_DatosIniciales.sql):
    Código  Huso                        Hora local  Prime time  PBI 2024  Franja
    XPA     UTC                         19:00       sí          20000     2
    XPB     UTC                         19:00       sí          -         -   (no es mercado de ninguna pieza)
@@ -181,9 +181,9 @@ BEGIN
 
     -- Partidos de prueba con su publicidad. Un partido jugado vuelve primero a
     -- PROGRAMADO, porque la publicidad de un partido jugado no se puede borrar.
-    WHILE EXISTS (SELECT 1 FROM Torneo.PARTIDO WHERE numero_partido BETWEEN 250 AND 252)
+    WHILE EXISTS (SELECT 1 FROM Torneo.PARTIDO WHERE numero_partido BETWEEN 250 AND 253)
     BEGIN
-        SELECT TOP (1) @id = id_partido FROM Torneo.PARTIDO WHERE numero_partido BETWEEN 250 AND 252;
+        SELECT TOP (1) @id = id_partido FROM Torneo.PARTIDO WHERE numero_partido BETWEEN 250 AND 253;
         IF (SELECT estado FROM Torneo.PARTIDO WHERE id_partido = @id) = 'FINALIZADO'
             EXEC Torneo.usp_PARTIDO_Modificacion @id_partido = @id, @estado = 'EN_JUEGO';
         IF (SELECT estado FROM Torneo.PARTIDO WHERE id_partido = @id) IN ('EN_JUEGO', 'SUSPENDIDO')
@@ -272,6 +272,7 @@ GO
      50000 y 40000 USD).
    - Partido 251: el 21/02/2027 en "Estadio Prueba Sin Espacios".
    - Partido 252: el 15/03/2027, cuando solo siguen vigentes las campañas 1 a 3.
+   - Partido 253: XPA - XPB, de cuartos, el 25/02/2027 en la misma sede que el 250.
    Las piezas de las campañas 2 a 5 se dan de alta acá; la de la campaña 1,
    en PP1. */
 DECLARE @usa SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'USA');
@@ -320,9 +321,11 @@ EXEC Torneo.usp_PARTIDO_Alta @numero_partido = 250, @id_sede = @sede, @fase = 'O
     @id_seleccion_local = @xpa, @id_seleccion_visitante = @xpb;
 EXEC Torneo.usp_PARTIDO_Alta @numero_partido = 251, @id_sede = @sin_espacios, @fase = 'OCTAVOS', @fecha_hora_utc = '2027-02-21 19:00';
 EXEC Torneo.usp_PARTIDO_Alta @numero_partido = 252, @id_sede = @sede, @fase = 'OCTAVOS', @fecha_hora_utc = '2027-03-15 19:00';
+EXEC Torneo.usp_PARTIDO_Alta @numero_partido = 253, @id_sede = @sede, @fase = 'CUARTOS', @fecha_hora_utc = '2027-02-25 19:00',
+    @id_seleccion_local = @xpa, @id_seleccion_visitante = @xpb;
 
 SELECT 'Preparación' AS caso, numero_partido, seleccion_local, seleccion_visitante, nombre_estadio, fecha_hora_utc
-FROM Torneo.vw_Fixture WHERE numero_partido BETWEEN 250 AND 252 ORDER BY numero_partido;
+FROM Torneo.vw_Fixture WHERE numero_partido BETWEEN 250 AND 253 ORDER BY numero_partido;
 GO
 
 
@@ -459,15 +462,15 @@ EXEC Publicidad.usp_AsignarPublicidadPartido @id_partido = @id_partido, @reasign
 EXEC Publicidad.usp_ESPACIO_PUBLICITARIO_Modificacion @id_espacio = @e4, @tarifa_usd = @tarifa;
 GO
 
-/* AP4 (ERROR) Publicidad para un partido ya jugado.
+/* AP4 (ERROR) Reasignar la publicidad de un partido ya jugado.
    Preparación: el partido 250 se juega y termina 1 - 0.
-   Esperado: error 50001 con 2 condiciones: el partido 250 está FINALIZADO y
-   ya tiene publicidad asignada. */
+   Esperado: error 50001 con 1 condición: el partido ya empezó (FINALIZADO) y
+   tiene su publicidad, que no se cambia (aunque se pida reasignar). */
 DECLARE @id_partido INT = (SELECT id_partido FROM Torneo.PARTIDO WHERE numero_partido = 250);
 EXEC Torneo.usp_PARTIDO_Modificacion @id_partido = @id_partido, @estado = 'EN_JUEGO';
 EXEC Torneo.usp_PARTIDO_Modificacion @id_partido = @id_partido, @estado = 'FINALIZADO', @goles_local = 1, @goles_visitante = 0;
 BEGIN TRY
-    EXEC Publicidad.usp_AsignarPublicidadPartido @id_partido = @id_partido;
+    EXEC Publicidad.usp_AsignarPublicidadPartido @id_partido = @id_partido, @reasignar = 1;
     PRINT N'AP4: FALLÓ, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
@@ -502,6 +505,36 @@ BEGIN CATCH
 END CATCH;
 GO
 
+/* AP7 (OK) Registro histórico: publicidad para un partido ya jugado que no tiene.
+   Preparación: el partido 253 se juega y termina 2 - 0, sin publicidad.
+   Esperado: se registran sus 4 piezas, como en el AP1 (el 25/02/2027 siguen
+   vigentes las 5 campañas). */
+DECLARE @id_partido INT = (SELECT id_partido FROM Torneo.PARTIDO WHERE numero_partido = 253);
+EXEC Torneo.usp_PARTIDO_Modificacion @id_partido = @id_partido, @estado = 'EN_JUEGO';
+EXEC Torneo.usp_PARTIDO_Modificacion @id_partido = @id_partido, @estado = 'FINALIZADO', @goles_local = 2, @goles_visitante = 0;
+SELECT 'AP7 antes' AS caso, estado, (SELECT COUNT(*) FROM Publicidad.EXHIBICION WHERE id_partido = @id_partido) AS exhibiciones
+FROM Torneo.PARTIDO WHERE id_partido = @id_partido;
+EXEC Publicidad.usp_AsignarPublicidadPartido @id_partido = @id_partido;
+GO
+
+/* AP8 (OK) Todos los partidos que no tienen publicidad, en una transacción que
+   se deshace (si la base tiene otros partidos sin publicidad, también se les
+   asigna, y se deshace).
+   Esperado: en la grilla del SP, el 251 y el 252 sin asignar, con los mismos
+   motivos que el AP5 y el AP6; los demás partidos sin publicidad, asignados.
+   En la de los partidos de prueba: 4 exhibiciones en el 250 y el 253 (las
+   que ya tenían) y 0 en el 251 y el 252. */
+BEGIN TRANSACTION;
+EXEC Publicidad.usp_AsignarPublicidadPartido;
+SELECT 'AP8' AS caso, p.numero_partido, COUNT(ex.id_espacio) AS exhibiciones
+FROM Torneo.PARTIDO AS p
+LEFT JOIN Publicidad.EXHIBICION AS ex ON ex.id_partido = p.id_partido
+WHERE p.numero_partido BETWEEN 250 AND 253
+GROUP BY p.numero_partido
+ORDER BY p.numero_partido;
+IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+GO
+
 
 /* ============================================================================
    LIMPIEZA Y VERIFICACIÓN FINAL
@@ -512,7 +545,7 @@ EXEC #usp_LimpiarPruebas;
 SELECT 'Final' AS caso,
        (SELECT COUNT(*) FROM Publicidad.PIEZA_PUBLICITARIA WHERE titulo LIKE N'Pieza Prueba Negocio%') AS piezas_de_prueba,
        (SELECT COUNT(*) FROM Publicidad.ANUNCIANTE WHERE razon_social = N'Anunciante Prueba Negocio')   AS anunciantes_de_prueba,
-       (SELECT COUNT(*) FROM Torneo.PARTIDO WHERE numero_partido BETWEEN 250 AND 252)                   AS partidos_de_prueba,
+       (SELECT COUNT(*) FROM Torneo.PARTIDO WHERE numero_partido BETWEEN 250 AND 253)                   AS partidos_de_prueba,
        (SELECT COUNT(*) FROM Torneo.SEDE
         WHERE nombre_estadio IN ('Estadio Prueba Publicidad Negocio', 'Estadio Prueba Sin Espacios'))  AS sedes_de_prueba,
        (SELECT COUNT(*) FROM DatosGenerales.PAIS WHERE codigo_fifa LIKE 'XP_' AND nombre LIKE 'Prueba XP%') AS paises_de_prueba;
