@@ -14,12 +14,11 @@
  Objetivo: Crear el proceso de importación masiva de indicadores económicos
            por país del Banco Mundial, como el PBI per cápita
            (NY.GDP.PCAP.CD) con el que la asignación de publicidad estima el
-           poder adquisitivo de cada mercado. Se importa desde un archivo XML
-           descargado de la API o consultando la API directamente. Los SP,
-           en el orden en que se crean (primero el que usan los otros dos):
+           poder adquisitivo de cada mercado. Se importa consultando la API,
+           que responde en XML. Los SP, en el orden en que se crean (primero
+           el que usa el otro):
              DatosGenerales.usp_ProcesarIndicadoresXML  valida el XML de la API y carga sus registros
-             DatosGenerales.usp_ImportarIndicadoresXML  lee un archivo XML y lo procesa con el primero
-             DatosGenerales.usp_ImportarIndicadoresAPI  consulta la API y procesa la respuesta igual
+             DatosGenerales.usp_ImportarIndicadoresAPI  consulta la API y procesa la respuesta
            El pedido a la API lo hace DatosGenerales.usp_ConsumirAPI
            (22_SP_ConsumirAPI.sql).
            Requiere haber ejecutado 00 a 22. Su script de testing es
@@ -37,15 +36,15 @@
       Mundial y no un mensaje de error de la API, y que traiga todos los
       registros (una sola página). Si no, no se importa nada.
    2. nodes() pasa los registros, tal como vienen, a la tabla de staging
-      #staging_indicadores, y ahí se convierten (TRY_CONVERT). El archivo
-      se importa tal como lo entrega la API: todas las transformaciones se
+      #staging_indicadores, y ahí se convierten (TRY_CONVERT). La respuesta
+      se importa tal como la entrega la API: todas las transformaciones se
       hacen acá, en T-SQL.
    3. Antes de cargar, cada registro puede quedar:
         OMITIDO      si es de un país que el sistema no tiene registrado (la
                      API trae todos los países y también agregados como
                      "World" o "High income"), si no tiene valor (el Banco
                      Mundial todavía no lo publicó) o si repite otro registro
-                     del archivo con el mismo valor (si ese registro se
+                     de la respuesta con el mismo valor (si ese registro se
                      rechaza en el paso 4, la copia también). No es un error.
         RECHAZADO    si el año o el valor no son números.
       Cada regla es un UPDATE sobre toda la tabla de staging, que anota el
@@ -72,11 +71,7 @@
    - Cada año es un registro, así que la serie histórica se conserva. Si el
      Banco Mundial revisa el valor de un año, se actualiza ese año y su
      fecha_actualizacion. Un valor que no viene no borra el guardado.
-   - Importar dos veces el mismo archivo no cambia nada.
-
- Se usa SQL dinámico solo para leer el archivo porque OPENROWSET(BULK) no acepta
- la ruta en una variable.
-
+   - Importar dos veces la misma respuesta no cambia nada.
 */
 
 USE MundialFutbol;
@@ -87,14 +82,14 @@ SET QUOTED_IDENTIFIER ON;
 GO
 
 /* ============================================================================
-   PROCESAMIENTO DEL XML (lo usan los dos SP de abajo)
+   PROCESAMIENTO DEL XML (lo usa el SP de abajo)
    ============================================================================ */
 
 /*
   usp_ProcesarIndicadoresXML
   Importa un documento de la API de indicadores del Banco Mundial. Lo
-  llaman usp_ImportarIndicadoresXML y usp_ImportarIndicadoresAPI. @origen
-  es el archivo o la URL de donde salió y @proceso, el SP que importa (el
+  llama usp_ImportarIndicadoresAPI. @origen es la URL o el texto que
+  identifica de dónde salió y @proceso, el SP que importa (el
   que lo llama; si no viene, este). Registra la importación (su número
   queda en @id_importacion) y los rechazados en
   DatosGenerales.ERRORES_INDICADOR_ECONOMICO, y devuelve el resumen (leídos,
@@ -228,7 +223,7 @@ BEGIN
         WHERE accion IS NULL AND codigo_indicador IS NOT NULL AND anio IS NOT NULL
     )
     UPDATE repetidos
-    SET accion = 'OMITIDO', motivo_omision = 'Repetido en el archivo con el mismo valor', copia_de = primero
+    SET accion = 'OMITIDO', motivo_omision = 'Repetido en la respuesta con el mismo valor', copia_de = primero
     WHERE copia > 1 AND valor_minimo = valor_maximo;
 
     /* 4. El SP de la Entrega 5 valida los demás y carga los válidos, todos juntos; después se
@@ -288,79 +283,6 @@ BEGIN
     FROM DatosGenerales.ERRORES_INDICADOR_ECONOMICO
     WHERE id_importacion = @id_importacion
     ORDER BY rechazado;
-END;
-GO
-
-
-/* ============================================================================
-   IMPORTACIÓN DESDE UN ARCHIVO
-   ============================================================================ */
-
-/*
-  usp_ImportarIndicadoresXML
-  Importa el archivo XML @ruta_archivo, descargado de la API de indicadores
-  del Banco Mundial sin modificar (ver datos/fuentes/bancomundial/README.md),
-  con usp_ProcesarIndicadoresXML. El número de la importación queda en
-  @id_importacion.
-  Valida: ruta obligatoria y terminada en .xml. Si el archivo no se puede
-  leer o no tiene un XML válido, no se importa nada (THROW 50002).
-*/
-CREATE OR ALTER PROCEDURE DatosGenerales.usp_ImportarIndicadoresXML
-    @ruta_archivo    NVARCHAR(400),
-    @id_importacion  INT = NULL OUTPUT
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    DECLARE @errores    NVARCHAR(2048) = N'';
-    DECLARE @nl         NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @sql        NVARCHAR(MAX);
-    DECLARE @contenido  VARBINARY(MAX);
-    DECLARE @xml        XML;
-    DECLARE @mensaje    NVARCHAR(2048);
-    DECLARE @proceso    VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-
-    SET @ruta_archivo = NULLIF(TRIM(@ruta_archivo), N'');
-
-    IF @ruta_archivo IS NULL
-        SET @errores += @nl + N'- La ruta del archivo es obligatoria.';
-    ELSE IF @ruta_archivo NOT LIKE N'%.xml'
-        SET @errores += @nl + N'- El archivo tiene que ser un .xml (el que devuelve la API del Banco Mundial).';
-
-    IF @errores <> N''
-    BEGIN
-        SET @errores = N'DatosGenerales.usp_ImportarIndicadoresXML: no se pudo importar el archivo.' + @errores;
-        THROW 50001, @errores, 1;
-    END;
-
-    /* Lectura. OPENROWSET(BULK) no acepta la ruta en una variable: SQL dinámico.
-       SINGLE_BLOB trae los bytes tal cual y, al convertirlos a XML, SQL Server
-       respeta la codificación que declara el archivo (UTF-8). */
-    BEGIN TRY
-        SET @sql = N'SELECT @contenido = BulkColumn FROM OPENROWSET(BULK N'''
-                 + REPLACE(@ruta_archivo, N'''', N'''''') + N''', SINGLE_BLOB) AS archivo;';
-        EXEC sp_executesql @sql, N'@contenido VARBINARY(MAX) OUTPUT', @contenido = @contenido OUTPUT;
-    END TRY
-    BEGIN CATCH
-        SET @mensaje = N'no se pudo leer el archivo (' + ERROR_MESSAGE() + N').';
-    END CATCH;
-
-    /* TRY_CONVERT y no CAST: un XML mal formado hace fallar el CAST con un
-       error que deja sin poder confirmar la transacción de quien llama,
-       aunque esté dentro de TRY ... CATCH. */
-    SET @xml = TRY_CONVERT(XML, @contenido);
-
-    IF @mensaje IS NULL AND @xml IS NULL
-        SET @mensaje = N'el archivo no tiene un XML válido (puede ser una descarga incompleta).';
-
-    IF @mensaje IS NOT NULL
-    BEGIN
-        SET @mensaje = N'DatosGenerales.usp_ImportarIndicadoresXML: no se importó nada, ' + @mensaje;
-        THROW 50002, @mensaje, 1;
-    END;
-
-    EXEC DatosGenerales.usp_ProcesarIndicadoresXML
-        @xml = @xml, @origen = @ruta_archivo, @proceso = @proceso, @id_importacion = @id_importacion OUTPUT;
 END;
 GO
 
@@ -448,8 +370,10 @@ BEGIN
 
     /* La respuesta llega como texto (UTF-16) y empieza con la declaración
        <?xml ... encoding="utf-8"?>, que SQL Server no acepta en un texto
-       NVARCHAR: se le quita antes de convertirla a XML. TRY_CONVERT por lo
-       mismo que en usp_ImportarIndicadoresXML. */
+       NVARCHAR: se le quita antes de convertirla a XML. TRY_CONVERT y no
+       CAST: un XML mal formado hace fallar el CAST con un error que deja sin
+       poder confirmar la transacción de quien llama, aunque esté dentro de
+       TRY ... CATCH. */
     IF @mensaje IS NULL
     BEGIN
         SET @xml = TRY_CONVERT(XML, IIF(LEFT(@respuesta, 5) = N'<?xml',
@@ -476,6 +400,6 @@ SELECT s.name AS esquema, p.name AS procedimiento, p.modify_date AS ultima_modif
 FROM sys.procedures AS p
 INNER JOIN sys.schemas AS s ON s.schema_id = p.schema_id
 WHERE s.name = N'DatosGenerales'
-  AND p.name IN (N'usp_ProcesarIndicadoresXML', N'usp_ImportarIndicadoresXML', N'usp_ImportarIndicadoresAPI')
+  AND p.name IN (N'usp_ProcesarIndicadoresXML', N'usp_ImportarIndicadoresAPI')
 ORDER BY p.name;
 GO

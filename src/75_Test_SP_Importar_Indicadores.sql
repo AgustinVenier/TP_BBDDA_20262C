@@ -15,31 +15,24 @@
            25_SP_Importar_Indicadores.sql, con el registro de cada
            importación y de sus rechazados
            (DatosGenerales.ERRORES_INDICADOR_ECONOMICO):
-             - desde los archivos XML chicos de datos/pruebas/ (con el formato
-               de la API del Banco Mundial): alta, reimportación sin
+             - procesando respuestas con el formato de la API del Banco
+               Mundial escritas en el test: alta, reimportación sin
                duplicados, actualización, importación con errores parciales y
-               los archivos que no se pueden importar;
+               los documentos que no se pueden importar;
              - consultando la API del Banco Mundial (casos AP, necesitan
                internet).
            Las reglas de los indicadores las prueba 66_Test_SP_Importacion.sql,
            con DatosGenerales.usp_ImportarIndicadoresEconomicos.
            Requiere haber ejecutado 00 a 25. No depende del juego de datos:
-           los archivos usan su propio indicador (TP.PRUEBA.PBI) y el caso de
-           la API importa solo la población de Argentina en 2024
+           las respuestas escritas usan su propio indicador (TP.PRUEBA.PBI) y
+           el caso de la API importa solo la población de Argentina en 2024
            (SP.POP.TOTL). Al final se borra lo que cargó el test, con el
            registro de sus importaciones, así que se puede ejecutar más de una
            vez.
 ================================================================================
 
- Antes de ejecutar: CAMBIAR @carpeta, en el primer lote, por la ruta de la
- carpeta datos\pruebas\ del repositorio en tu máquina. Es distinta para cada
- uno: depende de dónde se clonó el repositorio. Además, la cuenta del servicio
- de SQL Server tiene que poder leerla. El error "does not exist or you don't
- have file access rights" aparece tanto si la ruta está mal como si falta el
- permiso. Cómo darlo: ver "Antes de ejecutar" en 26_ImportarIndicadores.sql.
-
  Transacciones: la importación puede correr dentro de una transacción del
- que la llama, que IX9 deshace con ROLLBACK (con el registro de la
+ que la llama, que IX7 deshace con ROLLBACK (con el registro de la
  importación). Los demás casos no se deshacen: el test borra al final, con
  los SP de baja, los indicadores que cargó y el registro de sus
  importaciones.
@@ -65,19 +58,16 @@ GO
 SET NOCOUNT ON;
 GO
 
--- Carpeta de los archivos de prueba y configuración de OLE Automation antes del test (para los lotes siguientes).
--- CAMBIAR: ruta de la carpeta datos\pruebas\ del repositorio en tu máquina, terminada en \ (ver "Antes de ejecutar").
-DECLARE @carpeta NVARCHAR(400) = N'C:\Users\Rodrigo\Desktop\TP_BBDDA_20262C\datos\pruebas\';
+-- Configuración de OLE Automation antes del test (para los lotes siguientes).
 DECLARE @ole_antes INT = (SELECT CAST(value_in_use AS INT) FROM sys.configurations
                           WHERE name = N'Ole Automation Procedures');
 DECLARE @avanzadas_antes INT = (SELECT CAST(value_in_use AS INT) FROM sys.configurations
                                 WHERE name = N'show advanced options');
 
-EXEC sp_set_session_context @key = N'carpeta_pruebas', @value = @carpeta;
 EXEC sp_set_session_context @key = N'ole_antes', @value = @ole_antes;
 EXEC sp_set_session_context @key = N'avanzadas_antes', @value = @avanzadas_antes;
 
-IF OBJECT_ID(N'DatosGenerales.usp_ImportarIndicadoresXML', N'P') IS NULL
+IF OBJECT_ID(N'DatosGenerales.usp_ImportarIndicadoresAPI', N'P') IS NULL
    OR OBJECT_ID(N'DatosGenerales.usp_ImportarIndicadoresEconomicos', N'P') IS NULL
    OR OBJECT_ID(N'DatosGenerales.usp_ConsumirAPI', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE codigo_iso3 = 'GBR')
@@ -122,23 +112,18 @@ BEGIN
 END;
 GO
 
--- Borra el registro de las importaciones de los archivos de prueba, con sus rechazados.
+-- Borra el registro de las importaciones de los casos IX (su origen es el nombre del caso), con sus rechazados.
 IF OBJECT_ID(N'tempdb..#usp_BorrarImportacionesPrueba', N'P') IS NOT NULL
     DROP PROCEDURE #usp_BorrarImportacionesPrueba;
 GO
 CREATE PROCEDURE #usp_BorrarImportacionesPrueba
 AS
 BEGIN
-    DECLARE @carpeta NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400));
-    DECLARE @archivo NVARCHAR(400);
-    SET @archivo = @carpeta + N'indicadores_prueba_ok.xml';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
-    SET @archivo = @carpeta + N'indicadores_prueba_cambios.xml';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
-    SET @archivo = @carpeta + N'indicadores_prueba_errores.xml';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
-    SET @archivo = @carpeta + N'indicadores_prueba_vacio.xml';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'IX1';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'IX2';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'IX3';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'IX4';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'IX5';
 END;
 GO
 
@@ -154,14 +139,28 @@ EXEC #usp_BorrarImportacionesPrueba;
 GO
 
 
-/* IX1 (OK) Importación de indicadores_prueba_ok.xml: 6 registros.
+/* IX1 (OK) Importación de una respuesta con 6 registros.
    Esperado: 6 leídos, 3 insertados y 3 omitidos (World y High income, que no
    son países del sistema, y Brasil 2024, que viene sin valor). Quedan 4
    filas de TP.PRUEBA.PBI: Argentina 2023 (1000.5000) y 2024 (1100.2500), e
    Inglaterra y Escocia 2024 (2000.0000), las dos por el código GBR. */
-DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'indicadores_prueba_ok.xml';
+DECLARE @xml XML = N'
+<wb:data page="1" pages="1" per_page="50" total="6" sourceid="2" lastupdated="2026-10-08" xmlns:wb="http://www.worldbank.org">
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="AR">Argentina</wb:country>
+           <wb:countryiso3code>ARG</wb:countryiso3code><wb:date>2024</wb:date><wb:value>1100.25</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="AR">Argentina</wb:country>
+           <wb:countryiso3code>ARG</wb:countryiso3code><wb:date>2023</wb:date><wb:value>1000.5</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="GB">United Kingdom</wb:country>
+           <wb:countryiso3code>GBR</wb:countryiso3code><wb:date>2024</wb:date><wb:value>2000</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="1W">World</wb:country>
+           <wb:countryiso3code>WLD</wb:countryiso3code><wb:date>2024</wb:date><wb:value>1500</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="XD">High income</wb:country>
+           <wb:countryiso3code /><wb:date>2024</wb:date><wb:value>3000</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="BR">Brazil</wb:country>
+           <wb:countryiso3code>BRA</wb:countryiso3code><wb:date>2024</wb:date><wb:value /></wb:data>
+</wb:data>';
 
-EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
+EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = N'IX1';
 
 SELECT 'IX1 indicadores' AS caso, p.nombre AS pais, ie.anio, ie.valor
 FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
@@ -171,12 +170,26 @@ ORDER BY p.nombre, ie.anio;
 GO
 
 
-/* IX2 (OK) Reimportación del mismo archivo.
+/* IX2 (OK) Reimportación de la misma respuesta.
    Esperado: 3 SIN CAMBIOS y 3 omitidos; siguen las mismas 4 filas (no se
    duplica nada). */
-DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'indicadores_prueba_ok.xml';
+DECLARE @xml XML = N'
+<wb:data page="1" pages="1" per_page="50" total="6" sourceid="2" lastupdated="2026-10-08" xmlns:wb="http://www.worldbank.org">
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="AR">Argentina</wb:country>
+           <wb:countryiso3code>ARG</wb:countryiso3code><wb:date>2024</wb:date><wb:value>1100.25</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="AR">Argentina</wb:country>
+           <wb:countryiso3code>ARG</wb:countryiso3code><wb:date>2023</wb:date><wb:value>1000.5</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="GB">United Kingdom</wb:country>
+           <wb:countryiso3code>GBR</wb:countryiso3code><wb:date>2024</wb:date><wb:value>2000</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="1W">World</wb:country>
+           <wb:countryiso3code>WLD</wb:countryiso3code><wb:date>2024</wb:date><wb:value>1500</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="XD">High income</wb:country>
+           <wb:countryiso3code /><wb:date>2024</wb:date><wb:value>3000</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="BR">Brazil</wb:country>
+           <wb:countryiso3code>BRA</wb:countryiso3code><wb:date>2024</wb:date><wb:value /></wb:data>
+</wb:data>';
 
-EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
+EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = N'IX2';
 
 SELECT 'IX2 después' AS caso, COUNT(*) AS filas
 FROM DatosGenerales.INDICADOR_ECONOMICO
@@ -184,17 +197,26 @@ WHERE codigo_indicador = 'TP.PRUEBA.PBI';
 GO
 
 
-/* IX3 (OK) Importación de indicadores_prueba_cambios.xml: el Banco Mundial
-   revisó Argentina 2024, Argentina 2023 viene sin valor y se agrega Brasil
-   2024.
+/* IX3 (OK) El Banco Mundial revisó Argentina 2024, Argentina 2023 viene sin
+   valor y se agrega Brasil 2024.
    Esperado: 4 leídos: 1 insertado (Brasil 2024, 900.0000), 1 actualizado
    (Argentina 2024 pasa de 1100.2500 a 1150.7500 y renueva su
    fecha_actualizacion), 1 sin cambios (GBR 2024) y 1 omitido (Argentina 2023
    sin valor, que conserva su 1000.5000: un dato que no viene no borra el
    guardado). Quedan 5 filas. */
-DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'indicadores_prueba_cambios.xml';
+DECLARE @xml XML = N'
+<wb:data page="1" pages="1" per_page="50" total="4" sourceid="2" lastupdated="2026-10-08" xmlns:wb="http://www.worldbank.org">
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="AR">Argentina</wb:country>
+           <wb:countryiso3code>ARG</wb:countryiso3code><wb:date>2024</wb:date><wb:value>1150.75</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="AR">Argentina</wb:country>
+           <wb:countryiso3code>ARG</wb:countryiso3code><wb:date>2023</wb:date><wb:value /></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="GB">United Kingdom</wb:country>
+           <wb:countryiso3code>GBR</wb:countryiso3code><wb:date>2024</wb:date><wb:value>2000</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="BR">Brazil</wb:country>
+           <wb:countryiso3code>BRA</wb:countryiso3code><wb:date>2024</wb:date><wb:value>900</wb:value></wb:data>
+</wb:data>';
 
-EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
+EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = N'IX3';
 
 SELECT 'IX3 indicadores' AS caso, p.nombre AS pais, ie.anio, ie.valor, ie.fecha_actualizacion
 FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
@@ -204,15 +226,15 @@ ORDER BY p.nombre, ie.anio;
 GO
 
 
-/* IX4 (OK) Importación con errores parciales: indicadores_prueba_errores.xml
-   trae 12 registros.
+/* IX4 (OK) Importación con errores parciales: una respuesta con 12
+   registros.
    Esperado: 12 leídos, 2 insertados (Uruguay 2022 y Ecuador 2023), 1 omitido
    (la copia de Ecuador 2023 con el mismo valor) y 9 rechazados, con estos
    motivos:
      BOL (sin año)    el año es obligatorio.
      CHL 2023         el código del indicador es obligatorio.
      CHL 2024         el código "TP PRUEBA PBI" tiene espacios.
-     COL 2023 (x2)    el archivo trae 2 veces Colombia 2023 con valores
+     COL 2023 (x2)    la respuesta trae 2 veces Colombia 2023 con valores
                       distintos: se rechazan las dos.
      PER 2023         el valor no es un número válido (15 dígitos enteros).
      PRY 1950         el año debe estar entre 1960 y el actual.
@@ -221,11 +243,37 @@ GO
    Quedan importados Uruguay 2022 (1234.5000) y Ecuador 2023 (300.0000), y
    nada de Colombia, Paraguay, Perú, Bolivia ni Chile. Los 9 rechazados
    quedan en DatosGenerales.ERRORES_INDICADOR_ECONOMICO, con el número de la
-   importación y el texto que traía el archivo. */
-DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'indicadores_prueba_errores.xml';
+   importación y el texto que traía la respuesta. */
+DECLARE @xml XML = N'
+<wb:data page="1" pages="1" per_page="50" total="12" sourceid="2" lastupdated="2026-10-08" xmlns:wb="http://www.worldbank.org">
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="UY">Uruguay</wb:country>
+           <wb:countryiso3code>URY</wb:countryiso3code><wb:date>2022</wb:date><wb:value>1234.5</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="UY">Uruguay</wb:country>
+           <wb:countryiso3code>URY</wb:countryiso3code><wb:date>2023</wb:date><wb:value>dos mil</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="UY">Uruguay</wb:country>
+           <wb:countryiso3code>URY</wb:countryiso3code><wb:date>2023Q1</wb:date><wb:value>10</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="PY">Paraguay</wb:country>
+           <wb:countryiso3code>PRY</wb:countryiso3code><wb:date>1950</wb:date><wb:value>10</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP PRUEBA PBI">PBI de prueba</wb:indicator><wb:country id="CL">Chile</wb:country>
+           <wb:countryiso3code>CHL</wb:countryiso3code><wb:date>2024</wb:date><wb:value>10</wb:value></wb:data>
+  <wb:data><wb:indicator>PBI de prueba</wb:indicator><wb:country id="CL">Chile</wb:country>
+           <wb:countryiso3code>CHL</wb:countryiso3code><wb:date>2023</wb:date><wb:value>10</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="CO">Colombia</wb:country>
+           <wb:countryiso3code>COL</wb:countryiso3code><wb:date>2023</wb:date><wb:value>100</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="CO">Colombia</wb:country>
+           <wb:countryiso3code>COL</wb:countryiso3code><wb:date>2023</wb:date><wb:value>200</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="EC">Ecuador</wb:country>
+           <wb:countryiso3code>ECU</wb:countryiso3code><wb:date>2023</wb:date><wb:value>300</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="EC">Ecuador</wb:country>
+           <wb:countryiso3code>ECU</wb:countryiso3code><wb:date>2023</wb:date><wb:value>300</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="PE">Peru</wb:country>
+           <wb:countryiso3code>PER</wb:countryiso3code><wb:date>2023</wb:date><wb:value>123456789012345</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="BO">Bolivia</wb:country>
+           <wb:countryiso3code>BOL</wb:countryiso3code><wb:value>10</wb:value></wb:data>
+</wb:data>';
 DECLARE @id_importacion INT;
 
-EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
+EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = N'IX4', @id_importacion = @id_importacion OUTPUT;
 
 SELECT 'IX4 registro' AS caso, i.leidos, i.insertados, i.omitidos, i.rechazados, e.registro, e.codigo_iso3, e.anio,
        e.codigo_indicador, e.valor, REPLACE(e.motivos, NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -242,122 +290,91 @@ ORDER BY p.nombre, ie.anio;
 GO
 
 
-/* IX5 (OK) Importación de indicadores_prueba_vacio.xml: la respuesta de la
-   API para un año que todavía no tiene datos publicados.
+/* IX5 (OK) La respuesta de la API para un año que todavía no tiene datos
+   publicados.
    Esperado: 0 leídos. No es un error. */
-DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'indicadores_prueba_vacio.xml';
+DECLARE @xml XML = N'<wb:data page="0" pages="0" per_page="0" total="0" xmlns:wb="http://www.worldbank.org" />';
 
-EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
+EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = N'IX5';
 GO
 
 
-/* IX6 (ERROR) Archivo que no existe.
-   Esperado: error 50002, no se importó nada porque no se pudo leer el
-   archivo. */
-DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'no_existe.xml';
-
-BEGIN TRY
-    EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
-    PRINT N'IX6: FALLÓ, se esperaba un error.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'IX6', @error_esperado = 50002;
-END CATCH;
-GO
-
-
-/* IX7 (ERROR) Archivos que no se pueden importar:
-     a) indicadores_prueba_invalido.xml, una descarga cortada (no es un XML
-        válido);
-     b) indicadores_prueba_otro_formato.xml, un XML que no es de la API del
-        Banco Mundial;
-     c) indicadores_prueba_error_api.xml, el mensaje de error que devuelve la
-        API cuando el indicador o el país no existen;
-     d) indicadores_prueba_paginado.xml, la primera página de un resultado de
-        dos (descargado sin per_page).
-   Esperado: cuatro errores 50002, cada uno con su motivo, sin nada
+/* IX6 (ERROR) Documentos que no se pueden importar:
+     a) un XML que no es de la API del Banco Mundial;
+     b) el mensaje de error que devuelve la API cuando el indicador o el país
+        no existen;
+     c) la primera página de un resultado de dos (pedido sin per_page).
+   Esperado: tres errores 50002, cada uno con su motivo, sin nada
    importado. */
-DECLARE @carpeta NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400));
-DECLARE @archivo NVARCHAR(400);
+DECLARE @xml XML;
 
 BEGIN TRY
-    SET @archivo = @carpeta + N'indicadores_prueba_invalido.xml';
-    EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
-    PRINT N'IX7a: FALLÓ, se esperaba un error.';
+    SET @xml = N'<paises><pais codigo="ARG" pbi="13969.78">Argentina</pais></paises>';
+    EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = N'IX6a';
+    PRINT N'IX6a: FALLÓ, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'IX7a', @error_esperado = 50002;
+    EXEC #usp_MostrarError @caso = 'IX6a', @error_esperado = 50002;
 END CATCH;
 
 BEGIN TRY
-    SET @archivo = @carpeta + N'indicadores_prueba_otro_formato.xml';
-    EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
-    PRINT N'IX7b: FALLÓ, se esperaba un error.';
+    SET @xml = N'<wb:error xmlns:wb="http://www.worldbank.org"><wb:message id="120" key="Invalid value">The provided parameter value is not valid</wb:message></wb:error>';
+    EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = N'IX6b';
+    PRINT N'IX6b: FALLÓ, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'IX7b', @error_esperado = 50002;
+    EXEC #usp_MostrarError @caso = 'IX6b', @error_esperado = 50002;
 END CATCH;
 
 BEGIN TRY
-    SET @archivo = @carpeta + N'indicadores_prueba_error_api.xml';
-    EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
-    PRINT N'IX7c: FALLÓ, se esperaba un error.';
+    SET @xml = N'
+<wb:data page="1" pages="2" per_page="50" total="60" sourceid="2" lastupdated="2026-10-08" xmlns:wb="http://www.worldbank.org">
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="AR">Argentina</wb:country>
+           <wb:countryiso3code>ARG</wb:countryiso3code><wb:date>2024</wb:date><wb:value>1100.25</wb:value></wb:data>
+</wb:data>';
+    EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = N'IX6c';
+    PRINT N'IX6c: FALLÓ, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'IX7c', @error_esperado = 50002;
-END CATCH;
-
-BEGIN TRY
-    SET @archivo = @carpeta + N'indicadores_prueba_paginado.xml';
-    EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
-    PRINT N'IX7d: FALLÓ, se esperaba un error.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'IX7d', @error_esperado = 50002;
+    EXEC #usp_MostrarError @caso = 'IX6c', @error_esperado = 50002;
 END CATCH;
 GO
 
 
-/* IX8 (ERROR) Ruta vacía y archivo que no es .xml.
-   Esperado: dos errores 50001 de validación. */
-BEGIN TRY
-    EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = N'  ';
-    PRINT N'IX8a: FALLÓ, se esperaba un error de validación.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'IX8a', @error_esperado = 50001;
-END CATCH;
-
-BEGIN TRY
-    EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = N'C:\datos\pbi.json';
-    PRINT N'IX8b: FALLÓ, se esperaba un error de validación.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'IX8b', @error_esperado = 50001;
-END CATCH;
-GO
-
-
-/* IX9 (OK) Importación dentro de una transacción que se deshace: se vuelve a
-   importar indicadores_prueba_ok.xml, que tiene Argentina 2024 en 1100.2500
-   (IX3 la dejó en 1150.7500).
+/* IX7 (OK) Importación dentro de una transacción que se deshace: se vuelve a
+   importar la respuesta de IX1, que tiene Argentina 2024 en 1100.2500 (IX3
+   la dejó en 1150.7500).
    Esperado: 6 leídos, 1 actualizado (Argentina 2024), 2 sin cambios
    (Argentina 2023 y GBR 2024) y 3 omitidos. Dentro de la transacción
    Argentina 2024 vale 1100.2500; después del ROLLBACK vuelve a 1150.7500. */
-DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'indicadores_prueba_ok.xml';
+DECLARE @xml XML = N'
+<wb:data page="1" pages="1" per_page="50" total="6" sourceid="2" lastupdated="2026-10-08" xmlns:wb="http://www.worldbank.org">
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="AR">Argentina</wb:country>
+           <wb:countryiso3code>ARG</wb:countryiso3code><wb:date>2024</wb:date><wb:value>1100.25</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="AR">Argentina</wb:country>
+           <wb:countryiso3code>ARG</wb:countryiso3code><wb:date>2023</wb:date><wb:value>1000.5</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="GB">United Kingdom</wb:country>
+           <wb:countryiso3code>GBR</wb:countryiso3code><wb:date>2024</wb:date><wb:value>2000</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="1W">World</wb:country>
+           <wb:countryiso3code>WLD</wb:countryiso3code><wb:date>2024</wb:date><wb:value>1500</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="XD">High income</wb:country>
+           <wb:countryiso3code /><wb:date>2024</wb:date><wb:value>3000</wb:value></wb:data>
+  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="BR">Brazil</wb:country>
+           <wb:countryiso3code>BRA</wb:countryiso3code><wb:date>2024</wb:date><wb:value /></wb:data>
+</wb:data>';
 
 BEGIN TRANSACTION;
 
-EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
+EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = N'IX7';
 
-SELECT 'IX9 dentro de la transacción' AS caso, ie.valor
+SELECT 'IX7 dentro de la transacción' AS caso, ie.valor
 FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
 INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = ie.id_pais
 WHERE ie.codigo_indicador = 'TP.PRUEBA.PBI' AND p.nombre = 'Argentina' AND ie.anio = 2024;
 
 IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
 
-SELECT 'IX9 después del ROLLBACK' AS caso, ie.valor
+SELECT 'IX7 después del ROLLBACK' AS caso, ie.valor
 FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
 INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = ie.id_pais
 WHERE ie.codigo_indicador = 'TP.PRUEBA.PBI' AND p.nombre = 'Argentina' AND ie.anio = 2024;
@@ -489,7 +506,7 @@ GO
 SELECT 'Final' AS caso,
        (SELECT COUNT(*) FROM DatosGenerales.INDICADOR_ECONOMICO WHERE codigo_indicador = 'TP.PRUEBA.PBI') AS indicadores_de_prueba,
        (SELECT COUNT(*) FROM DatosGenerales.IMPORTACION
-        WHERE origen LIKE CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'indicadores[_]prueba%'
+        WHERE origen LIKE N'IX[0-9]%'
            OR origen LIKE N'%/country/ARG/indicator/SP.POP.TOTL?date=2024:2024%') AS importaciones_de_prueba;
 
 SELECT 'Final' AS caso, c.name AS opcion, c.value_in_use AS valor_actual,

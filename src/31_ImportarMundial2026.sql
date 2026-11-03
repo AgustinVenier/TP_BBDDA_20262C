@@ -26,8 +26,15 @@
    - CAMBIAR @repositorio (sección 1) por la ruta de la carpeta del
      repositorio en tu máquina, terminada en \.
    - La cuenta del servicio de SQL Server tiene que poder leer las carpetas
-     datos\ y scraping\datos\ (ver 26_ImportarIndicadores.sql: icacls ...
-     /grant 'NT Service\MSSQLSERVER:(OI)(CI)RX').
+     datos\ y scraping\datos\. El error "does not exist or you don't have
+     file access rights" aparece tanto si la ruta está mal como si falta el
+     permiso. Para darlo, desde PowerShell como administrador (con comillas
+     simples, porque con dobles PowerShell toma $ como variable):
+       icacls '<carpeta del repositorio>\datos' /grant 'NT Service\MSSQLSERVER:(OI)(CI)RX'
+       icacls '<carpeta del repositorio>\scraping\datos' /grant 'NT Service\MSSQLSERVER:(OI)(CI)RX'
+     MSSQLSERVER es la instancia por defecto. Con una instancia con nombre la
+     cuenta es NT Service\MSSQL$<instancia>, por ejemplo MSSQL$SQLEXPRESS. El
+     nombre se ve con: Get-Service -Name 'MSSQL*'
 
  Qué hace:
    1. Importa sedes, selecciones, jugadores, directores técnicos y

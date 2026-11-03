@@ -20,7 +20,7 @@ curl -o worldcup.teams.json    https://raw.githubusercontent.com/openfootball/wo
 curl -o worldcup.stadiums.json https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.stadiums.json
 ```
 
-La cuenta del servicio de SQL Server tiene que poder leer esta carpeta (ver "Antes de ejecutar" en `src/26_ImportarIndicadores.sql`).
+La cuenta del servicio de SQL Server tiene que poder leer esta carpeta (ver "Antes de ejecutar" en `src/31_ImportarMundial2026.sql`).
 
 ## Límites de uso
 

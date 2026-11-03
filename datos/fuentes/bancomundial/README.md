@@ -1,33 +1,31 @@
 # Indicadores económicos del Banco Mundial
 
-`pbi_per_capita_2015_2025.xml` es el PBI per cápita en dólares corrientes (indicador `NY.GDP.PCAP.CD`) de todos los países, de 2015 a 2025. Es la respuesta de la API de indicadores del Banco Mundial, guardada tal como llegó, sin modificaciones. Lo importa `DatosGenerales.usp_ImportarIndicadoresXML` (`src/25_SP_Importar_Indicadores.sql`).
+El sistema usa el PBI per cápita en dólares corrientes (indicador `NY.GDP.PCAP.CD`) para estimar el poder adquisitivo de cada mercado al proponer las piezas publicitarias de un partido (`Publicidad.fn_PrioridadPiezas`, que toma el último año cargado de cada país). Se guarda en `DatosGenerales.INDICADOR_ECONOMICO`: una fila por país, indicador y año.
 
-El sistema usa este indicador para estimar el poder adquisitivo de cada mercado al proponer las piezas publicitarias de un partido (`Publicidad.fn_PrioridadPiezas`).
+La fuente es la API de indicadores del Banco Mundial (v2). Responde en XML.
 
-## Cómo se obtuvo
+## Consumo desde SQL Server
 
-Con un pedido GET a esta URL, sin clave:
+`DatosGenerales.usp_ImportarIndicadoresAPI` (`src/25_SP_Importar_Indicadores.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`) y procesa la respuesta con `DatosGenerales.usp_ProcesarIndicadoresXML`. Por defecto trae el PBI per cápita de todos los países en los últimos 10 años. Se puede pedir otro indicador anual del Banco Mundial, otro rango de años o solo algunos países (`@paises = 'ARG;BRA'`). `src/26_ImportarIndicadores.sql` importa el PBI per cápita con los valores por defecto.
+
+Ejemplo de pedido, sin clave:
 
 ```text
-https://api.worldbank.org/v2/country/all/indicator/NY.GDP.PCAP.CD?date=2015:2025&per_page=20000&format=xml
+https://api.worldbank.org/v2/country/all/indicator/NY.GDP.PCAP.CD?date=2017:2026&per_page=20000&format=xml
 ```
 
 - `country/all`: todos los países y los agregados (regiones, niveles de ingreso). Se pide todo, porque si en la URL va un código de país que la API no conoce, rechaza el pedido completo. Lo que el sistema no usa se omite al importar.
-- `date=2015:2025`: el rango de años.
-- `per_page=20000`: la API pagina de a 50 registros si no se indica otra cosa. Con 20000 entran todos los países desde 1960 en una sola página. Si el archivo es una página de varias, la importación lo rechaza.
+- `date=2017:2026`: el rango de años.
+- `per_page=20000`: la API pagina de a 50 registros si no se indica otra cosa. Con 20000 entran todos los países desde 1960 en una sola página. Si la respuesta es una página de varias, la importación la rechaza.
 - `format=xml`: es el formato por defecto. Se indica igual para que quede explícito.
 
-Para bajarlo de nuevo, abrir la URL en el navegador y guardar la página como `.xml`, o desde una consola:
+Para verlo desde una consola:
 
 ```bat
-curl -o pbi_per_capita_2015_2025.xml "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.PCAP.CD?date=2015:2025&per_page=20000&format=xml"
+curl "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.PCAP.CD?date=2017:2026&per_page=20000&format=xml"
 ```
 
-## Consumo directo de la API desde SQL Server
-
-`DatosGenerales.usp_ImportarIndicadoresAPI` hace el mismo pedido desde T-SQL y procesa la respuesta con el mismo SP que el archivo. Por defecto trae el PBI per cápita de los últimos 10 años. Se puede pedir otro indicador anual del Banco Mundial, otro rango de años o solo algunos países (`@paises = 'ARG;BRA'`).
-
-En los dos casos, los registros se cargan con el SP de la Entrega 5 `DatosGenerales.usp_ImportarIndicadoresEconomicos` (`src/16_SP_Importacion.sql`). Lee la tabla de staging que arma el proceso, valida cada registro con las reglas de los indicadores y hace el upsert de los válidos de una vez. Los rechazados quedan en `DatosGenerales.ERRORES_INDICADOR_ECONOMICO`, con el número de la importación (`DatosGenerales.IMPORTACION`).
+Los registros se cargan con el SP de la Entrega 5 `DatosGenerales.usp_ImportarIndicadoresEconomicos` (`src/16_SP_Importacion.sql`). Lee la tabla de staging que arma el proceso, valida cada registro con las reglas de los indicadores y hace el upsert de los válidos de una vez. Los rechazados quedan en `DatosGenerales.ERRORES_INDICADOR_ECONOMICO`, con el número de la importación (`DatosGenerales.IMPORTACION`).
 
 SQL Server 2022 no trae un procedimiento para llamar a una API REST (`sp_invoke_external_rest_endpoint` recién está en SQL Server 2025), así que el pedido se hace con OLE Automation (`MSXML2.ServerXMLHTTP`) en `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`), que sirve para cualquier API REST sin clave. Hace falta la opción de instancia `Ole Automation Procedures`, que viene deshabilitada. `src/26_ImportarIndicadores.sql` la habilita solo mientras consulta la API y después la deja como estaba.
 

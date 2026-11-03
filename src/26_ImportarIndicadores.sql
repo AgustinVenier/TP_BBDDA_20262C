@@ -11,41 +11,26 @@
 
  Fecha: 29/10/2026
  Archivo: 26_ImportarIndicadores.sql
- Objetivo: Importar el PBI per cápita (NY.GDP.PCAP.CD) de todos los países
-           del sistema, con los SP de 25_SP_Importar_Indicadores.sql:
-             1. desde el archivo XML que devolvió la API del Banco Mundial
-                (2015 a 2025), guardado sin cambios en datos/fuentes/bancomundial/;
-             2. consultando la API, para traer los valores de los últimos 10
-                años (incluye las revisiones que haya publicado el Banco
-                Mundial después de descargar el archivo).
+ Objetivo: Importar el PBI per cápita (NY.GDP.PCAP.CD) de los últimos 10
+           años de todos los países del sistema, consultando la API del Banco
+           Mundial con DatosGenerales.usp_ImportarIndicadoresAPI
+           (25_SP_Importar_Indicadores.sql).
            Requiere haber ejecutado 00 a 20, 22 y 25. Va antes de
            32_DatosComplementarios.sql, que usa este PBI para asignar la
            publicidad. Se puede ejecutar más de una vez: lo que ya está
-           cargado queda SIN CAMBIOS.
+           cargado queda SIN CAMBIOS, y si el Banco Mundial revisó el valor
+           de un año, se actualiza.
 ================================================================================
 
  Antes de ejecutar:
-   - CAMBIAR @carpeta (sección 1) por la ruta de la carpeta datos\ del
-     repositorio en tu máquina. Es distinta para cada uno: depende de dónde
-     se clonó el repositorio.
-   - La cuenta del servicio de SQL Server tiene que poder leer esa carpeta.
-     El error "does not exist or you don't have file access rights" aparece
-     tanto si la ruta está mal como si falta el permiso. Para darlo, desde
-     PowerShell como administrador (con comillas simples, porque con dobles
-     PowerShell toma $ como variable):
-       icacls '<carpeta del repositorio>\datos' /grant 'NT Service\MSSQLSERVER:(OI)(CI)RX'
-     MSSQLSERVER es la instancia por defecto. Con una instancia con nombre la
-     cuenta es NT Service\MSSQL$<instancia>, por ejemplo MSSQL$SQLEXPRESS. El
-     nombre se ve con: Get-Service -Name 'MSSQL*'
-   - La parte 2 necesita internet y OLE Automation, que la instancia trae
-     deshabilitado. Este script lo habilita solo mientras consulta la API y
-     después lo deja como estaba. Hace falta ser sysadmin. Si no hay conexión,
-     la parte 2 falla con su motivo y la parte 1 queda importada.
-   - Para descargar el archivo de nuevo, ver datos/fuentes/bancomundial/README.md.
+   - Necesita internet y OLE Automation, que la instancia trae deshabilitado.
+     Este script lo habilita solo mientras consulta la API y después lo deja
+     como estaba. Hace falta ser sysadmin. Si no hay conexión, falla con su
+     motivo y no se importa nada.
 
- Resultado: por cada importación, el resumen (leídos, insertados,
- actualizados, sin cambios, omitidos y rechazados), los omitidos por motivo y
- los rechazados con sus motivos.
+ Resultado: el resumen de la importación (leídos, insertados, actualizados,
+ sin cambios, omitidos y rechazados), los omitidos por motivo y los
+ rechazados con sus motivos.
 */
 
 USE MundialFutbol;
@@ -54,16 +39,7 @@ GO
 SET NOCOUNT ON;
 GO
 
--- 1. Archivo XML.
--- CAMBIAR: ruta de la carpeta datos\ del repositorio en tu máquina, terminada en \ (ver "Antes de ejecutar").
-DECLARE @carpeta  NVARCHAR(400) = N'C:\Users\Rodrigo\Desktop\TP_BBDDA_20262C\datos\';
-DECLARE @archivo  NVARCHAR(400) = @carpeta + N'fuentes\bancomundial\pbi_per_capita_2015_2025.xml';
-
-EXEC DatosGenerales.usp_ImportarIndicadoresXML @ruta_archivo = @archivo;
-GO
-
-
--- 2. API del Banco Mundial, con OLE Automation habilitado solo durante la consulta.
+-- API del Banco Mundial, con OLE Automation habilitado solo durante la consulta.
 DECLARE @ole_antes        INT = (SELECT CAST(value_in_use AS INT) FROM sys.configurations
                                  WHERE name = N'Ole Automation Procedures');
 DECLARE @avanzadas_antes  INT = (SELECT CAST(value_in_use AS INT) FROM sys.configurations
