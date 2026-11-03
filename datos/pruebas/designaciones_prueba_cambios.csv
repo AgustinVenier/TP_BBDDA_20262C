@@ -1,0 +1,6 @@
+fecha,codigo_local,codigo_visitante,rol,nombre,apellido,pais,codigo_pais
+2026-12-01,ZZA,ZZB,PRINCIPAL,Pablo,Arbitro Uno,País Prueba C,ZZC
+2026-12-01,ZZA,ZZB,VAR,Otto,Otro Var,País Prueba D,ZZD
+2026-12-05,ZZA,ZZB,CUARTO,Tomás,Cuarto Cuatro,País Prueba D,ZZD
+2026-12-05,ZZA,ZZB,ASISTENTE_1,Ulises,Var Cinco,País Prueba D,ZZD
+2026-12-05,ZZA,ZZB,VAR,Yago,Asistente Nueve,País Prueba C,ZZC

@@ -232,6 +232,24 @@
           <AssociatedConnUserName />
           <FullPath>32_ImportarMundial2026.sql</FullPath>
         </FileNode>
+        <FileNode Name="33_Entrega7_Reportes.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>33_Entrega7_Reportes.sql</FullPath>
+        </FileNode>
+        <FileNode Name="34_SP_Importar_Designaciones.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>34_SP_Importar_Designaciones.sql</FullPath>
+        </FileNode>
+        <FileNode Name="35_ComplementoMundial2026.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>35_ComplementoMundial2026.sql</FullPath>
+        </FileNode>
         <FileNode Name="53_Test_FuncionesYVistas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
@@ -321,6 +339,12 @@
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
           <FullPath>73_Test_SP_Importar_Mundial2026.sql</FullPath>
+        </FileNode>
+        <FileNode Name="74_Test_SP_Importar_Designaciones.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>74_Test_SP_Importar_Designaciones.sql</FullPath>
         </FileNode>
         <FileNode Name="75_Test_SP_Importar_Indicadores.sql">
           <AssociatedConnectionMoniker />

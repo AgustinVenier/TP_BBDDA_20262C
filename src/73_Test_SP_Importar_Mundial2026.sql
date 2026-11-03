@@ -13,7 +13,8 @@
  Archivo: 73_Test_SP_Importar_Mundial2026.sql
  Objetivo: Probar la importación del Mundial 2026 de
            23_SP_Importar_Mundial2026.sql (sedes, selecciones y partidos en
-           JSON) y 24_SP_Importar_Jugadores.sql (jugadores en CSV), y el ABM
+           JSON) y 24_SP_Importar_Jugadores.sql (jugadores y cuerpo técnico
+           en CSV), y el ABM
            de Torneo.NOMBRE_ALTERNATIVO de 05_SP_ABM_Torneo.sql, con los
            archivos chicos de datos/pruebas/mundial_prueba_*: alta,
            reimportación sin duplicados, actualización, importación con
@@ -202,6 +203,12 @@ BEGIN
         EXEC Torneo.usp_LISTA_CONVOCADOS_Baja @id_lista = @id;
     END;
 
+    DELETE ct
+    FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
+    INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = ct.id_seleccion
+    INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
+    WHERE p.codigo_fifa IN ('ZZA', 'ZZB', 'ZZC');
+
     WHILE EXISTS (SELECT 1 FROM Torneo.SELECCION AS s
                   INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
                   WHERE p.codigo_fifa IN ('ZZA', 'ZZB', 'ZZC'))
@@ -245,6 +252,10 @@ BEGIN
     SET @archivo = @carpeta + N'mundial_prueba_jugadores_cambios.csv';
     EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
     SET @archivo = @carpeta + N'mundial_prueba_partidos.json';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
+    SET @archivo = @carpeta + N'mundial_prueba_cuerpo_tecnico.csv';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
+    SET @archivo = @carpeta + N'mundial_prueba_cuerpo_tecnico_cambios.csv';
     EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
 END;
 GO
@@ -663,6 +674,65 @@ END CATCH;
 GO
 
 
+/* MI12 (OK) Importación con errores parciales de mundial_prueba_cuerpo_tecnico.csv.
+   Esperado: 8 leídos, 3 insertados (el director técnico de ZZA, con país de
+   nacimiento Argentina; un ayudante de campo de ZZA, sin país; la directora
+   técnica de ZZB) y 5 rechazados: línea 5, un segundo director técnico de ZZA;
+   línea 6, la misma persona otra vez; línea 7, la selección QQQ no existe;
+   línea 8, el rol UTILERO no es válido; línea 9, el país XXX no existe. Quedan
+   en Torneo.ERRORES_CUERPO_TECNICO con el número de la importación. */
+DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_cuerpo_tecnico.csv';
+DECLARE @id_importacion INT;
+
+EXEC Torneo.usp_ImportarCuerpoTecnicoCSV @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
+
+SELECT 'MI12 registro' AS caso, i.leidos, i.insertados, i.rechazados,
+       (SELECT COUNT(*) FROM Torneo.ERRORES_CUERPO_TECNICO AS e WHERE e.id_importacion = i.id_importacion) AS en_errores,
+       IIF(i.leidos = 8 AND i.insertados = 3 AND i.rechazados = 5, 'OK', 'FALLÓ') AS verificacion
+FROM DatosGenerales.IMPORTACION AS i
+WHERE i.id_importacion = @id_importacion;
+
+SELECT 'MI12 cuerpo tecnico' AS caso, p.codigo_fifa, ct.rol, ct.nombre, ct.apellido, pn.nombre AS pais_nacimiento
+FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
+INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = ct.id_seleccion
+INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
+LEFT JOIN DatosGenerales.PAIS AS pn ON pn.id_pais = ct.id_pais_nacimiento
+WHERE p.codigo_fifa IN ('ZZA', 'ZZB')
+ORDER BY p.codigo_fifa, ct.rol;
+GO
+
+
+/* MI13 (OK) Importación de mundial_prueba_cuerpo_tecnico_cambios.csv sobre lo
+   cargado en MI12.
+   Esperado: 4 leídos, 1 sin cambios (el director técnico de ZZA), 1
+   actualizado (el ayudante de campo, ahora nacido en Uruguay) y 2 rechazados:
+   otro director técnico para ZZB, que ya tiene, y la directora técnica de ZZB
+   como médica. Siguen 3 personas en el cuerpo técnico de prueba. */
+DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_cuerpo_tecnico_cambios.csv';
+DECLARE @id_importacion INT;
+
+EXEC Torneo.usp_ImportarCuerpoTecnicoCSV @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
+
+SELECT 'MI13 verificacion' AS caso, i.leidos, i.insertados, i.actualizados, i.sin_cambios, i.rechazados,
+       (SELECT pn.codigo_fifa FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
+        INNER JOIN DatosGenerales.PAIS AS pn ON pn.id_pais = ct.id_pais_nacimiento
+        WHERE ct.apellido = N'Ayudante' AND ct.nombre = N'Rubén') AS pais_ayudante,
+       IIF(i.leidos = 4 AND i.insertados = 0 AND i.actualizados = 1 AND i.sin_cambios = 1 AND i.rechazados = 2
+           AND (SELECT COUNT(*) FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
+                INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = ct.id_seleccion
+                INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
+                WHERE p.codigo_fifa IN ('ZZA', 'ZZB')) = 3, 'OK', 'FALLÓ') AS verificacion
+FROM DatosGenerales.IMPORTACION AS i
+WHERE i.id_importacion = @id_importacion;
+
+SELECT 'MI13 rechazados' AS caso, registro AS linea, codigo_fifa, rol, nombre, apellido,
+       REPLACE(motivos, NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM Torneo.ERRORES_CUERPO_TECNICO
+WHERE id_importacion = @id_importacion
+ORDER BY registro;
+GO
+
+
 -- Se borra todo lo que cargó el test.
 EXEC #usp_LimpiarPruebas;
 GO
@@ -676,6 +746,7 @@ SELECT 'Final' AS caso,
        (SELECT COUNT(*) FROM Torneo.PARTIDO WHERE numero_partido BETWEEN 201 AND 211) AS partidos_de_prueba,
        (SELECT COUNT(*) FROM Torneo.SEDE WHERE nombre_estadio LIKE 'Estadio Prueba%') AS sedes_de_prueba,
        (SELECT COUNT(*) FROM DatosGenerales.PAIS WHERE codigo_fifa IN ('ZZA', 'ZZB', 'ZZC')) AS paises_de_prueba,
+       (SELECT COUNT(*) FROM Torneo.PERSONA_CUERPO_TECNICO WHERE apellido IN (N'Prueba', N'Ayudante', N'Técnica')) AS cuerpo_tecnico_de_prueba,
        (SELECT COUNT(*) FROM Torneo.NOMBRE_ALTERNATIVO
         WHERE nombre IN (N'Testland A', N'Testland B', N'Diego GOMEZ')) AS nombres_de_prueba,
        (SELECT COUNT(*) FROM DatosGenerales.IMPORTACION

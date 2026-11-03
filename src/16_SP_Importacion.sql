@@ -207,7 +207,11 @@ BEGIN
         INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;
         DELETE e FROM Torneo.ERRORES_PARTIDO AS e
         INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;
+        DELETE e FROM Torneo.ERRORES_CUERPO_TECNICO AS e
+        INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;
         DELETE e FROM DesarrolloPartido.ERRORES_EVENTO AS e
+        INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;
+        DELETE e FROM Arbitraje.ERRORES_DESIGNACION AS e
         INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;
 
         DELETE im FROM DatosGenerales.IMPORTACION AS im

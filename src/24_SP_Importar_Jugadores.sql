@@ -11,14 +11,19 @@
 
  Fecha: 02/11/2026
  Archivo: 24_SP_Importar_Jugadores.sql
- Objetivo: Crear el proceso de importación de las listas de convocados desde
-           el CSV que genera el scraping de Wikipedia (scraping/README.md):
-             Torneo.usp_ImportarJugadoresCSV  importa el archivo jugadores.csv
+ Objetivo: Crear el proceso de importación de las listas de convocados y de
+           los cuerpos técnicos desde los CSV que genera el scraping de
+           Wikipedia (scraping/README.md):
+             Torneo.usp_ImportarJugadoresCSV      importa el archivo jugadores.csv
+             Torneo.usp_ImportarCuerpoTecnicoCSV  importa el archivo cuerpo_tecnico.csv
            Las selecciones y sus listas tienen que estar cargadas antes
            (Torneo.usp_ImportarSeleccionesJSON, en 23_SP_Importar_Mundial2026.sql).
            Requiere haber ejecutado 00 a 23. Su script de testing es
            73_Test_SP_Importar_Mundial2026.sql, junto con el de 23.
 ================================================================================
+
+ Lo que sigue describe la importación de jugadores; la del cuerpo técnico
+ sigue los mismos pasos, sin SP masivo en 16 (ver su comentario).
 
  Formato: CSV en UTF-8, separado por comas, con comillas solo en los valores
  que las necesitan, y esta primera fila con los nombres de las columnas:
@@ -230,9 +235,249 @@ END;
 GO
 
 
--- Evidencia: SP de importación de jugadores creado.
+/*
+  usp_ImportarCuerpoTecnicoCSV
+  Importa el cuerpo técnico del CSV @ruta_archivo (el cuerpo_tecnico.csv del
+  scraping, con el director técnico de cada selección). Formato, con esta
+  primera fila:
+    codigo_fifa,rol,nombre,apellido,codigo_pais_nacimiento
+  codigo_fifa es el de la selección y codigo_pais_nacimiento, el código FIFA
+  del país de nacimiento (puede venir vacío).
+  Valida: ruta obligatoria y terminada en .csv. Si el archivo no se puede
+  leer, no tiene las columnas esperadas o alguna fila no es CSV válido, no se
+  importa nada (THROW 50002). Aplica sobre todas las filas, con UPDATE, las
+  reglas de usp_PERSONA_CUERPO_TECNICO_Alta: selección existente; nombre y
+  apellido obligatorios, de hasta 60 caracteres; rol válido; un solo director
+  técnico por selección; país de nacimiento existente. Una persona se reconoce
+  por su selección, apellido y nombre: si ya está con el mismo rol queda SIN
+  CAMBIOS, o ACTUALIZADO si cambió su país de nacimiento; con otro rol, se
+  rechaza. Las nuevas se cargan con un solo INSERT, sin SP masivo en 16.
+  Registra la importación (su número queda en @id_importacion) y los
+  rechazados en Torneo.ERRORES_CUERPO_TECNICO, y devuelve el resumen y los
+  rechazados con sus motivos.
+*/
+CREATE OR ALTER PROCEDURE Torneo.usp_ImportarCuerpoTecnicoCSV
+    @ruta_archivo    NVARCHAR(400),
+    @id_importacion  INT = NULL OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores       NVARCHAR(2048) = N'';
+    DECLARE @nl            NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @contenido     NVARCHAR(MAX);
+    DECLARE @encabezado    NVARCHAR(400);
+    DECLARE @mensaje       NVARCHAR(2048);
+    DECLARE @sql           NVARCHAR(MAX);
+    DECLARE @tran_propia   BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @proceso       VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @leidos        INT;
+    DECLARE @insertados    INT;
+    DECLARE @actualizados  INT;
+    DECLARE @sin_cambios   INT;
+    DECLARE @rechazados    INT;
+
+    SET @ruta_archivo = NULLIF(TRIM(@ruta_archivo), N'');
+    SET @id_importacion = NULL;
+
+    IF @ruta_archivo IS NULL
+        SET @errores += @nl + N'- La ruta del archivo es obligatoria.';
+    ELSE IF @ruta_archivo NOT LIKE N'%.csv'
+        SET @errores += @nl + N'- El archivo tiene que ser un .csv (el cuerpo_tecnico.csv del scraping).';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'Torneo.usp_ImportarCuerpoTecnicoCSV: no se pudo importar el archivo.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    /* 1. El archivo: la primera fila tiene que tener las columnas esperadas. */
+    EXEC DatosGenerales.usp_LeerArchivoUTF8 @ruta_archivo = @ruta_archivo, @contenido = @contenido OUTPUT;
+
+    SET @encabezado = REPLACE(REPLACE(LEFT(@contenido, CHARINDEX(NCHAR(10), @contenido + NCHAR(10)) - 1),
+                                      NCHAR(13), N''), N' ', N'');
+    IF @encabezado <> N'codigo_fifa,rol,nombre,apellido,codigo_pais_nacimiento'
+    BEGIN
+        SET @mensaje = N'Torneo.usp_ImportarCuerpoTecnicoCSV: no se importó nada, la primera fila del archivo tiene que ser '
+                     + N'"codigo_fifa,rol,nombre,apellido,codigo_pais_nacimiento" y es "' + LEFT(@encabezado, 200) + N'".';
+        THROW 50002, @mensaje, 1;
+    END;
+
+    /* 2. Las filas, como vienen. */
+    CREATE TABLE #crudo (
+        codigo_fifa             NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        rol                     NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        nombre                  NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        apellido                NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        codigo_pais_nacimiento  NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL
+    );
+
+    BEGIN TRY
+        SET @sql = N'BULK INSERT #crudo FROM N''' + REPLACE(@ruta_archivo, N'''', N'''''')
+                 + N''' WITH (FORMAT = ''CSV'', FIRSTROW = 2, CODEPAGE = ''65001'', FIELDTERMINATOR = '','', '
+                 + N'ROWTERMINATOR = ''' + IIF(CHARINDEX(NCHAR(13) + NCHAR(10), @contenido) > 0, N'0x0d0a', N'0x0a')
+                 + N''', FIELDQUOTE = ''"'', MAXERRORS = 0);';
+        EXEC sp_executesql @sql;
+    END TRY
+    BEGIN CATCH
+        SET @mensaje = N'Torneo.usp_ImportarCuerpoTecnicoCSV: no se importó nada, hay filas que no son CSV válido '
+                     + N'(tienen que tener 5 columnas): ' + ERROR_MESSAGE();
+        THROW 50002, @mensaje, 1;
+    END CATCH;
+
+    CREATE TABLE #staging_cuerpo_tecnico (
+        id_registro             INT PRIMARY KEY,   -- línea del archivo
+        -- Tal como vienen en el archivo
+        codigo_fifa             NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        rol                     NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        nombre                  NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        apellido                NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        codigo_pais_nacimiento  NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        -- Lo que se resuelve contra la base
+        id_seleccion            INT           NULL,
+        id_pais_nacimiento      SMALLINT      NULL,
+        id_persona_ct           INT           NULL,
+        -- Lo que le pasa a cada registro
+        errores                 NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+        accion                  VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+    );
+
+    INSERT INTO #staging_cuerpo_tecnico (id_registro, codigo_fifa, rol, nombre, apellido, codigo_pais_nacimiento)
+    SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + 1,
+           UPPER(NULLIF(TRIM(codigo_fifa), N'')), UPPER(NULLIF(TRIM(rol), N'')), NULLIF(TRIM(nombre), N''),
+           NULLIF(TRIM(apellido), N''), UPPER(NULLIF(TRIM(REPLACE(codigo_pais_nacimiento, NCHAR(13), N'')), N''))
+    FROM #crudo
+    WHERE CONCAT(codigo_fifa, rol, nombre, apellido, REPLACE(codigo_pais_nacimiento, NCHAR(13), N'')) <> N'';
+
+    /* 3. Las reglas, sobre toda la tabla. */
+    UPDATE st
+    SET id_seleccion = s.id_seleccion
+    FROM #staging_cuerpo_tecnico AS st
+    INNER JOIN DatosGenerales.PAIS AS pa ON pa.codigo_fifa = st.codigo_fifa
+    INNER JOIN Torneo.SELECCION AS s ON s.id_pais = pa.id_pais;
+
+    UPDATE st
+    SET id_pais_nacimiento = pa.id_pais
+    FROM #staging_cuerpo_tecnico AS st
+    INNER JOIN DatosGenerales.PAIS AS pa ON pa.codigo_fifa = st.codigo_pais_nacimiento;
+
+    UPDATE #staging_cuerpo_tecnico
+    SET errores = NULLIF(CONCAT(
+            IIF(id_seleccion IS NULL,
+                @nl + N'- No hay una selección con código ' + ISNULL(codigo_fifa, N'(vacío)') + N'.', NULL),
+            IIF(ISNULL(rol, N'') NOT IN (N'DIRECTOR_TECNICO', N'AYUDANTE_CAMPO', N'PREPARADOR_FISICO',
+                                         N'ENTRENADOR_ARQUEROS', N'MEDICO', N'OTRO'),
+                @nl + N'- El rol "' + ISNULL(rol, N'') + N'" no es DIRECTOR_TECNICO, AYUDANTE_CAMPO, '
+                    + N'PREPARADOR_FISICO, ENTRENADOR_ARQUEROS, MEDICO ni OTRO.', NULL),
+            IIF(nombre IS NULL, @nl + N'- El nombre es obligatorio.',
+                IIF(LEN(nombre) > 60, @nl + N'- El nombre no puede superar los 60 caracteres.', NULL)),
+            IIF(apellido IS NULL, @nl + N'- El apellido es obligatorio.',
+                IIF(LEN(apellido) > 60, @nl + N'- El apellido no puede superar los 60 caracteres.', NULL)),
+            IIF(codigo_pais_nacimiento IS NOT NULL AND id_pais_nacimiento IS NULL,
+                @nl + N'- No hay un país con código ' + codigo_pais_nacimiento + N'.', NULL)), N'');
+
+    -- Repetidas en el archivo: la misma persona, o dos directores técnicos de una selección (queda la primera).
+    WITH por_persona AS (
+        SELECT errores, ROW_NUMBER() OVER (PARTITION BY id_seleccion, apellido, nombre ORDER BY id_registro) AS n
+        FROM #staging_cuerpo_tecnico
+        WHERE errores IS NULL
+    )
+    UPDATE por_persona
+    SET errores = @nl + N'- La persona viene más de una vez en el archivo (se toma la primera).'
+    WHERE n > 1;
+
+    WITH por_director AS (
+        SELECT errores, ROW_NUMBER() OVER (PARTITION BY id_seleccion ORDER BY id_registro) AS n
+        FROM #staging_cuerpo_tecnico
+        WHERE errores IS NULL AND rol = N'DIRECTOR_TECNICO'
+    )
+    UPDATE por_director
+    SET errores = @nl + N'- El archivo trae más de un director técnico para la selección (se toma el primero).'
+    WHERE n > 1;
+
+    -- Las personas que ya están: mismo rol, SIN CAMBIOS o ACTUALIZADO (país de nacimiento); otro rol, se rechaza.
+    UPDATE st
+    SET id_persona_ct = ct.id_persona_ct,
+        accion = IIF(ct.rol <> st.rol, NULL,
+                     IIF(ISNULL(ct.id_pais_nacimiento, 0) = ISNULL(st.id_pais_nacimiento, 0), 'SIN CAMBIOS', 'ACTUALIZADO')),
+        errores = IIF(ct.rol <> st.rol,
+                      @nl + N'- ' + st.nombre + N' ' + st.apellido + N' ya integra el cuerpo técnico como ' + ct.rol + N'.',
+                      NULL)
+    FROM #staging_cuerpo_tecnico AS st
+    INNER JOIN Torneo.PERSONA_CUERPO_TECNICO AS ct
+        ON ct.id_seleccion = st.id_seleccion AND ct.apellido = st.apellido AND ct.nombre = st.nombre
+    WHERE st.errores IS NULL;
+
+    UPDATE st
+    SET errores = @nl + N'- La selección ya tiene director técnico: ' + ct.nombre + N' ' + ct.apellido + N'.'
+    FROM #staging_cuerpo_tecnico AS st
+    INNER JOIN Torneo.PERSONA_CUERPO_TECNICO AS ct
+        ON ct.id_seleccion = st.id_seleccion AND ct.rol = 'DIRECTOR_TECNICO'
+    WHERE st.errores IS NULL AND st.id_persona_ct IS NULL AND st.rol = N'DIRECTOR_TECNICO';
+
+    UPDATE #staging_cuerpo_tecnico SET accion = 'RECHAZADO' WHERE errores IS NOT NULL;
+
+    /* 4. Las altas con un INSERT y los cambios con un UPDATE; después se registran la importación y
+          sus rechazados, en la misma transacción. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        INSERT INTO Torneo.PERSONA_CUERPO_TECNICO (id_seleccion, id_pais_nacimiento, nombre, apellido, rol)
+        SELECT id_seleccion, id_pais_nacimiento, nombre, apellido, rol
+        FROM #staging_cuerpo_tecnico
+        WHERE accion IS NULL;
+
+        UPDATE #staging_cuerpo_tecnico SET accion = 'INSERTADO' WHERE accion IS NULL;
+
+        UPDATE ct
+        SET id_pais_nacimiento = st.id_pais_nacimiento
+        FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
+        INNER JOIN #staging_cuerpo_tecnico AS st ON st.id_persona_ct = ct.id_persona_ct
+        WHERE st.accion = 'ACTUALIZADO';
+
+        SELECT @leidos       = COUNT(*),
+               @insertados   = ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+               @actualizados = ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
+               @sin_cambios  = ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
+               @rechazados   = ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
+        FROM #staging_cuerpo_tecnico;
+
+        EXEC DatosGenerales.usp_RegistrarImportacion
+            @proceso = @proceso, @origen = @ruta_archivo, @leidos = @leidos, @insertados = @insertados,
+            @actualizados = @actualizados, @sin_cambios = @sin_cambios, @rechazados = @rechazados,
+            @id_importacion = @id_importacion OUTPUT;
+
+        INSERT INTO Torneo.ERRORES_CUERPO_TECNICO (id_importacion, registro, codigo_fifa, rol, nombre, apellido,
+                                                   codigo_pais_nacimiento, motivos)
+        SELECT @id_importacion, id_registro, codigo_fifa, rol, nombre, apellido, codigo_pais_nacimiento,
+               STUFF(errores, 1, 2, N'')
+        FROM #staging_cuerpo_tecnico
+        WHERE accion = 'RECHAZADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+
+    /* 5. Resultado. */
+    SELECT @id_importacion AS id_importacion, @ruta_archivo AS origen, @leidos AS leidos, @insertados AS insertados,
+           @actualizados AS actualizados, @sin_cambios AS sin_cambios, @rechazados AS rechazados;
+
+    SELECT CONCAT(N'Línea ', registro, N': ', ISNULL(codigo_fifa, N'(sin selección)'), N' ', ISNULL(rol, N'(sin rol)'), N' ',
+                  ISNULL(nombre, N''), N' ', ISNULL(apellido, N'')) AS rechazado,
+           motivos
+    FROM Torneo.ERRORES_CUERPO_TECNICO
+    WHERE id_importacion = @id_importacion
+    ORDER BY registro;
+END;
+GO
+
+
+-- Evidencia: SP de importación de jugadores y de cuerpo técnico creados.
 SELECT s.name AS esquema, p.name AS procedimiento, p.modify_date AS ultima_modificacion
 FROM sys.procedures AS p
 INNER JOIN sys.schemas AS s ON s.schema_id = p.schema_id
-WHERE s.name = N'Torneo' AND p.name = N'usp_ImportarJugadoresCSV';
+WHERE s.name = N'Torneo' AND p.name IN (N'usp_ImportarJugadoresCSV', N'usp_ImportarCuerpoTecnicoCSV');
 GO

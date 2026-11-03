@@ -14,7 +14,9 @@
  Objetivo: Obtener por scraping los jugadores convocados al Mundial 2026
            publicados en Wikipedia y guardarlos en jugadores.csv, una fila por
            convocado: selección (código FIFA), dorsal, posición, nombre,
-           apellido, fecha de nacimiento y club. El archivo lo importa
+           apellido, fecha de nacimiento y club. De la misma página sale
+           cuerpo_tecnico.csv, con el director técnico de cada selección
+           (Torneo.usp_ImportarCuerpoTecnicoCSV). El archivo de jugadores lo importa
            21_Importacion_Jugadores.sql, después de que 20_DatosIniciales.sql
            creó las selecciones y sus listas de convocados.
 ================================================================================
@@ -36,6 +38,11 @@
      sección. La fecha de nacimiento sale del <span class="bday"> (microformato
      hCard, formato ISO) y el orden "Apellido, Nombre" del atributo
      data-sort-value, que se usa para separar el nombre del apellido.
+   - Director técnico: el párrafo "Coach: Nombre" de la sección. Si es
+     extranjero, va precedido por la bandera de su país (código FIFA en el
+     atributo data-mw); si no, es del país de la selección. Esa nacionalidad
+     se toma como país de nacimiento. La página no trae su fecha de
+     nacimiento ni el resto del cuerpo técnico.
  La posición se guarda como la publica la página (GK, DF, MF, FW): la
  traduce Torneo.usp_ImportarJugadores.
 
@@ -48,7 +55,7 @@
  Uso:
    pip install requests beautifulsoup4 lxml
    python Scraping_Jugadores.py [--salida CARPETA]
- Si no se indica, el CSV se guarda en la carpeta "datos", junto al script.
+ Si no se indica, los CSV se guardan en la carpeta "datos", junto al script.
  Se escribe en UTF-8, separado por comas y con encabezado.
  La documentación completa (fuente, técnica, límites y formato) está en
  README.md, en esta misma carpeta.
@@ -56,6 +63,7 @@
 
 import argparse
 import csv
+import json
 import re
 import sys
 import time
@@ -77,6 +85,8 @@ ESPERA_POR_DEFECTO = 5   # segundos, si la respuesta 429 no trae Retry-After
 # Letras que NFKD no descompone, para comparar con el orden de Wikipedia (sin tildes).
 LETRAS_SIMPLES = str.maketrans({'ø': 'o', 'Ø': 'O', 'ł': 'l', 'Ł': 'L', 'đ': 'd',
                                 'Đ': 'D', 'ı': 'i', 'æ': 'ae', 'Æ': 'Ae', 'ß': 'ss'})
+# Nacionalidades que Wikipedia escribe con el apellido primero ("Hong Myung-bo").
+APELLIDO_PRIMERO = {'KOR', 'PRK', 'CHN'}
 # Partículas con las que empieza un apellido compuesto ("Virgil van Dijk").
 PARTICULAS = {'de', 'del', 'da', 'das', 'do', 'dos', 'di', 'du', 'la', 'le',
               'van', 'von', 'der', 'den', 'ten', 'ter'}
@@ -171,8 +181,44 @@ def leer_codigos_fifa(contenido):
     return codigos
 
 
+def leer_director_tecnico(parrafo, codigo, avisos):
+    """
+    El director técnico del párrafo "Coach: Nombre". Si es extranjero, Wikipedia
+    pone antes la bandera de su país, con el código FIFA en data-mw; si no, es
+    del país de la selección. Si dirigieron dos ("A (first match) / B (remaining
+    matches)"), queda el último: la base admite un solo director técnico.
+    """
+    enlaces = [a for a in parrafo.find_all('a') if not a.find_parent(class_='flagicon')]
+    banderas = parrafo.select('span.flagicon[data-mw]')
+    if not enlaces:
+        avisos.append(f'{codigo}: no se encontró el nombre del director técnico.')
+        return None
+    if len(enlaces) > 1:
+        avisos.append(f'{codigo}: hubo {len(enlaces)} directores técnicos; queda el último, '
+                      f'{enlaces[-1].get_text(strip=True)}.')
+    nacionalidad = codigo
+    if banderas:
+        # El código es el último de tres letras: a veces viene con un comentario delante.
+        encontrados = re.findall(r'[A-Z]{3}', json.loads(banderas[-1]['data-mw'])['parts'][0]
+                                 ['template']['params']['2']['wt'])
+        nacionalidad = encontrados[-1] if encontrados else codigo
+
+    palabras = enlaces[-1].get_text(' ', strip=True).split()
+    if len(palabras) == 1:                       # conocido por un solo nombre (Bubista)
+        nombre = apellido = palabras[0]
+    elif nacionalidad in APELLIDO_PRIMERO:       # "Hong Myung-bo": apellido Hong
+        apellido, nombre = palabras[0], ' '.join(palabras[1:])
+    else:
+        # La fuente no separa nombre y apellido: el resto, desde la primera partícula
+        # ("Luis de la Fuente") o la última palabra, es el apellido.
+        i = next((j for j in range(1, len(palabras) - 1) if palabras[j] in PARTICULAS), len(palabras) - 1)
+        nombre, apellido = ' '.join(palabras[:i]), ' '.join(palabras[i:])
+    return {'codigo_fifa': codigo, 'rol': 'DIRECTOR_TECNICO', 'nombre': nombre, 'apellido': apellido,
+            'codigo_pais_nacimiento': nacionalidad}
+
+
 def leer_jugadores(contenido, codigos):
-    jugadores, avisos = [], []
+    jugadores, tecnicos, avisos = [], [], []
     selecciones = 0
 
     for titulo in contenido.find_all('h3'):
@@ -193,6 +239,11 @@ def leer_jugadores(contenido, codigos):
                 break
             if hermano.name == 'div' and 'mw-heading' in (hermano.get('class') or []):
                 break
+            # El director técnico está en un párrafo "Coach: ..." antes de la tabla.
+            if hermano.name == 'p' and hermano.get_text(strip=True).startswith('Coach'):
+                tecnico = leer_director_tecnico(hermano, codigo, avisos)
+                if tecnico:
+                    tecnicos.append(tecnico)
         if tabla is None:
             avisos.append(f'{nombre}: no se encontró la tabla de convocados.')
             continue
@@ -214,7 +265,7 @@ def leer_jugadores(contenido, codigos):
                 'club': texto_enlace(celdas[-1]),
             })
 
-    return selecciones, jugadores, avisos
+    return selecciones, jugadores, tecnicos, avisos
 
 
 def guardar(ruta, filas):
@@ -227,7 +278,7 @@ def guardar(ruta, filas):
 def main():
     parser = argparse.ArgumentParser(description='Scraping de los jugadores del Mundial 2026 (Wikipedia).')
     parser.add_argument('--salida', default=str(Path(__file__).resolve().parent / 'datos'),
-                        help='carpeta donde se guarda jugadores.csv')
+                        help='carpeta donde se guardan jugadores.csv y cuerpo_tecnico.csv')
     args = parser.parse_args()
     sys.stdout.reconfigure(encoding='utf-8')
 
@@ -235,16 +286,18 @@ def main():
     with requests.Session() as sesion:
         sesion.headers['User-Agent'] = USER_AGENT
         codigos = leer_codigos_fifa(descargar(sesion, URL_CODIGOS))
-        selecciones, jugadores, avisos = leer_jugadores(descargar(sesion, URL_PLANTILLAS), codigos)
+        selecciones, jugadores, tecnicos, avisos = leer_jugadores(descargar(sesion, URL_PLANTILLAS), codigos)
     if not jugadores:
         sys.exit('No se encontró ningún jugador: puede haber cambiado la estructura de la página.')
 
     salida = Path(args.salida)
     salida.mkdir(parents=True, exist_ok=True)
     guardar(salida / 'jugadores.csv', jugadores)
+    guardar(salida / 'cuerpo_tecnico.csv', tecnicos)
 
     print(f'Selecciones: {selecciones}  Jugadores: {len(jugadores)}')
-    print(f'Archivo: {salida / "jugadores.csv"}')
+    print(f'Directores técnicos: {len(tecnicos)}')
+    print(f'Archivos: {salida / "jugadores.csv"}, {salida / "cuerpo_tecnico.csv"}')
     for aviso in avisos:
         print('Aviso:', aviso)
 

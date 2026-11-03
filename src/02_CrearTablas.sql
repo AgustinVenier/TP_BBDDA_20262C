@@ -81,6 +81,8 @@ GO
    ============================================================================ */
 
 DROP TABLE IF EXISTS DesarrolloPartido.ERRORES_EVENTO;
+DROP TABLE IF EXISTS Arbitraje.ERRORES_DESIGNACION;
+DROP TABLE IF EXISTS Torneo.ERRORES_CUERPO_TECNICO;
 DROP TABLE IF EXISTS Torneo.ERRORES_PARTIDO;
 DROP TABLE IF EXISTS Torneo.ERRORES_JUGADOR;
 DROP TABLE IF EXISTS Torneo.ERRORES_SELECCION;
@@ -1045,9 +1047,11 @@ GO
 
 
 /*
-  ERRORES_SEDE, ERRORES_SELECCION, ERRORES_JUGADOR y ERRORES_PARTIDO
+  ERRORES_SEDE, ERRORES_SELECCION, ERRORES_JUGADOR, ERRORES_CUERPO_TECNICO,
+  ERRORES_PARTIDO y ERRORES_DESIGNACION
   Registros rechazados de los archivos del torneo: estadios, selecciones y
-  partidos de openfootball, y jugadores del CSV del scraping. registro es su
+  partidos de openfootball, y jugadores, cuerpos técnicos y designaciones
+  arbitrales de los CSV del scraping. registro es su
   posicion en el archivo (en los jugadores, la linea); los demas datos, el
   texto que traia. resultado junta el marcador de los 90 minutos (ft), del
   alargue (et) y de los penales (p).
@@ -1102,6 +1106,22 @@ CREATE TABLE Torneo.ERRORES_JUGADOR (
 );
 GO
 
+CREATE TABLE Torneo.ERRORES_CUERPO_TECNICO (
+    id_importacion          INT            NOT NULL,
+    registro                INT            NOT NULL,
+    codigo_fifa             NVARCHAR(50)   NULL,
+    rol                     NVARCHAR(50)   NULL,
+    nombre                  NVARCHAR(400)  NULL,
+    apellido                NVARCHAR(400)  NULL,
+    codigo_pais_nacimiento  NVARCHAR(50)   NULL,
+    motivos                 NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_CUERPO_TECNICO PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_CUERPO_TECNICO_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
 CREATE TABLE Torneo.ERRORES_PARTIDO (
     id_importacion  INT            NOT NULL,
     registro        INT            NOT NULL,
@@ -1117,6 +1137,24 @@ CREATE TABLE Torneo.ERRORES_PARTIDO (
 
     CONSTRAINT PK_ERRORES_PARTIDO PRIMARY KEY (id_importacion, registro),
     CONSTRAINT FK_ERRORES_PARTIDO_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+CREATE TABLE Arbitraje.ERRORES_DESIGNACION (
+    id_importacion    INT            NOT NULL,
+    registro          INT            NOT NULL,
+    fecha             NVARCHAR(50)   NULL,
+    codigo_local      NVARCHAR(50)   NULL,
+    codigo_visitante  NVARCHAR(50)   NULL,
+    rol               NVARCHAR(50)   NULL,
+    nombre            NVARCHAR(400)  NULL,
+    apellido          NVARCHAR(400)  NULL,
+    codigo_pais       NVARCHAR(50)   NULL,
+    motivos           NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_DESIGNACION PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_DESIGNACION_IMPORTACION
         FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
 );
 GO
