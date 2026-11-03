@@ -256,11 +256,11 @@
           <AssociatedConnUserName />
           <FullPath>35_Ejecutar_Entrega9_ConsultasToBe.sql</FullPath>
         </FileNode>
-        <FileNode Name="36_Ejecutar_Entrega6_Importacion.sql">
+        <FileNode Name="37_Ejecutar_PrepararBase.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>36_Ejecutar_Entrega6_Importacion.sql</FullPath>
+          <FullPath>37_Ejecutar_PrepararBase.sql</FullPath>
         </FileNode>
         <FileNode Name="53_Test_FuncionesYVistas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
