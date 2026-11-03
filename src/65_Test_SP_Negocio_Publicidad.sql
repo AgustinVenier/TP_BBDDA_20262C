@@ -39,7 +39,7 @@
    - Al final, la verificación tiene que mostrar 0 datos de prueba.
 
  Mercados de prueba (partido 250: 20/02/2027 a las 19:00 UTC; prime time de
- 19 a 23 hs y franjas de PBI de 10.000 USD, según 20_DatosIniciales.sql):
+ 19 a 23 hs y franjas de PBI de 10.000 USD, según 20_Ejecutar_DatosIniciales.sql):
    Código  Huso                        Hora local  Prime time  PBI 2024  Franja
    XPA     UTC                         19:00       sí          20000     2
    XPB     UTC                         19:00       sí          -         -   (no es mercado de ninguna pieza)

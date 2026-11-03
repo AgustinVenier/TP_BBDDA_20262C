@@ -10,13 +10,13 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 03/11/2026
- Archivo: 34_Entrega7_Reportes.sql
+ Archivo: 34_Ejecutar_Entrega7_Reportes.sql
  Objetivo: Entrega 7. Ejecutar de punta a punta los reportes de
            30_SP_Reportes.sql para verlos a mano, sin verificaciones ni datos
            de prueba (para eso está 80_Test_SP_Reportes.sql).
            Requiere haber ejecutado 00 a 32: el torneo real
-           (31_ImportarMundial2026.sql) con sus datos complementarios
-           (32_DatosComplementarios.sql), que traen la publicidad.
+           (31_Ejecutar_ImportarMundial2026.sql) con sus datos complementarios
+           (32_Ejecutar_DatosComplementarios.sql), que traen la publicidad.
 ================================================================================
 
  Cómo leer los resultados:
@@ -146,7 +146,7 @@ BEGIN
     EXEC Reportes.usp_OcupacionPublicitaria @codigo_moneda = 'ARS';
 END
 ELSE
-    SELECT N'R4. No hay cotizaciones de ARS cargadas (ver 29_ImportarAPIs.sql): no se muestran los ingresos en pesos.' AS reporte;
+    SELECT N'R4. No hay cotizaciones de ARS cargadas (ver 29_Ejecutar_ImportarAPIs.sql): no se muestran los ingresos en pesos.' AS reporte;
 GO
 
 

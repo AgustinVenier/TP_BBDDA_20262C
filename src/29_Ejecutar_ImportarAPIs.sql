@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 31/10/2026
- Archivo: 29_ImportarAPIs.sql
+ Archivo: 29_Ejecutar_ImportarAPIs.sql
  Objetivo: Importar, con los SP de 21_SP_Importar_Publicidad.sql,
            27_SP_Importar_Cotizaciones.sql y 28_SP_Importar_Feriados.sql:
              0. las campañas publicitarias del Mundial 2026 del Dossier
@@ -232,7 +232,7 @@ BEGIN TRY
         FROM #staging_feriados;
 
         EXEC DatosGenerales.usp_RegistrarImportacion
-            @proceso = '29_ImportarAPIs.sql', @origen = N'Feriados cargados a mano (parte 3 del script)',
+            @proceso = '29_Ejecutar_ImportarAPIs.sql', @origen = N'Feriados cargados a mano (parte 3 del script)',
             @leidos = @leidos, @insertados = @insertados, @actualizados = @actualizados, @sin_cambios = @sin_cambios,
             @rechazados = @rechazados, @id_importacion = @id_importacion OUTPUT;
 

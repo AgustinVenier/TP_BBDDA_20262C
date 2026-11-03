@@ -30,7 +30,7 @@
  OLE Automation: requiere la opción de instancia 'Ole Automation Procedures',
  que viene deshabilitada. Quien consulta una API la habilita solo mientras
  llama a este SP y después la deja como estaba, como hace
- 26_ImportarIndicadores.sql. Hace falta ser sysadmin.
+ 26_Ejecutar_ImportarIndicadores.sql. Hace falta ser sysadmin.
 */
 
 USE MundialFutbol;

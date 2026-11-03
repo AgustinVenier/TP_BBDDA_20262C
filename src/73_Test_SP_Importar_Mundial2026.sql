@@ -36,7 +36,7 @@
  Antes de ejecutar: CAMBIAR @carpeta, en el primer lote, por la ruta de la
  carpeta datos\pruebas\ del repositorio en tu máquina. La cuenta del servicio
  de SQL Server tiene que poder leerla (ver "Antes de ejecutar" en
- 31_ImportarMundial2026.sql).
+ 31_Ejecutar_ImportarMundial2026.sql).
 
  Los jugadores de los archivos de prueba están escritos para pasar por cada
  paso de Torneo.usp_IdentificarJugadores:

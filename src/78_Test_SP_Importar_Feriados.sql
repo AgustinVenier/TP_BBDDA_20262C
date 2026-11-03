@@ -23,9 +23,9 @@
                documentos que no se pueden importar;
              - consultando la API Nager.Date (casos AP, necesitan internet).
            Requiere haber ejecutado 00 a 28 (usa Argentina, Inglaterra y
-           Escocia de 20_DatosIniciales.sql). No depende del juego de datos:
+           Escocia de 20_Ejecutar_DatosIniciales.sql). No depende del juego de datos:
            las respuestas escritas son de 2001, un año que no importa
-           29_ImportarAPIs.sql, y el caso de la API corre
+           29_Ejecutar_ImportarAPIs.sql, y el caso de la API corre
            dentro de una transacción que se deshace. Al final se borra lo que
            cargó el test, con el registro de sus importaciones, así que se
            puede ejecutar más de una vez.

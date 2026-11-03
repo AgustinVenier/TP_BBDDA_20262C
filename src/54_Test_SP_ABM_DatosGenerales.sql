@@ -16,7 +16,7 @@
            casos que no cumplen las validaciones, que deben fallar con un único
            mensaje que liste todas las condiciones incumplidas.
            Requiere haber ejecutado 00 a 20: los casos de parámetros usan los
-           valores del reglamento de 20_DatosIniciales.sql, e I6, el idioma
+           valores del reglamento de 20_Ejecutar_DatosIniciales.sql, e I6, el idioma
            inglés que carga ese script. No depende del juego de
            datos: crea sus propios datos de prueba (dos países, un
            idioma, un parámetro, una cotización, un feriado y, para las bajas

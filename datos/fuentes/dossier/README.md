@@ -18,7 +18,7 @@ La clave de una app web de Firebase no es secreta: va en el código que descarga
 
 ## Consumo desde SQL Server
 
-`Publicidad.usp_ImportarCampaniasAPI` (`src/21_SP_Importar_Publicidad.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`) y procesa la respuesta con `Publicidad.usp_ProcesarCampaniasJSON`. `src/29_ImportarAPIs.sql` la ejecuta antes de los datos complementarios (`src/32_DatosComplementarios.sql`), que asignan la publicidad de cada partido: así las piezas del Dossier compiten en esa asignación. El 32 agrega anunciantes de otros países, porque el Dossier cubre solo el mercado argentino.
+`Publicidad.usp_ImportarCampaniasAPI` (`src/21_SP_Importar_Publicidad.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`) y procesa la respuesta con `Publicidad.usp_ProcesarCampaniasJSON`. `src/29_Ejecutar_ImportarAPIs.sql` la ejecuta antes de los datos complementarios (`src/32_Ejecutar_DatosComplementarios.sql`), que asignan la publicidad de cada partido: así las piezas del Dossier compiten en esa asignación. El 32 agrega anunciantes de otros países, porque el Dossier cubre solo el mercado argentino.
 
 Pedido:
 

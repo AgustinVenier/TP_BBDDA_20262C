@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 03/11/2026
- Archivo: 32_DatosComplementarios.sql
+ Archivo: 32_Ejecutar_DatosComplementarios.sql
  Objetivo: Completar el Mundial 2026 real con lo que no traen las fuentes
            importadas, para que todas las tablas tengan datos y los reportes
            muestren información representativa. No repite nada de lo que ya
@@ -83,7 +83,7 @@ GO
 IF NOT EXISTS (SELECT 1 FROM Torneo.PARTIDO)
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.INDICADOR_ECONOMICO WHERE codigo_indicador = 'NY.GDP.PCAP.CD')
 BEGIN
-    PRINT N'32_DatosComplementarios.sql: la base tiene que tener el torneo real (31) y el PBI per cápita (26). '
+    PRINT N'32_Ejecutar_DatosComplementarios.sql: la base tiene que tener el torneo real (31) y el PBI per cápita (26). '
         + N'Ejecutá los scripts 00 a 31 y volvé a ejecutar este.';
     SET NOEXEC ON;
 END;

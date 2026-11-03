@@ -307,7 +307,7 @@ GO
 /* AP1 (OK) Importación desde la API, dentro de una transacción que se deshace.
    Esperado: el resumen con tantos leídos como campañas tenga el Dossier (75
    el 02/11/2026) y 0 rechazados. Si la base no tenía las campañas, quedan
-   INSERTADO; si ya las importó 29_ImportarAPIs.sql, SIN CAMBIOS. Sin
+   INSERTADO; si ya las importó 29_Ejecutar_ImportarAPIs.sql, SIN CAMBIOS. Sin
    conexión, se imprime el error 50002 de la consulta y no se carga nada. */
 SET XACT_ABORT OFF;
 BEGIN TRANSACTION;

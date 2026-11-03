@@ -10,14 +10,14 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 02/11/2026
- Archivo: 31_ImportarMundial2026.sql
+ Archivo: 31_Ejecutar_ImportarMundial2026.sql
  Objetivo: Cargar el Mundial 2026 real (las 16 sedes, las 48 selecciones con
            sus 1248 convocados y su director técnico, los 104 partidos con formaciones, cambios,
            goles y tarjetas, y el equipo arbitral de cada uno) desde los
            archivos de openfootball y los CSV del scraping, con los SP de
            23_SP_Importar_Mundial2026.sql y 24_SP_Importar_Jugadores.sql.
            Requiere haber ejecutado 00 a 30. Después va
-           32_DatosComplementarios.sql, que completa lo que los archivos no
+           32_Ejecutar_DatosComplementarios.sql, que completa lo que los archivos no
            traen (el resto de los cuerpos técnicos, idiomas de los
            árbitros, la publicidad de cada partido).
 ================================================================================
@@ -74,7 +74,7 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS)
 BEGIN
-    PRINT N'31_ImportarMundial2026.sql: la base tiene que tener los datos iniciales (20). '
+    PRINT N'31_Ejecutar_ImportarMundial2026.sql: la base tiene que tener los datos iniciales (20). '
         + N'Ejecutá los scripts 00 a 30 y volvé a ejecutarlo.';
     SET NOEXEC ON;
 END;

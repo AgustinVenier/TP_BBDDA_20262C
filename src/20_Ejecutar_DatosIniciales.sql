@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 20_DatosIniciales.sql
+ Archivo: 20_Ejecutar_DatosIniciales.sql
  Objetivo: Cargar los datos que el sistema necesita para funcionar: los
            parámetros del reglamento, los idiomas, los países y los tipos de
            gol. Todo se carga con los SP de ABM, nunca con INSERT directo

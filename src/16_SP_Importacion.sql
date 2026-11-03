@@ -51,7 +51,7 @@
       INSERTADO, ACTUALIZADO o SIN CAMBIOS.
    3. El proceso registra la importación (usp_RegistrarImportacion) y guarda
       los rechazados en la tabla ERRORES_ de lo que importó.
-   32_DatosComplementarios.sql también los usa, con tablas que arma a mano,
+   32_Ejecutar_DatosComplementarios.sql también los usa, con tablas que arma a mano,
    para cargar por conjuntos lo que no traen las fuentes (cuerpos técnicos,
    idiomas de los árbitros, campañas de otros países, reemplazos de último
    momento, informes y sanciones de los árbitros).
@@ -1156,7 +1156,7 @@ GO
   nombre, apellido, rol, fecha_nacimiento, codigo_fifa_nacimiento (del país
   de nacimiento), errores y accion. Los directores técnicos los importa
   usp_ImportarCuerpoTecnicoCSV (24) del scraping de Wikipedia; el resto del
-  cuerpo técnico lo carga 32_DatosComplementarios.sql. En una persona
+  cuerpo técnico lo carga 32_Ejecutar_DatosComplementarios.sql. En una persona
   existente, la fecha y el país de nacimiento que no vienen no se borran.
   Valida cada persona pendiente: selección registrada; nombre y apellido
   obligatorios y de hasta 60 caracteres; rol DIRECTOR_TECNICO,

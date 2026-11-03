@@ -10,16 +10,16 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 03/11/2026
- Archivo: 35_Entrega9_ConsultasToBe.sql
+ Archivo: 35_Ejecutar_Entrega9_ConsultasToBe.sql
  Objetivo: Entrega 9. Recorrer los puntos del alcance (sección 2, "To Be") con
            las consultas que muestran que el sistema los cumple, sobre el
            torneo real cargado. Usa las vistas y funciones de
            03_CrearFuncionesYVistas.sql y 30_SP_Reportes.sql; los reportes
-           de la Entrega 7 se ven en 34_Entrega7_Reportes.sql.
+           de la Entrega 7 se ven en 34_Ejecutar_Entrega7_Reportes.sql.
            Requiere haber ejecutado 00 a 33: el torneo real
-           (31_ImportarMundial2026.sql) con sus datos complementarios
-           (32_DatosComplementarios.sql) y las sedes propias del juego de
-           datos (33_SedesAdicionales.sql).
+           (31_Ejecutar_ImportarMundial2026.sql) con sus datos complementarios
+           (32_Ejecutar_DatosComplementarios.sql) y las sedes propias del juego de
+           datos (33_Ejecutar_SedesAdicionales.sql).
 ================================================================================
 
  Cómo leer los resultados:
