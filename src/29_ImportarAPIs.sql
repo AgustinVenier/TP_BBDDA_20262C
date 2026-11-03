@@ -23,9 +23,9 @@
                 la API Nager.Date, de a un país por consulta;
              3. a mano, los feriados del período del torneo de los países que
                 Nager.Date no cubre.
-           Requiere haber ejecutado 00 a 28. Va antes del juego de datos
-           (31): así las piezas del Dossier compiten en la asignación de
-           publicidad de sus partidos. Se puede ejecutar más de una vez: lo
+           Requiere haber ejecutado 00 a 28. Va antes de los datos
+           complementarios (32): así las piezas del Dossier compiten en la
+           asignación de publicidad de sus partidos. Se puede ejecutar más de una vez: lo
            que ya está cargado queda SIN CAMBIOS.
 ================================================================================
 

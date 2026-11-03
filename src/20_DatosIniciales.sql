@@ -140,7 +140,12 @@ VALUES
     ('Chino',      'zh'),
     ('Persa',      'fa'),
     ('Croata',     'hr'),
-    ('Noruego',    'no');
+    ('Noruego',    'no'),
+    ('Polaco',     'pl'),
+    ('Rumano',     'ro'),
+    ('Esloveno',   'sl'),
+    ('Sueco',      'sv'),
+    ('Uzbeko',     'uz');
 
 DECLARE @i INT = 1, @total INT = (SELECT COUNT(*) FROM @idiomas);
 DECLARE @cargados INT = 0, @existentes INT = 0, @rechazados INT = 0;

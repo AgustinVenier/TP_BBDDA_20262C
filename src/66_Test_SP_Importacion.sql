@@ -27,7 +27,8 @@
                con X, que no tiene ningún miembro de la FIFA).
              - Sede "Estadio Prueba Importación 66".
              - Selecciones XQA, XQB y XQC del grupo L, con 23 jugadores cada
-               una XQA y XQB.
+               una XQA y XQB, y el cuerpo técnico de XQA y XQB ("Prueba DT"
+               y "Prueba CT").
              - Partidos 221 (XQA - XQB, fase de grupos) y 222 (XQA - XQC,
                octavos de final), en agosto de 2026.
              - Árbitros "Prueba Arbitro" de XQE y de XQA, y sus designaciones
@@ -375,6 +376,94 @@ INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = lc.id_seleccion
 INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
 WHERE p.codigo_fifa = 'XQA' AND j.dorsal IN (2, 3, 5, 24)
 ORDER BY j.dorsal;
+GO
+
+
+/* ============================================================================
+   CUERPOS TÉCNICOS (usp_ImportarCuerpoTecnico)
+   ============================================================================ */
+
+/* CT1 (OK) Cuerpos técnicos con errores parciales.
+   Esperado: 3 INSERTADO ("Uno Prueba DT", director técnico de XQA nacido el
+   10/05/1975 en XQA, con el código y el rol en minúsculas; "Dos Prueba CT",
+   ayudante de campo de XQA, sin fecha ni país de nacimiento; y "Tres Prueba
+   DT", director técnico de XQB) y 8 RECHAZADO: QQQ (no hay una selección con
+   ese código); XQE (el país no tiene selección); sin nombre; apellido de 61
+   caracteres; el rol UTILERO; fecha de nacimiento futura y país de
+   nacimiento ZZZ (los dos motivos); y "Cuatro" dos veces en XQB (las dos
+   filas). */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+
+CREATE TABLE #staging_cuerpo_tecnico (
+    id_registro             INT PRIMARY KEY,
+    codigo_fifa             NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+    nombre                  NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+    apellido                NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+    rol                     VARCHAR(40)   COLLATE DATABASE_DEFAULT NULL,
+    fecha_nacimiento        DATE          NULL,
+    codigo_fifa_nacimiento  NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+    errores                 NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+    accion                  VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+);
+
+INSERT INTO #staging_cuerpo_tecnico (id_registro, codigo_fifa, nombre, apellido, rol, fecha_nacimiento, codigo_fifa_nacimiento)
+VALUES (1, ' xqa ', N'Uno', N'Prueba DT', 'director_tecnico', '1975-05-10', 'xqa'),
+       (2, 'XQA', N'Dos', N'Prueba CT', 'AYUDANTE_CAMPO', NULL, NULL),
+       (3, 'XQB', N'Tres', N'Prueba DT', 'DIRECTOR_TECNICO', NULL, 'XQB'),
+       (4, 'QQQ', N'Cuatro', N'Prueba CT', 'MEDICO', NULL, NULL),
+       (5, 'XQE', N'Cinco', N'Prueba CT', 'MEDICO', NULL, NULL),
+       (6, 'XQA', NULL, N'Prueba CT', 'MEDICO', NULL, NULL),
+       (7, 'XQA', N'Siete', REPLICATE(N'a', 61), 'MEDICO', NULL, NULL),
+       (8, 'XQA', N'Ocho', N'Prueba CT', 'UTILERO', NULL, NULL),
+       (9, 'XQA', N'Nueve', N'Prueba CT', 'MEDICO', '2099-01-01', 'ZZZ'),
+       (10, 'XQB', N'Cuatro', N'Prueba CT', 'MEDICO', NULL, NULL),
+       (11, 'XQB', N'Cuatro', N'Prueba CT', 'OTRO', NULL, NULL);
+
+EXEC Torneo.usp_ImportarCuerpoTecnico;
+
+SELECT 'CT1' AS caso, id_registro, codigo_fifa, nombre, LEFT(apellido, 20) AS apellido, rol, accion,
+       REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM #staging_cuerpo_tecnico ORDER BY id_registro;
+GO
+
+
+/* CT2 (OK) Sobre los cuerpos técnicos cargados.
+   Esperado:
+     a) "Uno" SIN CAMBIOS; "Dos" ACTUALIZADO (nacido el 01/01/1980); y
+        "Cinco Prueba DT" RECHAZADO: XQB quedaría con 2 directores técnicos
+        ("Tres", ya cargado, y "Cinco").
+     b) "Dos" pasa a director técnico de XQA y "Uno" a ayudante de campo, en
+        el mismo conjunto: los dos ACTUALIZADO (XQA sigue con uno solo).
+   Quedan: XQA con "Dos" director técnico y "Uno" ayudante; XQB con "Tres". */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+
+DELETE FROM #staging_cuerpo_tecnico;
+INSERT INTO #staging_cuerpo_tecnico (id_registro, codigo_fifa, nombre, apellido, rol, fecha_nacimiento, codigo_fifa_nacimiento)
+VALUES (1, 'XQA', N'Uno', N'Prueba DT', 'DIRECTOR_TECNICO', '1975-05-10', 'XQA'),
+       (2, 'XQA', N'Dos', N'Prueba CT', 'AYUDANTE_CAMPO', '1980-01-01', NULL),
+       (3, 'XQB', N'Cinco', N'Prueba DT', 'DIRECTOR_TECNICO', NULL, NULL);
+EXEC Torneo.usp_ImportarCuerpoTecnico;
+SELECT 'CT2a' AS caso, id_registro, codigo_fifa, nombre, rol, accion,
+       REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM #staging_cuerpo_tecnico ORDER BY id_registro;
+
+DELETE FROM #staging_cuerpo_tecnico;
+INSERT INTO #staging_cuerpo_tecnico (id_registro, codigo_fifa, nombre, apellido, rol)
+VALUES (1, 'XQA', N'Dos', N'Prueba CT', 'DIRECTOR_TECNICO'),
+       (2, 'XQA', N'Uno', N'Prueba DT', 'AYUDANTE_CAMPO');
+EXEC Torneo.usp_ImportarCuerpoTecnico;
+SELECT 'CT2b' AS caso, id_registro, codigo_fifa, nombre, rol, accion,
+       REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM #staging_cuerpo_tecnico ORDER BY id_registro;
+
+SELECT 'CT2 cuerpos técnicos' AS caso, p.codigo_fifa, ct.nombre, ct.apellido, ct.rol, ct.fecha_nacimiento,
+       pn.codigo_fifa AS pais_nacimiento
+FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
+INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = ct.id_seleccion
+INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
+LEFT JOIN DatosGenerales.PAIS AS pn ON pn.id_pais = ct.id_pais_nacimiento
+WHERE p.codigo_fifa LIKE 'XQ_'
+ORDER BY p.codigo_fifa, ct.rol;
 GO
 
 
@@ -746,13 +835,17 @@ GO
    ÁRBITROS Y DESIGNACIONES (usp_ImportarArbitros, usp_ImportarDesignaciones)
    ============================================================================ */
 
-/* AR1 (OK) Árbitros con errores parciales, y otra vez con una fecha de nacimiento.
+/* AR1 (OK) Árbitros con errores parciales, y otra vez con una fecha de
+   nacimiento y otros idiomas.
    Esperado: primero 4 INSERTADO ("Uno Prueba Arbitro", con el país en
-   minúsculas y la categoría FIFA; "Dos", con CONFEDERATION, que se guarda
-   como CONFEDERACION; "Tres", de XQA, y "Diez", de XQE) y 7 RECHAZADO: el
-   país ZZZ; sin nombre; apellido de 61 caracteres; categoría NACIONAL; fecha
-   de nacimiento futura; y "Nueve" dos veces (las dos filas). Después:
-   "Uno" ACTUALIZADO (nacido el 01/03/1985) y "Dos" SIN CAMBIOS. */
+   minúsculas, la categoría FIFA y los idiomas "ES, en", que se guardan como
+   español e inglés; "Dos", con CONFEDERATION, que se guarda como
+   CONFEDERACION, sin idiomas; "Tres", de XQA, y "Diez", de XQE) y 8
+   RECHAZADO: el país ZZZ; sin nombre; apellido de 61 caracteres; categoría
+   NACIONAL; fecha de nacimiento futura; "Nueve" dos veces (las dos filas);
+   y los idiomas qq y zz, que no existen. Después: "Uno" ACTUALIZADO (nacido
+   el 01/03/1985, y con francés: conserva el español y el inglés), "Dos" SIN
+   CAMBIOS y "Tres" ACTUALIZADO (solo agrega el español). */
 IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 CREATE TABLE #staging_arbitros (
@@ -762,37 +855,43 @@ CREATE TABLE #staging_arbitros (
     apellido          NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
     categoria         VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
     fecha_nacimiento  DATE          NULL,
+    idiomas           VARCHAR(200)  COLLATE DATABASE_DEFAULT NULL,
     errores           NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
     accion            VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
 );
 
-INSERT INTO #staging_arbitros (id_registro, codigo_fifa, nombre, apellido, categoria, fecha_nacimiento)
-VALUES (1, 'xqe', N' Uno ', N'Prueba Arbitro', 'fifa', NULL),
-       (2, 'XQE', N'Dos', N'Prueba Arbitro', 'Confederation', NULL),
-       (3, 'XQA', N'Tres', N'Prueba Arbitro', 'FIFA', NULL),
-       (4, 'ZZZ', N'Cuatro', N'Prueba Arbitro', 'FIFA', NULL),
-       (5, 'XQE', NULL, N'Prueba Arbitro', 'FIFA', NULL),
-       (6, 'XQE', N'Seis', REPLICATE(N'a', 61), 'FIFA', NULL),
-       (7, 'XQE', N'Siete', N'Prueba Arbitro', 'NACIONAL', NULL),
-       (8, 'XQE', N'Ocho', N'Prueba Arbitro', 'FIFA', '2099-01-01'),
-       (9, 'XQE', N'Nueve', N'Prueba Arbitro', 'FIFA', NULL),
-       (10, 'XQE', N'Nueve', N'Prueba Arbitro', 'FIFA', NULL),
-       (11, 'XQE', N'Diez', N'Prueba Arbitro', 'FIFA', NULL);
+INSERT INTO #staging_arbitros (id_registro, codigo_fifa, nombre, apellido, categoria, fecha_nacimiento, idiomas)
+VALUES (1, 'xqe', N' Uno ', N'Prueba Arbitro', 'fifa', NULL, 'ES, en'),
+       (2, 'XQE', N'Dos', N'Prueba Arbitro', 'Confederation', NULL, NULL),
+       (3, 'XQA', N'Tres', N'Prueba Arbitro', 'FIFA', NULL, NULL),
+       (4, 'ZZZ', N'Cuatro', N'Prueba Arbitro', 'FIFA', NULL, NULL),
+       (5, 'XQE', NULL, N'Prueba Arbitro', 'FIFA', NULL, NULL),
+       (6, 'XQE', N'Seis', REPLICATE(N'a', 61), 'FIFA', NULL, NULL),
+       (7, 'XQE', N'Siete', N'Prueba Arbitro', 'NACIONAL', NULL, NULL),
+       (8, 'XQE', N'Ocho', N'Prueba Arbitro', 'FIFA', '2099-01-01', NULL),
+       (9, 'XQE', N'Nueve', N'Prueba Arbitro', 'FIFA', NULL, NULL),
+       (10, 'XQE', N'Nueve', N'Prueba Arbitro', 'FIFA', NULL, NULL),
+       (11, 'XQE', N'Diez', N'Prueba Arbitro', 'FIFA', NULL, NULL),
+       (12, 'XQE', N'Doce', N'Prueba Arbitro', 'FIFA', NULL, 'es,qq,zz');
 
 EXEC Arbitraje.usp_ImportarArbitros;
 
-SELECT 'AR1' AS caso, id_registro, codigo_fifa, nombre, LEFT(apellido, 20) AS apellido, categoria, accion,
+SELECT 'AR1' AS caso, id_registro, codigo_fifa, nombre, LEFT(apellido, 20) AS apellido, categoria, idiomas, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
 FROM #staging_arbitros ORDER BY id_registro;
 
 DELETE FROM #staging_arbitros;
-INSERT INTO #staging_arbitros (id_registro, codigo_fifa, nombre, apellido, categoria, fecha_nacimiento)
-VALUES (1, 'XQE', N'Uno', N'Prueba Arbitro', 'FIFA', '1985-03-01'),
-       (2, 'XQE', N'Dos', N'Prueba Arbitro', 'CONFEDERACION', NULL);
+INSERT INTO #staging_arbitros (id_registro, codigo_fifa, nombre, apellido, categoria, fecha_nacimiento, idiomas)
+VALUES (1, 'XQE', N'Uno', N'Prueba Arbitro', 'FIFA', '1985-03-01', 'fr'),
+       (2, 'XQE', N'Dos', N'Prueba Arbitro', 'CONFEDERACION', NULL, NULL),
+       (3, 'XQA', N'Tres', N'Prueba Arbitro', 'FIFA', NULL, 'es');
 EXEC Arbitraje.usp_ImportarArbitros;
 SELECT 'AR1 otra vez' AS caso, nombre, accion FROM #staging_arbitros ORDER BY id_registro;
 
-SELECT 'AR1 árbitros' AS caso, p.codigo_fifa, a.nombre, a.apellido, a.categoria, a.fecha_nacimiento, a.activo
+SELECT 'AR1 árbitros' AS caso, p.codigo_fifa, a.nombre, a.apellido, a.categoria, a.fecha_nacimiento, a.activo,
+       (SELECT STRING_AGG(i.codigo_iso, ', ') WITHIN GROUP (ORDER BY i.codigo_iso)
+        FROM Arbitraje.ARBITRO_IDIOMA AS ai INNER JOIN DatosGenerales.IDIOMA AS i ON i.id_idioma = ai.id_idioma
+        WHERE ai.id_arbitro = a.id_arbitro) AS idiomas
 FROM Arbitraje.ARBITRO AS a
 INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = a.id_pais
 WHERE p.codigo_fifa LIKE 'XQ_'
@@ -1181,8 +1280,8 @@ GO
 -- Se deshace todo lo que cargó el test.
 IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
 GO
-DROP TABLE IF EXISTS #staging_sedes, #staging_selecciones, #staging_jugadores, #staging_partidos, #staging_eventos,
-                     #jugadores_prueba, #staging_arbitros, #staging_designaciones, #staging_indicadores,
+DROP TABLE IF EXISTS #staging_sedes, #staging_selecciones, #staging_jugadores, #staging_cuerpo_tecnico,
+                     #staging_partidos, #staging_eventos, #jugadores_prueba, #staging_arbitros, #staging_designaciones, #staging_indicadores,
                      #staging_cotizaciones, #staging_feriados, #staging_campanias, #staging_piezas;
 GO
 
@@ -1192,7 +1291,7 @@ GO
    ============================================================================ */
 
 /* ER1 (ERROR) Los SP de importación sin su tabla de staging.
-   Esperado: once errores 50001, uno por SP, sin cargar nada. */
+   Esperado: doce errores 50001, uno por SP, sin cargar nada. */
 BEGIN TRY EXEC DatosGenerales.usp_ImportarIndicadoresEconomicos; PRINT N'ER1a: FALLÓ, se esperaba un error.'; END TRY
 BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1a', @error_esperado = 50001; END CATCH;
 BEGIN TRY EXEC DatosGenerales.usp_ImportarCotizaciones; PRINT N'ER1b: FALLÓ, se esperaba un error.'; END TRY
@@ -1215,6 +1314,8 @@ BEGIN TRY EXEC Arbitraje.usp_ImportarDesignaciones; PRINT N'ER1j: FALLÓ, se esp
 BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1j', @error_esperado = 50001; END CATCH;
 BEGIN TRY EXEC Publicidad.usp_ImportarCampanias; PRINT N'ER1k: FALLÓ, se esperaba un error.'; END TRY
 BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1k', @error_esperado = 50001; END CATCH;
+BEGIN TRY EXEC Torneo.usp_ImportarCuerpoTecnico; PRINT N'ER1l: FALLÓ, se esperaba un error.'; END TRY
+BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1l', @error_esperado = 50001; END CATCH;
 GO
 
 

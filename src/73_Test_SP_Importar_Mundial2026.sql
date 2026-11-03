@@ -24,7 +24,7 @@
            tabla las prueba 66_Test_SP_Importacion.sql, con los SP de
            16_SP_Importacion.sql.
            Requiere haber ejecutado 00 a 24. No depende del juego de datos
-           (sirve con el torneo de prueba del 31 o con el real del 32): crea
+           (sirve con o sin el torneo real del 31 cargado): crea
            sus propios países (códigos ZZA, ZZB y ZZC), selecciones, sede,
            partidos (números 201 a 203) y árbitros ("Árbitro Prueba ...", con
            sus designaciones), y al final los borra con los SP de

@@ -10,17 +10,16 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 02/11/2026
- Archivo: 32_ImportarMundial2026.sql
+ Archivo: 31_ImportarMundial2026.sql
  Objetivo: Cargar el Mundial 2026 real (las 16 sedes, las 48 selecciones con
            sus 1248 convocados, los 104 partidos con formaciones, cambios,
            goles y tarjetas, y el equipo arbitral de cada uno) desde los
            archivos de openfootball y los CSV del scraping, con los SP de
            23_SP_Importar_Mundial2026.sql y 24_SP_Importar_Jugadores.sql.
-           Es la alternativa a 31_DatosDePrueba.sql: el torneo de prueba y el
-           real no pueden estar en la misma base (cada país tiene una sola
-           selección y el número de partido no se repite). Para la base del
-           torneo real: ejecutar 00 a 30 y después este script, en lugar del
-           31. Sobre una base con el torneo de prueba no hace nada.
+           Requiere haber ejecutado 00 a 30. Después va
+           32_DatosComplementarios.sql, que completa lo que los archivos no
+           traen (cuerpos técnicos, idiomas de los árbitros, la publicidad
+           de cada partido).
 ================================================================================
 
  Antes de ejecutar:
@@ -66,13 +65,10 @@ GO
 SET NOCOUNT ON;
 GO
 
--- Sobre una base con el torneo de prueba (31) no se carga nada. Se reconoce porque
--- tiene cuerpos técnicos, que los archivos del torneo real no traen.
 IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS)
-   OR EXISTS (SELECT 1 FROM Torneo.PERSONA_CUERPO_TECNICO)
 BEGIN
-    PRINT N'32_ImportarMundial2026.sql: la base tiene que tener los datos iniciales (20) y no tener el torneo de '
-        + N'prueba del 31. Recreá la base con 00 a 30 y volvé a ejecutarlo.';
+    PRINT N'31_ImportarMundial2026.sql: la base tiene que tener los datos iniciales (20). '
+        + N'Ejecutá los scripts 00 a 30 y volvé a ejecutarlo.';
     SET NOEXEC ON;
 END;
 GO

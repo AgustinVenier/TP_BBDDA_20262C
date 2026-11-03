@@ -30,7 +30,7 @@
              Arbitraje.usp_ImportarDesignacionesCSV   designaciones_arbitrales.csv (scraping)
            Requiere haber ejecutado 00 a 22. Su script de testing es
            73_Test_SP_Importar_Mundial2026.sql. La carga del torneo real está
-           en 32_ImportarMundial2026.sql.
+           en 31_ImportarMundial2026.sql.
 ================================================================================
 
  Cómo importa cada SP (igual que 24, 25, 27 y 28):
@@ -1456,6 +1456,7 @@ BEGIN
         apellido          NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
         categoria         VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
         fecha_nacimiento  DATE          NULL,
+        idiomas           VARCHAR(200)  COLLATE DATABASE_DEFAULT NULL,   -- el archivo no los trae
         errores           NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
         accion            VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
     );

@@ -22,8 +22,8 @@
            (22_SP_ConsumirAPI.sql), que tiene que existir cuando se ejecutan
            (no cuando se crean). Requiere haber ejecutado 00 a 20. Su script
            de testing es 71_Test_SP_Importar_Publicidad.sql y la importación
-           la hace 29_ImportarAPIs.sql, antes del juego de datos (31), para
-           que sus piezas compitan en la asignación de publicidad.
+           la hace 29_ImportarAPIs.sql, antes de los datos complementarios
+           (32), para que sus piezas compitan en la asignación de publicidad.
 ================================================================================
 
  Fuente: la página no trae las campañas en el HTML: las lee con JavaScript

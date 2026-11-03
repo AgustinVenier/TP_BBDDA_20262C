@@ -22,7 +22,8 @@
              Torneo.usp_ImportarSedes                          #staging_sedes        nombre del estadio
              Torneo.usp_ImportarSelecciones                    #staging_selecciones  código FIFA del país
              Torneo.usp_ImportarJugadores                      #staging_jugadores    selección + apellido + nombre
-             Torneo.usp_ImportarPartidos                       #staging_partidos     número de partido
+             Torneo.usp_ImportarCuerpoTecnico                  #staging_cuerpo_tecnico selección + apellido + nombre
+             Torneo.usp_ImportarPartidos                      #staging_partidos     número de partido
              DesarrolloPartido.usp_ImportarDesarrolloPartidos  #staging_eventos      lo que pasó en cada partido
              Arbitraje.usp_ImportarArbitros                    #staging_arbitros     país + apellido + nombre
              Arbitraje.usp_ImportarDesignaciones               #staging_designaciones número de partido + árbitro
@@ -48,6 +49,9 @@
       INSERTADO, ACTUALIZADO o SIN CAMBIOS.
    3. El proceso registra la importación (usp_RegistrarImportacion) y guarda
       los rechazados en la tabla ERRORES_ de lo que importó.
+   32_DatosComplementarios.sql también los usa, con tablas que arma a mano,
+   para cargar por conjuntos lo que no traen las fuentes (cuerpos técnicos,
+   idiomas de los árbitros, campañas de otros países).
    Las reglas de cada tabla están una sola vez, acá; el proceso solo rechaza
    lo que no puede convertir. Así se importan los registros válidos y se
    informan los errores de los demás. No se usa un parámetro de tipo tabla
@@ -1140,6 +1144,173 @@ GO
 
 
 /*
+  usp_ImportarCuerpoTecnico
+  Upsert de las personas del cuerpo técnico de las selecciones por
+  selección, apellido y nombre, desde #staging_cuerpo_tecnico. Columnas que
+  usa: id_registro (distinto en cada fila), codigo_fifa (de la selección),
+  nombre, apellido, rol, fecha_nacimiento, codigo_fifa_nacimiento (del país
+  de nacimiento), errores y accion. Ninguna fuente de la Entrega 6 trae los
+  cuerpos técnicos: los carga 32_DatosComplementarios.sql. En una persona
+  existente, la fecha y el país de nacimiento que no vienen no se borran.
+  Valida cada persona pendiente: selección registrada; nombre y apellido
+  obligatorios y de hasta 60 caracteres; rol DIRECTOR_TECNICO,
+  AYUDANTE_CAMPO, PREPARADOR_FISICO, ENTRENADOR_ARQUEROS, MEDICO u OTRO;
+  fecha de nacimiento no futura; país de nacimiento registrado; que no venga
+  dos veces. Y con las válidas, cada cuerpo técnico como quedaría (las
+  personas registradas que no vienen, más las que vienen): un solo director
+  técnico por selección; los directores técnicos que lo rompen se rechazan.
+  Con eso cubre las reglas de usp_PERSONA_CUERPO_TECNICO_Alta y
+  _Modificacion.
+*/
+CREATE OR ALTER PROCEDURE Torneo.usp_ImportarCuerpoTecnico
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @nl           NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia  BIT      = IIF(@@TRANCOUNT = 0, 1, 0);
+
+    -- La selección, el país de nacimiento y la persona ya registrada de cada fila pendiente.
+    DECLARE @registradas TABLE (
+        id_registro         INT PRIMARY KEY,
+        id_seleccion        INT,
+        id_pais_nacimiento  SMALLINT,
+        id_persona_ct       INT
+    );
+
+    IF OBJECT_ID(N'tempdb..#staging_cuerpo_tecnico') IS NULL
+        THROW 50001, N'Torneo.usp_ImportarCuerpoTecnico: no se importó nada, falta la tabla #staging_cuerpo_tecnico con el cuerpo técnico.', 1;
+
+    UPDATE #staging_cuerpo_tecnico
+    SET codigo_fifa            = UPPER(NULLIF(TRIM(codigo_fifa), '')),
+        nombre                 = NULLIF(TRIM(nombre), N''),
+        apellido               = NULLIF(TRIM(apellido), N''),
+        rol                    = UPPER(NULLIF(TRIM(rol), '')),
+        codigo_fifa_nacimiento = UPPER(NULLIF(TRIM(codigo_fifa_nacimiento), ''))
+    WHERE accion IS NULL;
+
+    INSERT INTO @registradas (id_registro, id_seleccion, id_pais_nacimiento, id_persona_ct)
+    SELECT st.id_registro, s.id_seleccion, pn.id_pais, ct.id_persona_ct
+    FROM #staging_cuerpo_tecnico AS st
+    LEFT JOIN DatosGenerales.PAIS AS pa ON pa.codigo_fifa = st.codigo_fifa
+    LEFT JOIN Torneo.SELECCION AS s ON s.id_pais = pa.id_pais
+    LEFT JOIN DatosGenerales.PAIS AS pn ON pn.codigo_fifa = st.codigo_fifa_nacimiento
+    LEFT JOIN Torneo.PERSONA_CUERPO_TECNICO AS ct
+           ON ct.id_seleccion = s.id_seleccion AND ct.apellido = st.apellido AND ct.nombre = st.nombre
+    WHERE st.accion IS NULL;
+
+    /* 1. Las reglas de cada persona. */
+    UPDATE st
+    SET errores = NULLIF(CONCAT(st.errores,
+            CASE WHEN st.codigo_fifa IS NULL  THEN @nl + N'- El código FIFA de la selección es obligatorio.'
+                 WHEN r.id_seleccion IS NULL THEN @nl + N'- No hay una selección registrada con código FIFA "'
+                                                       + st.codigo_fifa + N'".'
+            END,
+            CASE WHEN st.nombre IS NULL OR st.apellido IS NULL
+                     THEN @nl + N'- El nombre y el apellido son obligatorios.'
+                 WHEN LEN(st.nombre) > 60 OR LEN(st.apellido) > 60
+                     THEN @nl + N'- El nombre y el apellido no pueden superar los 60 caracteres.'
+            END,
+            CASE WHEN st.rol IS NULL THEN @nl + N'- El rol es obligatorio.'
+                 WHEN st.rol NOT IN ('DIRECTOR_TECNICO', 'AYUDANTE_CAMPO', 'PREPARADOR_FISICO',
+                                     'ENTRENADOR_ARQUEROS', 'MEDICO', 'OTRO')
+                     THEN @nl + N'- El rol "' + st.rol + N'" no es DIRECTOR_TECNICO, AYUDANTE_CAMPO, '
+                              + N'PREPARADOR_FISICO, ENTRENADOR_ARQUEROS, MEDICO ni OTRO.'
+            END,
+            IIF(st.fecha_nacimiento > CONVERT(DATE, GETDATE()), @nl + N'- La fecha de nacimiento no puede ser futura.', NULL),
+            IIF(st.codigo_fifa_nacimiento IS NOT NULL AND r.id_pais_nacimiento IS NULL,
+                @nl + N'- No hay un país registrado con código FIFA "' + st.codigo_fifa_nacimiento
+                    + N'" (país de nacimiento).', NULL)), N'')
+    FROM #staging_cuerpo_tecnico AS st
+    INNER JOIN @registradas AS r ON r.id_registro = st.id_registro;
+
+    UPDATE st
+    SET errores = CONCAT(st.errores, @nl, N'- Esta persona viene ', r.veces, N' veces para la selección.')
+    FROM #staging_cuerpo_tecnico AS st
+    INNER JOIN (SELECT codigo_fifa, nombre, apellido, COUNT(*) AS veces FROM #staging_cuerpo_tecnico
+                WHERE codigo_fifa IS NOT NULL AND nombre IS NOT NULL AND apellido IS NOT NULL
+                GROUP BY codigo_fifa, nombre, apellido HAVING COUNT(*) > 1) AS r
+            ON r.codigo_fifa = st.codigo_fifa AND r.nombre = st.nombre AND r.apellido = st.apellido
+    WHERE st.accion IS NULL;
+
+    /* 2. Cada cuerpo técnico como quedaría con las personas válidas: un solo director técnico
+          por selección. Se rechazan los directores técnicos que vienen para una selección que
+          quedaría con más de uno. */
+    WITH validas AS (
+        SELECT st.id_registro, r.id_seleccion, r.id_persona_ct, st.rol
+        FROM #staging_cuerpo_tecnico AS st
+        INNER JOIN @registradas AS r ON r.id_registro = st.id_registro
+        WHERE st.errores IS NULL
+    ),
+    directores AS (
+        SELECT e.id_seleccion, COUNT(*) AS cantidad
+        FROM (SELECT id_seleccion, rol FROM validas
+              UNION ALL
+              SELECT ct.id_seleccion, ct.rol
+              FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
+              WHERE ct.id_seleccion IN (SELECT id_seleccion FROM validas)
+                AND NOT EXISTS (SELECT 1 FROM validas AS v WHERE v.id_persona_ct = ct.id_persona_ct)) AS e
+        WHERE e.rol = 'DIRECTOR_TECNICO'
+        GROUP BY e.id_seleccion
+        HAVING COUNT(*) > 1
+    )
+    UPDATE st
+    SET errores = CONCAT(@nl, N'- La selección quedaría con ', d.cantidad, N' directores técnicos: puede tener uno solo.')
+    FROM #staging_cuerpo_tecnico AS st
+    INNER JOIN validas AS v ON v.id_registro = st.id_registro
+    INNER JOIN directores AS d ON d.id_seleccion = v.id_seleccion
+    WHERE v.rol = 'DIRECTOR_TECNICO';
+
+    UPDATE #staging_cuerpo_tecnico SET accion = 'RECHAZADO' WHERE accion IS NULL AND errores IS NOT NULL;
+
+    /* 3. Lo que le pasa a cada persona válida, antes de cargar. */
+    UPDATE st
+    SET accion = CASE WHEN r.id_persona_ct IS NULL THEN 'INSERTADO'
+                      WHEN st.rol <> ct.rol
+                        OR st.fecha_nacimiento <> ISNULL(ct.fecha_nacimiento, '19000101')
+                        OR r.id_pais_nacimiento <> ISNULL(ct.id_pais_nacimiento, 0)
+                          THEN 'ACTUALIZADO'
+                      ELSE 'SIN CAMBIOS'
+                 END
+    FROM #staging_cuerpo_tecnico AS st
+    INNER JOIN @registradas AS r ON r.id_registro = st.id_registro
+    LEFT JOIN Torneo.PERSONA_CUERPO_TECNICO AS ct ON ct.id_persona_ct = r.id_persona_ct
+    WHERE st.accion IS NULL;
+
+    /* 4. Carga, todos juntos. Los cambios de rol van antes que las altas: el director técnico
+          nuevo de una selección puede reemplazar al que pasa a otro rol. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        UPDATE ct
+        SET rol                = st.rol,
+            fecha_nacimiento   = ISNULL(st.fecha_nacimiento, ct.fecha_nacimiento),
+            id_pais_nacimiento = ISNULL(r.id_pais_nacimiento, ct.id_pais_nacimiento)
+        FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
+        INNER JOIN @registradas AS r ON r.id_persona_ct = ct.id_persona_ct
+        INNER JOIN #staging_cuerpo_tecnico AS st ON st.id_registro = r.id_registro
+        WHERE st.accion = 'ACTUALIZADO';
+
+        INSERT INTO Torneo.PERSONA_CUERPO_TECNICO
+            (id_seleccion, id_pais_nacimiento, nombre, apellido, fecha_nacimiento, rol)
+        SELECT r.id_seleccion, r.id_pais_nacimiento, st.nombre, st.apellido, st.fecha_nacimiento, st.rol
+        FROM #staging_cuerpo_tecnico AS st
+        INNER JOIN @registradas AS r ON r.id_registro = st.id_registro
+        WHERE st.accion = 'INSERTADO'
+        ORDER BY st.id_registro;
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+/*
   usp_ImportarPartidos
   Upsert de partidos del fixture por número, desde #staging_partidos.
   Columnas que usa: id_registro (distinto en cada fila), numero_partido,
@@ -1997,15 +2168,18 @@ GO
   usp_ImportarArbitros
   Upsert de árbitros por país (código FIFA), apellido y nombre, desde
   #staging_arbitros. Columnas que usa: id_registro (distinto en cada fila),
-  codigo_fifa, nombre, apellido, categoria, fecha_nacimiento, errores y
-  accion. Acepta la categoría CONFEDERATION, en inglés. En uno existente, la
+  codigo_fifa, nombre, apellido, categoria, fecha_nacimiento, idiomas,
+  errores y accion. Acepta la categoría CONFEDERATION, en inglés. idiomas es
+  una lista de códigos ISO 639-1 separados por comas (ej. 'es,en'), como en
+  usp_RegistrarArbitro, y puede no venir: se agregan los que el árbitro no
+  tiene, y los que tiene y no vienen no se borran. En uno existente, la
   fecha de nacimiento que no viene no se borra, y si está activo o no queda
-  como está. Los idiomas no se importan: se registran con
-  usp_ARBITRO_IDIOMA_Alta.
+  como está.
   Valida cada árbitro pendiente: país registrado; nombre y apellido
   obligatorios y de hasta 60 caracteres; categoría FIFA o CONFEDERACION;
-  fecha de nacimiento no futura; que no venga dos veces. Con eso cubre las
-  reglas de usp_ARBITRO_Alta.
+  fecha de nacimiento no futura; idiomas registrados; que no venga dos
+  veces. Con eso cubre las reglas de usp_ARBITRO_Alta y
+  usp_ARBITRO_IDIOMA_Alta.
 */
 CREATE OR ALTER PROCEDURE Arbitraje.usp_ImportarArbitros
 AS
@@ -2021,6 +2195,14 @@ BEGIN
         id_registro  INT PRIMARY KEY,
         id_pais      SMALLINT,
         id_arbitro   INT
+    );
+
+    -- Los idiomas de cada fila pendiente, uno por fila (id_idioma NULL: el código no existe).
+    DECLARE @idiomas TABLE (
+        id_registro  INT,
+        codigo       VARCHAR(10),
+        id_idioma    SMALLINT,
+        PRIMARY KEY (id_registro, codigo)
     );
 
     IF OBJECT_ID(N'tempdb..#staging_arbitros') IS NULL
@@ -2040,6 +2222,13 @@ BEGIN
     LEFT JOIN Arbitraje.ARBITRO AS a ON a.id_pais = pa.id_pais AND a.apellido = st.apellido AND a.nombre = st.nombre
     WHERE st.accion IS NULL;
 
+    INSERT INTO @idiomas (id_registro, codigo, id_idioma)
+    SELECT DISTINCT st.id_registro, LEFT(LOWER(TRIM(c.value)), 10), i.id_idioma
+    FROM #staging_arbitros AS st
+    CROSS APPLY STRING_SPLIT(st.idiomas, ',') AS c
+    LEFT JOIN DatosGenerales.IDIOMA AS i ON i.codigo_iso = LOWER(TRIM(c.value))
+    WHERE st.accion IS NULL AND TRIM(c.value) <> '';
+
     /* 1. Las reglas de cada árbitro. */
     UPDATE st
     SET errores = NULLIF(CONCAT(st.errores,
@@ -2055,7 +2244,10 @@ BEGIN
                  WHEN st.categoria NOT IN ('FIFA', 'CONFEDERACION')
                      THEN @nl + N'- La categoría "' + st.categoria + N'" no es FIFA ni CONFEDERACION.'
             END,
-            IIF(st.fecha_nacimiento > CONVERT(DATE, GETDATE()), @nl + N'- La fecha de nacimiento no puede ser futura.', NULL)), N'')
+            IIF(st.fecha_nacimiento > CONVERT(DATE, GETDATE()), @nl + N'- La fecha de nacimiento no puede ser futura.', NULL),
+            (SELECT @nl + N'- Idiomas que no existen: ' + STRING_AGG(i.codigo, ', ') + N'.'
+             FROM @idiomas AS i
+             WHERE i.id_registro = st.id_registro AND i.id_idioma IS NULL)), N'')
     FROM #staging_arbitros AS st
     INNER JOIN @registrados AS r ON r.id_registro = st.id_registro;
 
@@ -2074,6 +2266,10 @@ BEGIN
     UPDATE st
     SET accion = CASE WHEN r.id_arbitro IS NULL THEN 'INSERTADO'
                       WHEN st.categoria <> a.categoria OR st.fecha_nacimiento <> ISNULL(a.fecha_nacimiento, '19000101')
+                        OR EXISTS (SELECT 1 FROM @idiomas AS i
+                                   WHERE i.id_registro = st.id_registro
+                                     AND NOT EXISTS (SELECT 1 FROM Arbitraje.ARBITRO_IDIOMA AS ai
+                                                     WHERE ai.id_arbitro = a.id_arbitro AND ai.id_idioma = i.id_idioma))
                           THEN 'ACTUALIZADO'
                       ELSE 'SIN CAMBIOS'
                  END
@@ -2100,6 +2296,17 @@ BEGIN
         INNER JOIN @registrados AS r ON r.id_registro = st.id_registro
         WHERE st.accion = 'INSERTADO'
         ORDER BY st.id_registro;
+
+        -- Los idiomas que cada árbitro todavía no tiene (el árbitro nuevo ya tiene su id).
+        INSERT INTO Arbitraje.ARBITRO_IDIOMA (id_arbitro, id_idioma)
+        SELECT a.id_arbitro, i.id_idioma
+        FROM #staging_arbitros AS st
+        INNER JOIN @registrados AS r ON r.id_registro = st.id_registro
+        INNER JOIN Arbitraje.ARBITRO AS a ON a.id_pais = r.id_pais AND a.apellido = st.apellido AND a.nombre = st.nombre
+        INNER JOIN @idiomas AS i ON i.id_registro = st.id_registro
+        WHERE st.accion IN ('INSERTADO', 'ACTUALIZADO')
+          AND NOT EXISTS (SELECT 1 FROM Arbitraje.ARBITRO_IDIOMA AS ai
+                          WHERE ai.id_arbitro = a.id_arbitro AND ai.id_idioma = i.id_idioma);
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
     END TRY
