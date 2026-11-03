@@ -22,6 +22,12 @@ curl -o worldcup.stadiums.json https://raw.githubusercontent.com/openfootball/wo
 
 La cuenta del servicio de SQL Server tiene que poder leer esta carpeta (ver "Antes de ejecutar" en `src/26_ImportarIndicadores.sql`).
 
+## Límites de uso
+
+- No hace falta clave ni registro: son archivos estáticos de un repositorio público de GitHub, que los sirve desde `raw.githubusercontent.com`.
+- GitHub limita los pedidos sin autenticar a `raw.githubusercontent.com`, igual que los clones por HTTPS y la API REST ([changelog del 8 de mayo de 2025](https://github.blog/changelog/2025-05-08-updated-rate-limits-for-unauthenticated-requests/)). No publica cuántos pedidos admite para descargar archivos; al superarlo responde HTTP 429 (Too Many Requests).
+- La importación no consulta la URL: lee los archivos de esta carpeta. Los tres pedidos se hacen solo para actualizar los archivos.
+
 ## Lo que los archivos no traen
 
 - El número de partido: el importador los numera por fecha y hora (ver el encabezado de `src/23_SP_Importar_Mundial2026.sql`).

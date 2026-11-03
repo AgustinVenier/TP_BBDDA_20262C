@@ -1077,9 +1077,11 @@ BEGIN
 
         EXEC Torneo.usp_ImportarPartidos;
 
+        -- Cada INSERT lleva ORDER BY para que id_evento (el registro de ERRORES_EVENTO) siga el orden
+        -- del archivo y salga igual en cada importación.
         -- Formaciones: titulares y suplentes de cada selección (lineup[0] es team1).
         INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, es_titular)
-        SELECT 'FORMACION', st.id_registro, st.numero_partido, CAST(l.[key] AS INT) + 1, CAST(j.[key] AS INT) + 1,
+        SELECT 'FORMACION', st.id_registro, st.numero_partido, CAST(l.[key] AS INT) + 1 AS lado, CAST(j.[key] AS INT) + 1 AS orden,
                NULLIF(TRIM(JSON_VALUE(j.value, N'$.name')), N''), 1
         FROM #staging_partidos AS st
         CROSS APPLY OPENJSON(st.detalle, N'$.lineup') AS l
@@ -1091,7 +1093,8 @@ BEGIN
         FROM #staging_partidos AS st
         CROSS APPLY OPENJSON(st.detalle, N'$.lineup') AS l
         CROSS APPLY OPENJSON(l.value, N'$.bench') AS j
-        WHERE st.accion <> 'RECHAZADO' AND l.[key] IN (N'0', N'1');
+        WHERE st.accion <> 'RECHAZADO' AND l.[key] IN (N'0', N'1')
+        ORDER BY id_registro, lado, orden;
 
         -- Cambios: el archivo no dice el motivo (queda vacío).
         INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, nombre_entra_txt, minuto_txt)
@@ -1102,7 +1105,8 @@ BEGIN
         CROSS APPLY OPENJSON(l.value, N'$.subs') AS c
         CROSS APPLY OPENJSON(c.value)
             WITH (sale NVARCHAR(200) '$.off', entra NVARCHAR(200) '$.on', minuto NVARCHAR(20) '$.minute') AS d
-        WHERE st.accion <> 'RECHAZADO' AND l.[key] IN (N'0', N'1');
+        WHERE st.accion <> 'RECHAZADO' AND l.[key] IN (N'0', N'1')
+        ORDER BY st.id_registro, CAST(l.[key] AS INT), CAST(c.[key] AS INT);
 
         -- Goles: goals1 son los que suman para team1; un gol en contra lo hizo un jugador del rival.
         INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, minuto_txt, de_penal, en_contra)
@@ -1115,7 +1119,8 @@ BEGIN
         CROSS APPLY OPENJSON(g.value)
             WITH (nombre NVARCHAR(200) '$.name', minuto NVARCHAR(20) '$.minute',
                   de_penal NVARCHAR(10) '$.penalty', en_contra NVARCHAR(10) '$.owngoal') AS d
-        WHERE st.accion <> 'RECHAZADO';
+        WHERE st.accion <> 'RECHAZADO'
+        ORDER BY st.id_registro, x.lado, CAST(g.[key] AS INT);
 
         -- Penales convertidos en la definición: el equipo sale de cómo cambia el marcador.
         WITH penales AS (
@@ -1129,7 +1134,8 @@ BEGIN
         )
         INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, marcador_1)
         SELECT 'PENAL', id_registro, numero_partido, IIF(marcador_1 > marcador_1_antes, 1, 2), orden, nombre, marcador_1
-        FROM penales;
+        FROM penales
+        ORDER BY id_registro, orden;
 
         -- Tarjetas: bookings[0] son las de team1. Y/R se registra como amarilla y como roja por doble
         -- amarilla. El archivo no tiene el motivo (queda vacío).
@@ -1146,7 +1152,8 @@ BEGIN
                      FROM (VALUES (N'Y', 'AMARILLA', 0), (N'R', 'ROJA', 0), (N'Y/R', 'AMARILLA', 0), (N'Y/R', 'ROJA', 1))
                           AS v (codigo, tarjeta, doble)
                      WHERE v.codigo = UPPER(TRIM(d.tipo))) AS c
-        WHERE st.accion <> 'RECHAZADO' AND b.[key] IN (N'0', N'1');
+        WHERE st.accion <> 'RECHAZADO' AND b.[key] IN (N'0', N'1')
+        ORDER BY st.id_registro, CAST(b.[key] AS INT), CAST(t.[key] AS INT), c.doble;
 
         -- Selección del jugador y minuto ("45+2": minuto 45 y 2 de adicional).
         UPDATE e
