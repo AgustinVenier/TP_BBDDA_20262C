@@ -18,7 +18,10 @@
            sedes cargadas (se ejecuta una sola vez, después de recrear la
            base). De lo anterior, lo que necesita es la importación del PBI
            per cápita del Banco Mundial (22, 25 y 26): la asignación de
-           publicidad lo usa para priorizar las piezas.
+           publicidad lo usa para priorizar las piezas. Si antes se
+           importaron las campañas del Dossier Mundial (29), sus piezas
+           compiten en esa asignación: son para el mercado argentino y
+           aparecen en los partidos de Argentina.
 ================================================================================
 
  Qué carga:

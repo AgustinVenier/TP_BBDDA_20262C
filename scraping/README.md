@@ -1,7 +1,16 @@
-# Scraping de los jugadores del Mundial 2026
+# Scraping de los jugadores y del equipo arbitral del Mundial 2026
 
 Universidad Nacional de La Matanza · 3641 - Bases de Datos Aplicada · Comisión 01 · Grupo 2
 Entrega 6 – Procesos de importación
+
+Hay dos scripts, los dos sobre Wikipedia en inglés:
+
+| Script | Genera | Se importa con |
+|---|---|---|
+| `Scraping_Jugadores.py` | `datos/jugadores.csv`: los convocados de cada selección | `Torneo.usp_ImportarJugadoresCSV` (`src/24_SP_Importar_Jugadores.sql`) |
+| `Scraping_Arbitros.py` | `datos/designaciones_arbitrales.csv`: el equipo arbitral de cada partido | `Arbitraje.usp_ImportarDesignacionesCSV` (`src/23_SP_Importar_Mundial2026.sql`) |
+
+Las secciones 1 a 6 describen el de jugadores. La 7 describe el del equipo arbitral, que usa la misma técnica, los mismos límites de uso y las mismas funciones de descarga.
 
 ---
 ## 1. Qué se obtiene
@@ -172,6 +181,106 @@ Salida esperada:
 ```
 Selecciones: 48  Jugadores: 1248
 Archivo: ...\datos\jugadores.csv
+```
+---
+
+## 7. Equipo arbitral (`Scraping_Arbitros.py`)
+
+### 7.1 Qué se obtiene
+
+**`designaciones_arbitrales.csv`**: una fila por árbitro designado en cada uno de los 104 partidos, con los ocho roles que publica la FIFA. Son 832 designaciones de 169 árbitros de 49 países. Se cargan en **`Arbitraje.ARBITRO`** y **`Arbitraje.DESIGNACION_ARBITRAL`**.
+
+| Columna del CSV | Destino | Observación |
+|---|---|---|
+| `fecha` | Partido | Fecha del partido en la hora local de la sede (`AAAA-MM-DD`). Con las dos selecciones identifica al partido: el archivo no numera los partidos |
+| `local`, `visitante` | Partido | Código FIFA de cada selección |
+| `rol` | `DESIGNACION_ARBITRAL.rol` | Como lo publica la página. `Arbitraje.usp_ImportarDesignaciones` lo traduce (ver la tabla de abajo) |
+| `nombre`, `apellido` | `ARBITRO.nombre`, `ARBITRO.apellido` | Ver [nombre y apellido](#74-nombre-y-apellido) |
+| `pais` | `ARBITRO.id_pais` | Código FIFA del país del árbitro |
+
+| Rol en la página | Rol en la base |
+|---|---|
+| Referee | `PRINCIPAL` |
+| Assistant referees (el primero y el segundo) | `ASISTENTE_1` y `ASISTENTE_2` |
+| Fourth official | `CUARTO` |
+| Reserve assistant referee | `ASISTENTE_RESERVA` |
+| Video assistant referee | `VAR` |
+| Assistant video assistant referee | `AVAR` |
+| Support video assistant referee | `VAR_APOYO` |
+
+La página no publica la fecha de nacimiento, la categoría ni los idiomas de los árbitros. La categoría se pasa como parámetro al importar (FIFA, porque la FIFA eligió a los árbitros del Mundial); los idiomas se registran después con `Arbitraje.usp_ARBITRO_IDIOMA_Alta`.
+
+### 7.2 Páginas de origen
+
+| Página | Qué se toma |
+|---|---|
+| 2026 FIFA World Cup Group A … Group L | Los 72 partidos de la fase de grupos |
+| 2026 FIFA World Cup round of 32 | Los 16 partidos de dieciseisavos |
+| 2026 FIFA World Cup knockout stage | Los 16 partidos de octavos a la final. También tiene los dieciseisavos, pero sin el equipo arbitral: de esos se toma la página anterior |
+| List of FIFA country codes | El código FIFA de cada selección y del país de cada árbitro, igual que en el scraping de jugadores |
+
+Son **15 pedidos por ejecución**, uno detrás de otro, por la misma conexión y con un segundo de pausa entre cada uno, muy por debajo de los límites de la sección 3. Ante un 429 se espera y se reintenta igual que en el scraping de jugadores.
+
+### 7.3 Dónde está cada dato en el HTML
+
+Cada partido es un `<div class="footballbox">`. Debajo, después de las formaciones, un párrafo trae el resto del equipo arbitral, con un `<b>` por rol y una línea "Nombre (País)" por árbitro:
+
+```html
+<div class="footballbox">
+  <div class="fleft"><time><div class="fdate">June 11, 2026 <span class="dtstart">2026-06-11</span></div> ...</time></div>
+  <table class="fevent"><tr>
+    <th class="fhome"><a ...>Mexico</a></th> <th class="fscore">2–0</th> <th class="faway"><a ...>South Africa</a></th>
+  </tr></table>
+  <div class="fright"> ... <div>Referee: <a ...>Wilton Sampaio</a> (<a ...>Brazil</a>)</div></div>
+</div>
+...
+<p><b>Assistant referees:</b><br/>Bruno Pires (Brazil)<br/>Bruno Boschilia (Brazil)
+   <br/><b>Fourth official:</b><br/>Juan Gabriel Benítez (Paraguay)
+   <br/><b>Video assistant referee:</b><br/>Nicolás Gallo (Colombia) ...</p>
+```
+
+| Dato | Cómo se obtiene |
+|---|---|
+| Fecha | El `<span class="dtstart">` oculto, que ya está en formato ISO |
+| Selecciones | El texto de `.fhome` y `.faway`, traducido a su código FIFA |
+| Árbitro principal | La línea "Referee: Nombre (País)" de `.fright` |
+| Resto del equipo | El párrafo que tiene un `<b>` "Fourth official", el primero después del partido. Cada `<br>` separa una línea; las que terminan en ":" son el rol y las demás, sus árbitros |
+
+Se quitan las notas ("[14]") y los enlaces a artículos en otros idiomas ("[de]") que la página pone junto a algunos nombres.
+
+### 7.4 Nombre y apellido
+
+La página muestra el nombre completo y, a diferencia de la de plantillas, no tiene un atributo que marque el apellido. Se toma **la primera palabra como nombre y el resto como apellido**: "Carlos del Cerro Grande" queda como Carlos / del Cerro Grande. Con los nombres compuestos el corte no es el real ("Juan Gabriel Benítez" queda como Juan / Gabriel Benítez), pero es siempre el mismo, así que el árbitro se reconoce igual al volver a importar.
+
+**Un árbitro escrito de dos formas.** Algunas páginas escriben al mismo árbitro de otra forma. Se toman como la misma persona dos formas del mismo país que:
+
+- son iguales sin tildes ni signos ("Hamza El-Fariq" y "Hamza El Fariq"), o
+- tienen la misma primera y última palabra y una está dentro de la otra ("Katia García" y "Katia Itzel García"), o
+- son casi iguales y terminan igual ("Masimiliano Del Yesso" y "Maximiliano Del Yesso").
+
+Se usa la forma que más se repite, y el script avisa cada unificación. En el dataset actual son 6.
+
+### 7.5 Formato y ejecución
+
+El formato es el de la sección 5 (UTF-8 sin BOM, comas, encabezado y `\r\n`):
+
+```csv
+fecha,local,visitante,rol,nombre,apellido,pais
+2026-06-11,MEX,RSA,Referee,Wilton,Sampaio,BRA
+2026-06-11,MEX,RSA,Assistant referee 1,Bruno,Pires,BRA
+```
+
+```bash
+python Scraping_Arbitros.py [--salida CARPETA]
+```
+
+Tarda unos 25 segundos. Salida esperada:
+
+```
+Partidos: 104  Designaciones: 832  Árbitros: 169
+Archivo: ...\datos\designaciones_arbitrales.csv
+Aviso: Facundo Rodriguez (Argentina) se toma como Facundo Rodríguez.
+...
 ```
 ---
 

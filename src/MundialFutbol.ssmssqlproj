@@ -166,6 +166,12 @@
           <AssociatedConnUserName />
           <FullPath>20_DatosIniciales.sql</FullPath>
         </FileNode>
+        <FileNode Name="21_SP_Importar_Publicidad.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>21_SP_Importar_Publicidad.sql</FullPath>
+        </FileNode>
         <FileNode Name="22_SP_ConsumirAPI.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
@@ -208,11 +214,11 @@
           <AssociatedConnUserName />
           <FullPath>28_SP_Importar_Feriados.sql</FullPath>
         </FileNode>
-        <FileNode Name="29_ImportarCotizacionesYFeriados.sql">
+        <FileNode Name="29_ImportarAPIs.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>29_ImportarCotizacionesYFeriados.sql</FullPath>
+          <FullPath>29_ImportarAPIs.sql</FullPath>
         </FileNode>
         <FileNode Name="30_SP_Reportes.sql">
           <AssociatedConnectionMoniker />
@@ -309,6 +315,12 @@
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>66_Test_SP_Importacion.sql</FullPath>
+        </FileNode>
+        <FileNode Name="71_Test_SP_Importar_Publicidad.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>71_Test_SP_Importar_Publicidad.sql</FullPath>
         </FileNode>
         <FileNode Name="72_Test_SP_ConsumirAPI.sql">
           <AssociatedConnectionMoniker />

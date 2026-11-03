@@ -255,7 +255,21 @@ VALUES
     ('Turquía',                'TUR', 'TR', 'TUR', 'Turkey Standard Time',            'TRY'),
     ('Irak',                   'IRQ', 'IQ', 'IRQ', 'Arabic Standard Time',            'IQD'),
     ('República Democrática del Congo', 'COD', 'CD', 'COD', 'W. Central Africa Standard Time', 'CDF'),
-    ('Curazao',                'CUW', 'CW', 'CUW', 'SA Western Standard Time',        'XCG');
+    ('Curazao',                'CUW', 'CW', 'CUW', 'SA Western Standard Time',        'XCG'),
+    -- Países de los árbitros del Mundial 2026 que no están en las listas de arriba
+    ('Venezuela',              'VEN', 'VE', 'VEN', 'Venezuela Standard Time',         'VES'),
+    ('Eslovenia',              'SVN', 'SI', 'SVN', 'Central Europe Standard Time',    'EUR'),
+    ('Polonia',                'POL', 'PL', 'POL', 'Central European Standard Time',  'PLN'),
+    ('Rumania',                'ROU', 'RO', 'ROU', 'GTB Standard Time',               'RON'),
+    ('Honduras',               'HON', 'HN', 'HND', 'Central America Standard Time',   'HNL'),
+    ('El Salvador',            'SLV', 'SV', 'SLV', 'Central America Standard Time',   'USD'),
+    ('Nicaragua',              'NCA', 'NI', 'NIC', 'Central America Standard Time',   'NIO'),
+    ('Jamaica',                'JAM', 'JM', 'JAM', 'SA Pacific Standard Time',        'JMD'),
+    ('Trinidad y Tobago',      'TRI', 'TT', 'TTO', 'SA Western Standard Time',        'TTD'),
+    ('Gabón',                  'GAB', 'GA', 'GAB', 'W. Central Africa Standard Time', 'XAF'),
+    ('Camerún',                'CMR', 'CM', 'CMR', 'W. Central Africa Standard Time', 'XAF'),
+    ('Angola',                 'ANG', 'AO', 'AGO', 'W. Central Africa Standard Time', 'AOA'),
+    ('Mauritania',             'MTN', 'MR', 'MRT', 'Greenwich Standard Time',         'MRU');
 
 DECLARE @i INT = 1, @total INT = (SELECT COUNT(*) FROM @paises);
 DECLARE @cargados INT = 0, @existentes INT = 0, @rechazados INT = 0;

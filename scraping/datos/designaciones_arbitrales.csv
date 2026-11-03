@@ -1,0 +1,833 @@
+fecha,local,visitante,rol,nombre,apellido,pais
+2026-06-11,MEX,RSA,Referee,Wilton,Sampaio,BRA
+2026-06-11,MEX,RSA,Assistant referee 1,Bruno,Pires,BRA
+2026-06-11,MEX,RSA,Assistant referee 2,Bruno,Boschilia,BRA
+2026-06-11,MEX,RSA,Fourth official,Juan,Gabriel Benítez,PAR
+2026-06-11,MEX,RSA,Reserve assistant referee,Eduardo,Cardozo,PAR
+2026-06-11,MEX,RSA,Video assistant referee,Nicolás,Gallo,COL
+2026-06-11,MEX,RSA,Assistant video assistant referee,Juan,Lara,CHI
+2026-06-11,MEX,RSA,Support video assistant referee,Jérôme,Brisard,FRA
+2026-06-11,KOR,CZE,Referee,Amin,Omar,EGY
+2026-06-11,KOR,CZE,Assistant referee 1,Mahmoud,Abouregal,EGY
+2026-06-11,KOR,CZE,Assistant referee 2,Ahmed,Hossam Taha,EGY
+2026-06-11,KOR,CZE,Fourth official,Juan,Gabriel Calderón,CRC
+2026-06-11,KOR,CZE,Reserve assistant referee,Juan,Carlos Mora,CRC
+2026-06-11,KOR,CZE,Video assistant referee,Mahmoud,Ashour,EGY
+2026-06-11,KOR,CZE,Assistant video assistant referee,Joe,Dickerson,USA
+2026-06-11,KOR,CZE,Support video assistant referee,Marco,Di Bello,ITA
+2026-06-12,CAN,BIH,Referee,Facundo,Tello,ARG
+2026-06-12,CAN,BIH,Assistant referee 1,Juan,Pablo Belatti,ARG
+2026-06-12,CAN,BIH,Assistant referee 2,Gabriel,Chade,ARG
+2026-06-12,CAN,BIH,Fourth official,Khalid,Al-Turais,KSA
+2026-06-12,CAN,BIH,Reserve assistant referee,Mohammed,Al-Bakry,KSA
+2026-06-12,CAN,BIH,Video assistant referee,Hernán,Mastrángelo,ARG
+2026-06-12,CAN,BIH,Assistant video assistant referee,Antonio,García,URU
+2026-06-12,CAN,BIH,Support video assistant referee,Tatiana,Guzmán,NCA
+2026-06-12,USA,PAR,Referee,Danny,Makkelie,NED
+2026-06-12,USA,PAR,Assistant referee 1,Hessel,Steegstra,NED
+2026-06-12,USA,PAR,Assistant referee 2,Jan,de Vries,NED
+2026-06-12,USA,PAR,Fourth official,Yusuke,Araki,JPN
+2026-06-12,USA,PAR,Reserve assistant referee,Jun,Mihara,JPN
+2026-06-12,USA,PAR,Video assistant referee,Carlos,del Cerro Grande,ESP
+2026-06-12,USA,PAR,Assistant video assistant referee,Dennis,Higler,NED
+2026-06-12,USA,PAR,Support video assistant referee,Khamis,Al-Marri,QAT
+2026-06-13,AUS,TUR,Referee,Jesús,Valenzuela,VEN
+2026-06-13,AUS,TUR,Assistant referee 1,Jorge,Urrego,VEN
+2026-06-13,AUS,TUR,Assistant referee 2,Tulio,Moreno,VEN
+2026-06-13,AUS,TUR,Fourth official,Kevin,Ortega,PER
+2026-06-13,AUS,TUR,Reserve assistant referee,Michael,Orué,PER
+2026-06-13,AUS,TUR,Video assistant referee,Tatiana,Guzmán,NCA
+2026-06-13,AUS,TUR,Assistant video assistant referee,Juan,Soto,VEN
+2026-06-13,AUS,TUR,Support video assistant referee,Fu,Ming,CHN
+2026-06-13,BRA,MAR,Referee,Slavko,Vinčić,SVN
+2026-06-13,BRA,MAR,Assistant referee 1,Tomaž,Klančnik,SVN
+2026-06-13,BRA,MAR,Assistant referee 2,Andraž,Kovačič,SVN
+2026-06-13,BRA,MAR,Fourth official,Sandro,Schärer,SUI
+2026-06-13,BRA,MAR,Reserve assistant referee,Stéphane,De Almeida,SUI
+2026-06-13,BRA,MAR,Video assistant referee,Bastian,Dankert,GER
+2026-06-13,BRA,MAR,Assistant video assistant referee,Willy,Delajod,FRA
+2026-06-13,BRA,MAR,Support video assistant referee,Ivan,Bebek,CRO
+2026-06-13,HAI,SCO,Referee,Mustapha,Ghorbal,ALG
+2026-06-13,HAI,SCO,Assistant referee 1,Mokrane,Gourari,ALG
+2026-06-13,HAI,SCO,Assistant referee 2,Abbes,Akram Zerhouni,ALG
+2026-06-13,HAI,SCO,Fourth official,Alejandro,Hernández Hernández,ESP
+2026-06-13,HAI,SCO,Reserve assistant referee,José,Enrique Naranjo Pérez,ESP
+2026-06-13,HAI,SCO,Video assistant referee,Abdullah,Al-Shehri,KSA
+2026-06-13,HAI,SCO,Assistant video assistant referee,Mohammed,Obaid Khadim,UAE
+2026-06-13,HAI,SCO,Support video assistant referee,Fedayi,San,SUI
+2026-06-13,QAT,SUI,Referee,Saíd,Martínez,HON
+2026-06-13,QAT,SUI,Assistant referee 1,Walter,López,HON
+2026-06-13,QAT,SUI,Assistant referee 2,Christian,Ramírez,HON
+2026-06-13,QAT,SUI,Fourth official,Oshane,Nation,JAM
+2026-06-13,QAT,SUI,Reserve assistant referee,Caleb,Wales,TRI
+2026-06-13,QAT,SUI,Video assistant referee,Guillermo,Pacheco,MEX
+2026-06-13,QAT,SUI,Assistant video assistant referee,Erick,Miranda,MEX
+2026-06-13,QAT,SUI,Support video assistant referee,Leodán,González,URU
+2026-06-14,GER,CUW,Referee,Jalal,Jayed,MAR
+2026-06-14,GER,CUW,Assistant referee 1,Zakaria,Brinsi,MAR
+2026-06-14,GER,CUW,Assistant referee 2,Mostafa,Akarkad,MAR
+2026-06-14,GER,CUW,Fourth official,Abongile,Tom,RSA
+2026-06-14,GER,CUW,Reserve assistant referee,Zakhele,Siwela,RSA
+2026-06-14,GER,CUW,Video assistant referee,Hamza,El Fariq,MAR
+2026-06-14,GER,CUW,Assistant video assistant referee,Nicolás,Gallo,COL
+2026-06-14,GER,CUW,Support video assistant referee,Shaun,Evans,AUS
+2026-06-14,CIV,ECU,Referee,François,Letexier,FRA
+2026-06-14,CIV,ECU,Assistant referee 1,Cyril,Mugnier,FRA
+2026-06-14,CIV,ECU,Assistant referee 2,Mehdi,Rahmouni,FRA
+2026-06-14,CIV,ECU,Fourth official,Khalid,Al-Turais,KSA
+2026-06-14,CIV,ECU,Reserve assistant referee,Mohammed,Al-Bakry,KSA
+2026-06-14,CIV,ECU,Video assistant referee,Jarred,Gillett,ENG
+2026-06-14,CIV,ECU,Assistant video assistant referee,Willy,Delajod,FRA
+2026-06-14,CIV,ECU,Support video assistant referee,Bram,Van Driessche,BEL
+2026-06-14,NED,JPN,Referee,Ismail,Elfath,USA
+2026-06-14,NED,JPN,Assistant referee 1,Corey,Parker,USA
+2026-06-14,NED,JPN,Assistant referee 2,Kyle,Atkins,USA
+2026-06-14,NED,JPN,Fourth official,Katia,Itzel García,MEX
+2026-06-14,NED,JPN,Reserve assistant referee,Sandra,Ramírez,MEX
+2026-06-14,NED,JPN,Video assistant referee,Armando,Villarreal,USA
+2026-06-14,NED,JPN,Assistant video assistant referee,Rodolpho,Toski,BRA
+2026-06-14,NED,JPN,Support video assistant referee,Tomasz,Kwiatkowski,POL
+2026-06-14,SWE,TUN,Referee,Yael,Falcón,ARG
+2026-06-14,SWE,TUN,Assistant referee 1,Maximiliano,Del Yesso,ARG
+2026-06-14,SWE,TUN,Assistant referee 2,Facundo,Rodríguez,ARG
+2026-06-14,SWE,TUN,Fourth official,Juan,Gabriel Calderón,CRC
+2026-06-14,SWE,TUN,Reserve assistant referee,Juan,Carlos Mora,CRC
+2026-06-14,SWE,TUN,Video assistant referee,Juan,Lara,CHI
+2026-06-14,SWE,TUN,Assistant video assistant referee,Antonio,García,URU
+2026-06-14,SWE,TUN,Support video assistant referee,Hernán,Mastrángelo,ARG
+2026-06-15,BEL,EGY,Referee,Ramon,Abatti,BRA
+2026-06-15,BEL,EGY,Assistant referee 1,Danilo,Manis,BRA
+2026-06-15,BEL,EGY,Assistant referee 2,Rafael,Alves,BRA
+2026-06-15,BEL,EGY,Fourth official,Kevin,Ortega,PER
+2026-06-15,BEL,EGY,Reserve assistant referee,Michael,Orué,PER
+2026-06-15,BEL,EGY,Video assistant referee,Juan,Soto,VEN
+2026-06-15,BEL,EGY,Assistant video assistant referee,Leodán,González,URU
+2026-06-15,BEL,EGY,Support video assistant referee,Carlos,del Cerro Grande,ESP
+2026-06-15,IRN,NZL,Referee,César,Arturo Ramos,MEX
+2026-06-15,IRN,NZL,Assistant referee 1,Alberto,Morín,MEX
+2026-06-15,IRN,NZL,Assistant referee 2,Marco,Bisguerra,MEX
+2026-06-15,IRN,NZL,Fourth official,Yusuke,Araki,JPN
+2026-06-15,IRN,NZL,Reserve assistant referee,Jun,Mihara,JPN
+2026-06-15,IRN,NZL,Video assistant referee,Erick,Miranda,MEX
+2026-06-15,IRN,NZL,Assistant video assistant referee,Fedayi,San,SUI
+2026-06-15,IRN,NZL,Support video assistant referee,Bastian,Dankert,GER
+2026-06-15,KSA,URU,Referee,Maurizio,Mariani,ITA
+2026-06-15,KSA,URU,Assistant referee 1,Daniele,Bindoni,ITA
+2026-06-15,KSA,URU,Assistant referee 2,Alberto,Tegoni,ITA
+2026-06-15,KSA,URU,Fourth official,Drew,Fischer,CAN
+2026-06-15,KSA,URU,Reserve assistant referee,Micheal,Barwegen,CAN
+2026-06-15,KSA,URU,Video assistant referee,Marco,Di Bello,ITA
+2026-06-15,KSA,URU,Assistant video assistant referee,Ivan,Bebek,CRO
+2026-06-15,KSA,URU,Support video assistant referee,Jérôme,Brisard,FRA
+2026-06-15,ESP,CPV,Referee,Adham,Makhadmeh,JOR
+2026-06-15,ESP,CPV,Assistant referee 1,Mohammad,Al-Kalaf,JOR
+2026-06-15,ESP,CPV,Assistant referee 2,Ahmad,Al-Roalle,JOR
+2026-06-15,ESP,CPV,Fourth official,Andrés,Rojas,COL
+2026-06-15,ESP,CPV,Reserve assistant referee,Alexander,Guzmán,COL
+2026-06-15,ESP,CPV,Video assistant referee,Joe,Dickerson,USA
+2026-06-15,ESP,CPV,Assistant video assistant referee,Khamis,Al-Marri,QAT
+2026-06-15,ESP,CPV,Support video assistant referee,Fu,Ming,CHN
+2026-06-16,ARG,ALG,Referee,Szymon,Marciniak,POL
+2026-06-16,ARG,ALG,Assistant referee 1,Tomasz,Listkiewicz,POL
+2026-06-16,ARG,ALG,Assistant referee 2,Adam,Kupsik,POL
+2026-06-16,ARG,ALG,Fourth official,Campbell-Kirk,Kawana-Waugh,NZL
+2026-06-16,ARG,ALG,Reserve assistant referee,Isaac,Trevis,NZL
+2026-06-16,ARG,ALG,Video assistant referee,Tomasz,Kwiatkowski,POL
+2026-06-16,ARG,ALG,Assistant video assistant referee,Dennis,Higler,NED
+2026-06-16,ARG,ALG,Support video assistant referee,Mohammed,Obaid Khadim,UAE
+2026-06-16,AUT,JOR,Referee,Dahane,Beida,MTN
+2026-06-16,AUT,JOR,Assistant referee 1,Jerson,Emiliano dos Santos,ANG
+2026-06-16,AUT,JOR,Assistant referee 2,Elvis,Noupue,CMR
+2026-06-16,AUT,JOR,Fourth official,Oshane,Nation,JAM
+2026-06-16,AUT,JOR,Reserve assistant referee,Caleb,Wales,TRI
+2026-06-16,AUT,JOR,Video assistant referee,Mahmoud,Ashour,EGY
+2026-06-16,AUT,JOR,Assistant video assistant referee,Nicolás,Gallo,COL
+2026-06-16,AUT,JOR,Support video assistant referee,Rodolpho,Toski,BRA
+2026-06-16,FRA,SEN,Referee,Alireza,Faghani,AUS
+2026-06-16,FRA,SEN,Assistant referee 1,George,Lakrindis,AUS
+2026-06-16,FRA,SEN,Assistant referee 2,James,Lindsay,AUS
+2026-06-16,FRA,SEN,Fourth official,Sandro,Schärer,SUI
+2026-06-16,FRA,SEN,Reserve assistant referee,Stéphane,De Almeida,SUI
+2026-06-16,FRA,SEN,Video assistant referee,Abdullah,Al-Shehri,KSA
+2026-06-16,FRA,SEN,Assistant video assistant referee,Armando,Villarreal,USA
+2026-06-16,FRA,SEN,Support video assistant referee,Tatiana,Guzmán,NCA
+2026-06-16,IRQ,NOR,Referee,Pierre,Atcho,GAB
+2026-06-16,IRQ,NOR,Assistant referee 1,Boris,Ditsoga,GAB
+2026-06-16,IRQ,NOR,Assistant referee 2,Amos,Abeigne Ndong,GAB
+2026-06-16,IRQ,NOR,Fourth official,Amin,Omar,EGY
+2026-06-16,IRQ,NOR,Reserve assistant referee,Mahmoud,Abouregal,EGY
+2026-06-16,IRQ,NOR,Video assistant referee,Guillermo,Pacheco,MEX
+2026-06-16,IRQ,NOR,Assistant video assistant referee,Hamza,El Fariq,MAR
+2026-06-16,IRQ,NOR,Support video assistant referee,Jarred,Gillett,ENG
+2026-06-17,ENG,CRO,Referee,Clément,Turpin,FRA
+2026-06-17,ENG,CRO,Assistant referee 1,Nicolas,Danos,FRA
+2026-06-17,ENG,CRO,Assistant referee 2,Benjamin,Pagès,FRA
+2026-06-17,ENG,CRO,Fourth official,Katia,Itzel García,MEX
+2026-06-17,ENG,CRO,Reserve assistant referee,Sandra,Ramírez,MEX
+2026-06-17,ENG,CRO,Video assistant referee,Jérôme,Brisard,FRA
+2026-06-17,ENG,CRO,Assistant video assistant referee,Willy,Delajod,FRA
+2026-06-17,ENG,CRO,Support video assistant referee,Fedayi,San,SUI
+2026-06-17,GHA,PAN,Referee,Glenn,Nyberg,SWE
+2026-06-17,GHA,PAN,Assistant referee 1,Mahbod,Beigi,SWE
+2026-06-17,GHA,PAN,Assistant referee 2,Andreas,Söderkvist,SWE
+2026-06-17,GHA,PAN,Fourth official,Khalid,Al-Turais,KSA
+2026-06-17,GHA,PAN,Reserve assistant referee,Mohammed,Al-Bakry,KSA
+2026-06-17,GHA,PAN,Video assistant referee,Bram,Van Driessche,BEL
+2026-06-17,GHA,PAN,Assistant video assistant referee,Marco,Di Bello,ITA
+2026-06-17,GHA,PAN,Support video assistant referee,Bastian,Dankert,GER
+2026-06-17,POR,COD,Referee,Abdulrahman,Al-Jassim,QAT
+2026-06-17,POR,COD,Assistant referee 1,Taleb,Al-Marri,QAT
+2026-06-17,POR,COD,Assistant referee 2,Saud,Al-Maqaleh,QAT
+2026-06-17,POR,COD,Fourth official,Abongile,Tom,RSA
+2026-06-17,POR,COD,Reserve assistant referee,Zakhele,Siwela,RSA
+2026-06-17,POR,COD,Video assistant referee,Khamis,Al-Marri,QAT
+2026-06-17,POR,COD,Assistant video assistant referee,Juan,Soto,VEN
+2026-06-17,POR,COD,Support video assistant referee,Hernán,Mastrángelo,ARG
+2026-06-17,UZB,COL,Referee,Anthony,Taylor,ENG
+2026-06-17,UZB,COL,Assistant referee 1,Gary,Beswick,ENG
+2026-06-17,UZB,COL,Assistant referee 2,Adam,Nunn,ENG
+2026-06-17,UZB,COL,Fourth official,Juan,Gabriel Calderón,CRC
+2026-06-17,UZB,COL,Reserve assistant referee,Juan,Carlos Mora,CRC
+2026-06-17,UZB,COL,Video assistant referee,Ivan,Bebek,CRO
+2026-06-17,UZB,COL,Assistant video assistant referee,Jarred,Gillett,ENG
+2026-06-17,UZB,COL,Support video assistant referee,Carlos,del Cerro Grande,ESP
+2026-06-18,CAN,QAT,Referee,Cristián,Garay,CHI
+2026-06-18,CAN,QAT,Assistant referee 1,José,Retamal,CHI
+2026-06-18,CAN,QAT,Assistant referee 2,Miguel,Rocha,CHI
+2026-06-18,CAN,QAT,Fourth official,Kevin,Ortega,PER
+2026-06-18,CAN,QAT,Reserve assistant referee,Michael,Orué,PER
+2026-06-18,CAN,QAT,Video assistant referee,Juan,Lara,CHI
+2026-06-18,CAN,QAT,Assistant video assistant referee,Rodolpho,Toski,BRA
+2026-06-18,CAN,QAT,Support video assistant referee,Nicolás,Gallo,COL
+2026-06-18,CZE,RSA,Referee,Tori,Penso,USA
+2026-06-18,CZE,RSA,Assistant referee 1,Kathryn,Nesbitt,USA
+2026-06-18,CZE,RSA,Assistant referee 2,Brooke,Mayo,USA
+2026-06-18,CZE,RSA,Fourth official,Campbell-Kirk,Kawana-Waugh,NZL
+2026-06-18,CZE,RSA,Reserve assistant referee,Isaac,Trevis,NZL
+2026-06-18,CZE,RSA,Video assistant referee,Tatiana,Guzmán,NCA
+2026-06-18,CZE,RSA,Assistant video assistant referee,Joe,Dickerson,USA
+2026-06-18,CZE,RSA,Support video assistant referee,Mohammed,Obaid Khadim,UAE
+2026-06-18,MEX,KOR,Referee,Gustavo,Tejera,URU
+2026-06-18,MEX,KOR,Assistant referee 1,Carlos,Barreiro,URU
+2026-06-18,MEX,KOR,Assistant referee 2,Nicolás,Tarán,URU
+2026-06-18,MEX,KOR,Fourth official,Andrés,Rojas,COL
+2026-06-18,MEX,KOR,Reserve assistant referee,Alexander,Guzmán,COL
+2026-06-18,MEX,KOR,Video assistant referee,Leodán,González,URU
+2026-06-18,MEX,KOR,Assistant video assistant referee,Antonio,García,URU
+2026-06-18,MEX,KOR,Support video assistant referee,Jérôme,Brisard,FRA
+2026-06-18,SUI,BIH,Referee,João,Pinheiro,POR
+2026-06-18,SUI,BIH,Assistant referee 1,Bruno,Jesus,POR
+2026-06-18,SUI,BIH,Assistant referee 2,Luciano,Maia,POR
+2026-06-18,SUI,BIH,Fourth official,Yusuke,Araki,JPN
+2026-06-18,SUI,BIH,Reserve assistant referee,Jun,Mihara,JPN
+2026-06-18,SUI,BIH,Video assistant referee,Dennis,Higler,NED
+2026-06-18,SUI,BIH,Assistant video assistant referee,Tomasz,Kwiatkowski,POL
+2026-06-18,SUI,BIH,Support video assistant referee,Fu,Ming,CHN
+2026-06-19,BRA,HAI,Referee,Alejandro,Hernández Hernández,ESP
+2026-06-19,BRA,HAI,Assistant referee 1,José,Enrique Naranjo Pérez,ESP
+2026-06-19,BRA,HAI,Assistant referee 2,Diego,Sánchez Rojo,ESP
+2026-06-19,BRA,HAI,Fourth official,Sandro,Schärer,SUI
+2026-06-19,BRA,HAI,Reserve assistant referee,Stéphane,De Almeida,SUI
+2026-06-19,BRA,HAI,Video assistant referee,Carlos,del Cerro Grande,ESP
+2026-06-19,BRA,HAI,Assistant video assistant referee,Willy,Delajod,FRA
+2026-06-19,BRA,HAI,Support video assistant referee,Mahmoud,Ashour,EGY
+2026-06-19,SCO,MAR,Referee,Ilgiz,Tantashev,UZB
+2026-06-19,SCO,MAR,Assistant referee 1,Andrey,Tsapenko,UZB
+2026-06-19,SCO,MAR,Assistant referee 2,Timur,Gaynullin,UZB
+2026-06-19,SCO,MAR,Fourth official,Adham,Makhadmeh,JOR
+2026-06-19,SCO,MAR,Reserve assistant referee,Mohammad,Al-Kalaf,JOR
+2026-06-19,SCO,MAR,Video assistant referee,Armando,Villarreal,USA
+2026-06-19,SCO,MAR,Assistant video assistant referee,Erick,Miranda,MEX
+2026-06-19,SCO,MAR,Support video assistant referee,Hernán,Mastrángelo,ARG
+2026-06-19,TUR,PAR,Referee,Iván,Barton,SLV
+2026-06-19,TUR,PAR,Assistant referee 1,David,Morán,SLV
+2026-06-19,TUR,PAR,Assistant referee 2,Henry,Pupiro,NCA
+2026-06-19,TUR,PAR,Fourth official,Oshane,Nation,JAM
+2026-06-19,TUR,PAR,Reserve assistant referee,Caleb,Wales,TRI
+2026-06-19,TUR,PAR,Video assistant referee,Khamis,Al-Marri,QAT
+2026-06-19,TUR,PAR,Assistant video assistant referee,Tatiana,Guzmán,NCA
+2026-06-19,TUR,PAR,Support video assistant referee,Abdullah,Al-Shehri,KSA
+2026-06-19,USA,AUS,Referee,Felix,Zwayer,GER
+2026-06-19,USA,AUS,Assistant referee 1,Robert,Kempter,GER
+2026-06-19,USA,AUS,Assistant referee 2,Christian,Dietz,GER
+2026-06-19,USA,AUS,Fourth official,Katia,Itzel García,MEX
+2026-06-19,USA,AUS,Reserve assistant referee,Sandra,Ramírez,MEX
+2026-06-19,USA,AUS,Video assistant referee,Bastian,Dankert,GER
+2026-06-19,USA,AUS,Assistant video assistant referee,Hamza,El Fariq,MAR
+2026-06-19,USA,AUS,Support video assistant referee,Bram,Van Driessche,BEL
+2026-06-20,ECU,CUW,Referee,Ma,Ning,CHN
+2026-06-20,ECU,CUW,Assistant referee 1,Zhou,Fei,CHN
+2026-06-20,ECU,CUW,Assistant referee 2,Saud,Al-Maqaleh,QAT
+2026-06-20,ECU,CUW,Fourth official,Campbell-Kirk,Kawana-Waugh,NZL
+2026-06-20,ECU,CUW,Reserve assistant referee,Isaac,Trevis,NZL
+2026-06-20,ECU,CUW,Video assistant referee,Fu,Ming,CHN
+2026-06-20,ECU,CUW,Assistant video assistant referee,Marco,Di Bello,ITA
+2026-06-20,ECU,CUW,Support video assistant referee,Tomasz,Kwiatkowski,POL
+2026-06-20,GER,CIV,Referee,Juan,Gabriel Benítez,PAR
+2026-06-20,GER,CIV,Assistant referee 1,Eduardo,Cardozo,PAR
+2026-06-20,GER,CIV,Assistant referee 2,Milcíades,Saldívar,PAR
+2026-06-20,GER,CIV,Fourth official,Khalid,Al-Turais,KSA
+2026-06-20,GER,CIV,Reserve assistant referee,Mohammed,Al-Bakry,KSA
+2026-06-20,GER,CIV,Video assistant referee,Antonio,García,URU
+2026-06-20,GER,CIV,Assistant video assistant referee,Guillermo,Pacheco,MEX
+2026-06-20,GER,CIV,Support video assistant referee,Juan,Soto,VEN
+2026-06-20,NED,SWE,Referee,Michael,Oliver,ENG
+2026-06-20,NED,SWE,Assistant referee 1,Stuart,Burt,ENG
+2026-06-20,NED,SWE,Assistant referee 2,James,Mainwaring,ENG
+2026-06-20,NED,SWE,Fourth official,Abongile,Tom,RSA
+2026-06-20,NED,SWE,Reserve assistant referee,Zakhele,Siwela,RSA
+2026-06-20,NED,SWE,Video assistant referee,Jarred,Gillett,ENG
+2026-06-20,NED,SWE,Assistant video assistant referee,Ivan,Bebek,CRO
+2026-06-20,NED,SWE,Support video assistant referee,Rodolpho,Toski,BRA
+2026-06-20,TUN,JPN,Referee,István,Kovács,ROU
+2026-06-20,TUN,JPN,Assistant referee 1,Mihai,Marius Marica,ROU
+2026-06-20,TUN,JPN,Assistant referee 2,Ferencz,Tunyogi,ROU
+2026-06-20,TUN,JPN,Fourth official,Juan,Gabriel Calderón,CRC
+2026-06-20,TUN,JPN,Reserve assistant referee,Juan,Carlos Mora,CRC
+2026-06-20,TUN,JPN,Video assistant referee,Fedayi,San,SUI
+2026-06-20,TUN,JPN,Assistant video assistant referee,Joe,Dickerson,USA
+2026-06-20,TUN,JPN,Support video assistant referee,Bastian,Dankert,GER
+2026-06-21,BEL,IRN,Referee,Darío,Herrera,ARG
+2026-06-21,BEL,IRN,Assistant referee 1,Cristian,Navarro,ARG
+2026-06-21,BEL,IRN,Assistant referee 2,Gabriel,Chade,ARG
+2026-06-21,BEL,IRN,Fourth official,Yusuke,Araki,JPN
+2026-06-21,BEL,IRN,Reserve assistant referee,Jun,Mihara,JPN
+2026-06-21,BEL,IRN,Video assistant referee,Hernán,Mastrángelo,ARG
+2026-06-21,BEL,IRN,Assistant video assistant referee,Leodán,González,URU
+2026-06-21,BEL,IRN,Support video assistant referee,Carlos,del Cerro Grande,ESP
+2026-06-21,NZL,EGY,Referee,Omar,Al Ali,UAE
+2026-06-21,NZL,EGY,Assistant referee 1,Mohamed,Al-Hammadi,UAE
+2026-06-21,NZL,EGY,Assistant referee 2,Taleb,Al-Marri,QAT
+2026-06-21,NZL,EGY,Fourth official,Kevin,Ortega,PER
+2026-06-21,NZL,EGY,Reserve assistant referee,Michael,Orué,PER
+2026-06-21,NZL,EGY,Video assistant referee,Mohammed,Obaid Khadim,UAE
+2026-06-21,NZL,EGY,Assistant video assistant referee,Shaun,Evans,AUS
+2026-06-21,NZL,EGY,Support video assistant referee,Armando,Villarreal,USA
+2026-06-21,ESP,KSA,Referee,Raphael,Claus,BRA
+2026-06-21,ESP,KSA,Assistant referee 1,Danilo,Manis,BRA
+2026-06-21,ESP,KSA,Assistant referee 2,Rodrigo,Figueiredo,BRA
+2026-06-21,ESP,KSA,Fourth official,Andrés,Rojas,COL
+2026-06-21,ESP,KSA,Reserve assistant referee,Alexander,Guzmán,COL
+2026-06-21,ESP,KSA,Video assistant referee,Nicolás,Gallo,COL
+2026-06-21,ESP,KSA,Assistant video assistant referee,Erick,Miranda,MEX
+2026-06-21,ESP,KSA,Support video assistant referee,Guillermo,Pacheco,MEX
+2026-06-21,URU,CPV,Referee,Espen,Eskås,NOR
+2026-06-21,URU,CPV,Assistant referee 1,Jan,Erik Engan,NOR
+2026-06-21,URU,CPV,Assistant referee 2,Isaak,Bashevkin,NOR
+2026-06-21,URU,CPV,Fourth official,Tori,Penso,USA
+2026-06-21,URU,CPV,Reserve assistant referee,Brooke,Mayo,USA
+2026-06-21,URU,CPV,Video assistant referee,Willy,Delajod,FRA
+2026-06-21,URU,CPV,Assistant video assistant referee,Jérôme,Brisard,FRA
+2026-06-21,URU,CPV,Support video assistant referee,Dennis,Higler,NED
+2026-06-22,ARG,AUT,Referee,Amin,Omar,EGY
+2026-06-22,ARG,AUT,Assistant referee 1,Mahmoud,Abouregal,EGY
+2026-06-22,ARG,AUT,Assistant referee 2,Ahmed,Hossam Taha,EGY
+2026-06-22,ARG,AUT,Fourth official,Alejandro,Hernández Hernández,ESP
+2026-06-22,ARG,AUT,Reserve assistant referee,Diego,Sánchez Rojo,ESP
+2026-06-22,ARG,AUT,Video assistant referee,Khamis,Al-Marri,QAT
+2026-06-22,ARG,AUT,Assistant video assistant referee,Mahmoud,Ashour,EGY
+2026-06-22,ARG,AUT,Support video assistant referee,Tatiana,Guzmán,NCA
+2026-06-22,FRA,IRQ,Referee,Drew,Fischer,CAN
+2026-06-22,FRA,IRQ,Assistant referee 1,Micheal,Barwegen,CAN
+2026-06-22,FRA,IRQ,Assistant referee 2,Lyes,Arfa,CAN
+2026-06-22,FRA,IRQ,Fourth official,Sandro,Schärer,SUI
+2026-06-22,FRA,IRQ,Reserve assistant referee,Stéphane,De Almeida,SUI
+2026-06-22,FRA,IRQ,Video assistant referee,Joe,Dickerson,USA
+2026-06-22,FRA,IRQ,Assistant video assistant referee,Antonio,García,URU
+2026-06-22,FRA,IRQ,Support video assistant referee,Juan,Soto,VEN
+2026-06-22,JOR,ALG,Referee,Slavko,Vinčić,SVN
+2026-06-22,JOR,ALG,Assistant referee 1,Tomaž,Klančnik,SVN
+2026-06-22,JOR,ALG,Assistant referee 2,Andraž,Kovačič,SVN
+2026-06-22,JOR,ALG,Fourth official,Oshane,Nation,JAM
+2026-06-22,JOR,ALG,Reserve assistant referee,Caleb,Wales,TRI
+2026-06-22,JOR,ALG,Video assistant referee,Ivan,Bebek,CRO
+2026-06-22,JOR,ALG,Assistant video assistant referee,Jarred,Gillett,ENG
+2026-06-22,JOR,ALG,Support video assistant referee,Bram,Van Driessche,BEL
+2026-06-22,NOR,SEN,Referee,Wilton,Sampaio,BRA
+2026-06-22,NOR,SEN,Assistant referee 1,Bruno,Pires,BRA
+2026-06-22,NOR,SEN,Assistant referee 2,Bruno,Boschilia,BRA
+2026-06-22,NOR,SEN,Fourth official,Campbell-Kirk,Kawana-Waugh,NZL
+2026-06-22,NOR,SEN,Reserve assistant referee,Isaac,Trevis,NZL
+2026-06-22,NOR,SEN,Video assistant referee,Rodolpho,Toski,BRA
+2026-06-22,NOR,SEN,Assistant video assistant referee,Juan,Lara,CHI
+2026-06-22,NOR,SEN,Support video assistant referee,Tomasz,Kwiatkowski,POL
+2026-06-23,COL,COD,Referee,Maurizio,Mariani,ITA
+2026-06-23,COL,COD,Assistant referee 1,Daniele,Bindoni,ITA
+2026-06-23,COL,COD,Assistant referee 2,Alberto,Tegoni,ITA
+2026-06-23,COL,COD,Fourth official,Juan,Gabriel Calderón,CRC
+2026-06-23,COL,COD,Reserve assistant referee,Juan,Carlos Mora,CRC
+2026-06-23,COL,COD,Video assistant referee,Marco,Di Bello,ITA
+2026-06-23,COL,COD,Assistant video assistant referee,Mohammed,Obaid Khadim,UAE
+2026-06-23,COL,COD,Support video assistant referee,Carlos,del Cerro Grande,ESP
+2026-06-23,ENG,GHA,Referee,Saíd,Martínez,HON
+2026-06-23,ENG,GHA,Assistant referee 1,Walter,López,HON
+2026-06-23,ENG,GHA,Assistant referee 2,Christian,Ramírez,HON
+2026-06-23,ENG,GHA,Fourth official,Ma,Ning,CHN
+2026-06-23,ENG,GHA,Reserve assistant referee,Zhou,Fei,CHN
+2026-06-23,ENG,GHA,Video assistant referee,Armando,Villarreal,USA
+2026-06-23,ENG,GHA,Assistant video assistant referee,Erick,Miranda,MEX
+2026-06-23,ENG,GHA,Support video assistant referee,Abdullah,Al-Shehri,KSA
+2026-06-23,PAN,CRO,Referee,Pierre,Atcho,GAB
+2026-06-23,PAN,CRO,Assistant referee 1,Boris,Ditsoga,GAB
+2026-06-23,PAN,CRO,Assistant referee 2,Amos,Abeigne Ndong,GAB
+2026-06-23,PAN,CRO,Fourth official,Khalid,Al-Turais,KSA
+2026-06-23,PAN,CRO,Reserve assistant referee,Mohammed,Al-Bakry,KSA
+2026-06-23,PAN,CRO,Video assistant referee,Nicolás,Gallo,COL
+2026-06-23,PAN,CRO,Assistant video assistant referee,Fu,Ming,CHN
+2026-06-23,PAN,CRO,Support video assistant referee,Bastian,Dankert,GER
+2026-06-23,POR,UZB,Referee,Jalal,Jayed,MAR
+2026-06-23,POR,UZB,Assistant referee 1,Zakaria,Brinsi,MAR
+2026-06-23,POR,UZB,Assistant referee 2,Mostafa,Akarkad,MAR
+2026-06-23,POR,UZB,Fourth official,Abongile,Tom,RSA
+2026-06-23,POR,UZB,Reserve assistant referee,Zakhele,Siwela,RSA
+2026-06-23,POR,UZB,Video assistant referee,Leodán,González,URU
+2026-06-23,POR,UZB,Assistant video assistant referee,Hamza,El Fariq,MAR
+2026-06-23,POR,UZB,Support video assistant referee,Hernán,Mastrángelo,ARG
+2026-06-24,BIH,QAT,Referee,Jesús,Valenzuela,VEN
+2026-06-24,BIH,QAT,Assistant referee 1,Jorge,Urrego,VEN
+2026-06-24,BIH,QAT,Assistant referee 2,Tulio,Moreno,VEN
+2026-06-24,BIH,QAT,Fourth official,Yusuke,Araki,JPN
+2026-06-24,BIH,QAT,Reserve assistant referee,Jun,Mihara,JPN
+2026-06-24,BIH,QAT,Video assistant referee,Tatiana,Guzmán,NCA
+2026-06-24,BIH,QAT,Assistant video assistant referee,Leodán,González,URU
+2026-06-24,BIH,QAT,Support video assistant referee,Shaun,Evans,AUS
+2026-06-24,CZE,MEX,Referee,Yael,Falcón,ARG
+2026-06-24,CZE,MEX,Assistant referee 1,Maximiliano,Del Yesso,ARG
+2026-06-24,CZE,MEX,Assistant referee 2,Facundo,Rodríguez,ARG
+2026-06-24,CZE,MEX,Fourth official,Cristián,Garay,CHI
+2026-06-24,CZE,MEX,Reserve assistant referee,José,Retamal,CHI
+2026-06-24,CZE,MEX,Video assistant referee,Juan,Lara,CHI
+2026-06-24,CZE,MEX,Assistant video assistant referee,Rodolpho,Toski,BRA
+2026-06-24,CZE,MEX,Support video assistant referee,Ivan,Bebek,CRO
+2026-06-24,MAR,HAI,Referee,Danny,Makkelie,NED
+2026-06-24,MAR,HAI,Assistant referee 1,Hessel,Steegstra,NED
+2026-06-24,MAR,HAI,Assistant referee 2,Jan,de Vries,NED
+2026-06-24,MAR,HAI,Fourth official,João,Pinheiro,POR
+2026-06-24,MAR,HAI,Reserve assistant referee,Bruno,Jesus,POR
+2026-06-24,MAR,HAI,Video assistant referee,Dennis,Higler,NED
+2026-06-24,MAR,HAI,Assistant video assistant referee,Fedayi,San,SUI
+2026-06-24,MAR,HAI,Support video assistant referee,Bram,Van Driessche,BEL
+2026-06-24,SCO,BRA,Referee,César,Arturo Ramos,MEX
+2026-06-24,SCO,BRA,Assistant referee 1,Alberto,Morín,MEX
+2026-06-24,SCO,BRA,Assistant referee 2,Marco,Bisguerra,MEX
+2026-06-24,SCO,BRA,Fourth official,Espen,Eskås,NOR
+2026-06-24,SCO,BRA,Reserve assistant referee,Jan,Erik Engan,NOR
+2026-06-24,SCO,BRA,Video assistant referee,Guillermo,Pacheco,MEX
+2026-06-24,SCO,BRA,Assistant video assistant referee,Abdullah,Al-Shehri,KSA
+2026-06-24,SCO,BRA,Support video assistant referee,Tomasz,Kwiatkowski,POL
+2026-06-24,RSA,KOR,Referee,Facundo,Tello,ARG
+2026-06-24,RSA,KOR,Assistant referee 1,Juan,Pablo Belatti,ARG
+2026-06-24,RSA,KOR,Assistant referee 2,Gabriel,Chade,ARG
+2026-06-24,RSA,KOR,Fourth official,Andrés,Rojas,COL
+2026-06-24,RSA,KOR,Reserve assistant referee,Alexander,Guzmán,COL
+2026-06-24,RSA,KOR,Video assistant referee,Hernán,Mastrángelo,ARG
+2026-06-24,RSA,KOR,Assistant video assistant referee,Nicolás,Gallo,COL
+2026-06-24,RSA,KOR,Support video assistant referee,Bastian,Dankert,GER
+2026-06-24,SUI,CAN,Referee,Ramon,Abatti,BRA
+2026-06-24,SUI,CAN,Assistant referee 1,Danilo,Manis,BRA
+2026-06-24,SUI,CAN,Assistant referee 2,Rafael,Alves,BRA
+2026-06-24,SUI,CAN,Fourth official,Kevin,Ortega,PER
+2026-06-24,SUI,CAN,Reserve assistant referee,Michael,Orué,PER
+2026-06-24,SUI,CAN,Video assistant referee,Juan,Soto,VEN
+2026-06-24,SUI,CAN,Assistant video assistant referee,Antonio,García,URU
+2026-06-24,SUI,CAN,Support video assistant referee,Jarred,Gillett,ENG
+2026-06-25,CUW,CIV,Referee,Glenn,Nyberg,SWE
+2026-06-25,CUW,CIV,Assistant referee 1,Mahbod,Beigi,SWE
+2026-06-25,CUW,CIV,Assistant referee 2,Andreas,Söderkvist,SWE
+2026-06-25,CUW,CIV,Fourth official,Sandro,Schärer,SUI
+2026-06-25,CUW,CIV,Reserve assistant referee,Stéphane,De Almeida,SUI
+2026-06-25,CUW,CIV,Video assistant referee,Carlos,del Cerro Grande,ESP
+2026-06-25,CUW,CIV,Assistant video assistant referee,Leodán,González,URU
+2026-06-25,CUW,CIV,Support video assistant referee,Juan,Soto,VEN
+2026-06-25,ECU,GER,Referee,Tori,Penso,USA
+2026-06-25,ECU,GER,Assistant referee 1,Brooke,Mayo,USA
+2026-06-25,ECU,GER,Assistant referee 2,Kathryn,Nesbitt,USA
+2026-06-25,ECU,GER,Fourth official,Campbell-Kirk,Kawana-Waugh,NZL
+2026-06-25,ECU,GER,Reserve assistant referee,Isaac,Trevis,NZL
+2026-06-25,ECU,GER,Video assistant referee,Joe,Dickerson,USA
+2026-06-25,ECU,GER,Assistant video assistant referee,Fu,Ming,CHN
+2026-06-25,ECU,GER,Support video assistant referee,Khamis,Al-Marri,QAT
+2026-06-25,JPN,SWE,Referee,Iván,Barton,SLV
+2026-06-25,JPN,SWE,Assistant referee 1,David,Morán,SLV
+2026-06-25,JPN,SWE,Assistant referee 2,Henry,Pupiro,NCA
+2026-06-25,JPN,SWE,Fourth official,Dahane,Beida,MTN
+2026-06-25,JPN,SWE,Reserve assistant referee,Jerson,Emiliano dos Santos,ANG
+2026-06-25,JPN,SWE,Video assistant referee,Nicolás,Gallo,COL
+2026-06-25,JPN,SWE,Assistant video assistant referee,Guillermo,Pacheco,MEX
+2026-06-25,JPN,SWE,Support video assistant referee,Rodolpho,Toski,BRA
+2026-06-25,PAR,AUS,Referee,Clément,Turpin,FRA
+2026-06-25,PAR,AUS,Assistant referee 1,Nicolas,Danos,FRA
+2026-06-25,PAR,AUS,Assistant referee 2,Benjamin,Pagès,FRA
+2026-06-25,PAR,AUS,Fourth official,Oshane,Nation,JAM
+2026-06-25,PAR,AUS,Reserve assistant referee,Caleb,Wales,TRI
+2026-06-25,PAR,AUS,Video assistant referee,Jérôme,Brisard,FRA
+2026-06-25,PAR,AUS,Assistant video assistant referee,Willy,Delajod,FRA
+2026-06-25,PAR,AUS,Support video assistant referee,Hamza,El Fariq,MAR
+2026-06-25,TUN,NED,Referee,Katia,Itzel García,MEX
+2026-06-25,TUN,NED,Assistant referee 1,Sandra,Ramírez,MEX
+2026-06-25,TUN,NED,Assistant referee 2,José,Enrique Naranjo Pérez,ESP
+2026-06-25,TUN,NED,Fourth official,Juan,Gabriel Benítez,PAR
+2026-06-25,TUN,NED,Reserve assistant referee,Milcíades,Saldívar,PAR
+2026-06-25,TUN,NED,Video assistant referee,Erick,Miranda,MEX
+2026-06-25,TUN,NED,Assistant video assistant referee,Mohammed,Obaid Khadim,UAE
+2026-06-25,TUN,NED,Support video assistant referee,Hernán,Mastrángelo,ARG
+2026-06-25,TUR,USA,Referee,Mustapha,Ghorbal,ALG
+2026-06-25,TUR,USA,Assistant referee 1,Mokrane,Gourari,ALG
+2026-06-25,TUR,USA,Assistant referee 2,Abbes,Akram Zerhouni,ALG
+2026-06-25,TUR,USA,Fourth official,Omar,Al Ali,UAE
+2026-06-25,TUR,USA,Reserve assistant referee,Mohamed,Al-Hammadi,UAE
+2026-06-25,TUR,USA,Video assistant referee,Antonio,García,URU
+2026-06-25,TUR,USA,Assistant video assistant referee,Mahmoud,Ashour,EGY
+2026-06-25,TUR,USA,Support video assistant referee,Juan,Lara,CHI
+2026-06-26,CPV,KSA,Referee,François,Letexier,FRA
+2026-06-26,CPV,KSA,Assistant referee 1,Cyril,Mugnier,FRA
+2026-06-26,CPV,KSA,Assistant referee 2,Mehdi,Rahmouni,FRA
+2026-06-26,CPV,KSA,Fourth official,Abongile,Tom,RSA
+2026-06-26,CPV,KSA,Reserve assistant referee,Zakhele,Siwela,RSA
+2026-06-26,CPV,KSA,Video assistant referee,Marco,Di Bello,ITA
+2026-06-26,CPV,KSA,Assistant video assistant referee,Willy,Delajod,FRA
+2026-06-26,CPV,KSA,Support video assistant referee,Joe,Dickerson,USA
+2026-06-26,EGY,IRN,Referee,Szymon,Marciniak,POL
+2026-06-26,EGY,IRN,Assistant referee 1,Tomasz,Listkiewicz,POL
+2026-06-26,EGY,IRN,Assistant referee 2,Adam,Kupsik,POL
+2026-06-26,EGY,IRN,Fourth official,Yusuke,Araki,JPN
+2026-06-26,EGY,IRN,Reserve assistant referee,Jun,Mihara,JPN
+2026-06-26,EGY,IRN,Video assistant referee,Tomasz,Kwiatkowski,POL
+2026-06-26,EGY,IRN,Assistant video assistant referee,Dennis,Higler,NED
+2026-06-26,EGY,IRN,Support video assistant referee,Shaun,Evans,AUS
+2026-06-26,NZL,BEL,Referee,Adham,Makhadmeh,JOR
+2026-06-26,NZL,BEL,Assistant referee 1,Mohammad,Al-Kalaf,JOR
+2026-06-26,NZL,BEL,Assistant referee 2,Ahmad,Al-Roalle,JOR
+2026-06-26,NZL,BEL,Fourth official,Kevin,Ortega,PER
+2026-06-26,NZL,BEL,Reserve assistant referee,Michael,Orué,PER
+2026-06-26,NZL,BEL,Video assistant referee,Juan,Soto,VEN
+2026-06-26,NZL,BEL,Assistant video assistant referee,Erick,Miranda,MEX
+2026-06-26,NZL,BEL,Support video assistant referee,Antonio,García,URU
+2026-06-26,NOR,FRA,Referee,Michael,Oliver,ENG
+2026-06-26,NOR,FRA,Assistant referee 1,Stuart,Burt,ENG
+2026-06-26,NOR,FRA,Assistant referee 2,James,Mainwaring,ENG
+2026-06-26,NOR,FRA,Fourth official,Ma,Ning,CHN
+2026-06-26,NOR,FRA,Reserve assistant referee,Zhou,Fei,CHN
+2026-06-26,NOR,FRA,Video assistant referee,Jarred,Gillett,ENG
+2026-06-26,NOR,FRA,Assistant video assistant referee,Bram,Van Driessche,BEL
+2026-06-26,NOR,FRA,Support video assistant referee,Abdullah,Al-Shehri,KSA
+2026-06-26,SEN,IRQ,Referee,Anthony,Taylor,ENG
+2026-06-26,SEN,IRQ,Assistant referee 1,Gary,Beswick,ENG
+2026-06-26,SEN,IRQ,Assistant referee 2,Adam,Nunn,ENG
+2026-06-26,SEN,IRQ,Fourth official,Khalid,Al-Turais,KSA
+2026-06-26,SEN,IRQ,Reserve assistant referee,Mohammed,Al-Bakry,KSA
+2026-06-26,SEN,IRQ,Video assistant referee,Ivan,Bebek,CRO
+2026-06-26,SEN,IRQ,Assistant video assistant referee,Fedayi,San,SUI
+2026-06-26,SEN,IRQ,Support video assistant referee,Carlos,del Cerro Grande,ESP
+2026-06-26,URU,ESP,Referee,Ismail,Elfath,USA
+2026-06-26,URU,ESP,Assistant referee 1,Corey,Parker,USA
+2026-06-26,URU,ESP,Assistant referee 2,Kyle,Atkins,USA
+2026-06-26,URU,ESP,Fourth official,Juan,Gabriel Calderón,CRC
+2026-06-26,URU,ESP,Reserve assistant referee,Juan,Carlos Mora,CRC
+2026-06-26,URU,ESP,Video assistant referee,Tatiana,Guzmán,NCA
+2026-06-26,URU,ESP,Assistant video assistant referee,Armando,Villarreal,USA
+2026-06-26,URU,ESP,Support video assistant referee,Khamis,Al-Marri,QAT
+2026-06-27,ALG,AUT,Referee,Ilgiz,Tantashev,UZB
+2026-06-27,ALG,AUT,Assistant referee 1,Andrey,Tsapenko,UZB
+2026-06-27,ALG,AUT,Assistant referee 2,Timur,Gaynullin,UZB
+2026-06-27,ALG,AUT,Fourth official,Katia,Itzel García,MEX
+2026-06-27,ALG,AUT,Reserve assistant referee,Sandra,Ramírez,MEX
+2026-06-27,ALG,AUT,Video assistant referee,Leodán,González,URU
+2026-06-27,ALG,AUT,Assistant video assistant referee,Shaun,Evans,AUS
+2026-06-27,ALG,AUT,Support video assistant referee,Armando,Villarreal,USA
+2026-06-27,COL,POR,Referee,Alireza,Faghani,AUS
+2026-06-27,COL,POR,Assistant referee 1,George,Lakrindis,AUS
+2026-06-27,COL,POR,Assistant referee 2,James,Lindsay,AUS
+2026-06-27,COL,POR,Fourth official,Saíd,Martínez,HON
+2026-06-27,COL,POR,Reserve assistant referee,Walter,López,HON
+2026-06-27,COL,POR,Video assistant referee,Jérôme,Brisard,FRA
+2026-06-27,COL,POR,Assistant video assistant referee,Hernán,Mastrángelo,ARG
+2026-06-27,COL,POR,Support video assistant referee,Mahmoud,Ashour,EGY
+2026-06-27,CRO,GHA,Referee,Drew,Fischer,CAN
+2026-06-27,CRO,GHA,Assistant referee 1,Micheal,Barwegen,CAN
+2026-06-27,CRO,GHA,Assistant referee 2,Lyes,Arfa,CAN
+2026-06-27,CRO,GHA,Fourth official,Campbell-Kirk,Kawana-Waugh,NZL
+2026-06-27,CRO,GHA,Reserve assistant referee,Isaac,Trevis,NZL
+2026-06-27,CRO,GHA,Video assistant referee,Guillermo,Pacheco,MEX
+2026-06-27,CRO,GHA,Assistant video assistant referee,Rodolpho,Toski,BRA
+2026-06-27,CRO,GHA,Support video assistant referee,Tomasz,Kwiatkowski,POL
+2026-06-27,COD,UZB,Referee,Felix,Zwayer,GER
+2026-06-27,COD,UZB,Assistant referee 1,Robert,Kempter,GER
+2026-06-27,COD,UZB,Assistant referee 2,Christian,Dietz,GER
+2026-06-27,COD,UZB,Fourth official,Alejandro,Hernández Hernández,ESP
+2026-06-27,COD,UZB,Reserve assistant referee,Diego,Sánchez Rojo,ESP
+2026-06-27,COD,UZB,Video assistant referee,Bastian,Dankert,GER
+2026-06-27,COD,UZB,Assistant video assistant referee,Dennis,Higler,NED
+2026-06-27,COD,UZB,Support video assistant referee,Jarred,Gillett,ENG
+2026-06-27,JOR,ARG,Referee,István,Kovács,ROU
+2026-06-27,JOR,ARG,Assistant referee 1,Mihai,Marius Marica,ROU
+2026-06-27,JOR,ARG,Assistant referee 2,Ferencz,Tunyogi,ROU
+2026-06-27,JOR,ARG,Fourth official,Dahane,Beida,MTN
+2026-06-27,JOR,ARG,Reserve assistant referee,Jerson,Emiliano dos Santos,ANG
+2026-06-27,JOR,ARG,Video assistant referee,Bram,Van Driessche,BEL
+2026-06-27,JOR,ARG,Assistant video assistant referee,Fedayi,San,SUI
+2026-06-27,JOR,ARG,Support video assistant referee,Marco,Di Bello,ITA
+2026-06-27,PAN,ENG,Referee,Abdulrahman,Al-Jassim,QAT
+2026-06-27,PAN,ENG,Assistant referee 1,Taleb,Al-Marri,QAT
+2026-06-27,PAN,ENG,Assistant referee 2,Saud,Al-Maqaleh,QAT
+2026-06-27,PAN,ENG,Fourth official,Sandro,Schärer,SUI
+2026-06-27,PAN,ENG,Reserve assistant referee,Stéphane,De Almeida,SUI
+2026-06-27,PAN,ENG,Video assistant referee,Juan,Lara,CHI
+2026-06-27,PAN,ENG,Assistant video assistant referee,Khamis,Al-Marri,QAT
+2026-06-27,PAN,ENG,Support video assistant referee,Abdullah,Al-Shehri,KSA
+2026-06-28,RSA,CAN,Referee,João,Pinheiro,POR
+2026-06-28,RSA,CAN,Assistant referee 1,Bruno,Jesus,POR
+2026-06-28,RSA,CAN,Assistant referee 2,Luciano,Maia,POR
+2026-06-28,RSA,CAN,Fourth official,Omar,Al Ali,UAE
+2026-06-28,RSA,CAN,Reserve assistant referee,Mohamed,Al-Hammadi,UAE
+2026-06-28,RSA,CAN,Video assistant referee,Carlos,del Cerro Grande,ESP
+2026-06-28,RSA,CAN,Assistant video assistant referee,Rodolpho,Toski,BRA
+2026-06-28,RSA,CAN,Support video assistant referee,Hernán,Mastrángelo,ARG
+2026-06-29,BRA,JPN,Referee,Maurizio,Mariani,ITA
+2026-06-29,BRA,JPN,Assistant referee 1,Daniele,Bindoni,ITA
+2026-06-29,BRA,JPN,Assistant referee 2,Alberto,Tegoni,ITA
+2026-06-29,BRA,JPN,Fourth official,Sandro,Schärer,SUI
+2026-06-29,BRA,JPN,Reserve assistant referee,Stéphane,De Almeida,SUI
+2026-06-29,BRA,JPN,Video assistant referee,Marco,Di Bello,ITA
+2026-06-29,BRA,JPN,Assistant video assistant referee,Ivan,Bebek,CRO
+2026-06-29,BRA,JPN,Support video assistant referee,Joe,Dickerson,USA
+2026-06-29,GER,PAR,Referee,Jalal,Jayed,MAR
+2026-06-29,GER,PAR,Assistant referee 1,Zakaria,Brinsi,MAR
+2026-06-29,GER,PAR,Assistant referee 2,Mostafa,Akarkad,MAR
+2026-06-29,GER,PAR,Fourth official,Ma,Ning,CHN
+2026-06-29,GER,PAR,Reserve assistant referee,Zhou,Fei,CHN
+2026-06-29,GER,PAR,Video assistant referee,Tatiana,Guzmán,NCA
+2026-06-29,GER,PAR,Assistant video assistant referee,Hamza,El Fariq,MAR
+2026-06-29,GER,PAR,Support video assistant referee,Abdullah,Al-Shehri,KSA
+2026-06-29,NED,MAR,Referee,Wilton,Sampaio,BRA
+2026-06-29,NED,MAR,Assistant referee 1,Bruno,Pires,BRA
+2026-06-29,NED,MAR,Assistant referee 2,Bruno,Boschilia,BRA
+2026-06-29,NED,MAR,Fourth official,Cristián,Garay,CHI
+2026-06-29,NED,MAR,Reserve assistant referee,José,Retamal,CHI
+2026-06-29,NED,MAR,Video assistant referee,Nicolás,Gallo,COL
+2026-06-29,NED,MAR,Assistant video assistant referee,Leodán,González,URU
+2026-06-29,NED,MAR,Support video assistant referee,Armando,Villarreal,USA
+2026-06-30,FRA,SWE,Referee,Danny,Makkelie,NED
+2026-06-30,FRA,SWE,Assistant referee 1,Hessel,Steegstra,NED
+2026-06-30,FRA,SWE,Assistant referee 2,Jan,de Vries,NED
+2026-06-30,FRA,SWE,Fourth official,Tori,Penso,USA
+2026-06-30,FRA,SWE,Reserve assistant referee,Brooke,Mayo,USA
+2026-06-30,FRA,SWE,Video assistant referee,Dennis,Higler,NED
+2026-06-30,FRA,SWE,Assistant video assistant referee,Bram,Van Driessche,BEL
+2026-06-30,FRA,SWE,Support video assistant referee,Tomasz,Kwiatkowski,POL
+2026-06-30,CIV,NOR,Referee,Jesús,Valenzuela,VEN
+2026-06-30,CIV,NOR,Assistant referee 1,Jorge,Urrego,VEN
+2026-06-30,CIV,NOR,Assistant referee 2,Tulio,Moreno,VEN
+2026-06-30,CIV,NOR,Fourth official,Juan,Gabriel Benítez,PAR
+2026-06-30,CIV,NOR,Reserve assistant referee,Eduardo,Cardozo,PAR
+2026-06-30,CIV,NOR,Video assistant referee,Juan,Lara,CHI
+2026-06-30,CIV,NOR,Assistant video assistant referee,Juan,Soto,VEN
+2026-06-30,CIV,NOR,Support video assistant referee,Jarred,Gillett,ENG
+2026-06-30,MEX,ECU,Referee,Slavko,Vinčić,SVN
+2026-06-30,MEX,ECU,Assistant referee 1,Tomaž,Klančnik,SVN
+2026-06-30,MEX,ECU,Assistant referee 2,Andraž,Kovačič,SVN
+2026-06-30,MEX,ECU,Fourth official,Mustapha,Ghorbal,ALG
+2026-06-30,MEX,ECU,Reserve assistant referee,Mokrane,Gourari,ALG
+2026-06-30,MEX,ECU,Video assistant referee,Bastian,Dankert,GER
+2026-06-30,MEX,ECU,Assistant video assistant referee,Willy,Delajod,FRA
+2026-06-30,MEX,ECU,Support video assistant referee,Mahmoud,Ashour,EGY
+2026-07-01,BEL,SEN,Referee,Saíd,Martínez,HON
+2026-07-01,BEL,SEN,Assistant referee 1,Walter,López,HON
+2026-07-01,BEL,SEN,Assistant referee 2,Christian,Ramírez,HON
+2026-07-01,BEL,SEN,Fourth official,Andrés,Rojas,COL
+2026-07-01,BEL,SEN,Reserve assistant referee,Alexander,Guzmán,COL
+2026-07-01,BEL,SEN,Video assistant referee,Guillermo,Pacheco,MEX
+2026-07-01,BEL,SEN,Assistant video assistant referee,Rodolpho,Toski,BRA
+2026-07-01,BEL,SEN,Support video assistant referee,Carlos,del Cerro Grande,ESP
+2026-07-01,ENG,COD,Referee,Adham,Makhadmeh,JOR
+2026-07-01,ENG,COD,Assistant referee 1,Mohammad,Al-Kalaf,JOR
+2026-07-01,ENG,COD,Assistant referee 2,Ahmad,Al-Roalle,JOR
+2026-07-01,ENG,COD,Fourth official,Khalid,Al-Turais,KSA
+2026-07-01,ENG,COD,Reserve assistant referee,Mohammed,Al-Bakry,KSA
+2026-07-01,ENG,COD,Video assistant referee,Khamis,Al-Marri,QAT
+2026-07-01,ENG,COD,Assistant video assistant referee,Mohammed,Obaid Khadim,UAE
+2026-07-01,ENG,COD,Support video assistant referee,Joe,Dickerson,USA
+2026-07-01,USA,BIH,Referee,Raphael,Claus,BRA
+2026-07-01,USA,BIH,Assistant referee 1,Danilo,Manis,BRA
+2026-07-01,USA,BIH,Assistant referee 2,Rodrigo,Figueiredo,BRA
+2026-07-01,USA,BIH,Fourth official,Darío,Herrera,ARG
+2026-07-01,USA,BIH,Reserve assistant referee,Cristian,Navarro,ARG
+2026-07-01,USA,BIH,Video assistant referee,Juan,Soto,VEN
+2026-07-01,USA,BIH,Assistant video assistant referee,Nicolás,Gallo,COL
+2026-07-01,USA,BIH,Support video assistant referee,Jérôme,Brisard,FRA
+2026-07-02,POR,CRO,Referee,Espen,Eskås,NOR
+2026-07-02,POR,CRO,Assistant referee 1,Jan,Erik Engan,NOR
+2026-07-02,POR,CRO,Assistant referee 2,Isaak,Bashevkin,NOR
+2026-07-02,POR,CRO,Fourth official,Abongile,Tom,RSA
+2026-07-02,POR,CRO,Reserve assistant referee,Zakhele,Siwela,RSA
+2026-07-02,POR,CRO,Video assistant referee,Jarred,Gillett,ENG
+2026-07-02,POR,CRO,Assistant video assistant referee,Dennis,Higler,NED
+2026-07-02,POR,CRO,Support video assistant referee,Marco,Di Bello,ITA
+2026-07-02,ESP,AUT,Referee,Glenn,Nyberg,SWE
+2026-07-02,ESP,AUT,Assistant referee 1,Mahbod,Beigi,SWE
+2026-07-02,ESP,AUT,Assistant referee 2,Andreas,Söderkvist,SWE
+2026-07-02,ESP,AUT,Fourth official,Dahane,Beida,MTN
+2026-07-02,ESP,AUT,Reserve assistant referee,Elvis,Noupue,CMR
+2026-07-02,ESP,AUT,Video assistant referee,Tomasz,Kwiatkowski,POL
+2026-07-02,ESP,AUT,Assistant video assistant referee,Fedayi,San,SUI
+2026-07-02,ESP,AUT,Support video assistant referee,Shaun,Evans,AUS
+2026-07-02,SUI,ALG,Referee,Yael,Falcón,ARG
+2026-07-02,SUI,ALG,Assistant referee 1,Maximiliano,Del Yesso,ARG
+2026-07-02,SUI,ALG,Assistant referee 2,Facundo,Rodríguez,ARG
+2026-07-02,SUI,ALG,Fourth official,Kevin,Ortega,PER
+2026-07-02,SUI,ALG,Reserve assistant referee,Michael,Orué,PER
+2026-07-02,SUI,ALG,Video assistant referee,Hernán,Mastrángelo,ARG
+2026-07-02,SUI,ALG,Assistant video assistant referee,Erick,Miranda,MEX
+2026-07-02,SUI,ALG,Support video assistant referee,Juan,Lara,CHI
+2026-07-03,ARG,CPV,Referee,Drew,Fischer,CAN
+2026-07-03,ARG,CPV,Assistant referee 1,Micheal,Barwegen,CAN
+2026-07-03,ARG,CPV,Assistant referee 2,Lyes,Arfa,CAN
+2026-07-03,ARG,CPV,Fourth official,Katia,Itzel García,MEX
+2026-07-03,ARG,CPV,Reserve assistant referee,Sandra,Ramírez,MEX
+2026-07-03,ARG,CPV,Video assistant referee,Armando,Villarreal,USA
+2026-07-03,ARG,CPV,Assistant video assistant referee,Ivan,Bebek,CRO
+2026-07-03,ARG,CPV,Support video assistant referee,Tatiana,Guzmán,NCA
+2026-07-03,AUS,EGY,Referee,Gustavo,Tejera,URU
+2026-07-03,AUS,EGY,Assistant referee 1,Carlos,Barreiro,URU
+2026-07-03,AUS,EGY,Assistant referee 2,Nicolás,Tarán,URU
+2026-07-03,AUS,EGY,Fourth official,Sandro,Schärer,SUI
+2026-07-03,AUS,EGY,Reserve assistant referee,Stéphane,De Almeida,SUI
+2026-07-03,AUS,EGY,Video assistant referee,Leodán,González,URU
+2026-07-03,AUS,EGY,Assistant video assistant referee,Antonio,García,URU
+2026-07-03,AUS,EGY,Support video assistant referee,Bastian,Dankert,GER
+2026-07-03,COL,GHA,Referee,Clément,Turpin,FRA
+2026-07-03,COL,GHA,Assistant referee 1,Nicolas,Danos,FRA
+2026-07-03,COL,GHA,Assistant referee 2,Benjamin,Pagès,FRA
+2026-07-03,COL,GHA,Fourth official,Alejandro,Hernández Hernández,ESP
+2026-07-03,COL,GHA,Reserve assistant referee,José,Enrique Naranjo Pérez,ESP
+2026-07-03,COL,GHA,Video assistant referee,Jérôme,Brisard,FRA
+2026-07-03,COL,GHA,Assistant video assistant referee,Willy,Delajod,FRA
+2026-07-03,COL,GHA,Support video assistant referee,Fu,Ming,CHN
+2026-07-04,CAN,MAR,Referee,Michael,Oliver,ENG
+2026-07-04,CAN,MAR,Assistant referee 1,Stuart,Burt,ENG
+2026-07-04,CAN,MAR,Assistant referee 2,James,Mainwaring,ENG
+2026-07-04,CAN,MAR,Fourth official,Danny,Makkelie,NED
+2026-07-04,CAN,MAR,Reserve assistant referee,Hessel,Steegstra,NED
+2026-07-04,CAN,MAR,Video assistant referee,Jarred,Gillett,ENG
+2026-07-04,CAN,MAR,Assistant video assistant referee,Dennis,Higler,NED
+2026-07-04,CAN,MAR,Support video assistant referee,Tomasz,Kwiatkowski,POL
+2026-07-04,PAR,FRA,Referee,Ilgiz,Tantashev,UZB
+2026-07-04,PAR,FRA,Assistant referee 1,Andrey,Tsapenko,UZB
+2026-07-04,PAR,FRA,Assistant referee 2,Timur,Gaynullin,UZB
+2026-07-04,PAR,FRA,Fourth official,Abdulrahman,Al-Jassim,QAT
+2026-07-04,PAR,FRA,Reserve assistant referee,Taleb,Al-Marri,QAT
+2026-07-04,PAR,FRA,Video assistant referee,Juan,Lara,CHI
+2026-07-04,PAR,FRA,Assistant video assistant referee,Marco,Di Bello,ITA
+2026-07-04,PAR,FRA,Support video assistant referee,Joe,Dickerson,USA
+2026-07-05,BRA,NOR,Referee,Ismail,Elfath,USA
+2026-07-05,BRA,NOR,Assistant referee 1,Corey,Parker,USA
+2026-07-05,BRA,NOR,Assistant referee 2,Kyle,Atkins,USA
+2026-07-05,BRA,NOR,Fourth official,Saíd,Martínez,HON
+2026-07-05,BRA,NOR,Reserve assistant referee,Walter,López,HON
+2026-07-05,BRA,NOR,Video assistant referee,Tatiana,Guzmán,NCA
+2026-07-05,BRA,NOR,Assistant video assistant referee,Leodán,González,URU
+2026-07-05,BRA,NOR,Support video assistant referee,Carlos,del Cerro Grande,ESP
+2026-07-05,MEX,ENG,Referee,Alireza,Faghani,AUS
+2026-07-05,MEX,ENG,Assistant referee 1,George,Lakrindis,AUS
+2026-07-05,MEX,ENG,Assistant referee 2,James,Lindsay,AUS
+2026-07-05,MEX,ENG,Fourth official,Jalal,Jayed,MAR
+2026-07-05,MEX,ENG,Reserve assistant referee,Zakaria,Brinsi,MAR
+2026-07-05,MEX,ENG,Video assistant referee,Nicolás,Gallo,COL
+2026-07-05,MEX,ENG,Assistant video assistant referee,Juan,Lara,CHI
+2026-07-05,MEX,ENG,Support video assistant referee,Juan,Soto,VEN
+2026-07-06,POR,ESP,Referee,Anthony,Taylor,ENG
+2026-07-06,POR,ESP,Assistant referee 1,Gary,Beswick,ENG
+2026-07-06,POR,ESP,Assistant referee 2,Adam,Nunn,ENG
+2026-07-06,POR,ESP,Fourth official,Felix,Zwayer,GER
+2026-07-06,POR,ESP,Reserve assistant referee,Robert,Kempter,GER
+2026-07-06,POR,ESP,Video assistant referee,Bastian,Dankert,GER
+2026-07-06,POR,ESP,Assistant video assistant referee,Antonio,García,URU
+2026-07-06,POR,ESP,Support video assistant referee,Marco,Di Bello,ITA
+2026-07-06,USA,BEL,Referee,Adham,Makhadmeh,JOR
+2026-07-06,USA,BEL,Assistant referee 1,Mohammad,Al-Kalaf,JOR
+2026-07-06,USA,BEL,Assistant referee 2,Ahmad,Al-Roalle,JOR
+2026-07-06,USA,BEL,Fourth official,Pierre,Atcho,GAB
+2026-07-06,USA,BEL,Reserve assistant referee,Boris,Ditsoga,GAB
+2026-07-06,USA,BEL,Video assistant referee,Khamis,Al-Marri,QAT
+2026-07-06,USA,BEL,Assistant video assistant referee,Nicolás,Gallo,COL
+2026-07-06,USA,BEL,Support video assistant referee,Hernán,Mastrángelo,ARG
+2026-07-07,ARG,EGY,Referee,François,Letexier,FRA
+2026-07-07,ARG,EGY,Assistant referee 1,Cyril,Mugnier,FRA
+2026-07-07,ARG,EGY,Assistant referee 2,Mehdi,Rahmouni,FRA
+2026-07-07,ARG,EGY,Fourth official,Espen,Eskås,NOR
+2026-07-07,ARG,EGY,Reserve assistant referee,Isaak,Bashevkin,NOR
+2026-07-07,ARG,EGY,Video assistant referee,Jérôme,Brisard,FRA
+2026-07-07,ARG,EGY,Assistant video assistant referee,Willy,Delajod,FRA
+2026-07-07,ARG,EGY,Support video assistant referee,Bram,Van Driessche,BEL
+2026-07-07,SUI,COL,Referee,Iván,Barton,SLV
+2026-07-07,SUI,COL,Assistant referee 1,David,Morán,SLV
+2026-07-07,SUI,COL,Assistant referee 2,Henry,Pupiro,NCA
+2026-07-07,SUI,COL,Fourth official,Katia,Itzel García,MEX
+2026-07-07,SUI,COL,Reserve assistant referee,Sandra,Ramírez,MEX
+2026-07-07,SUI,COL,Video assistant referee,Guillermo,Pacheco,MEX
+2026-07-07,SUI,COL,Assistant video assistant referee,Armando,Villarreal,USA
+2026-07-07,SUI,COL,Support video assistant referee,Ivan,Bebek,CRO
+2026-07-09,FRA,MAR,Referee,Facundo,Tello,ARG
+2026-07-09,FRA,MAR,Assistant referee 1,Juan,Pablo Belatti,ARG
+2026-07-09,FRA,MAR,Assistant referee 2,Gabriel,Chade,ARG
+2026-07-09,FRA,MAR,Fourth official,Darío,Herrera,ARG
+2026-07-09,FRA,MAR,Reserve assistant referee,Cristian,Navarro,ARG
+2026-07-09,FRA,MAR,Video assistant referee,Hernán,Mastrángelo,ARG
+2026-07-09,FRA,MAR,Assistant video assistant referee,Leodán,González,URU
+2026-07-09,FRA,MAR,Support video assistant referee,Tatiana,Guzmán,NCA
+2026-07-10,ESP,BEL,Referee,Michael,Oliver,ENG
+2026-07-10,ESP,BEL,Assistant referee 1,Stuart,Burt,ENG
+2026-07-10,ESP,BEL,Assistant referee 2,James,Mainwaring,ENG
+2026-07-10,ESP,BEL,Fourth official,Ramon,Abatti,BRA
+2026-07-10,ESP,BEL,Reserve assistant referee,Rafael,Alves,BRA
+2026-07-10,ESP,BEL,Video assistant referee,Jarred,Gillett,ENG
+2026-07-10,ESP,BEL,Assistant video assistant referee,Ivan,Bebek,CRO
+2026-07-10,ESP,BEL,Support video assistant referee,Joe,Dickerson,USA
+2026-07-11,ARG,SUI,Referee,João,Pinheiro,POR
+2026-07-11,ARG,SUI,Assistant referee 1,Bruno,Jesus,POR
+2026-07-11,ARG,SUI,Assistant referee 2,Luciano,Maia,POR
+2026-07-11,ARG,SUI,Fourth official,Drew,Fischer,CAN
+2026-07-11,ARG,SUI,Reserve assistant referee,Micheal,Barwegen,CAN
+2026-07-11,ARG,SUI,Video assistant referee,Guillermo,Pacheco,MEX
+2026-07-11,ARG,SUI,Assistant video assistant referee,Juan,Lara,CHI
+2026-07-11,ARG,SUI,Support video assistant referee,Marco,Di Bello,ITA
+2026-07-11,NOR,ENG,Referee,Clément,Turpin,FRA
+2026-07-11,NOR,ENG,Assistant referee 1,Nicolas,Danos,FRA
+2026-07-11,NOR,ENG,Assistant referee 2,Benjamin,Pagès,FRA
+2026-07-11,NOR,ENG,Fourth official,Alejandro,Hernández Hernández,ESP
+2026-07-11,NOR,ENG,Reserve assistant referee,José,Enrique Naranjo Pérez,ESP
+2026-07-11,NOR,ENG,Video assistant referee,Jérôme,Brisard,FRA
+2026-07-11,NOR,ENG,Assistant video assistant referee,Armando,Villarreal,USA
+2026-07-11,NOR,ENG,Support video assistant referee,Carlos,del Cerro Grande,ESP
+2026-07-14,FRA,ESP,Referee,Iván,Barton,SLV
+2026-07-14,FRA,ESP,Assistant referee 1,David,Morán,SLV
+2026-07-14,FRA,ESP,Assistant referee 2,Henry,Pupiro,NCA
+2026-07-14,FRA,ESP,Fourth official,Glenn,Nyberg,SWE
+2026-07-14,FRA,ESP,Reserve assistant referee,Mahbod,Beigi,SWE
+2026-07-14,FRA,ESP,Video assistant referee,Tomasz,Kwiatkowski,POL
+2026-07-14,FRA,ESP,Assistant video assistant referee,Dennis,Higler,NED
+2026-07-14,FRA,ESP,Support video assistant referee,Guillermo,Pacheco,MEX
+2026-07-15,ENG,ARG,Referee,Ismail,Elfath,USA
+2026-07-15,ENG,ARG,Assistant referee 1,Corey,Parker,USA
+2026-07-15,ENG,ARG,Assistant referee 2,Kyle,Atkins,USA
+2026-07-15,ENG,ARG,Fourth official,Maurizio,Mariani,ITA
+2026-07-15,ENG,ARG,Reserve assistant referee,Daniele,Bindoni,ITA
+2026-07-15,ENG,ARG,Video assistant referee,Marco,Di Bello,ITA
+2026-07-15,ENG,ARG,Assistant video assistant referee,Juan,Lara,CHI
+2026-07-15,ENG,ARG,Support video assistant referee,Tatiana,Guzmán,NCA
+2026-07-18,FRA,ENG,Referee,Jesús,Valenzuela,VEN
+2026-07-18,FRA,ENG,Assistant referee 1,Jorge,Urrego,VEN
+2026-07-18,FRA,ENG,Assistant referee 2,Tulio,Moreno,VEN
+2026-07-18,FRA,ENG,Fourth official,Jalal,Jayed,MAR
+2026-07-18,FRA,ENG,Reserve assistant referee,Zakaria,Brinsi,MAR
+2026-07-18,FRA,ENG,Video assistant referee,Leodán,González,URU
+2026-07-18,FRA,ENG,Assistant video assistant referee,Armando,Villarreal,USA
+2026-07-18,FRA,ENG,Support video assistant referee,Carlos,del Cerro Grande,ESP
+2026-07-19,ESP,ARG,Referee,Slavko,Vinčić,SVN
+2026-07-19,ESP,ARG,Assistant referee 1,Tomaž,Klančnik,SVN
+2026-07-19,ESP,ARG,Assistant referee 2,Andraž,Kovačič,SVN
+2026-07-19,ESP,ARG,Fourth official,Adham,Makhadmeh,JOR
+2026-07-19,ESP,ARG,Reserve assistant referee,Mohammad,Al-Kalaf,JOR
+2026-07-19,ESP,ARG,Video assistant referee,Bastian,Dankert,GER
+2026-07-19,ESP,ARG,Assistant video assistant referee,Nicolás,Gallo,COL
+2026-07-19,ESP,ARG,Support video assistant referee,Khamis,Al-Marri,QAT

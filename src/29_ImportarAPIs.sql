@@ -10,9 +10,12 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 31/10/2026
- Archivo: 29_ImportarCotizacionesYFeriados.sql
- Objetivo: Importar, con los SP de 27_SP_Importar_Cotizaciones.sql y
-           28_SP_Importar_Feriados.sql:
+ Archivo: 29_ImportarAPIs.sql
+ Objetivo: Importar, con los SP de 21_SP_Importar_Publicidad.sql,
+           27_SP_Importar_Cotizaciones.sql y 28_SP_Importar_Feriados.sql:
+             0. las campañas publicitarias del Mundial 2026 del Dossier
+                Mundial, con sus anunciantes y piezas, desde la API de
+                Firestore que usa la página;
              1. las cotizaciones contra el dólar de las monedas de todos los
                 países del sistema en junio y julio de 2026 (el torneo y las
                 campañas publicitarias), desde la API Frankfurter;
@@ -20,15 +23,17 @@
                 la API Nager.Date, de a un país por consulta;
              3. a mano, los feriados del período del torneo de los países que
                 Nager.Date no cubre.
-           Requiere haber ejecutado 00 a 28. Se puede ejecutar más de una
-           vez: lo que ya está cargado queda SIN CAMBIOS.
+           Requiere haber ejecutado 00 a 28. Va antes del juego de datos
+           (31): así las piezas del Dossier compiten en la asignación de
+           publicidad de sus partidos. Se puede ejecutar más de una vez: lo
+           que ya está cargado queda SIN CAMBIOS.
 ================================================================================
 
  Antes de ejecutar:
    - Necesita internet y OLE Automation, que la instancia trae deshabilitado.
      Este script lo habilita solo mientras consulta las APIs y después lo deja
-     como estaba. Hace falta ser sysadmin. Si no hay conexión, las
-     cotizaciones fallan con su motivo, los feriados de cada país quedan
+     como estaba. Hace falta ser sysadmin. Si no hay conexión, las campañas y
+     las cotizaciones fallan con su motivo, los feriados de cada país quedan
      informados con su error y se cargan igual los de la parte 3.
 
  Por qué hay un WHILE: Nager.Date responde los feriados de un país por
@@ -45,10 +50,10 @@
  las fechas previstas, a verificar con el calendario oficial de cada país.
  Solo se cargan para los países que la API no cubrió en esta ejecución.
 
- Resultado: el resumen de las cotizaciones (leídos, insertados,
- actualizados, sin cambios, omitidos y rechazados), el de los feriados por
- país, el de la carga a mano y los partidos que caen en feriado en algún
- mercado.
+ Resultado: el resumen de las campañas y el de las cotizaciones (leídos,
+ insertados, actualizados, sin cambios, omitidos y rechazados), el de los
+ feriados por país, el de la carga a mano, los partidos que caen en feriado
+ en algún mercado y los anunciantes por país.
 */
 
 USE MundialFutbol;
@@ -100,12 +105,22 @@ BEGIN
     RECONFIGURE;
 END;
 
+-- 0. Campañas del Dossier Mundial, con el período del torneo.
+BEGIN TRY
+    EXEC Publicidad.usp_ImportarCampaniasAPI @fecha_inicio = '2026-06-11', @fecha_fin = '2026-07-19';
+END TRY
+BEGIN CATCH
+    SELECT @numero_error = ERROR_NUMBER(), @mensaje_error = ERROR_MESSAGE();
+END CATCH;
+
 -- 1. Cotizaciones de junio y julio de 2026.
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarCotizacionesAPI @fecha_desde = '2026-06-01', @fecha_hasta = '2026-07-31';
 END TRY
 BEGIN CATCH
-    SELECT @numero_error = ERROR_NUMBER(), @mensaje_error = ERROR_MESSAGE();
+    -- Si fallan también las campañas, se informa ese error, que es el primero.
+    IF @mensaje_error IS NULL
+        SELECT @numero_error = ERROR_NUMBER(), @mensaje_error = ERROR_MESSAGE();
 END CATCH;
 
 -- 2. Feriados de cada país, de a una consulta por código ISO.
@@ -217,7 +232,7 @@ BEGIN TRY
         FROM #staging_feriados;
 
         EXEC DatosGenerales.usp_RegistrarImportacion
-            @proceso = '29_ImportarCotizacionesYFeriados.sql', @origen = N'Feriados cargados a mano (parte 3 del script)',
+            @proceso = '29_ImportarAPIs.sql', @origen = N'Feriados cargados a mano (parte 3 del script)',
             @leidos = @leidos, @insertados = @insertados, @actualizados = @actualizados, @sin_cambios = @sin_cambios,
             @rechazados = @rechazados, @id_importacion = @id_importacion OUTPUT;
 
@@ -231,7 +246,7 @@ BEGIN TRY
 END TRY
 BEGIN CATCH
     IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-    -- Si fallan también las cotizaciones, se informa ese error, que es el primero.
+    -- Si fallan también las campañas o las cotizaciones, se informa ese error, que es el primero.
     IF @mensaje_error IS NULL
         SELECT @numero_error = ERROR_NUMBER(), @mensaje_error = ERROR_MESSAGE();
 END CATCH;
@@ -265,6 +280,16 @@ FROM Torneo.PARTIDO AS p
 CROSS APPLY Publicidad.fn_MercadosEnPrimeTime(p.id_partido) AS m
 WHERE m.es_feriado = 1
 ORDER BY p.numero_partido, m.mercado;
+
+-- Evidencia: anunciantes, campañas y piezas por país del anunciante (las del Dossier son de Argentina).
+SELECT pa.nombre AS pais, COUNT(DISTINCT an.id_anunciante) AS anunciantes, COUNT(DISTINCT c.id_campania) AS campanias,
+       COUNT(pz.id_pieza) AS piezas
+FROM Publicidad.ANUNCIANTE AS an
+INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = an.id_pais
+LEFT JOIN Publicidad.CAMPANIA AS c ON c.id_anunciante = an.id_anunciante
+LEFT JOIN Publicidad.PIEZA_PUBLICITARIA AS pz ON pz.id_campania = c.id_campania
+GROUP BY pa.nombre
+ORDER BY anunciantes DESC;
 
 -- Evidencia: tarifa de cada espacio de la primera sede en la moneda de cada mercado, el día del primer partido.
 DECLARE @fecha DATE = (SELECT CAST(MIN(fecha_hora_local) AS DATE) FROM Torneo.PARTIDO);

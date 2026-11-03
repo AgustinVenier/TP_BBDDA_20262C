@@ -80,6 +80,8 @@ GO
    BORRADO EN ORDEN INVERSO DE DEPENDENCIAS
    ============================================================================ */
 
+DROP TABLE IF EXISTS Publicidad.ERRORES_CAMPANIA;
+DROP TABLE IF EXISTS Arbitraje.ERRORES_DESIGNACION;
 DROP TABLE IF EXISTS DesarrolloPartido.ERRORES_EVENTO;
 DROP TABLE IF EXISTS Torneo.ERRORES_PARTIDO;
 DROP TABLE IF EXISTS Torneo.ERRORES_JUGADOR;
@@ -789,12 +791,15 @@ GO
   DESIGNACION_ARBITRAL
   Resuelve la relacion N:N "dirige" entre PARTIDO y ARBITRO.
   Un arbitro cumple un solo rol por partido y cada rol lo cubre un solo arbitro.
+  Los cinco que pide la consigna (principal, asistentes, cuarto y VAR) mas los
+  tres que publica la FIFA en el Mundial 2026: el asistente de reserva, el
+  asistente del VAR (AVAR) y el VAR de apoyo.
   El conflicto de nacionalidad se valida en el SP de designacion.
 */
 CREATE TABLE Arbitraje.DESIGNACION_ARBITRAL (
     id_partido          INT             NOT NULL,
     id_arbitro          INT             NOT NULL,
-    rol                 VARCHAR(12)     NOT NULL,
+    rol                 VARCHAR(17)     NOT NULL,
     informe_postpartido VARCHAR(MAX)    NULL,
     sancion             VARCHAR(500)    NULL,
     fecha_designacion   DATETIME2(0)    NOT NULL
@@ -807,7 +812,8 @@ CREATE TABLE Arbitraje.DESIGNACION_ARBITRAL (
         FOREIGN KEY (id_arbitro) REFERENCES Arbitraje.ARBITRO (id_arbitro),
     CONSTRAINT UQ_DESIGNACION_ARBITRAL_partido_rol UNIQUE (id_partido, rol),
     CONSTRAINT CK_DESIGNACION_ARBITRAL_rol CHECK (rol IN (
-        'PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR'))
+        'PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR',
+        'ASISTENTE_RESERVA', 'AVAR', 'VAR_APOYO'))
 );
 GO
 
@@ -963,7 +969,9 @@ GO
   Una fila por cada vez que un proceso importa un archivo o una respuesta de
   una API: el SP que importo (o el script, en una carga a mano como la de
   29), el origen (ruta del archivo o URL), cuando y el resumen. Los totales cuentan los registros del origen (en
-  usp_ImportarPartidosJSON, los partidos y lo que paso en cada uno), salvo
+  usp_ImportarPartidosJSON, los partidos y lo que paso en cada uno; en un
+  reproceso, solo los partidos que se reprocesan; en
+  usp_ImportarDesignacionesCSV, las designaciones, sin los arbitros), salvo
   insertados, actualizados y sin cambios de los feriados, que cuentan
   feriados por pais y dia. Una importacion que falla entera (archivo que no
   se puede leer o con otro formato) no se registra: el proceso informa el
@@ -1147,6 +1155,52 @@ CREATE TABLE DesarrolloPartido.ERRORES_EVENTO (
     CONSTRAINT FK_ERRORES_EVENTO_IMPORTACION
         FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion),
     CONSTRAINT CK_ERRORES_EVENTO_tipo CHECK (tipo IN ('FORMACION', 'CAMBIO', 'GOL', 'PENAL', 'TARJETA'))
+);
+GO
+
+
+/*
+  ERRORES_DESIGNACION
+  Designaciones arbitrales rechazadas del CSV del scraping: registro es la
+  linea del archivo; los demas datos, el texto que traia (el partido por su
+  fecha y sus dos selecciones, y el arbitro por su nombre y su pais).
+*/
+CREATE TABLE Arbitraje.ERRORES_DESIGNACION (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    fecha           NVARCHAR(50)   NULL,
+    local           NVARCHAR(50)   NULL,
+    visitante       NVARCHAR(50)   NULL,
+    rol             NVARCHAR(100)  NULL,
+    nombre          NVARCHAR(400)  NULL,
+    apellido        NVARCHAR(400)  NULL,
+    pais            NVARCHAR(50)   NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_DESIGNACION PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_DESIGNACION_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+
+/*
+  ERRORES_CAMPANIA
+  Campañas rechazadas del Dossier Mundial: registro es la posicion de la
+  campaña en la respuesta de la API; documento, su id en Firestore; los demas
+  datos, el texto que traia.
+*/
+CREATE TABLE Publicidad.ERRORES_CAMPANIA (
+    id_importacion  INT            NOT NULL,
+    registro        INT            NOT NULL,
+    documento       NVARCHAR(200)  NULL,
+    anunciante      NVARCHAR(400)  NULL,
+    titulo          NVARCHAR(400)  NULL,
+    motivos         NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_CAMPANIA PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_CAMPANIA_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
 );
 GO
 

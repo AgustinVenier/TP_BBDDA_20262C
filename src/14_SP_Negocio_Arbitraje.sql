@@ -126,10 +126,11 @@ GO
     - los cinco árbitros informados, distintos, existentes y activos;
     - conflicto de nacionalidad: ninguno puede ser del país de una de las
       dos selecciones (lo rechaza con el detalle de cada caso);
-    - el principal y el VAR tienen que ser de categoría FIFA;
-    - ninguno puede tener otro partido a menos de 24 horas.
+    - el principal y el VAR tienen que ser de categoría FIFA.
   Desde dieciseisavos, advierte (sin impedir la designación) cuando un
   árbitro es de un país que puede cruzarse con los que juegan el partido.
+  Los roles opcionales (ASISTENTE_RESERVA, AVAR y VAR_APOYO) se designan
+  después, con usp_DESIGNACION_ARBITRAL_Alta.
   Con esas validaciones cubre las reglas de Arbitraje.usp_DESIGNACION_ARBITRAL_Alta
   y designa a los cinco con un solo INSERT.
 */
@@ -152,16 +153,15 @@ BEGIN
     DECLARE @tran_propia  BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
     DECLARE @estado       VARCHAR(12);
     DECLARE @fase         VARCHAR(15);
-    DECLARE @utc          DATETIME2(0);
     DECLARE @local        INT;
     DECLARE @visitante    INT;
 
-    DECLARE @terna TABLE (rol VARCHAR(12) PRIMARY KEY, id_arbitro INT);
+    DECLARE @terna TABLE (rol VARCHAR(17) PRIMARY KEY, id_arbitro INT);
     INSERT INTO @terna (rol, id_arbitro)
     VALUES ('PRINCIPAL', @id_principal), ('ASISTENTE_1', @id_asistente_1),
            ('ASISTENTE_2', @id_asistente_2), ('CUARTO', @id_cuarto), ('VAR', @id_var);
 
-    SELECT @estado = estado, @fase = fase, @utc = fecha_hora_utc,
+    SELECT @estado = estado, @fase = fase,
            @local = id_seleccion_local, @visitante = id_seleccion_visitante
     FROM Torneo.PARTIDO
     WHERE id_partido = @id_partido;
@@ -217,16 +217,6 @@ BEGIN
         FROM @terna AS t
         INNER JOIN Arbitraje.ARBITRO AS a ON a.id_arbitro = t.id_arbitro
         WHERE t.rol IN ('PRINCIPAL', 'VAR') AND a.categoria <> 'FIFA'), N'');
-
-    SET @errores += ISNULL((
-        SELECT STRING_AGG(@nl + N'- ' + a.apellido + N', ' + a.nombre + N' ya dirige el partido '
-                          + CAST(p.numero_partido AS NVARCHAR(3)) + N', a menos de 24 horas.', N'')
-        FROM @terna AS t
-        INNER JOIN Arbitraje.ARBITRO AS a ON a.id_arbitro = t.id_arbitro
-        INNER JOIN Arbitraje.DESIGNACION_ARBITRAL AS d ON d.id_arbitro = t.id_arbitro
-        INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = d.id_partido
-        WHERE d.id_partido <> @id_partido
-          AND ABS(DATEDIFF(MINUTE, p.fecha_hora_utc, @utc)) < 1440), N'');
 
     IF @errores <> N''
     BEGIN

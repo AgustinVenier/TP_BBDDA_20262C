@@ -12,10 +12,10 @@
  Fecha: 02/11/2026
  Archivo: 32_ImportarMundial2026.sql
  Objetivo: Cargar el Mundial 2026 real (las 16 sedes, las 48 selecciones con
-           sus 1248 convocados y los 104 partidos con formaciones, cambios,
-           goles y tarjetas) desde los archivos de openfootball y el CSV del
-           scraping, con los SP de 23_SP_Importar_Mundial2026.sql y
-           24_SP_Importar_Jugadores.sql.
+           sus 1248 convocados, los 104 partidos con formaciones, cambios,
+           goles y tarjetas, y el equipo arbitral de cada uno) desde los
+           archivos de openfootball y los CSV del scraping, con los SP de
+           23_SP_Importar_Mundial2026.sql y 24_SP_Importar_Jugadores.sql.
            Es la alternativa a 31_DatosDePrueba.sql: el torneo de prueba y el
            real no pueden estar en la misma base (cada país tiene una sola
            selección y el número de partido no se repite). Para la base del
@@ -48,8 +48,12 @@
    2. Corrige a mano lo que no se puede deducir de los archivos: registra
       los nombres alternativos de esas selecciones y jugadores, y la
       capacidad de SoFi Stadium.
-   3. Vuelve a importar los partidos: lo que ya estaba queda SIN CAMBIOS y
-      se carga lo que faltaba.
+   3. Reprocesa solo los partidos que tuvieron algún rechazo en la primera
+      importación (@reprocesar_importacion): los demás ya están cargados y
+      no se vuelven a procesar. De los reprocesados, lo que ya estaba queda
+      SIN CAMBIOS y se carga lo que faltaba.
+   4. Importa el equipo arbitral de cada partido (los ocho roles que publica
+      la FIFA, del CSV del scraping de Wikipedia), con sus árbitros.
    Se puede ejecutar más de una vez sobre la base del torneo real: lo que ya
    está cargado queda SIN CAMBIOS, salvo SoFi Stadium, que se rechaza porque
    el archivo trae una capacidad menor que la corregida (bajarla dejaría
@@ -63,10 +67,9 @@ SET NOCOUNT ON;
 GO
 
 -- Sobre una base con el torneo de prueba (31) no se carga nada. Se reconoce porque
--- tiene cuerpos técnicos y designaciones arbitrales, que los archivos del torneo real no traen.
+-- tiene cuerpos técnicos, que los archivos del torneo real no traen.
 IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS)
    OR EXISTS (SELECT 1 FROM Torneo.PERSONA_CUERPO_TECNICO)
-   OR EXISTS (SELECT 1 FROM Arbitraje.DESIGNACION_ARBITRAL)
 BEGIN
     PRINT N'32_ImportarMundial2026.sql: la base tiene que tener los datos iniciales (20) y no tener el torneo de '
         + N'prueba del 31. Recreá la base con 00 a 30 y volvé a ejecutarlo.';
@@ -101,9 +104,12 @@ DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHA
 EXEC Torneo.usp_ImportarJugadoresCSV @ruta_archivo = @archivo;
 GO
 
+-- Su número, para reprocesar después solo los partidos que rechace (sección 3).
 DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHAR(400))
                                + N'datos\fuentes\openfootball\worldcup-full.json';
-EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo;
+DECLARE @id_importacion INT;
+EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
+EXEC sp_set_session_context @key = N'importacion_partidos', @value = @id_importacion;
 GO
 
 
@@ -191,22 +197,32 @@ GO
 
 
 /* ============================================================================
-   3. SEGUNDA IMPORTACIÓN DE LOS PARTIDOS
+   3. REPROCESO DE LOS PARTIDOS RECHAZADOS
    ============================================================================ */
 DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHAR(400))
                                + N'datos\fuentes\openfootball\worldcup-full.json';
-EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo;
+DECLARE @reprocesar INT = CAST(SESSION_CONTEXT(N'importacion_partidos') AS INT);
+EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @reprocesar_importacion = @reprocesar;
 GO
 
 
 /* ============================================================================
-   4. RESUMEN
+   4. EQUIPO ARBITRAL DE CADA PARTIDO
+   ============================================================================ */
+DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHAR(400))
+                               + N'scraping\datos\designaciones_arbitrales.csv';
+EXEC Arbitraje.usp_ImportarDesignacionesCSV @ruta_archivo = @archivo;
+GO
+
+
+/* ============================================================================
+   5. RESUMEN
    ============================================================================ */
 SELECT s.name + N'.' + t.name AS tabla, SUM(p.rows) AS filas
 FROM sys.tables AS t
 INNER JOIN sys.schemas AS s ON s.schema_id = t.schema_id
 INNER JOIN sys.partitions AS p ON p.object_id = t.object_id AND p.index_id IN (0, 1)
-WHERE s.name IN (N'Torneo', N'DesarrolloPartido')
+WHERE s.name IN (N'Torneo', N'DesarrolloPartido', N'Arbitraje')
 GROUP BY s.name, t.name
 ORDER BY s.name, t.name;
 
@@ -222,7 +238,8 @@ SELECT i.id_importacion, i.proceso, i.origen, i.fecha_hora, i.leidos, i.insertad
        (SELECT COUNT(*) FROM Torneo.ERRORES_SELECCION AS e WHERE e.id_importacion = i.id_importacion)     AS errores_seleccion,
        (SELECT COUNT(*) FROM Torneo.ERRORES_JUGADOR AS e WHERE e.id_importacion = i.id_importacion)       AS errores_jugador,
        (SELECT COUNT(*) FROM Torneo.ERRORES_PARTIDO AS e WHERE e.id_importacion = i.id_importacion)       AS errores_partido,
-       (SELECT COUNT(*) FROM DesarrolloPartido.ERRORES_EVENTO AS e WHERE e.id_importacion = i.id_importacion) AS errores_evento
+       (SELECT COUNT(*) FROM DesarrolloPartido.ERRORES_EVENTO AS e WHERE e.id_importacion = i.id_importacion) AS errores_evento,
+       (SELECT COUNT(*) FROM Arbitraje.ERRORES_DESIGNACION AS e WHERE e.id_importacion = i.id_importacion) AS errores_designacion
 FROM DatosGenerales.IMPORTACION AS i
 WHERE i.id_importacion > CAST(SESSION_CONTEXT(N'importacion_desde') AS INT)
 ORDER BY i.id_importacion;

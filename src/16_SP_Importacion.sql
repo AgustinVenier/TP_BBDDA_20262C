@@ -24,6 +24,10 @@
              Torneo.usp_ImportarJugadores                      #staging_jugadores    selección + apellido + nombre
              Torneo.usp_ImportarPartidos                       #staging_partidos     número de partido
              DesarrolloPartido.usp_ImportarDesarrolloPartidos  #staging_eventos      lo que pasó en cada partido
+             Arbitraje.usp_ImportarArbitros                    #staging_arbitros     país + apellido + nombre
+             Arbitraje.usp_ImportarDesignaciones               #staging_designaciones número de partido + árbitro
+             Publicidad.usp_ImportarCampanias                  #staging_campanias    anunciante + nombre de la campaña
+                                                               y #staging_piezas     (y título de cada pieza)
            Y los del registro de las importaciones (02_CrearTablas.sql):
              DatosGenerales.usp_RegistrarImportacion  registra una importación y devuelve su número
              DatosGenerales.usp_BorrarImportacion     la borra, con sus registros rechazados
@@ -208,6 +212,10 @@ BEGIN
         DELETE e FROM Torneo.ERRORES_PARTIDO AS e
         INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;
         DELETE e FROM DesarrolloPartido.ERRORES_EVENTO AS e
+        INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;
+        DELETE e FROM Arbitraje.ERRORES_DESIGNACION AS e
+        INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;
+        DELETE e FROM Publicidad.ERRORES_CAMPANIA AS e
         INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;
 
         DELETE im FROM DatosGenerales.IMPORTACION AS im
@@ -1698,6 +1706,540 @@ BEGIN
         FROM #staging_eventos AS e
         INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
         WHERE e.tipo = 'TARJETA' AND e.accion = 'INSERTADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+/* ============================================================================
+   ÁRBITROS Y DESIGNACIONES
+   El equipo arbitral de cada partido, que importa
+   Arbitraje.usp_ImportarDesignacionesCSV (23_SP_Importar_Mundial2026.sql).
+   ============================================================================ */
+
+/*
+  usp_ImportarArbitros
+  Upsert de árbitros por país (código FIFA), apellido y nombre, desde
+  #staging_arbitros. Columnas que usa: id_registro (distinto en cada fila),
+  codigo_fifa, nombre, apellido, categoria, fecha_nacimiento, errores y
+  accion. Acepta la categoría CONFEDERATION, en inglés. En uno existente, la
+  fecha de nacimiento que no viene no se borra, y si está activo o no queda
+  como está. Los idiomas no se importan: se registran con
+  usp_ARBITRO_IDIOMA_Alta.
+  Valida cada árbitro pendiente: país registrado; nombre y apellido
+  obligatorios y de hasta 60 caracteres; categoría FIFA o CONFEDERACION;
+  fecha de nacimiento no futura; que no venga dos veces. Con eso cubre las
+  reglas de usp_ARBITRO_Alta.
+*/
+CREATE OR ALTER PROCEDURE Arbitraje.usp_ImportarArbitros
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @nl           NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia  BIT      = IIF(@@TRANCOUNT = 0, 1, 0);
+
+    -- El país y el árbitro ya registrados de cada fila pendiente.
+    DECLARE @registrados TABLE (
+        id_registro  INT PRIMARY KEY,
+        id_pais      SMALLINT,
+        id_arbitro   INT
+    );
+
+    IF OBJECT_ID(N'tempdb..#staging_arbitros') IS NULL
+        THROW 50001, N'Arbitraje.usp_ImportarArbitros: no se importó nada, falta la tabla #staging_arbitros con los árbitros.', 1;
+
+    UPDATE #staging_arbitros
+    SET codigo_fifa = UPPER(NULLIF(TRIM(codigo_fifa), '')),
+        nombre      = NULLIF(TRIM(nombre), N''),
+        apellido    = NULLIF(TRIM(apellido), N''),
+        categoria   = IIF(UPPER(TRIM(categoria)) = 'CONFEDERATION', 'CONFEDERACION', UPPER(NULLIF(TRIM(categoria), '')))
+    WHERE accion IS NULL;
+
+    INSERT INTO @registrados (id_registro, id_pais, id_arbitro)
+    SELECT st.id_registro, pa.id_pais, a.id_arbitro
+    FROM #staging_arbitros AS st
+    LEFT JOIN DatosGenerales.PAIS AS pa ON pa.codigo_fifa = st.codigo_fifa
+    LEFT JOIN Arbitraje.ARBITRO AS a ON a.id_pais = pa.id_pais AND a.apellido = st.apellido AND a.nombre = st.nombre
+    WHERE st.accion IS NULL;
+
+    /* 1. Las reglas de cada árbitro. */
+    UPDATE st
+    SET errores = NULLIF(CONCAT(st.errores,
+            CASE WHEN st.codigo_fifa IS NULL THEN @nl + N'- El código FIFA del país es obligatorio.'
+                 WHEN r.id_pais IS NULL     THEN @nl + N'- No hay un país registrado con código FIFA "' + st.codigo_fifa + N'".'
+            END,
+            CASE WHEN st.nombre IS NULL OR st.apellido IS NULL
+                     THEN @nl + N'- El nombre y el apellido son obligatorios.'
+                 WHEN LEN(st.nombre) > 60 OR LEN(st.apellido) > 60
+                     THEN @nl + N'- El nombre y el apellido no pueden superar los 60 caracteres.'
+            END,
+            CASE WHEN st.categoria IS NULL THEN @nl + N'- La categoría es obligatoria.'
+                 WHEN st.categoria NOT IN ('FIFA', 'CONFEDERACION')
+                     THEN @nl + N'- La categoría "' + st.categoria + N'" no es FIFA ni CONFEDERACION.'
+            END,
+            IIF(st.fecha_nacimiento > CONVERT(DATE, GETDATE()), @nl + N'- La fecha de nacimiento no puede ser futura.', NULL)), N'')
+    FROM #staging_arbitros AS st
+    INNER JOIN @registrados AS r ON r.id_registro = st.id_registro;
+
+    UPDATE st
+    SET errores = CONCAT(st.errores, @nl, N'- Este árbitro viene ', r.veces, N' veces.')
+    FROM #staging_arbitros AS st
+    INNER JOIN (SELECT codigo_fifa, nombre, apellido, COUNT(*) AS veces FROM #staging_arbitros
+                WHERE codigo_fifa IS NOT NULL AND nombre IS NOT NULL AND apellido IS NOT NULL
+                GROUP BY codigo_fifa, nombre, apellido HAVING COUNT(*) > 1) AS r
+            ON r.codigo_fifa = st.codigo_fifa AND r.nombre = st.nombre AND r.apellido = st.apellido
+    WHERE st.accion IS NULL;
+
+    UPDATE #staging_arbitros SET accion = 'RECHAZADO' WHERE accion IS NULL AND errores IS NOT NULL;
+
+    /* 2. Lo que le pasa a cada árbitro válido, antes de cargar. */
+    UPDATE st
+    SET accion = CASE WHEN r.id_arbitro IS NULL THEN 'INSERTADO'
+                      WHEN st.categoria <> a.categoria OR st.fecha_nacimiento <> ISNULL(a.fecha_nacimiento, '19000101')
+                          THEN 'ACTUALIZADO'
+                      ELSE 'SIN CAMBIOS'
+                 END
+    FROM #staging_arbitros AS st
+    INNER JOIN @registrados AS r ON r.id_registro = st.id_registro
+    LEFT JOIN Arbitraje.ARBITRO AS a ON a.id_arbitro = r.id_arbitro
+    WHERE st.accion IS NULL;
+
+    /* 3. Carga, todos juntos. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        UPDATE a
+        SET categoria        = st.categoria,
+            fecha_nacimiento = ISNULL(st.fecha_nacimiento, a.fecha_nacimiento)
+        FROM Arbitraje.ARBITRO AS a
+        INNER JOIN @registrados AS r ON r.id_arbitro = a.id_arbitro
+        INNER JOIN #staging_arbitros AS st ON st.id_registro = r.id_registro
+        WHERE st.accion = 'ACTUALIZADO';
+
+        INSERT INTO Arbitraje.ARBITRO (id_pais, nombre, apellido, fecha_nacimiento, categoria)
+        SELECT r.id_pais, st.nombre, st.apellido, st.fecha_nacimiento, st.categoria
+        FROM #staging_arbitros AS st
+        INNER JOIN @registrados AS r ON r.id_registro = st.id_registro
+        WHERE st.accion = 'INSERTADO'
+        ORDER BY st.id_registro;
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+/*
+  usp_ImportarDesignaciones
+  Upsert de designaciones arbitrales por partido (número) y árbitro, desde
+  #staging_designaciones. Columnas que usa: id_registro (distinto en cada
+  fila), numero_partido, id_arbitro, rol, errores y accion. Acepta los roles
+  en español o como los publica la FIFA, en inglés: Referee, Assistant
+  referee 1 y 2, Fourth official, Reserve assistant referee, Video assistant
+  referee, Assistant video assistant referee y Support video assistant
+  referee. Un árbitro que ya está designado en el partido con otro rol
+  cambia de rol. Las designaciones del partido que no vienen quedan como
+  están, y el informe y la sanción post-partido no se tocan.
+  Es una carga histórica: no exige, como usp_DESIGNACION_ARBITRAL_Alta, que
+  el partido esté PROGRAMADO ni que el árbitro esté activo.
+  Valida cada designación pendiente: partido y árbitro existentes; rol
+  válido; que el árbitro no sea del país de una de las dos selecciones del
+  partido (conflicto de nacionalidad). Y con las válidas, cada partido como
+  quedaría: cada rol con un solo árbitro y cada árbitro con un solo rol; las
+  designaciones que lo rompen se rechazan.
+*/
+CREATE OR ALTER PROCEDURE Arbitraje.usp_ImportarDesignaciones
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @nl           NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia  BIT      = IIF(@@TRANCOUNT = 0, 1, 0);
+
+    -- El partido, el árbitro y su designación ya registrados de cada fila pendiente.
+    DECLARE @registradas TABLE (
+        id_registro     INT PRIMARY KEY,
+        id_partido      INT,
+        arbitro_existe  BIT,
+        pais_conflicto  VARCHAR(60),   -- el país del árbitro, si juega el partido
+        rol_actual      VARCHAR(17)    -- el que el árbitro ya tiene en el partido
+    );
+
+    IF OBJECT_ID(N'tempdb..#staging_designaciones') IS NULL
+        THROW 50001, N'Arbitraje.usp_ImportarDesignaciones: no se importó nada, falta la tabla #staging_designaciones con las designaciones.', 1;
+
+    UPDATE #staging_designaciones
+    SET rol = CASE UPPER(NULLIF(TRIM(rol), ''))
+                  WHEN 'REFEREE'                           THEN 'PRINCIPAL'
+                  WHEN 'ASSISTANT REFEREE 1'               THEN 'ASISTENTE_1'
+                  WHEN 'ASSISTANT REFEREE 2'               THEN 'ASISTENTE_2'
+                  WHEN 'FOURTH OFFICIAL'                   THEN 'CUARTO'
+                  WHEN 'RESERVE ASSISTANT REFEREE'         THEN 'ASISTENTE_RESERVA'
+                  WHEN 'VIDEO ASSISTANT REFEREE'           THEN 'VAR'
+                  WHEN 'ASSISTANT VIDEO ASSISTANT REFEREE' THEN 'AVAR'
+                  WHEN 'SUPPORT VIDEO ASSISTANT REFEREE'   THEN 'VAR_APOYO'
+                  ELSE UPPER(NULLIF(TRIM(rol), ''))
+              END
+    WHERE accion IS NULL;
+
+    INSERT INTO @registradas (id_registro, id_partido, arbitro_existe, pais_conflicto, rol_actual)
+    SELECT st.id_registro, p.id_partido, IIF(a.id_arbitro IS NULL, 0, 1),
+           (SELECT TOP (1) pa.nombre
+            FROM Torneo.SELECCION AS s
+            INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
+            WHERE s.id_seleccion IN (p.id_seleccion_local, p.id_seleccion_visitante) AND s.id_pais = a.id_pais),
+           d.rol
+    FROM #staging_designaciones AS st
+    LEFT JOIN Torneo.PARTIDO AS p ON p.numero_partido = st.numero_partido
+    LEFT JOIN Arbitraje.ARBITRO AS a ON a.id_arbitro = st.id_arbitro
+    LEFT JOIN Arbitraje.DESIGNACION_ARBITRAL AS d ON d.id_partido = p.id_partido AND d.id_arbitro = a.id_arbitro
+    WHERE st.accion IS NULL;
+
+    /* 1. Las reglas de cada designación. */
+    UPDATE st
+    SET errores = NULLIF(CONCAT(st.errores,
+            CASE WHEN st.numero_partido IS NULL THEN @nl + N'- El número de partido es obligatorio.'
+                 WHEN r.id_partido IS NULL     THEN @nl + N'- No hay un partido con el número '
+                                                         + CAST(st.numero_partido AS NVARCHAR(3)) + N'.'
+            END,
+            CASE WHEN st.id_arbitro IS NULL THEN @nl + N'- El árbitro es obligatorio.'
+                 WHEN r.arbitro_existe = 0  THEN @nl + N'- No existe un árbitro con id ' + CAST(st.id_arbitro AS NVARCHAR(10)) + N'.'
+            END,
+            CASE WHEN st.rol IS NULL THEN @nl + N'- El rol es obligatorio.'
+                 WHEN st.rol NOT IN ('PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR',
+                                     'ASISTENTE_RESERVA', 'AVAR', 'VAR_APOYO')
+                     THEN @nl + N'- El rol "' + st.rol + N'" no es PRINCIPAL, ASISTENTE_1, ASISTENTE_2, CUARTO, VAR, '
+                              + N'ASISTENTE_RESERVA, AVAR ni VAR_APOYO.'
+            END,
+            IIF(r.pais_conflicto IS NOT NULL,
+                @nl + N'- Conflicto de nacionalidad: el árbitro es de ' + r.pais_conflicto + N', que juega este partido.', NULL)), N'')
+    FROM #staging_designaciones AS st
+    INNER JOIN @registradas AS r ON r.id_registro = st.id_registro;
+
+    /* 2. Cada partido como quedaría con las designaciones válidas (las registradas de los árbitros
+          que no vienen, más las que vienen): cada rol con un solo árbitro y cada árbitro con un
+          solo rol. Las que lo rompen se rechazan. */
+    WITH validas AS (
+        SELECT st.id_registro, r.id_partido, st.id_arbitro, st.rol
+        FROM #staging_designaciones AS st
+        INNER JOIN @registradas AS r ON r.id_registro = st.id_registro
+        WHERE st.errores IS NULL
+    ),
+    equipo AS (
+        SELECT id_partido, id_arbitro, rol FROM validas
+        UNION ALL
+        SELECT d.id_partido, d.id_arbitro, d.rol
+        FROM Arbitraje.DESIGNACION_ARBITRAL AS d
+        WHERE d.id_partido IN (SELECT id_partido FROM validas)
+          AND NOT EXISTS (SELECT 1 FROM validas AS v WHERE v.id_partido = d.id_partido AND v.id_arbitro = d.id_arbitro)
+    )
+    UPDATE st
+    SET errores = CONCAT(IIF(ro.veces > 1, CONCAT(@nl, N'- El rol ', v.rol, N' lo tendrían ', ro.veces, N' árbitros en el partido.'), N''),
+                         IIF(ar.veces > 1, CONCAT(@nl, N'- El árbitro viene ', ar.veces, N' veces para el partido.'), N''))
+    FROM #staging_designaciones AS st
+    INNER JOIN validas AS v ON v.id_registro = st.id_registro
+    CROSS APPLY (SELECT COUNT(*) AS veces FROM equipo AS e WHERE e.id_partido = v.id_partido AND e.rol = v.rol) AS ro
+    CROSS APPLY (SELECT COUNT(*) AS veces FROM equipo AS e WHERE e.id_partido = v.id_partido AND e.id_arbitro = v.id_arbitro) AS ar
+    WHERE ro.veces > 1 OR ar.veces > 1;
+
+    UPDATE #staging_designaciones SET accion = 'RECHAZADO' WHERE accion IS NULL AND errores IS NOT NULL;
+
+    /* 3. Lo que le pasa a cada designación válida, antes de cargar. */
+    UPDATE st
+    SET accion = CASE WHEN r.rol_actual IS NULL  THEN 'INSERTADO'
+                      WHEN r.rol_actual <> st.rol THEN 'ACTUALIZADO'
+                      ELSE 'SIN CAMBIOS'
+                 END
+    FROM #staging_designaciones AS st
+    INNER JOIN @registradas AS r ON r.id_registro = st.id_registro
+    WHERE st.accion IS NULL;
+
+    /* 4. Carga, todos juntos. Los cambios de rol van en un solo UPDATE: dos árbitros que se
+          intercambian el rol no chocan con la restricción de un rol por partido. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        UPDATE d
+        SET rol = st.rol
+        FROM Arbitraje.DESIGNACION_ARBITRAL AS d
+        INNER JOIN @registradas AS r ON r.id_partido = d.id_partido
+        INNER JOIN #staging_designaciones AS st ON st.id_registro = r.id_registro AND st.id_arbitro = d.id_arbitro
+        WHERE st.accion = 'ACTUALIZADO';
+
+        INSERT INTO Arbitraje.DESIGNACION_ARBITRAL (id_partido, id_arbitro, rol)
+        SELECT r.id_partido, st.id_arbitro, st.rol
+        FROM #staging_designaciones AS st
+        INNER JOIN @registradas AS r ON r.id_registro = st.id_registro
+        WHERE st.accion = 'INSERTADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+/* ============================================================================
+   PUBLICIDAD
+   Las campañas del Dossier Mundial (21_SP_Importar_Publicidad.sql).
+   ============================================================================ */
+
+/*
+  usp_ImportarCampanias
+  Upsert de campañas publicitarias con su anunciante, sus piezas y el
+  mercado de interés de cada pieza, desde dos tablas de staging:
+    #staging_campanias  una fila por campaña. Columnas que usa: id_registro,
+                        anunciante (razón social), id_pais (del anunciante),
+                        nombre, fecha_inicio, fecha_fin, errores y accion.
+    #staging_piezas     una fila por pieza y mercado. Columnas que usa:
+                        id_registro (el de su campaña), titulo, id_idioma e
+                        id_pais_interes (NULL: la pieza no trae mercado).
+  Clave natural: la razón social del anunciante, el nombre de la campaña en
+  ese anunciante y el título de la pieza en esa campaña.
+  Valida cada campaña pendiente: anunciante, país del anunciante, nombre y
+  fechas obligatorios; razón social y nombre de hasta 150 caracteres; país
+  existente; fecha de fin no anterior a la de inicio; al menos una pieza;
+  título de cada pieza obligatorio y de hasta 150 caracteres; idioma y país
+  de interés existentes; que una pieza no venga con dos idiomas; que no
+  venga dos veces la misma campaña del mismo anunciante; que un anunciante
+  no venga con países distintos; y que las fechas nuevas de una campaña ya
+  cargada no dejen afuera un partido en el que se exhibe una de sus piezas.
+  Con eso cubre las reglas de usp_ANUNCIANTE_Alta, usp_CAMPANIA_Alta y
+  _Modificacion, usp_PIEZA_PUBLICITARIA_Alta y usp_PIEZA_PAIS_INTERES_Alta.
+  Los motivos de las piezas se anotan en su campaña.
+  Una campaña queda INSERTADO si no existía; ACTUALIZADO si cambiaron sus
+  fechas o el país de su anunciante, o si le falta alguna pieza, el idioma
+  de una pieza o un mercado; si no, SIN CAMBIOS. Las piezas y los mercados
+  que la campaña ya tiene y no vienen no se borran: pueden estar exhibidas,
+  y la exhibición es el historial para facturar.
+*/
+CREATE OR ALTER PROCEDURE Publicidad.usp_ImportarCampanias
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @nl           NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia  BIT      = IIF(@@TRANCOUNT = 0, 1, 0);
+
+    IF OBJECT_ID(N'tempdb..#staging_campanias') IS NULL OR OBJECT_ID(N'tempdb..#staging_piezas') IS NULL
+        THROW 50001, N'Publicidad.usp_ImportarCampanias: no se importó nada, faltan las tablas #staging_campanias y #staging_piezas con las campañas y sus piezas.', 1;
+
+    UPDATE #staging_campanias
+    SET anunciante = NULLIF(TRIM(anunciante), N''),
+        nombre     = NULLIF(TRIM(nombre), N'')
+    WHERE accion IS NULL;
+
+    UPDATE #staging_piezas
+    SET titulo = NULLIF(TRIM(titulo), N'');
+
+    /* 1. Cada regla anota su motivo en las campañas que no la cumplen. */
+    UPDATE st
+    SET errores = NULLIF(CONCAT(st.errores,
+            CASE WHEN st.anunciante IS NULL      THEN @nl + N'- El anunciante es obligatorio.'
+                 WHEN LEN(st.anunciante) > 150   THEN @nl + N'- La razón social del anunciante no puede superar los 150 caracteres.'
+            END,
+            CASE WHEN st.id_pais IS NULL THEN @nl + N'- El país del anunciante es obligatorio.'
+                 WHEN NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS AS p WHERE p.id_pais = st.id_pais)
+                     THEN @nl + N'- No existe el país con id ' + CAST(st.id_pais AS NVARCHAR(10)) + N'.'
+            END,
+            CASE WHEN st.nombre IS NULL      THEN @nl + N'- El nombre de la campaña es obligatorio.'
+                 WHEN LEN(st.nombre) > 150   THEN @nl + N'- El nombre de la campaña no puede superar los 150 caracteres.'
+            END,
+            CASE WHEN st.fecha_inicio IS NULL OR st.fecha_fin IS NULL
+                     THEN @nl + N'- Las fechas de inicio y de fin son obligatorias.'
+                 WHEN st.fecha_fin < st.fecha_inicio
+                     THEN @nl + N'- La fecha de fin no puede ser anterior a la de inicio.'
+            END,
+            IIF(NOT EXISTS (SELECT 1 FROM #staging_piezas AS sp WHERE sp.id_registro = st.id_registro),
+                @nl + N'- La campaña no tiene piezas.', NULL),
+            pz.errores), N'')
+    FROM #staging_campanias AS st
+    -- Los motivos de sus piezas, una vez cada uno.
+    OUTER APPLY (SELECT STRING_AGG(m.motivo, N'') WITHIN GROUP (ORDER BY m.motivo) AS errores
+                 FROM (SELECT DISTINCT v.motivo
+                       FROM #staging_piezas AS sp
+                       LEFT JOIN DatosGenerales.IDIOMA AS i ON i.id_idioma = sp.id_idioma
+                       LEFT JOIN DatosGenerales.PAIS AS p ON p.id_pais = sp.id_pais_interes
+                       CROSS APPLY (VALUES
+                           (IIF(sp.titulo IS NULL, @nl + N'- Hay una pieza sin título.', NULL)),
+                           (IIF(LEN(sp.titulo) > 150, @nl + N'- El título de la pieza "' + LEFT(sp.titulo, 40)
+                                                      + N'..." no puede superar los 150 caracteres.', NULL)),
+                           (IIF(sp.id_idioma IS NOT NULL AND i.id_idioma IS NULL,
+                                @nl + N'- No existe el idioma con id ' + CAST(sp.id_idioma AS NVARCHAR(10)) + N'.', NULL)),
+                           (IIF(sp.id_pais_interes IS NOT NULL AND p.id_pais IS NULL,
+                                @nl + N'- No existe el país de interés con id ' + CAST(sp.id_pais_interes AS NVARCHAR(10)) + N'.', NULL))
+                       ) AS v (motivo)
+                       WHERE sp.id_registro = st.id_registro AND v.motivo IS NOT NULL) AS m) AS pz
+    WHERE st.accion IS NULL;
+
+    -- Una pieza con dos idiomas: no se sabe cuál es.
+    UPDATE st
+    SET errores = CONCAT(st.errores, @nl, N'- La pieza "', d.titulo, N'" viene con idiomas distintos.')
+    FROM #staging_campanias AS st
+    INNER JOIN (SELECT id_registro, MIN(titulo) AS titulo
+                FROM (SELECT id_registro, titulo
+                      FROM #staging_piezas
+                      WHERE titulo IS NOT NULL
+                      GROUP BY id_registro, titulo
+                      HAVING COUNT(DISTINCT id_idioma) > 1) AS x
+                GROUP BY id_registro) AS d ON d.id_registro = st.id_registro
+    WHERE st.accion IS NULL;
+
+    -- La misma campaña del mismo anunciante más de una vez: no se sabe cuál cargar y se rechazan todas.
+    WITH repetidas AS (
+        SELECT errores, COUNT(*) OVER (PARTITION BY anunciante, nombre) AS veces
+        FROM #staging_campanias
+        WHERE accion IS NULL AND anunciante IS NOT NULL AND nombre IS NOT NULL
+    )
+    UPDATE repetidas
+    SET errores = CONCAT(errores, @nl, N'- Esta campaña del mismo anunciante viene ', veces, N' veces.')
+    WHERE veces > 1;
+
+    -- Un anunciante es de un solo país.
+    WITH anunciantes AS (
+        SELECT errores,
+               MIN(id_pais) OVER (PARTITION BY anunciante) AS pais_minimo,
+               MAX(id_pais) OVER (PARTITION BY anunciante) AS pais_maximo
+        FROM #staging_campanias
+        WHERE accion IS NULL AND anunciante IS NOT NULL AND id_pais IS NOT NULL
+    )
+    UPDATE anunciantes
+    SET errores = CONCAT(errores, @nl, N'- El anunciante viene con países distintos en sus campañas.')
+    WHERE pais_minimo <> pais_maximo;
+
+    -- Las fechas nuevas de una campaña cargada no pueden dejar afuera un partido en el que ya se exhibe.
+    UPDATE st
+    SET errores = CONCAT(st.errores, @nl, N'- Con esas fechas quedaría afuera el partido ', x.numero_partido,
+                         N', en el que ya se exhibe una pieza de la campaña.')
+    FROM #staging_campanias AS st
+    INNER JOIN Publicidad.ANUNCIANTE AS an ON an.razon_social = st.anunciante
+    INNER JOIN Publicidad.CAMPANIA AS c ON c.id_anunciante = an.id_anunciante AND c.nombre = st.nombre
+    CROSS APPLY (SELECT TOP (1) p.numero_partido
+                 FROM Publicidad.EXHIBICION AS e
+                 INNER JOIN Publicidad.PIEZA_PUBLICITARIA AS pz ON pz.id_pieza = e.id_pieza
+                 INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = e.id_partido
+                 WHERE pz.id_campania = c.id_campania
+                   AND CAST(p.fecha_hora_local AS DATE) NOT BETWEEN st.fecha_inicio AND st.fecha_fin
+                 ORDER BY p.numero_partido) AS x
+    WHERE st.accion IS NULL AND st.fecha_fin >= st.fecha_inicio;
+
+    UPDATE #staging_campanias SET accion = 'RECHAZADO' WHERE accion IS NULL AND errores IS NOT NULL;
+
+    /* 2. Lo que le pasa a cada campaña válida, antes de cargar. */
+    UPDATE st
+    SET accion = CASE WHEN c.id_campania IS NULL THEN 'INSERTADO'
+                      WHEN c.fecha_inicio <> st.fecha_inicio OR c.fecha_fin <> st.fecha_fin OR an.id_pais <> st.id_pais
+                           OR EXISTS (SELECT 1
+                                      FROM #staging_piezas AS sp
+                                      LEFT JOIN Publicidad.PIEZA_PUBLICITARIA AS pz
+                                             ON pz.id_campania = c.id_campania AND pz.titulo = sp.titulo
+                                      WHERE sp.id_registro = st.id_registro
+                                        AND (pz.id_pieza IS NULL
+                                             OR (sp.id_idioma IS NOT NULL AND pz.id_idioma IS DISTINCT FROM sp.id_idioma)
+                                             OR (sp.id_pais_interes IS NOT NULL
+                                                 AND NOT EXISTS (SELECT 1 FROM Publicidad.PIEZA_PAIS_INTERES AS ppi
+                                                                 WHERE ppi.id_pieza = pz.id_pieza
+                                                                   AND ppi.id_pais = sp.id_pais_interes))))
+                          THEN 'ACTUALIZADO'
+                      ELSE 'SIN CAMBIOS'
+                 END
+    FROM #staging_campanias AS st
+    LEFT JOIN Publicidad.ANUNCIANTE AS an ON an.razon_social = st.anunciante
+    LEFT JOIN Publicidad.CAMPANIA AS c ON c.id_anunciante = an.id_anunciante AND c.nombre = st.nombre
+    WHERE st.accion IS NULL;
+
+    /* 3. Carga, todas juntas. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        -- Anunciantes nuevos, y los que cambiaron de país.
+        INSERT INTO Publicidad.ANUNCIANTE (razon_social, id_pais)
+        SELECT DISTINCT st.anunciante, st.id_pais
+        FROM #staging_campanias AS st
+        WHERE st.accion IN ('INSERTADO', 'ACTUALIZADO')
+          AND NOT EXISTS (SELECT 1 FROM Publicidad.ANUNCIANTE AS an WHERE an.razon_social = st.anunciante);
+
+        UPDATE an
+        SET id_pais = st.id_pais
+        FROM Publicidad.ANUNCIANTE AS an
+        INNER JOIN (SELECT DISTINCT anunciante, id_pais FROM #staging_campanias
+                    WHERE accion IN ('INSERTADO', 'ACTUALIZADO')) AS st ON st.anunciante = an.razon_social
+        WHERE an.id_pais <> st.id_pais;
+
+        -- Campañas: las que cambiaron de fechas y las nuevas.
+        UPDATE c
+        SET fecha_inicio = st.fecha_inicio, fecha_fin = st.fecha_fin
+        FROM Publicidad.CAMPANIA AS c
+        INNER JOIN Publicidad.ANUNCIANTE AS an ON an.id_anunciante = c.id_anunciante
+        INNER JOIN #staging_campanias AS st ON st.anunciante = an.razon_social AND st.nombre = c.nombre
+        WHERE st.accion = 'ACTUALIZADO' AND (c.fecha_inicio <> st.fecha_inicio OR c.fecha_fin <> st.fecha_fin);
+
+        INSERT INTO Publicidad.CAMPANIA (id_anunciante, nombre, fecha_inicio, fecha_fin)
+        SELECT an.id_anunciante, st.nombre, st.fecha_inicio, st.fecha_fin
+        FROM #staging_campanias AS st
+        INNER JOIN Publicidad.ANUNCIANTE AS an ON an.razon_social = st.anunciante
+        WHERE st.accion = 'INSERTADO';
+
+        -- Piezas: una por título en cada campaña, con el idioma que traiga (si no trae, no se borra el guardado).
+        WITH piezas AS (
+            SELECT c.id_campania, sp.titulo, MAX(sp.id_idioma) AS id_idioma
+            FROM #staging_piezas AS sp
+            INNER JOIN #staging_campanias AS st ON st.id_registro = sp.id_registro
+            INNER JOIN Publicidad.ANUNCIANTE AS an ON an.razon_social = st.anunciante
+            INNER JOIN Publicidad.CAMPANIA AS c ON c.id_anunciante = an.id_anunciante AND c.nombre = st.nombre
+            WHERE st.accion IN ('INSERTADO', 'ACTUALIZADO')
+            GROUP BY c.id_campania, sp.titulo
+        )
+        UPDATE pz
+        SET id_idioma = p.id_idioma
+        FROM Publicidad.PIEZA_PUBLICITARIA AS pz
+        INNER JOIN piezas AS p ON p.id_campania = pz.id_campania AND p.titulo = pz.titulo
+        WHERE p.id_idioma IS NOT NULL AND pz.id_idioma IS DISTINCT FROM p.id_idioma;
+
+        WITH piezas AS (
+            SELECT c.id_campania, sp.titulo, MAX(sp.id_idioma) AS id_idioma
+            FROM #staging_piezas AS sp
+            INNER JOIN #staging_campanias AS st ON st.id_registro = sp.id_registro
+            INNER JOIN Publicidad.ANUNCIANTE AS an ON an.razon_social = st.anunciante
+            INNER JOIN Publicidad.CAMPANIA AS c ON c.id_anunciante = an.id_anunciante AND c.nombre = st.nombre
+            WHERE st.accion IN ('INSERTADO', 'ACTUALIZADO')
+            GROUP BY c.id_campania, sp.titulo
+        )
+        INSERT INTO Publicidad.PIEZA_PUBLICITARIA (id_campania, id_idioma, titulo)
+        SELECT p.id_campania, p.id_idioma, p.titulo
+        FROM piezas AS p
+        WHERE NOT EXISTS (SELECT 1 FROM Publicidad.PIEZA_PUBLICITARIA AS pz
+                          WHERE pz.id_campania = p.id_campania AND pz.titulo = p.titulo);
+
+        -- Mercados de interés que les faltan a las piezas.
+        INSERT INTO Publicidad.PIEZA_PAIS_INTERES (id_pieza, id_pais)
+        SELECT DISTINCT pz.id_pieza, sp.id_pais_interes
+        FROM #staging_piezas AS sp
+        INNER JOIN #staging_campanias AS st ON st.id_registro = sp.id_registro
+        INNER JOIN Publicidad.ANUNCIANTE AS an ON an.razon_social = st.anunciante
+        INNER JOIN Publicidad.CAMPANIA AS c ON c.id_anunciante = an.id_anunciante AND c.nombre = st.nombre
+        INNER JOIN Publicidad.PIEZA_PUBLICITARIA AS pz ON pz.id_campania = c.id_campania AND pz.titulo = sp.titulo
+        WHERE st.accion IN ('INSERTADO', 'ACTUALIZADO')
+          AND sp.id_pais_interes IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM Publicidad.PIEZA_PAIS_INTERES AS ppi
+                          WHERE ppi.id_pieza = pz.id_pieza AND ppi.id_pais = sp.id_pais_interes);
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
     END TRY
