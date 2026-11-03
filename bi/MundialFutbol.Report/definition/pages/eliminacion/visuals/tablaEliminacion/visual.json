@@ -3,9 +3,9 @@
   "name": "tablaEliminacion",
   "position": {
     "x": 20,
-    "y": 485,
+    "y": 495,
     "z": 1000,
-    "height": 225,
+    "height": 215,
     "width": 1240,
     "tabOrder": 1000
   },

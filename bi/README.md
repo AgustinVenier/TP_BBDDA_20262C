@@ -39,7 +39,9 @@ El segmentador **Fase** filtra todas las tablas relacionadas con el partido. En 
 
 ## Cuadro de eliminación
 
-Power BI no trae un objeto visual de cuadro de eliminación, así que se dibuja: la medida `Cuadro de eliminación` (tabla `Cuadro`) arma una imagen SVG con los cruces, los resultados (con los penales entre paréntesis), las líneas que unen cada ronda y el tercer puesto aparte, y un objeto visual de imagen la muestra. El ganador de cada partido va en negrita y el campeón, con fondo dorado.
+Power BI no trae un objeto visual de cuadro de eliminación, así que se dibuja: la medida `Cuadro de eliminación` (tabla `Cuadro`) arma una imagen SVG con los cruces, los resultados (con los penales entre paréntesis), las líneas que unen cada ronda y el tercer puesto aparte, y un objeto visual de imagen la muestra.
+
+El cuadro va en espejo, como los oficiales: la mitad de cada ronda a la izquierda, la otra mitad a la derecha y la final en el centro, con el campeón arriba y el tercer puesto abajo. Así la imagen es más ancha que alta y aprovecha la franja del visual: un cuadro de una sola dirección, con las cinco rondas, es casi tan alto como ancho y se achicaba demasiado. Los colores siguen el tema del reporte: los nombres de las rondas en azul oscuro, el ganador de cada cruce en negrita, con la fila celeste y el marcador en azul, y las líneas que lo llevan al cruce siguiente en azul; la final en dorado y el tercer puesto en bronce. Los nombres de más de 17 letras se angostan para entrar al lado del marcador, y los de más de 22 se cortan con "…".
 
 La vista `Reportes.vw_CuadroEliminacion` ubica cada partido en el cuadro. Como la base no guarda qué partido alimenta a cuál, lo reconstruye con los resultados, desde la final hacia atrás. Mientras falte jugar algún cruce, esa ronda se ordena por número de partido.
 
