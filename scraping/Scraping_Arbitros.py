@@ -9,48 +9,59 @@
    Tavella, Tomás - TomasTavella
    Venier, Agustin - AgustinVenier
 
- Fecha: 03/11/2026
+ Fecha: 02/11/2026
  Archivo: Scraping_Arbitros.py
- Objetivo: Obtener por scraping las designaciones arbitrales del Mundial 2026
-           publicadas en Wikipedia y guardarlas en designaciones.csv, una fila
-           por partido y rol: partido (fecha y selecciones), rol, nombre,
-           apellido y país del árbitro. Los roles son los de
-           Arbitraje.DESIGNACION_ARBITRAL: PRINCIPAL, ASISTENTE_1, ASISTENTE_2,
-           CUARTO y VAR.
+ Objetivo: Obtener por scraping el equipo arbitral de cada partido del
+           Mundial 2026 publicado en Wikipedia y guardarlo en
+           designaciones_arbitrales.csv, una fila por árbitro designado:
+           fecha y selecciones del partido (código FIFA), rol, nombre,
+           apellido y país del árbitro (código FIFA). El archivo lo importa
+           Arbitraje.usp_ImportarDesignacionesCSV (23_SP_Importar_Mundial2026.sql),
+           después de los partidos.
 ================================================================================
 
  Páginas de origen (Wikipedia en inglés, licencia CC BY-SA 4.0):
-   - 2026 FIFA World Cup Group A ... Group L: los 72 partidos de la fase de grupos.
-   - 2026 FIFA World Cup round of 32: los 16 partidos de dieciseisavos.
-   - 2026 FIFA World Cup knockout stage: octavos, cuartos, semifinales, tercer
-     puesto y final (los dieciseisavos también aparecen, sin designaciones).
-   - List of FIFA country codes: el código FIFA de cada selección y país, con el
-     que el partido y el árbitro se asocian a la base.
-   Wikipedia escribe cada país con el mismo nombre en todas las páginas, así que
-   se cruzan por nombre sin tablas de traducción escritas a mano.
+   - 2026 FIFA World Cup Group A ... Group L: los partidos de cada grupo.
+   - 2026 FIFA World Cup round of 32: los dieciseisavos de final.
+   - 2026 FIFA World Cup knockout stage: de octavos a la final. También
+     tiene los dieciseisavos, pero sin el equipo arbitral: de esos partidos
+     se toma la página anterior.
+   - List of FIFA country codes: el código FIFA de cada selección y del país
+     de cada árbitro, para asociarlos a la base sin tablas de traducción
+     escritas a mano.
 
- Técnica: scraping de HTML estático (requests + BeautifulSoup con lxml).
-   - Partido: cada <div class="footballbox">. De ahí salen la fecha
-     (<span class="bday">), las dos selecciones (.fhome y .faway) y el árbitro
-     principal ("Referee: Nombre (País)").
-   - Asistentes, cuarto árbitro y VAR: el bloque con las etiquetas en negrita
-     ("Assistant referees:", "Fourth official:", "Video assistant referee:"), que
-     sigue a cada partido. Cada línea es "Nombre (País)".
-   Los árbitros de reserva, el asistente de VAR y el VAR de apoyo se descartan
-   porque DESIGNACION_ARBITRAL solo tiene cinco roles.
+ Técnica: scraping de HTML estático, igual que Scraping_Jugadores.py. Se
+ descarga el HTML de cada página con requests y se recorre con BeautifulSoup
+ (parser lxml), buscando los elementos por su estructura:
+   - Partido: cada <div class="footballbox">. La fecha sale del
+     <span class="dtstart"> (formato ISO), las selecciones de las celdas
+     .fhome y .faway, y el árbitro principal de la línea "Referee: Nombre
+     (País)" de la celda .fright.
+   - El resto del equipo arbitral: el párrafo que sigue al partido, con un
+     <b> por rol ("Assistant referees:", "Fourth official:", ...) y debajo
+     una línea "Nombre (País)" por árbitro.
+ El rol se guarda como lo publica la página ("Referee", "Fourth official"),
+ salvo los dos asistentes, que se numeran por su orden ("Assistant referee
+ 1" y "Assistant referee 2"): lo traduce Arbitraje.usp_ImportarDesignaciones.
+ La página no marca el apellido: el nombre es la primera palabra y el
+ apellido, el resto. Algunos árbitros están escritos de dos formas en
+ distintos partidos ("Hamza El-Fariq" y "Hamza El Fariq"): se unifican en la
+ forma que más se repite (ver misma_persona), para que sean un solo árbitro.
 
  Límites de uso: Wikipedia no pide clave, pero exige un User-Agent que
- identifique al cliente y pide no hacer muchos pedidos seguidos. El script hace
- 16 pedidos por ejecución, uno detrás de otro y por una misma conexión
- (requests.Session). Si Wikipedia responde 429 (demasiados pedidos), espera lo que
- indique el encabezado Retry-After y reintenta, hasta tres veces.
+ identifique al cliente y pide no hacer muchos pedidos seguidos. El script
+ hace 15 pedidos por ejecución, uno detrás de otro, por una misma conexión
+ (requests.Session) y con un segundo de pausa entre cada uno. Si Wikipedia
+ responde 429 (demasiados pedidos), espera lo que indique el encabezado
+ Retry-After y reintenta, hasta tres veces.
 
  Uso:
    pip install requests beautifulsoup4 lxml
    python Scraping_Arbitros.py [--salida CARPETA]
  Si no se indica, el CSV se guarda en la carpeta "datos", junto al script.
  Se escribe en UTF-8, separado por comas y con encabezado.
-================================================================================
+ La documentación completa (fuente, técnica, límites y formato) está en
+ README.md, en esta misma carpeta.
 """
 
 import argparse
@@ -58,171 +69,164 @@ import csv
 import re
 import sys
 import time
-from datetime import datetime, timezone
-from email.utils import parsedate_to_datetime
+from collections import Counter
+from difflib import SequenceMatcher
 from pathlib import Path
 
 import requests
-from bs4 import BeautifulSoup
 
-BASE = 'https://en.wikipedia.org/wiki/'
+# La descarga (User-Agent y reintentos ante un 429), los códigos FIFA y la comparación de nombres
+# son los del scraping de jugadores.
+from Scraping_Jugadores import USER_AGENT, URL_CODIGOS, descargar, leer_codigos_fifa, plegar
+
+URL_WIKI = 'https://en.wikipedia.org/wiki/'
 PAGINAS = ([f'2026_FIFA_World_Cup_Group_{g}' for g in 'ABCDEFGHIJKL']
            + ['2026_FIFA_World_Cup_round_of_32', '2026_FIFA_World_Cup_knockout_stage'])
-URL_CODIGOS = BASE + 'List_of_FIFA_country_codes'
-USER_AGENT = ('TP-BBDDA-UNLaM-Grupo2/1.0 '
-              '(trabajo práctico; https://github.com/AgustinVenier/TP_BBDDA_20262C)')
-REINTENTOS_429 = 3       # reintentos si Wikipedia responde 429 (demasiados pedidos)
-ESPERA_POR_DEFECTO = 5   # segundos, si la respuesta 429 no trae Retry-After
-PAUSA = 1                # segundos entre pedidos
+PAUSA = 1   # segundos entre pedidos
 
-# Etiqueta del bloque de Wikipedia -> rol de DESIGNACION_ARBITRAL. El VAR de apoyo y el
-# asistente de VAR tienen su propia etiqueta y quedan fuera.
-ROLES = {'Fourth official': 'CUARTO', 'Video assistant referee': 'VAR'}
-PERSONA = re.compile(r'^(?P<nombre>.+?)\s*\((?P<pais>[^()]+)\)$')
-
-# Países que Wikipedia escribe distinto en la página de árbitros y en la de códigos FIFA.
-# Se completa solo si el script avisa que un país no encontró su código.
-ALIAS_PAIS = {}
+# Roles del párrafo de cada partido, en el orden en que se escriben en el CSV.
+ROLES = ['Assistant referees', 'Fourth official', 'Reserve assistant referee', 'Video assistant referee',
+         'Assistant video assistant referee', 'Support video assistant referee']
 
 
-def segundos_de_espera(respuesta, intento):
-    """Lo que pide Retry-After (en segundos o como fecha); si no viene, 5, 10 y 20 s."""
-    valor = respuesta.headers.get('Retry-After', '').strip()
-    if valor.isdigit():
-        return int(valor)
-    try:
-        return max(0, (parsedate_to_datetime(valor) - datetime.now(timezone.utc)).total_seconds())
-    except (TypeError, ValueError):
-        return ESPERA_POR_DEFECTO * 2 ** intento
+def limpiar(texto):
+    """Sin notas ("[14]"), enlaces a otros idiomas ("[de]") ni espacios de más."""
+    return ' '.join(re.sub(r'\[[^\]]*\]', '', texto.replace('\xa0', ' ')).split())
 
 
-def descargar(sesion, url):
-    for intento in range(REINTENTOS_429 + 1):
-        respuesta = sesion.get(url, timeout=60)
-        if respuesta.status_code != 429 or intento == REINTENTOS_429:
-            break
-        espera = segundos_de_espera(respuesta, intento)
-        print(f'Wikipedia pidió esperar (429): reintento en {espera:.0f} s.')
-        time.sleep(espera)
-    respuesta.raise_for_status()
-    return BeautifulSoup(respuesta.text, 'lxml').select_one('#mw-content-text .mw-parser-output')
+def arbitro(linea):
+    """"Wilton Sampaio (Brazil)" -> ("Wilton Sampaio", "Brazil")."""
+    m = re.fullmatch(r'(.+?)\s*\(([^()]+)\)', limpiar(linea))
+    return (m.group(1), m.group(2).strip()) if m else (limpiar(linea), '')
 
 
-def leer_codigos_fifa(contenido):
-    """Nombre -> código, solo de la sección "FIFA member codes" (después hay códigos viejos)."""
-    codigos = {}
-    fin = contenido.find(lambda t: t.name == 'h2' and t.get_text(strip=True) == 'Non-FIFA member codes')
-    for tabla in contenido.select('table.wikitable'):
-        if fin is not None and tabla.find_previous('h2') is fin:
-            break
-        for fila in tabla.find_all('tr')[1:]:
-            celdas = [re.sub(r'\[.*?\]', '', c.get_text(' ', strip=True)).strip()
-                      for c in fila.find_all(['th', 'td'])]
-            for i in range(0, len(celdas) - 1, 2):
-                if re.fullmatch(r'[A-Z]{3}', celdas[i + 1]):
-                    codigos[celdas[i]] = celdas[i + 1]
-    return codigos
+def separar_arbitro(completo):
+    """
+    La página no marca el apellido: el nombre es la primera palabra y el
+    apellido, el resto ("Carlos del Cerro Grande" -> "Carlos", "del Cerro
+    Grande"). Con una sola palabra, va en los dos.
+    """
+    palabras = completo.split()
+    if len(palabras) == 1:
+        return palabras[0], palabras[0]
+    return palabras[0], ' '.join(palabras[1:])
 
 
-def separar_persona(texto):
-    """"Wilton Sampaio (Brazil)" -> ("Wilton", "Sampaio", "Brazil"). La primera palabra es el
-    nombre y el resto el apellido: la fuente no distingue nombre de apellido."""
-    texto = re.sub(r'\[[^\]]*\]', '', texto)   # nota al pie pegada al nombre ("[ A ]")
-    coincidencia = PERSONA.match(re.sub(r'\s+', ' ', texto).strip())
-    if not coincidencia:
-        return None
-    palabras = coincidencia['nombre'].split(' ')
-    nombre, apellido = (palabras[0], ' '.join(palabras[1:])) if len(palabras) > 1 else (palabras[0], palabras[0])
-    return nombre, apellido, coincidencia['pais'].strip()
-
-
-def lineas_por_etiqueta(bloque):
-    """{etiqueta: [líneas]} del bloque, que separa cada dato con <br>."""
-    for br in bloque.find_all('br'):
+def leer_oficiales(parrafo):
+    """Rol -> lista de (nombre completo, país), del párrafo con un <b> por rol."""
+    roles, rol = {}, None
+    for br in parrafo.find_all('br'):
         br.replace_with('\n')
-    for referencia in bloque.find_all('sup'):
-        referencia.decompose()
-    resultado, actual = {}, None
-    for linea in bloque.get_text().split('\n'):
-        linea = re.sub(r'\s+', ' ', linea).strip()
-        if linea.endswith(':'):
-            actual = linea[:-1]
-            resultado[actual] = []
-        elif linea and actual:
-            resultado[actual].append(linea)
-    return resultado
-
-
-def leer_partidos(contenido, codigos, avisos):
-    cajas = contenido.select('div.footballbox')
-    filas = []
-    for i, caja in enumerate(cajas):
-        # El bloque de oficiales es el primero con "Assistant referees:" antes del
-        # siguiente partido; si no está, el partido no tiene designaciones en esta página.
-        limite = cajas[i + 1] if i + 1 < len(cajas) else None
-        bloque = None
-        for etiqueta in caja.find_all_next('b'):
-            if limite is not None and limite in etiqueta.find_all_previous('div', class_='footballbox'):
-                break
-            if etiqueta.get_text(strip=True).startswith('Assistant referees'):
-                bloque = etiqueta.parent
-                break
-        if bloque is None:
+    for linea in parrafo.get_text().split('\n'):
+        linea = limpiar(linea)
+        if not linea:
             continue
+        if linea.endswith(':'):
+            rol = linea[:-1]
+            roles[rol] = []
+        elif rol is not None:
+            roles[rol].append(arbitro(linea))
+    return roles
 
-        local = caja.select_one('.fhome').get_text(' ', strip=True)
-        visitante = caja.select_one('.faway').get_text(' ', strip=True)
-        fecha = caja.select_one('span.bday').get_text(strip=True)
-        principal = re.search(r'Referee:\s*(.+?)\s*$', caja.select_one('.fright').get_text(' ', strip=True))
-        designados = lineas_por_etiqueta(bloque)
 
-        personas = [('PRINCIPAL', principal.group(1).replace(' (', '(').replace('( ', '(').replace(' )', ')'))] \
-            if principal else []
-        asistentes = designados.get('Assistant referees', [])
-        personas += [(f'ASISTENTE_{n}', texto) for n, texto in enumerate(asistentes[:2], start=1)]
-        for etiqueta, rol in ROLES.items():
-            if designados.get(etiqueta):
-                personas.append((rol, designados[etiqueta][0]))
+def leer_partidos(contenido):
+    """Cada partido de la página, con su equipo arbitral (vacío si la página no lo tiene)."""
+    partidos = []
+    es_partido = lambda t: t.name == 'div' and 'footballbox' in (t.get('class') or [])
+    es_oficiales = lambda t: t.name == 'p' and any('Fourth official' in b.get_text() for b in t.find_all('b'))
+    for elemento in contenido.find_all(lambda t: es_partido(t) or es_oficiales(t)):
+        if es_partido(elemento):
+            principal = re.search(r'Referee:\s*(.+)', elemento.select_one('.fright').get_text(' ', strip=True))
+            partidos.append({
+                'fecha': elemento.select_one('.dtstart').get_text(strip=True),
+                'local': limpiar(elemento.select_one('.fhome').get_text(' ')),
+                'visitante': limpiar(elemento.select_one('.faway').get_text(' ')),
+                'principal': arbitro(principal.group(1)) if principal else None,
+                'oficiales': {},
+            })
+        elif partidos and not partidos[-1]['oficiales']:
+            partidos[-1]['oficiales'] = leer_oficiales(elemento)
+    return partidos
 
-        roles_vistos = {rol for rol, _ in personas}
-        faltan = {'PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR'} - roles_vistos
-        if faltan:
-            avisos.append(f'{fecha} {local} - {visitante}: sin {", ".join(sorted(faltan))}.')
 
-        for rol, texto in personas:
-            persona = separar_persona(texto)
-            if persona is None:
-                avisos.append(f'{fecha} {local} - {visitante}: no se pudo leer "{texto}" ({rol}).')
-                continue
-            nombre, apellido, pais = persona
+def misma_persona(a, b):
+    """
+    Dos formas de escribir a un árbitro del mismo país: iguales sin tildes ni
+    signos ("El-Fariq" y "El Fariq"); con la misma primera y última palabra y
+    una dentro de la otra ("Katia García" y "Katia Itzel García"); o casi
+    iguales y con la misma última palabra ("Masimiliano" y "Maximiliano Del Yesso").
+    """
+    pa, pb = a.split(), b.split()
+    if plegar(a) == plegar(b):
+        return True
+    if plegar(pa[-1]) != plegar(pb[-1]):
+        return False
+    cortas, largas = sorted(([plegar(p) for p in pa], [plegar(p) for p in pb]), key=len)
+    if cortas[0] == largas[0] and set(cortas) <= set(largas):
+        return True
+    return SequenceMatcher(None, plegar(a), plegar(b)).ratio() >= 0.85
+
+
+def unificar(designados):
+    """
+    (nombre completo, país) -> la forma que se usa para esa persona: la que
+    más veces aparece (y si empatan, la más larga).
+    """
+    veces = Counter(designados)
+    formas = {}
+    for completo, pais in sorted(veces, key=lambda f: (-veces[f], -len(f[0]))):
+        elegida = next((e for e in formas.values() if e[1] == pais and misma_persona(e[0], completo)), None)
+        formas[(completo, pais)] = elegida or (completo, pais)
+    return formas
+
+
+def armar_filas(partidos, codigos):
+    filas, avisos = [], []
+    # Un partido puede estar en dos páginas (los dieciseisavos): se queda el que tiene el equipo arbitral.
+    unicos = {}
+    for p in partidos:
+        clave = (p['fecha'], p['local'], p['visitante'])
+        if clave not in unicos or (p['oficiales'] and not unicos[clave]['oficiales']):
+            unicos[clave] = p
+
+    designados = {}
+    for (fecha, local, visitante), p in sorted(unicos.items()):
+        lista = designados[(fecha, local, visitante)] = []
+        if p['principal']:
+            lista.append(('Referee', p['principal']))
+        for rol in ROLES:
+            if rol == 'Assistant referees':
+                lista += [(f'Assistant referee {i}', a) for i, a in enumerate(p['oficiales'].get(rol, []), 1)]
+            else:
+                lista += [(rol, a) for a in p['oficiales'].get(rol, [])]
+        if not p['oficiales']:
+            avisos.append(f'{fecha} {local} - {visitante}: la página no tiene el equipo arbitral; solo va el principal.')
+        for nombre_equipo in (local, visitante):
+            if nombre_equipo not in codigos:
+                avisos.append(f'{fecha} {local} - {visitante}: no se encontró el código FIFA de "{nombre_equipo}".')
+
+    # Un árbitro escrito de dos formas en distintos partidos queda con una sola.
+    formas = unificar([a for lista in designados.values() for _, a in lista])
+    for forma, elegida in sorted(formas.items()):
+        if forma != elegida:
+            avisos.append(f'{forma[0]} ({forma[1]}) se toma como {elegida[0]}.')
+
+    for (fecha, local, visitante), lista in designados.items():
+        for rol, arbitro_partido in lista:
+            completo, pais = formas[arbitro_partido]
+            nombre, apellido = separar_arbitro(completo)
+            if pais not in codigos:
+                avisos.append(f'{completo}: no se encontró el código FIFA de "{pais}"; se guarda el nombre del país.')
             filas.append({
                 'fecha': fecha,
-                'codigo_local': codigos.get(local, ''),
-                'codigo_visitante': codigos.get(visitante, ''),
+                'local': codigos.get(local, local),
+                'visitante': codigos.get(visitante, visitante),
                 'rol': rol,
                 'nombre': nombre,
                 'apellido': apellido,
-                'pais': pais,
-                'codigo_pais': codigos.get(ALIAS_PAIS.get(pais, pais), ''),
+                'pais': codigos.get(pais, pais),
             })
-            for campo, equipo in (('codigo_local', local), ('codigo_visitante', visitante)):
-                if not filas[-1][campo]:
-                    avisos.append(f'{equipo}: no se encontró su código FIFA.')
-    return filas
-
-
-def unificar_apellidos(filas):
-    """Una misma persona puede figurar con el apellido completo en una página y abreviado en
-    otra ("Katia Itzel García" y "Katia García"): se deja la forma más larga, para que la
-    base no registre dos árbitros."""
-    apellidos = {(f['codigo_pais'], f['nombre'], f['apellido']) for f in filas}
-    forma_larga = {}
-    for pais, nombre, apellido in apellidos:
-        for otro in apellidos:
-            if otro[:2] == (pais, nombre) and otro[2].endswith(' ' + apellido):
-                forma_larga[(pais, nombre, apellido)] = otro[2]
-    for fila in filas:
-        fila['apellido'] = forma_larga.get((fila['codigo_pais'], fila['nombre'], fila['apellido']), fila['apellido'])
+    return len(unicos), filas, avisos
 
 
 def guardar(ruta, filas):
@@ -233,38 +237,32 @@ def guardar(ruta, filas):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Scraping de las designaciones arbitrales del Mundial 2026 (Wikipedia).')
+    parser = argparse.ArgumentParser(description='Scraping del equipo arbitral de los partidos del Mundial 2026 (Wikipedia).')
     parser.add_argument('--salida', default=str(Path(__file__).resolve().parent / 'datos'),
-                        help='carpeta donde se guarda designaciones.csv')
+                        help='carpeta donde se guarda designaciones_arbitrales.csv')
     args = parser.parse_args()
     sys.stdout.reconfigure(encoding='utf-8')
 
-    filas, avisos, vistos = [], [], set()
+    # Una sola sesión: los pedidos reusan la conexión y el User-Agent.
+    partidos = []
     with requests.Session() as sesion:
         sesion.headers['User-Agent'] = USER_AGENT
         codigos = leer_codigos_fifa(descargar(sesion, URL_CODIGOS))
         for pagina in PAGINAS:
             time.sleep(PAUSA)
-            for fila in leer_partidos(descargar(sesion, BASE + pagina), codigos, avisos):
-                # La página de eliminatorias repite los partidos de la ronda anterior.
-                clave = (fila['fecha'], fila['codigo_local'], fila['codigo_visitante'], fila['rol'])
-                if clave not in vistos:
-                    vistos.add(clave)
-                    filas.append(fila)
-    if not filas:
-        sys.exit('No se encontró ninguna designación: puede haber cambiado la estructura de la página.')
+            partidos += leer_partidos(descargar(sesion, URL_WIKI + pagina))
 
-    unificar_apellidos(filas)
+    cantidad, filas, avisos = armar_filas(partidos, codigos)
+    if not filas:
+        sys.exit('No se encontró ningún partido: puede haber cambiado la estructura de las páginas.')
+
     salida = Path(args.salida)
     salida.mkdir(parents=True, exist_ok=True)
-    guardar(salida / 'designaciones.csv', filas)
+    guardar(salida / 'designaciones_arbitrales.csv', filas)
 
-    partidos = {(f['fecha'], f['codigo_local'], f['codigo_visitante']) for f in filas}
-    oficiales = {(f['codigo_pais'] or f['pais'], f['apellido'], f['nombre']) for f in filas}
-    print(f'Partidos: {len(partidos)}  Designaciones: {len(filas)}  Oficiales distintos: {len(oficiales)}')
-    print(f'Archivo: {salida / "designaciones.csv"}')
-    for pais in sorted({f['pais'] for f in filas if not f['codigo_pais']}):
-        avisos.append(f'{pais}: no se encontró su código FIFA (completar ALIAS_PAIS).')
+    arbitros = {(f['nombre'], f['apellido'], f['pais']) for f in filas}
+    print(f'Partidos: {cantidad}  Designaciones: {len(filas)}  Árbitros: {len(arbitros)}')
+    print(f'Archivo: {salida / "designaciones_arbitrales.csv"}')
     for aviso in avisos:
         print('Aviso:', aviso)
 

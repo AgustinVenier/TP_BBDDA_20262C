@@ -2,8 +2,6 @@ codigo_fifa,rol,nombre,apellido,codigo_pais_nacimiento
 ZZA,DIRECTOR_TECNICO,Ernesto,Prueba,ARG
 ZZA,AYUDANTE_CAMPO,Rubén,Ayudante,
 ZZB,DIRECTOR_TECNICO,Sofía,Técnica,ZZB
-ZZA,DIRECTOR_TECNICO,Otro,Director,ARG
-ZZB,MEDICO,Sofía,Técnica,ZZB
 QQQ,MEDICO,Ana,Sin Seleccion,
 ZZA,UTILERO,Luis,Rol Malo,
 ZZB,PREPARADOR_FISICO,Marta,Pais Malo,XXX

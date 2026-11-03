@@ -494,7 +494,7 @@ GO
   vw_TablaPosiciones
   Posiciones de cada grupo con los partidos de grupos FINALIZADOS: 3 puntos
   por partido ganado y 1 por empatado; desempatan la diferencia de gol y los
-  goles a favor (el mismo criterio de 31_DatosDePrueba.sql).
+  goles a favor.
 */
 CREATE OR ALTER VIEW Reportes.vw_TablaPosiciones
 AS

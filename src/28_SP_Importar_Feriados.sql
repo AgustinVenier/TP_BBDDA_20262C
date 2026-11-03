@@ -358,7 +358,7 @@ GO
   @anio del país con código ISO alfa-2 @codigo_iso2, y procesa la respuesta
   con usp_ProcesarFeriadosJSON (@mostrar y los OUTPUT son los de ese SP).
   Por defecto trae los del año actual. Para varios países se llama una vez
-  por país, como hace 29_ImportarCotizacionesYFeriados.sql.
+  por país, como hace 29_ImportarAPIs.sql.
   Valida: código ISO de 2 letras y de algún país del sistema; año entre 1960
   y el siguiente al actual. Si la API no tiene feriados de ese país (responde
   sin contenido, HTTP 204), no responde, responde con otro código HTTP

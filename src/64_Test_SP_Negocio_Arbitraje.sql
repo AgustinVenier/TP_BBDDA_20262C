@@ -390,22 +390,27 @@ BEGIN CATCH
 END CATCH;
 GO
 
-/* DT5 (ERROR) Árbitros que ya dirigen otro partido a menos de 24 horas.
-   Esperado: error 50001 con 2 condiciones: "Prueba Neutral 4" y "Prueba
-   Neutral 5" ya dirigen el partido 245, a menos de 24 horas del 246. */
+/* DT5 (OK) Árbitros que dirigen otro partido 18 horas antes: no hay un
+   descanso mínimo entre partidos (la consigna no lo pide).
+   "Prueba Neutral 4" y "Prueba Neutral 5" dirigen el 245 y se designan
+   también en el 246, 18 horas después. Para que DT7 pruebe el 246 sin
+   árbitros, al final se dan de baja las cinco designaciones (el partido
+   sigue PROGRAMADO).
+   Esperado: la consulta del SP muestra los cinco árbitros del 246; después,
+   0 designaciones en el 246. */
 DECLARE @id_partido INT = (SELECT id_partido FROM Torneo.PARTIDO WHERE numero_partido = 246);
 DECLARE @n4 INT, @n5 INT, @b INT, @c INT, @d INT;
 EXEC #usp_Arbitro N'Prueba Neutral 4', @n4 OUTPUT;   EXEC #usp_Arbitro N'Prueba Neutral 5', @n5 OUTPUT;
 EXEC #usp_Arbitro N'Prueba Neutral 7', @b OUTPUT;    EXEC #usp_Arbitro N'Prueba Neutral 8', @c OUTPUT;
 EXEC #usp_Arbitro N'Prueba Neutral 9', @d OUTPUT;
-BEGIN TRY
-    EXEC Arbitraje.usp_DesignarTernaArbitral @id_partido = @id_partido, @id_principal = @n4,
-        @id_asistente_1 = @b, @id_asistente_2 = @c, @id_cuarto = @d, @id_var = @n5;
-    PRINT N'DT5: FALLÓ, se esperaba un error de validación.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'DT5';
-END CATCH;
+EXEC Arbitraje.usp_DesignarTernaArbitral @id_partido = @id_partido, @id_principal = @n4,
+    @id_asistente_1 = @b, @id_asistente_2 = @c, @id_cuarto = @d, @id_var = @n5;
+EXEC Arbitraje.usp_DESIGNACION_ARBITRAL_Baja @id_partido = @id_partido, @id_arbitro = @n4;
+EXEC Arbitraje.usp_DESIGNACION_ARBITRAL_Baja @id_partido = @id_partido, @id_arbitro = @b;
+EXEC Arbitraje.usp_DESIGNACION_ARBITRAL_Baja @id_partido = @id_partido, @id_arbitro = @c;
+EXEC Arbitraje.usp_DESIGNACION_ARBITRAL_Baja @id_partido = @id_partido, @id_arbitro = @d;
+EXEC Arbitraje.usp_DESIGNACION_ARBITRAL_Baja @id_partido = @id_partido, @id_arbitro = @n5;
+SELECT 'DT5 después' AS caso, COUNT(*) AS designaciones_en_246 FROM Arbitraje.DESIGNACION_ARBITRAL WHERE id_partido = @id_partido;
 GO
 
 /* DT6 (ERROR) Partido ya jugado y partido sin selecciones definidas.

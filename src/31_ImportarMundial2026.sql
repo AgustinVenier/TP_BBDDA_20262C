@@ -10,32 +10,28 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 02/11/2026
- Archivo: 32_ImportarMundial2026.sql
+ Archivo: 31_ImportarMundial2026.sql
  Objetivo: Cargar el Mundial 2026 real (las 16 sedes, las 48 selecciones con
-           sus 1248 convocados y su director técnico, y los 104 partidos con formaciones, cambios,
-           goles y tarjetas) y las designaciones arbitrales de sus 104 partidos
-           (terna, cuarto árbitro y VAR) desde los archivos de openfootball y
-           los CSV del scraping, con los SP de 23_SP_Importar_Mundial2026.sql,
-           24_SP_Importar_Jugadores.sql y 34_SP_Importar_Designaciones.sql.
-           Es la alternativa a 31_DatosDePrueba.sql: el torneo de prueba y el
-           real no pueden estar en la misma base (cada país tiene una sola
-           selección y el número de partido no se repite). Para la base del
-           torneo real: ejecutar 00 a 30, el 34 y después este script, en lugar
-           del 31. Sobre una base con el torneo de prueba no hace nada.
+           sus 1248 convocados y su director técnico, los 104 partidos con formaciones, cambios,
+           goles y tarjetas, y el equipo arbitral de cada uno) desde los
+           archivos de openfootball y los CSV del scraping, con los SP de
+           23_SP_Importar_Mundial2026.sql y 24_SP_Importar_Jugadores.sql.
+           Requiere haber ejecutado 00 a 30. Después va
+           32_DatosComplementarios.sql, que completa lo que los archivos no
+           traen (el resto de los cuerpos técnicos, idiomas de los
+           árbitros, la publicidad de cada partido).
 ================================================================================
 
  Antes de ejecutar:
    - CAMBIAR @repositorio (sección 1) por la ruta de la carpeta del
      repositorio en tu máquina, terminada en \.
-   - Haber ejecutado 34_SP_Importar_Designaciones.sql (sin él, la sección 4 se salta).
    - La cuenta del servicio de SQL Server tiene que poder leer las carpetas
      datos\ y scraping\datos\ (ver 26_ImportarIndicadores.sql: icacls ...
      /grant 'NT Service\MSSQLSERVER:(OI)(CI)RX').
 
  Qué hace:
    1. Importa sedes, selecciones, jugadores, directores técnicos y
-      partidos, en ese orden (cada uno necesita lo anterior). Es una
-      importación con errores parciales:
+      partidos, en ese orden (cada uno necesita lo anterior). Es una importación con errores parciales:
       se cargan los registros válidos y se informan los rechazados, que
       quedan en las tablas ERRORES_ con el número de su importación (ver el
       resumen, al final).
@@ -51,11 +47,12 @@
    2. Corrige a mano lo que no se puede deducir de los archivos: registra
       los nombres alternativos de esas selecciones y jugadores, y la
       capacidad de SoFi Stadium.
-   3. Vuelve a importar los partidos: lo que ya estaba queda SIN CAMBIOS y
-      se carga lo que faltaba.
-   4. Importa las designaciones arbitrales (scraping\datos\designaciones.csv):
-      las 520 (5 por partido) con 162 árbitros, de los que da de alta a los que
-      todavía no están.
+   3. Reprocesa solo los partidos que tuvieron algún rechazo en la primera
+      importación (@reprocesar_importacion): los demás ya están cargados y
+      no se vuelven a procesar. De los reprocesados, lo que ya estaba queda
+      SIN CAMBIOS y se carga lo que faltaba.
+   4. Importa el equipo arbitral de cada partido (los ocho roles que publica
+      la FIFA, del CSV del scraping de Wikipedia), con sus árbitros.
    Se puede ejecutar más de una vez sobre la base del torneo real: lo que ya
    está cargado queda SIN CAMBIOS, salvo SoFi Stadium, que se rechaza porque
    el archivo trae una capacidad menor que la corregida (bajarla dejaría
@@ -68,14 +65,10 @@ GO
 SET NOCOUNT ON;
 GO
 
--- Sobre una base con el torneo de prueba (31) no se carga nada. Se reconoce porque
--- tiene sedes que no vinieron de la importación del archivo de estadios.
 IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS)
-   OR (EXISTS (SELECT 1 FROM Torneo.SEDE)
-       AND NOT EXISTS (SELECT 1 FROM DatosGenerales.IMPORTACION WHERE proceso = 'Torneo.usp_ImportarSedesJSON'))
 BEGIN
-    PRINT N'32_ImportarMundial2026.sql: la base tiene que tener los datos iniciales (20) y no tener el torneo de '
-        + N'prueba del 31. Recreá la base con 00 a 30 y el 34, y volvé a ejecutarlo.';
+    PRINT N'31_ImportarMundial2026.sql: la base tiene que tener los datos iniciales (20). '
+        + N'Ejecutá los scripts 00 a 30 y volvé a ejecutarlo.';
     SET NOEXEC ON;
 END;
 GO
@@ -111,9 +104,12 @@ SET @archivo = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHAR(400)) + N'scrapi
 EXEC Torneo.usp_ImportarCuerpoTecnicoCSV @ruta_archivo = @archivo;
 GO
 
+-- Su número, para reprocesar después solo los partidos que rechace (sección 3).
 DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHAR(400))
                                + N'datos\fuentes\openfootball\worldcup-full.json';
-EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo;
+DECLARE @id_importacion INT;
+EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
+EXEC sp_set_session_context @key = N'importacion_partidos', @value = @id_importacion;
 GO
 
 
@@ -201,25 +197,21 @@ GO
 
 
 /* ============================================================================
-   3. SEGUNDA IMPORTACIÓN DE LOS PARTIDOS
+   3. REPROCESO DE LOS PARTIDOS RECHAZADOS
    ============================================================================ */
 DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHAR(400))
                                + N'datos\fuentes\openfootball\worldcup-full.json';
-EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo;
+DECLARE @reprocesar INT = CAST(SESSION_CONTEXT(N'importacion_partidos') AS INT);
+EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @reprocesar_importacion = @reprocesar;
 GO
 
 
 /* ============================================================================
-   4. DESIGNACIONES ARBITRALES
+   4. EQUIPO ARBITRAL DE CADA PARTIDO
    ============================================================================ */
-IF OBJECT_ID(N'Arbitraje.usp_ImportarDesignacionesCSV', N'P') IS NULL
-    PRINT N'Designaciones arbitrales: falta ejecutar 34_SP_Importar_Designaciones.sql; no se cargaron.';
-ELSE
-BEGIN
-    DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHAR(400))
-                                   + N'scraping\datos\designaciones.csv';
-    EXEC Arbitraje.usp_ImportarDesignacionesCSV @ruta_archivo = @archivo;
-END;
+DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHAR(400))
+                               + N'scraping\datos\designaciones_arbitrales.csv';
+EXEC Arbitraje.usp_ImportarDesignacionesCSV @ruta_archivo = @archivo;
 GO
 
 
@@ -244,11 +236,11 @@ SELECT i.id_importacion, i.proceso, i.origen, i.fecha_hora, i.leidos, i.insertad
        i.rechazados,
        (SELECT COUNT(*) FROM Torneo.ERRORES_SEDE AS e WHERE e.id_importacion = i.id_importacion)          AS errores_sede,
        (SELECT COUNT(*) FROM Torneo.ERRORES_SELECCION AS e WHERE e.id_importacion = i.id_importacion)     AS errores_seleccion,
-       (SELECT COUNT(*) FROM Torneo.ERRORES_JUGADOR AS e WHERE e.id_importacion = i.id_importacion)       AS errores_jugador,
        (SELECT COUNT(*) FROM Torneo.ERRORES_CUERPO_TECNICO AS e WHERE e.id_importacion = i.id_importacion) AS errores_cuerpo_tecnico,
+       (SELECT COUNT(*) FROM Torneo.ERRORES_JUGADOR AS e WHERE e.id_importacion = i.id_importacion)       AS errores_jugador,
        (SELECT COUNT(*) FROM Torneo.ERRORES_PARTIDO AS e WHERE e.id_importacion = i.id_importacion)       AS errores_partido,
        (SELECT COUNT(*) FROM DesarrolloPartido.ERRORES_EVENTO AS e WHERE e.id_importacion = i.id_importacion) AS errores_evento,
-       (SELECT COUNT(*) FROM Arbitraje.ERRORES_DESIGNACION AS e WHERE e.id_importacion = i.id_importacion)   AS errores_designacion
+       (SELECT COUNT(*) FROM Arbitraje.ERRORES_DESIGNACION AS e WHERE e.id_importacion = i.id_importacion) AS errores_designacion
 FROM DatosGenerales.IMPORTACION AS i
 WHERE i.id_importacion > CAST(SESSION_CONTEXT(N'importacion_desde') AS INT)
 ORDER BY i.id_importacion;

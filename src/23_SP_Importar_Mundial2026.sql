@@ -17,26 +17,30 @@
            partidos con lo que pasó en cada uno (formaciones, cambios, goles,
            penales de la definición y tarjetas). Los jugadores se importan
            antes, desde el CSV del scraping (24_SP_Importar_Jugadores.sql).
+           Y el equipo arbitral de cada partido, desde el CSV del scraping de
+           Wikipedia (scraping/README.md), después de los partidos.
            Los objetos, en el orden en que se crean:
-             DatosGenerales.usp_LeerArchivoUTF8   lee un archivo de texto UTF-8
-             Torneo.fn_ClaveNombre                nombre sin separadores, para compararlo
-             Torneo.usp_IdentificarJugadores      reconoce a un jugador por cómo lo escribe la fuente
-             Torneo.fn_CoordenadaDecimal          coordenada en grados con decimales
-             Torneo.usp_ImportarSedesJSON         worldcup.stadiums.json
-             Torneo.usp_ImportarSeleccionesJSON   worldcup.teams.json
-             Torneo.usp_ImportarPartidosJSON      worldcup-full.json
+             DatosGenerales.usp_LeerArchivoUTF8       lee un archivo de texto UTF-8
+             Torneo.fn_ClaveNombre                    nombre sin separadores, para compararlo
+             Torneo.usp_IdentificarJugadores          reconoce a un jugador por cómo lo escribe la fuente
+             Torneo.fn_CoordenadaDecimal              coordenada en grados con decimales
+             Torneo.usp_ImportarSedesJSON             worldcup.stadiums.json
+             Torneo.usp_ImportarSeleccionesJSON       worldcup.teams.json
+             Torneo.usp_ImportarPartidosJSON          worldcup-full.json
+             Arbitraje.usp_ImportarDesignacionesCSV   designaciones_arbitrales.csv (scraping)
            Requiere haber ejecutado 00 a 22. Su script de testing es
            73_Test_SP_Importar_Mundial2026.sql. La carga del torneo real está
-           en 32_ImportarMundial2026.sql.
+           en 31_ImportarMundial2026.sql.
 ================================================================================
 
  Cómo importa cada SP (igual que 24, 25, 27 y 28):
    1. Se controla el archivo: que se pueda leer, que sea JSON y que tenga la
-      estructura del archivo de openfootball que corresponde. Si no, no se
-      importa nada (THROW 50002).
-   2. OPENJSON pasa los registros, tal como vienen, a la tabla de staging
-      que lee el SP de la Entrega 5 (#staging_sedes, por ejemplo), y ahí se
-      convierten. Todas las transformaciones se hacen acá, en T-SQL.
+      estructura del archivo de openfootball que corresponde (o, el CSV del
+      equipo arbitral, sus columnas). Si no, no se importa nada (THROW 50002).
+   2. OPENJSON (o BULK INSERT, el CSV) pasa los registros, tal como vienen, a
+      la tabla de staging que lee el SP de la Entrega 5 (#staging_sedes, por
+      ejemplo), y ahí se convierten. Todas las transformaciones se hacen acá,
+      en T-SQL.
    3. Se rechazan los registros que no se pudieron convertir: un UPDATE
       sobre toda la tabla anota el motivo y los marca RECHAZADO.
    4. El SP de la Entrega 5 que corresponde (16_SP_Importacion.sql) valida
@@ -72,23 +76,35 @@
      dentro de la lista de su selección (ver usp_IdentificarJugadores). Un
      nombre que no se reconoce se rechaza, y se resuelve registrándolo como
      nombre alternativo del jugador (Torneo.usp_NOMBRE_ALTERNATIVO_Alta) y
-     volviendo a importar.
+     reprocesando los partidos rechazados (ver usp_ImportarPartidosJSON).
    - Formaciones: la posición en cancha de cada titular es su posición
      habitual; el esquema táctico sale de esas posiciones (ej. 4-3-3).
    - Minutos: 45+2 es el 45 con 2 de adicional. Un minuto después del 120 es
      adicional del alargue (121 es 120+1).
-   - Cambios: el archivo no dice el motivo: se registran como TACTICO. Un
-     cambio en el minuto 46, 91 o 106 se hizo en el entretiempo.
+   - Cambios: el archivo no dice el motivo: uno nuevo se registra como
+     TACTICO y uno ya cargado conserva el suyo. Un cambio en el minuto 46, 91
+     o 106 se hizo en el entretiempo.
    - Goles: los de penal son de tipo PENAL, los en contra EN CONTRA y el resto
      JUGADA.
    - Penales de la definición: se cargan los convertidos, como goles del
      período PENALES. El equipo de cada uno sale de cómo cambia el marcador.
    - Tarjetas: Y es amarilla, R roja directa y Y/R la segunda amarilla, que
      se registra como amarilla y además como roja por doble amarilla. El
-     archivo no tiene el motivo: se registra "Sin detalle en la fuente".
+     archivo no tiene el motivo: una nueva se registra con "Sin detalle en la
+     fuente" y una ya cargada conserva el suyo.
+   - Si el archivo corrige un evento ya cargado (el minuto de un gol, por
+     ejemplo), se actualiza: ver usp_ImportarDesarrolloPartidos.
 
- Se usa SQL dinámico solo para leer el archivo, porque OPENROWSET(BULK) no
- acepta la ruta en una variable.
+ Transformaciones del CSV del equipo arbitral:
+   - Partido: el de esa fecha (hora local de la sede) entre esas dos
+     selecciones, en cualquier orden.
+   - Árbitros: uno por cada país, nombre y apellido del archivo, con la
+     categoría que se pasa como parámetro (FIFA, por defecto).
+   - Roles: los traduce usp_ImportarDesignaciones (Referee es PRINCIPAL,
+     Fourth official es CUARTO, etc.).
+
+ Se usa SQL dinámico solo para leer el archivo, porque OPENROWSET(BULK) y
+ BULK INSERT no aceptan la ruta en una variable.
 */
 
 USE MundialFutbol;
@@ -733,9 +749,22 @@ GO
   Los partidos se numeran desde @primer_numero (1 para el fixture completo;
   otro número si el archivo es solo una parte, para no pisar los que ya
   tienen esos números).
+  Con @reprocesar_importacion, el número de una importación anterior del
+  mismo archivo, reprocesa solo los partidos que tuvieron algún rechazo en
+  ella (en Torneo.ERRORES_PARTIDO o en DesarrolloPartido.ERRORES_EVENTO),
+  después de corregir lo que los rechazó: los demás ya están cargados y no
+  se vuelven a procesar. Se lee el archivo entero, porque el número de cada
+  partido sale del orden de todos, pero se reprocesa el partido completo
+  (una formación necesita sus 11 titulares, y los cambios, goles y tarjetas,
+  la formación): lo que ya estaba queda SIN CAMBIOS y se carga lo que
+  faltaba. Lo que se vuelve a rechazar queda con el número de la nueva
+  importación, que se puede volver a reprocesar.
   Valida: ruta obligatoria y terminada en .json; primer número entre 1 y
-  255. Si el archivo no se puede leer, no es JSON o no tiene la lista
-  "matches", no se importa nada (THROW 50002). Rechaza los registros que no
+  255; la importación a reprocesar, de este proceso y de este archivo. Si el
+  archivo no se puede leer, no es JSON o no tiene la lista "matches", o si
+  en un reproceso no tiene los partidos rechazados en esa importación (el
+  archivo cambió o se numera desde otro número), no se importa nada (THROW
+  50002). Rechaza los registros que no
   puede convertir (ronda, fecha, selecciones y estadio que no reconoce,
   números que no son números, jugadores que no reconoce, minutos y
   tarjetas); las reglas las aplican los SP de la Entrega 5. Registra la
@@ -746,9 +775,10 @@ GO
   rechazó alguno).
 */
 CREATE OR ALTER PROCEDURE Torneo.usp_ImportarPartidosJSON
-    @ruta_archivo    NVARCHAR(400),
-    @primer_numero   TINYINT = 1,
-    @id_importacion  INT     = NULL OUTPUT
+    @ruta_archivo            NVARCHAR(400),
+    @primer_numero           TINYINT = 1,
+    @reprocesar_importacion  INT     = NULL,
+    @id_importacion          INT     = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -776,6 +806,12 @@ BEGIN
 
     IF ISNULL(@primer_numero, 0) = 0
         SET @errores += @nl + N'- El primer número de partido tiene que estar entre 1 y 255.';
+
+    IF @reprocesar_importacion IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM DatosGenerales.IMPORTACION
+                       WHERE id_importacion = @reprocesar_importacion AND proceso = @proceso AND origen = @ruta_archivo)
+        SET @errores += @nl + CONCAT(N'- No hay una importación ', @reprocesar_importacion,
+                                     N' de este archivo con este proceso para reprocesar.');
 
     IF @errores <> N''
     BEGIN
@@ -918,6 +954,54 @@ BEGIN
     CROSS APPLY (SELECT TRY_CONVERT(DATETIME2(0), st.fecha_txt + N' ' + LEFT(st.hora_txt, CHARINDEX(N' ', st.hora_txt + N' ') - 1), 120) AS local,
                         TRY_CONVERT(INT, SUBSTRING(st.hora_txt, NULLIF(CHARINDEX(N'UTC', st.hora_txt), 0) + 3, 10)) AS desfase) AS h;
 
+    -- Número: por fecha y hora UTC, grupo y orden en el archivo; la fase de grupos primero.
+    SELECT @partidos_grupos = COUNT(*)
+    FROM #staging_partidos
+    WHERE fase = 'GRUPOS' AND fecha_hora_utc IS NOT NULL;
+
+    WITH orden AS (
+        SELECT id_registro, fase,
+               ROW_NUMBER() OVER (PARTITION BY IIF(fase = 'GRUPOS', 0, 1)
+                                  ORDER BY fecha_hora_utc, grupo, id_registro) AS n
+        FROM #staging_partidos
+        WHERE fase IS NOT NULL AND fecha_hora_utc IS NOT NULL
+    )
+    UPDATE st
+    SET numero_partido = IIF(n.numero <= 255, n.numero, NULL)
+    FROM #staging_partidos AS st
+    INNER JOIN orden AS o ON o.id_registro = st.id_registro
+    CROSS APPLY (SELECT @primer_numero - 1 + o.n + IIF(o.fase = 'GRUPOS', 0, @partidos_grupos) AS numero) AS n;
+
+    -- Reproceso: quedan solo los partidos con algún rechazo en esa importación. Ya numerados, porque
+    -- el número sale del orden de todos. Tienen que ser los mismos que entonces (mismo registro, fecha
+    -- y selecciones, o mismo número si se rechazaron sus eventos); si no, no se reprocesa nada.
+    IF @reprocesar_importacion IS NOT NULL
+    BEGIN
+        IF EXISTS (SELECT 1 FROM Torneo.ERRORES_PARTIDO AS e
+                   LEFT JOIN #staging_partidos AS st ON st.id_registro = e.registro
+                   WHERE e.id_importacion = @reprocesar_importacion
+                     AND (st.id_registro IS NULL OR ISNULL(st.fecha_txt, N'') <> ISNULL(e.fecha, N'')
+                          OR ISNULL(st.equipo_1, N'') <> ISNULL(e.equipo_1, N'')
+                          OR ISNULL(st.equipo_2, N'') <> ISNULL(e.equipo_2, N'')))
+           OR EXISTS (SELECT 1 FROM DesarrolloPartido.ERRORES_EVENTO AS e
+                      LEFT JOIN #staging_partidos AS st ON st.id_registro = e.registro_partido
+                      WHERE e.id_importacion = @reprocesar_importacion
+                        AND ISNULL(st.numero_partido, 0) <> ISNULL(e.numero_partido, 0))
+        BEGIN
+            SET @mensaje = CONCAT(N'Torneo.usp_ImportarPartidosJSON: no se reprocesó nada, el archivo no tiene los ',
+                                  N'partidos rechazados en la importación ', @reprocesar_importacion,
+                                  N' (cambió o se numera desde otro número).');
+            THROW 50002, @mensaje, 1;
+        END;
+
+        DELETE st
+        FROM #staging_partidos AS st
+        WHERE NOT EXISTS (SELECT 1 FROM Torneo.ERRORES_PARTIDO AS e
+                          WHERE e.id_importacion = @reprocesar_importacion AND e.registro = st.id_registro)
+          AND NOT EXISTS (SELECT 1 FROM DesarrolloPartido.ERRORES_EVENTO AS e
+                          WHERE e.id_importacion = @reprocesar_importacion AND e.registro_partido = st.id_registro);
+    END;
+
     -- Selecciones: por el nombre del país o un nombre alternativo registrado (sin distinguir tildes).
     UPDATE st
     SET id_seleccion_1 = (SELECT MAX(x.id_seleccion) FROM (
@@ -957,24 +1041,6 @@ BEGIN
                  FROM Torneo.SEDE AS s
                  WHERE CHARINDEX(LEFT(s.ciudad, CHARINDEX(' (', s.ciudad + ' (') - 1), st.estadio_txt) > 0
                     OR CHARINDEX(s.nombre_estadio, st.estadio_txt) > 0) AS x;
-
-    -- Número: por fecha y hora UTC, grupo y orden en el archivo; la fase de grupos primero.
-    SELECT @partidos_grupos = COUNT(*)
-    FROM #staging_partidos
-    WHERE fase = 'GRUPOS' AND fecha_hora_utc IS NOT NULL;
-
-    WITH orden AS (
-        SELECT id_registro, fase,
-               ROW_NUMBER() OVER (PARTITION BY IIF(fase = 'GRUPOS', 0, 1)
-                                  ORDER BY fecha_hora_utc, grupo, id_registro) AS n
-        FROM #staging_partidos
-        WHERE fase IS NOT NULL AND fecha_hora_utc IS NOT NULL
-    )
-    UPDATE st
-    SET numero_partido = IIF(n.numero <= 255, n.numero, NULL)
-    FROM #staging_partidos AS st
-    INNER JOIN orden AS o ON o.id_registro = st.id_registro
-    CROSS APPLY (SELECT @primer_numero - 1 + o.n + IIF(o.fase = 'GRUPOS', 0, @partidos_grupos) AS numero) AS n;
 
     /* 3. Lo que no se pudo convertir. Las reglas de los partidos las aplica usp_ImportarPartidos. */
     UPDATE st
@@ -1027,10 +1093,10 @@ BEGIN
         CROSS APPLY OPENJSON(l.value, N'$.bench') AS j
         WHERE st.accion <> 'RECHAZADO' AND l.[key] IN (N'0', N'1');
 
-        -- Cambios: el archivo no dice el motivo.
-        INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, nombre_entra_txt, minuto_txt, motivo)
+        -- Cambios: el archivo no dice el motivo (queda vacío).
+        INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, nombre_entra_txt, minuto_txt)
         SELECT 'CAMBIO', st.id_registro, st.numero_partido, CAST(l.[key] AS INT) + 1, CAST(c.[key] AS INT) + 1,
-               NULLIF(TRIM(d.sale), N''), NULLIF(TRIM(d.entra), N''), NULLIF(TRIM(d.minuto), N''), 'TACTICO'
+               NULLIF(TRIM(d.sale), N''), NULLIF(TRIM(d.entra), N''), NULLIF(TRIM(d.minuto), N'')
         FROM #staging_partidos AS st
         CROSS APPLY OPENJSON(st.detalle, N'$.lineup') AS l
         CROSS APPLY OPENJSON(l.value, N'$.subs') AS c
@@ -1066,11 +1132,11 @@ BEGIN
         FROM penales;
 
         -- Tarjetas: bookings[0] son las de team1. Y/R se registra como amarilla y como roja por doble
-        -- amarilla. El archivo no tiene el motivo.
+        -- amarilla. El archivo no tiene el motivo (queda vacío).
         INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, minuto_txt, tipo_txt,
-                                      tipo_tarjeta, es_doble_amarilla, motivo)
+                                      tipo_tarjeta, es_doble_amarilla)
         SELECT 'TARJETA', st.id_registro, st.numero_partido, CAST(b.[key] AS INT) + 1, CAST(t.[key] AS INT) + 1,
-               NULLIF(TRIM(d.nombre), N''), NULLIF(TRIM(d.minuto), N''), d.tipo, c.tarjeta, c.doble, 'Sin detalle en la fuente'
+               NULLIF(TRIM(d.nombre), N''), NULLIF(TRIM(d.minuto), N''), d.tipo, c.tarjeta, c.doble
         FROM #staging_partidos AS st
         CROSS APPLY OPENJSON(st.detalle, N'$.bookings') AS b
         CROSS APPLY OPENJSON(b.value) AS t
@@ -1210,7 +1276,8 @@ BEGIN
     FROM #staging_partidos
     UNION ALL
     SELECT @id_importacion, N'Formaciones, cambios, goles, penales y tarjetas', COUNT(*),
-           ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0), 0,
+           ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+           ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
            ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
            ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
     FROM #staging_eventos;
@@ -1250,11 +1317,285 @@ END;
 GO
 
 
+/* ============================================================================
+   EQUIPO ARBITRAL
+   ============================================================================ */
+
+/*
+  usp_ImportarDesignacionesCSV
+  Importa el equipo arbitral de cada partido desde el CSV que genera el
+  scraping de Wikipedia (designaciones_arbitrales.csv, ver
+  scraping/README.md), con una fila por árbitro designado y esta primera fila
+  con los nombres de las columnas:
+    fecha,local,visitante,rol,nombre,apellido,pais
+  fecha es la del partido (AAAA-MM-DD, en la hora local de la sede), local y
+  visitante los códigos FIFA de sus selecciones (en cualquier orden), rol el
+  que publica la FIFA en inglés (lo traduce usp_ImportarDesignaciones) y pais
+  el código FIFA del país del árbitro. Los partidos tienen que estar
+  cargados antes (usp_ImportarPartidosJSON).
+  Primero carga los árbitros con usp_ImportarArbitros: uno por cada país,
+  nombre y apellido distintos del archivo, con la categoría @categoria (el
+  archivo no la trae; los árbitros del Mundial son de la lista de la FIFA).
+  Después, las designaciones con usp_ImportarDesignaciones.
+  Valida: ruta obligatoria y terminada en .csv; categoría FIFA o
+  CONFEDERACION. Si el archivo no se puede leer, no tiene las columnas
+  esperadas o alguna fila no es CSV válido, no se importa nada (THROW 50002).
+  Rechaza las filas con una fecha que no es fecha, las de un partido que no
+  encuentra y las de un árbitro rechazado; las reglas las aplican los SP de
+  la Entrega 5. Registra la importación (los totales cuentan las filas del
+  archivo, es decir, las designaciones; su número queda en @id_importacion)
+  y las filas rechazadas en Arbitraje.ERRORES_DESIGNACION. Devuelve el
+  resumen de designaciones y de árbitros, los rechazados con sus motivos y
+  los partidos del archivo a los que les falta alguno de los cinco roles que
+  pide la consigna.
+*/
+CREATE OR ALTER PROCEDURE Arbitraje.usp_ImportarDesignacionesCSV
+    @ruta_archivo    NVARCHAR(400),
+    @categoria       VARCHAR(15) = 'FIFA',
+    @id_importacion  INT         = NULL OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores       NVARCHAR(2048) = N'';
+    DECLARE @nl            NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @contenido     NVARCHAR(MAX);
+    DECLARE @encabezado    NVARCHAR(400);
+    DECLARE @mensaje       NVARCHAR(2048);
+    DECLARE @sql           NVARCHAR(MAX);
+    DECLARE @tran_propia   BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @proceso       VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @leidos        INT;
+    DECLARE @insertados    INT;
+    DECLARE @actualizados  INT;
+    DECLARE @sin_cambios   INT;
+    DECLARE @rechazados    INT;
+
+    SET @ruta_archivo = NULLIF(TRIM(@ruta_archivo), N'');
+    SET @categoria    = UPPER(NULLIF(TRIM(@categoria), ''));
+    SET @id_importacion = NULL;
+
+    IF @ruta_archivo IS NULL
+        SET @errores += @nl + N'- La ruta del archivo es obligatoria.';
+    ELSE IF @ruta_archivo NOT LIKE N'%.csv'
+        SET @errores += @nl + N'- El archivo tiene que ser un .csv (el designaciones_arbitrales.csv del scraping).';
+
+    IF @categoria IS NULL OR @categoria NOT IN ('FIFA', 'CONFEDERACION')
+        SET @errores += @nl + N'- La categoría de los árbitros tiene que ser FIFA o CONFEDERACION.';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'Arbitraje.usp_ImportarDesignacionesCSV: no se pudo importar el archivo.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    /* 1. El archivo: la primera fila tiene que tener las columnas esperadas. */
+    EXEC DatosGenerales.usp_LeerArchivoUTF8 @ruta_archivo = @ruta_archivo, @contenido = @contenido OUTPUT;
+
+    SET @encabezado = REPLACE(REPLACE(LEFT(@contenido, CHARINDEX(NCHAR(10), @contenido + NCHAR(10)) - 1),
+                                      NCHAR(13), N''), N' ', N'');
+    IF @encabezado <> N'fecha,local,visitante,rol,nombre,apellido,pais'
+    BEGIN
+        SET @mensaje = N'Arbitraje.usp_ImportarDesignacionesCSV: no se importó nada, la primera fila del archivo tiene que ser '
+                     + N'"fecha,local,visitante,rol,nombre,apellido,pais" y es "' + LEFT(@encabezado, 200) + N'".';
+        THROW 50002, @mensaje, 1;
+    END;
+
+    /* 2. Las filas, como vienen. FORMAT = 'CSV' respeta las comillas. El fin de
+          línea es el del archivo: CRLF (Windows) o LF. */
+    CREATE TABLE #crudo (
+        fecha_txt      NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        local_txt      NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        visitante_txt  NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        rol_txt        NVARCHAR(100) COLLATE DATABASE_DEFAULT NULL,
+        nombre         NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        apellido       NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        pais_txt       NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL
+    );
+
+    BEGIN TRY
+        SET @sql = N'BULK INSERT #crudo FROM N''' + REPLACE(@ruta_archivo, N'''', N'''''')
+                 + N''' WITH (FORMAT = ''CSV'', FIRSTROW = 2, CODEPAGE = ''65001'', FIELDTERMINATOR = '','', '
+                 + N'ROWTERMINATOR = ''' + IIF(CHARINDEX(NCHAR(13) + NCHAR(10), @contenido) > 0, N'0x0d0a', N'0x0a')
+                 + N''', FIELDQUOTE = ''"'', MAXERRORS = 0);';
+        EXEC sp_executesql @sql;
+    END TRY
+    BEGIN CATCH
+        SET @mensaje = N'Arbitraje.usp_ImportarDesignacionesCSV: no se importó nada, hay filas que no son CSV válido '
+                     + N'(tienen que tener 7 columnas): ' + ERROR_MESSAGE();
+        THROW 50002, @mensaje, 1;
+    END CATCH;
+
+    -- usp_ImportarDesignaciones lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
+    CREATE TABLE #staging_designaciones (
+        id_registro     INT PRIMARY KEY,   -- línea del archivo
+        -- Tal como vienen en el archivo
+        fecha_txt       NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        local_txt       NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        visitante_txt   NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        rol_txt         NVARCHAR(100) COLLATE DATABASE_DEFAULT NULL,
+        nombre          NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        apellido        NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        pais_txt        NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        -- Para convertir
+        fecha           DATE          NULL,
+        -- Lo que lee usp_ImportarDesignaciones, ya convertido
+        numero_partido  TINYINT       NULL,
+        id_arbitro      INT           NULL,
+        rol             VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
+        -- Lo que le pasa a cada registro: lo completan este SP y usp_ImportarDesignaciones
+        errores         NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+        accion          VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+    );
+
+    -- usp_ImportarArbitros lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
+    CREATE TABLE #staging_arbitros (
+        id_registro       INT PRIMARY KEY,   -- primera línea del archivo en la que aparece
+        codigo_fifa       NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        nombre            NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        apellido          NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        categoria         VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
+        fecha_nacimiento  DATE          NULL,
+        idiomas           VARCHAR(200)  COLLATE DATABASE_DEFAULT NULL,   -- el archivo no los trae
+        errores           NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+        accion            VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+    );
+
+    INSERT INTO #staging_designaciones (id_registro, fecha_txt, local_txt, visitante_txt, rol_txt, nombre, apellido, pais_txt)
+    SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + 1,
+           NULLIF(TRIM(fecha_txt), N''), UPPER(NULLIF(TRIM(local_txt), N'')), UPPER(NULLIF(TRIM(visitante_txt), N'')),
+           NULLIF(TRIM(rol_txt), N''), NULLIF(TRIM(nombre), N''), NULLIF(TRIM(apellido), N''),
+           UPPER(NULLIF(TRIM(REPLACE(pais_txt, NCHAR(13), N'')), N''))
+    FROM #crudo
+    WHERE CONCAT(fecha_txt, local_txt, visitante_txt, rol_txt, nombre, apellido, REPLACE(pais_txt, NCHAR(13), N'')) <> N'';
+
+    -- El rol pasa como viene ("Referee", "Fourth official"): lo traduce usp_ImportarDesignaciones.
+    UPDATE #staging_designaciones
+    SET fecha = TRY_CONVERT(DATE, fecha_txt, 23),
+        rol   = LEFT(rol_txt, 100);
+
+    -- El partido: el de esa fecha (hora local de la sede) entre esas dos selecciones, en cualquier orden.
+    UPDATE st
+    SET numero_partido = (SELECT MAX(p.numero_partido)
+                          FROM Torneo.PARTIDO AS p
+                          INNER JOIN Torneo.SELECCION AS sl ON sl.id_seleccion = p.id_seleccion_local
+                          INNER JOIN DatosGenerales.PAIS AS pl ON pl.id_pais = sl.id_pais
+                          INNER JOIN Torneo.SELECCION AS sv ON sv.id_seleccion = p.id_seleccion_visitante
+                          INNER JOIN DatosGenerales.PAIS AS pv ON pv.id_pais = sv.id_pais
+                          WHERE CAST(p.fecha_hora_local AS DATE) = st.fecha
+                            AND ((pl.codigo_fifa = st.local_txt AND pv.codigo_fifa = st.visitante_txt)
+                              OR (pl.codigo_fifa = st.visitante_txt AND pv.codigo_fifa = st.local_txt)))
+    FROM #staging_designaciones AS st
+    WHERE st.fecha IS NOT NULL;
+
+    -- Un árbitro por cada país, nombre y apellido distintos del archivo.
+    INSERT INTO #staging_arbitros (id_registro, codigo_fifa, nombre, apellido, categoria)
+    SELECT MIN(id_registro), pais_txt, nombre, apellido, @categoria
+    FROM #staging_designaciones
+    GROUP BY pais_txt, nombre, apellido;
+
+    /* 3. Lo que no se pudo convertir. Las reglas de los árbitros y de las designaciones las
+          aplican usp_ImportarArbitros y usp_ImportarDesignaciones. */
+    UPDATE #staging_designaciones
+    SET errores = NULLIF(CONCAT(
+            CASE WHEN fecha_txt IS NULL THEN @nl + N'- La fecha del partido es obligatoria.'
+                 WHEN fecha IS NULL     THEN @nl + N'- La fecha "' + fecha_txt + N'" no es una fecha AAAA-MM-DD.'
+            END,
+            CASE WHEN local_txt IS NULL OR visitante_txt IS NULL
+                     THEN @nl + N'- Faltan las selecciones del partido.'
+                 WHEN fecha IS NOT NULL AND numero_partido IS NULL
+                     THEN @nl + N'- No hay un partido entre ' + local_txt + N' y ' + visitante_txt + N' el '
+                              + CONVERT(NVARCHAR(10), fecha, 103) + N'.'
+            END), N'');
+
+    /* 4. Los SP de la Entrega 5 cargan los árbitros y, con ellos, las designaciones; después se
+          registran la importación y sus rechazados. Todo en una transacción. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        EXEC Arbitraje.usp_ImportarArbitros;
+
+        -- Cada fila con su árbitro, o con los motivos por los que se rechazó.
+        UPDATE st
+        SET id_arbitro = a.id_arbitro,
+            errores    = NULLIF(CONCAT(st.errores,
+                             IIF(sa.accion = 'RECHAZADO', @nl + N'- El árbitro se rechazó:' + REPLACE(sa.errores, @nl + N'- ', @nl + N'  - '), NULL)), N'')
+        FROM #staging_designaciones AS st
+        INNER JOIN #staging_arbitros AS sa
+                ON EXISTS (SELECT st.pais_txt, st.nombre, st.apellido INTERSECT SELECT sa.codigo_fifa, sa.nombre, sa.apellido)
+        LEFT JOIN DatosGenerales.PAIS AS pa ON pa.codigo_fifa = sa.codigo_fifa
+        LEFT JOIN Arbitraje.ARBITRO AS a ON a.id_pais = pa.id_pais AND a.apellido = sa.apellido AND a.nombre = sa.nombre
+                                        AND sa.accion <> 'RECHAZADO';
+
+        UPDATE #staging_designaciones SET accion = 'RECHAZADO' WHERE errores IS NOT NULL;
+
+        EXEC Arbitraje.usp_ImportarDesignaciones;
+
+        SELECT @leidos       = COUNT(*),
+               @insertados   = ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+               @actualizados = ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
+               @sin_cambios  = ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
+               @rechazados   = ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
+        FROM #staging_designaciones;
+
+        EXEC DatosGenerales.usp_RegistrarImportacion
+            @proceso = @proceso, @origen = @ruta_archivo, @leidos = @leidos, @insertados = @insertados,
+            @actualizados = @actualizados, @sin_cambios = @sin_cambios, @rechazados = @rechazados,
+            @id_importacion = @id_importacion OUTPUT;
+
+        INSERT INTO Arbitraje.ERRORES_DESIGNACION (id_importacion, registro, fecha, local, visitante, rol, nombre, apellido,
+                                                   pais, motivos)
+        SELECT @id_importacion, id_registro, fecha_txt, local_txt, visitante_txt, rol_txt, nombre, apellido, pais_txt,
+               STUFF(errores, 1, 2, N'')
+        FROM #staging_designaciones
+        WHERE accion = 'RECHAZADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+
+    /* 5. Resultado. */
+    SELECT @id_importacion AS id_importacion, N'Designaciones' AS registros, @leidos AS leidos, @insertados AS insertados,
+           @actualizados AS actualizados, @sin_cambios AS sin_cambios, @rechazados AS rechazados
+    UNION ALL
+    SELECT @id_importacion, N'Árbitros', COUNT(*),
+           ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+           ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
+           ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
+           ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
+    FROM #staging_arbitros;
+
+    SELECT CONCAT(N'Línea ', registro, N': ', ISNULL(fecha, N'(sin fecha)'), N' ', ISNULL(local, N'?'), N' - ',
+                  ISNULL(visitante, N'?'), N', ', ISNULL(rol, N'(sin rol)'), N': ', ISNULL(nombre, N''), N' ',
+                  ISNULL(apellido, N''), N' (', ISNULL(pais, N'?'), N')') AS rechazado,
+           motivos
+    FROM Arbitraje.ERRORES_DESIGNACION
+    WHERE id_importacion = @id_importacion
+    ORDER BY registro;
+
+    -- Partidos del archivo a los que les falta alguno de los cinco roles que pide la consigna.
+    SELECT p.numero_partido, f.seleccion_local, f.seleccion_visitante,
+           STRING_AGG(r.rol, ', ') WITHIN GROUP (ORDER BY r.orden) AS roles_sin_designar
+    FROM Torneo.PARTIDO AS p
+    INNER JOIN Torneo.vw_Fixture AS f ON f.id_partido = p.id_partido
+    CROSS JOIN (VALUES (1, 'PRINCIPAL'), (2, 'ASISTENTE_1'), (3, 'ASISTENTE_2'), (4, 'CUARTO'), (5, 'VAR')) AS r (orden, rol)
+    WHERE p.numero_partido IN (SELECT numero_partido FROM #staging_designaciones)
+      AND NOT EXISTS (SELECT 1 FROM Arbitraje.DESIGNACION_ARBITRAL AS d WHERE d.id_partido = p.id_partido AND d.rol = r.rol)
+    GROUP BY p.numero_partido, f.seleccion_local, f.seleccion_visitante
+    ORDER BY p.numero_partido;
+END;
+GO
+
+
 -- Evidencia: objetos de la importación del Mundial 2026 creados.
 SELECT s.name AS esquema, o.name AS objeto, o.type_desc AS tipo
 FROM sys.objects AS o
 INNER JOIN sys.schemas AS s ON s.schema_id = o.schema_id
 WHERE o.name IN (N'usp_LeerArchivoUTF8', N'fn_ClaveNombre', N'fn_CoordenadaDecimal', N'usp_IdentificarJugadores',
-                 N'usp_ImportarSedesJSON', N'usp_ImportarSeleccionesJSON', N'usp_ImportarPartidosJSON')
+                 N'usp_ImportarSedesJSON', N'usp_ImportarSeleccionesJSON', N'usp_ImportarPartidosJSON',
+                 N'usp_ImportarDesignacionesCSV')
 ORDER BY o.type_desc, o.name;
 GO

@@ -19,7 +19,7 @@
                 años (incluye las revisiones que haya publicado el Banco
                 Mundial después de descargar el archivo).
            Requiere haber ejecutado 00 a 20, 22 y 25. Va antes de
-           31_DatosDePrueba.sql, que usa este PBI para asignar la
+           32_DatosComplementarios.sql, que usa este PBI para asignar la
            publicidad. Se puede ejecutar más de una vez: lo que ya está
            cargado queda SIN CAMBIOS.
 ================================================================================

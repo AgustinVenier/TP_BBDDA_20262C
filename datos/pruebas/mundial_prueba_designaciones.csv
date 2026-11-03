@@ -1,0 +1,14 @@
+fecha,local,visitante,rol,nombre,apellido,pais
+2026-08-01,ZZA,ZZB,Referee,Árbitro,Prueba Uno,ZZC
+2026-08-01,ZZA,ZZB,Assistant referee 1,Árbitro,Prueba Dos,ZZC
+2026-08-01,ZZA,ZZB,Assistant referee 2,Árbitro,Prueba Tres,ZZC
+2026-08-01,ZZA,ZZB,Fourth official,Árbitro,Prueba Cuatro,ZZC
+2026-08-01,ZZA,ZZB,Video assistant referee,Árbitro,Prueba Cinco,ZZC
+2026-08-01,ZZA,ZZB,Assistant video assistant referee,Árbitro,Prueba Conflicto,ZZA
+2026-08-05,ZZA,ZZB,Referee,Árbitro,Prueba Uno,ZZC
+2026-08-05,ZZB,ZZA,Referee,Árbitro,Prueba Dos,ZZC
+2026-08-03,ZZA,ZZB,Referee,Árbitro,Prueba Uno,ZZC
+2026-13-01,ZZA,ZZB,Referee,Árbitro,Prueba Uno,ZZC
+2026-08-01,ZZA,ZZB,Support video assistant referee,Árbitro,Prueba Seis,QQQ
+2026-08-01,ZZA,ZZB,Linesman,Árbitro,Prueba Siete,ZZC
+2026-08-01,ZZA,ZZB,Reserve assistant referee,"Árbitro, Jr.",Prueba Ocho,ZZC

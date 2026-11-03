@@ -26,8 +26,9 @@
      distintos, por doble amarilla o por roja directa; las amarillas sueltas
      se anulan al terminar la fase de grupos y al terminar los cuartos de
      final, como en el reglamento del Mundial 2026 (en el de 2022 solo se
-     anulaban después de cuartos: LIMPIEZA_AMARILLAS_TRAS_GRUPOS en 0); listas de 23 a 26 jugadores con al menos
-     3 arqueros; grupos de 4 selecciones; prime time de 19 a 23 hs; el PBI
+     anulaban después de cuartos: LIMPIEZA_AMARILLAS_TRAS_GRUPOS en 0);
+     listas de 23 a 26 jugadores con al menos 3 arqueros; grupos de 4
+     selecciones; prime time de 19 a 23 hs; el PBI
      per cápita se compara por franjas de 10.000 USD. Se pueden cambiar con
      usp_PARAMETRO_REGLAMENTO_Modificacion sin tocar código.
    - Países: no es la lista de clasificados (las selecciones se cargan en el
@@ -141,7 +142,6 @@ VALUES
     ('Persa',      'fa'),
     ('Croata',     'hr'),
     ('Noruego',    'no'),
-    -- Idiomas de los árbitros del Mundial 2026 que no están en la lista de arriba
     ('Polaco',     'pl'),
     ('Rumano',     'ro'),
     ('Esloveno',   'sl'),
@@ -263,19 +263,20 @@ VALUES
     ('República Democrática del Congo', 'COD', 'CD', 'COD', 'W. Central Africa Standard Time', 'CDF'),
     ('Curazao',                'CUW', 'CW', 'CUW', 'SA Western Standard Time',        'XCG'),
     -- Países de los árbitros y directores técnicos del Mundial 2026 que no están en las listas de arriba
-    ('Angola',                 'ANG', 'AO', 'AGO', 'W. Central Africa Standard Time', 'AOA'),
-    ('Camerún',                'CMR', 'CM', 'CMR', 'W. Central Africa Standard Time', 'XAF'),
+    ('Venezuela',              'VEN', 'VE', 'VEN', 'Venezuela Standard Time',         'VES'),
     ('Eslovenia',              'SVN', 'SI', 'SVN', 'Central Europe Standard Time',    'EUR'),
-    ('El Salvador',            'SLV', 'SV', 'SLV', 'Central America Standard Time',   'USD'),
-    ('Gabón',                  'GAB', 'GA', 'GAB', 'W. Central Africa Standard Time', 'XAF'),
-    ('Grecia',                 'GRE', 'GR', 'GRC', 'GTB Standard Time',               'EUR'),
-    ('Honduras',               'HON', 'HN', 'HND', 'Central America Standard Time',   'HNL'),
-    ('Jamaica',                'JAM', 'JM', 'JAM', 'SA Pacific Standard Time',        'JMD'),
-    ('Mauritania',             'MTN', 'MR', 'MRT', 'Greenwich Standard Time',         'MRU'),
-    ('Nicaragua',              'NCA', 'NI', 'NIC', 'Central America Standard Time',   'NIO'),
     ('Polonia',                'POL', 'PL', 'POL', 'Central European Standard Time',  'PLN'),
     ('Rumania',                'ROU', 'RO', 'ROU', 'GTB Standard Time',               'RON'),
-    ('Venezuela',              'VEN', 'VE', 'VEN', 'Venezuela Standard Time',         'VES');
+    ('Honduras',               'HON', 'HN', 'HND', 'Central America Standard Time',   'HNL'),
+    ('El Salvador',            'SLV', 'SV', 'SLV', 'Central America Standard Time',   'USD'),
+    ('Nicaragua',              'NCA', 'NI', 'NIC', 'Central America Standard Time',   'NIO'),
+    ('Jamaica',                'JAM', 'JM', 'JAM', 'SA Pacific Standard Time',        'JMD'),
+    ('Trinidad y Tobago',      'TRI', 'TT', 'TTO', 'SA Western Standard Time',        'TTD'),
+    ('Gabón',                  'GAB', 'GA', 'GAB', 'W. Central Africa Standard Time', 'XAF'),
+    ('Camerún',                'CMR', 'CM', 'CMR', 'W. Central Africa Standard Time', 'XAF'),
+    ('Angola',                 'ANG', 'AO', 'AGO', 'W. Central Africa Standard Time', 'AOA'),
+    ('Mauritania',             'MTN', 'MR', 'MRT', 'Greenwich Standard Time',         'MRU'),
+    ('Grecia',                 'GRE', 'GR', 'GRC', 'GTB Standard Time',               'EUR');
 
 DECLARE @i INT = 1, @total INT = (SELECT COUNT(*) FROM @paises);
 DECLARE @cargados INT = 0, @existentes INT = 0, @rechazados INT = 0;
