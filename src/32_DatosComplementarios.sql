@@ -46,7 +46,11 @@
       las listas (1 de junio) y el primer partido de cada selección. Lo
       inventado es el dorsal y la posición del que sale, que la fuente no
       publica: se toman del reemplazante, que hereda su dorsal.
-   7. El informe post-partido del árbitro principal de cada partido, que
+   7. El banco de suplentes completo de cada formación: el archivo de
+      partidos trae solo a los suplentes que entraron. Se agregan los demás
+      convocados que estaban en la lista el día del partido, salvo los
+      suspendidos para ese partido.
+   8. El informe post-partido del árbitro principal de cada partido, que
       resume la disciplina real del partido (amarillas y expulsiones, por
       dorsal y selección), y dos sanciones ficticias basadas en hechos del
       torneo: la terna del partido de la expulsión de Balogun, que la FIFA
@@ -64,7 +68,7 @@
    - Cambio por lesión en los primeros 20 minutos: los de la parte 5.
    - Partido en prime time en más de cuatro mercados candidatos, en el que
      la asignación elige solo cuatro piezas: los de la parte 4.
-   - Designación descartada por conflicto de nacionalidad: la parte 8 la
+   - Designación descartada por conflicto de nacionalidad: la parte 9 la
      intenta, dentro de una transacción que se deshace.
 */
 
@@ -486,7 +490,79 @@ GO
 
 
 /* ============================================================================
-   7. INFORMES POST-PARTIDO Y SANCIONES DE LOS ÁRBITROS
+   7. BANCOS DE SUPLENTES COMPLETOS
+   El archivo de partidos trae en el banco solo a los suplentes que entraron.
+   Se agregan los demás convocados de cada selección que estaban en la lista
+   el día del partido (dados de alta y no dados de baja) y no estaban
+   suspendidos para ese partido (fn_JugadoresSuspendidos), con el SP de
+   eventos de la Entrega 5, que completa una formación ya cargada.
+   ============================================================================ */
+CREATE TABLE #staging_eventos (
+    id_evento           INT           PRIMARY KEY,
+    tipo                VARCHAR(12)   COLLATE DATABASE_DEFAULT NOT NULL,
+    numero_partido      TINYINT       NOT NULL,
+    codigo_fifa         VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    id_jugador          INT           NULL,
+    id_jugador_entra    INT           NULL,
+    es_titular          BIT           NULL,
+    posicion_en_cancha  VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
+    minuto              TINYINT       NULL,
+    minuto_adicional    TINYINT       NULL,
+    en_entretiempo      BIT           NULL,
+    motivo              VARCHAR(200)  COLLATE DATABASE_DEFAULT NULL,
+    periodo             VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL,
+    tipo_gol            VARCHAR(40)   COLLATE DATABASE_DEFAULT NULL,
+    tipo_tarjeta        VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    es_doble_amarilla   BIT           NULL,
+    errores             NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+    accion              VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+);
+
+INSERT INTO #staging_eventos (id_evento, tipo, numero_partido, id_jugador, es_titular)
+SELECT ROW_NUMBER() OVER (ORDER BY p.numero_partido, f.id_seleccion, j.dorsal), 'FORMACION', p.numero_partido,
+       j.id_jugador, 0
+FROM DesarrolloPartido.FORMACION AS f
+INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = f.id_partido
+INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_seleccion = f.id_seleccion
+INNER JOIN Torneo.JUGADOR AS j ON j.id_lista = l.id_lista
+WHERE j.fecha_alta <= CAST(p.fecha_hora_local AS DATE)
+  AND (j.fecha_baja IS NULL OR j.fecha_baja > CAST(p.fecha_hora_local AS DATE))
+  AND NOT EXISTS (SELECT 1 FROM DesarrolloPartido.ALINEACION AS a
+                  WHERE a.id_formacion = f.id_formacion AND a.id_jugador = j.id_jugador)
+  AND NOT EXISTS (SELECT 1 FROM DesarrolloPartido.fn_JugadoresSuspendidos(p.id_partido) AS su
+                  WHERE su.id_jugador = j.id_jugador);
+
+BEGIN TRY
+    BEGIN TRANSACTION;
+    EXEC DesarrolloPartido.usp_ImportarDesarrolloPartidos;
+
+    IF EXISTS (SELECT 1 FROM #staging_eventos WHERE accion = 'RECHAZADO')
+    BEGIN
+        SELECT numero_partido, id_jugador, STUFF(errores, 1, 2, N'') AS motivos
+        FROM #staging_eventos WHERE accion = 'RECHAZADO' ORDER BY id_evento;
+        ROLLBACK TRANSACTION;
+        PRINT N'Bancos de suplentes: hay jugadores rechazados (ver la grilla); no se agregó ninguno.';
+        SET NOEXEC ON;
+    END
+    ELSE
+    BEGIN
+        COMMIT TRANSACTION;
+        DECLARE @suplentes INT = (SELECT COUNT(*) FROM #staging_eventos WHERE accion = 'INSERTADO');
+        PRINT CONCAT(N'Bancos de suplentes: ', @suplentes, N' suplentes agregados a las formaciones.');
+    END;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+    PRINT N'Error al completar los bancos de suplentes: ' + ERROR_MESSAGE();
+    SET NOEXEC ON;
+END CATCH;
+
+DROP TABLE #staging_eventos;
+GO
+
+
+/* ============================================================================
+   8. INFORMES POST-PARTIDO Y SANCIONES DE LOS ÁRBITROS
    El informe del principal: resultado y disciplina del partido (los
    jugadores por dorsal y selección: el informe es VARCHAR). Las sanciones:
    el principal y el VAR del partido de la expulsión de Balogun (USA-BIH,
@@ -582,7 +658,7 @@ GO
 
 
 /* ============================================================================
-   8. DESIGNACIÓN DESCARTADA POR CONFLICTO DE NACIONALIDAD
+   9. DESIGNACIÓN DESCARTADA POR CONFLICTO DE NACIONALIDAD
    Un árbitro del país de una de las selecciones, como cuarto árbitro del
    primer partido de esa selección. La regla está en el SP de la Entrega 5
    (y en usp_DesignarTernaArbitral y usp_DESIGNACION_ARBITRAL_Alta). Se
@@ -633,7 +709,7 @@ GO
 
 
 /* ============================================================================
-   9. RESUMEN Y CASOS OBLIGATORIOS
+   10. RESUMEN Y CASOS OBLIGATORIOS
    ============================================================================ */
 SELECT s.name + N'.' + t.name AS tabla, SUM(p.rows) AS filas
 FROM sys.tables AS t
@@ -708,6 +784,14 @@ WHERE m.en_prime_time = 1
 GROUP BY p.id_partido, p.numero_partido, p.fecha_hora_utc
 HAVING COUNT(*) > 4
 ORDER BY p.numero_partido;
+
+-- Formaciones: cada una con 11 titulares y el banco completo.
+SELECT COUNT(*) AS formaciones, MIN(t.titulares) AS min_titulares, MAX(t.titulares) AS max_titulares,
+       MIN(t.suplentes) AS min_suplentes, MAX(t.suplentes) AS max_suplentes
+FROM (SELECT f.id_formacion, SUM(IIF(a.es_titular = 1, 1, 0)) AS titulares, SUM(IIF(a.es_titular = 0, 1, 0)) AS suplentes
+      FROM DesarrolloPartido.FORMACION AS f
+      INNER JOIN DesarrolloPartido.ALINEACION AS a ON a.id_formacion = f.id_formacion
+      GROUP BY f.id_formacion) AS t;
 
 -- Reemplazos de último momento: el que sale (dado de baja) y el que entra, con el mismo dorsal.
 SELECT pa.nombre AS seleccion, b.nombre + N' ' + b.apellido AS sale, b.fecha_baja, b.motivo_baja,

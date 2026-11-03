@@ -244,6 +244,12 @@
           <AssociatedConnUserName />
           <FullPath>33_Entrega7_Reportes.sql</FullPath>
         </FileNode>
+        <FileNode Name="34_SedesAdicionales.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>34_SedesAdicionales.sql</FullPath>
+        </FileNode>
         <FileNode Name="53_Test_FuncionesYVistas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
