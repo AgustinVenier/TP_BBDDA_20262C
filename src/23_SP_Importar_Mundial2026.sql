@@ -81,15 +81,19 @@
      habitual; el esquema táctico sale de esas posiciones (ej. 4-3-3).
    - Minutos: 45+2 es el 45 con 2 de adicional. Un minuto después del 120 es
      adicional del alargue (121 es 120+1).
-   - Cambios: el archivo no dice el motivo: se registran como TACTICO. Un
-     cambio en el minuto 46, 91 o 106 se hizo en el entretiempo.
+   - Cambios: el archivo no dice el motivo: uno nuevo se registra como
+     TACTICO y uno ya cargado conserva el suyo. Un cambio en el minuto 46, 91
+     o 106 se hizo en el entretiempo.
    - Goles: los de penal son de tipo PENAL, los en contra EN CONTRA y el resto
      JUGADA.
    - Penales de la definición: se cargan los convertidos, como goles del
      período PENALES. El equipo de cada uno sale de cómo cambia el marcador.
    - Tarjetas: Y es amarilla, R roja directa y Y/R la segunda amarilla, que
      se registra como amarilla y además como roja por doble amarilla. El
-     archivo no tiene el motivo: se registra "Sin detalle en la fuente".
+     archivo no tiene el motivo: una nueva se registra con "Sin detalle en la
+     fuente" y una ya cargada conserva el suyo.
+   - Si el archivo corrige un evento ya cargado (el minuto de un gol, por
+     ejemplo), se actualiza: ver usp_ImportarDesarrolloPartidos.
 
  Transformaciones del CSV del equipo arbitral:
    - Partido: el de esa fecha (hora local de la sede) entre esas dos
@@ -1089,10 +1093,10 @@ BEGIN
         CROSS APPLY OPENJSON(l.value, N'$.bench') AS j
         WHERE st.accion <> 'RECHAZADO' AND l.[key] IN (N'0', N'1');
 
-        -- Cambios: el archivo no dice el motivo.
-        INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, nombre_entra_txt, minuto_txt, motivo)
+        -- Cambios: el archivo no dice el motivo (queda vacío).
+        INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, nombre_entra_txt, minuto_txt)
         SELECT 'CAMBIO', st.id_registro, st.numero_partido, CAST(l.[key] AS INT) + 1, CAST(c.[key] AS INT) + 1,
-               NULLIF(TRIM(d.sale), N''), NULLIF(TRIM(d.entra), N''), NULLIF(TRIM(d.minuto), N''), 'TACTICO'
+               NULLIF(TRIM(d.sale), N''), NULLIF(TRIM(d.entra), N''), NULLIF(TRIM(d.minuto), N'')
         FROM #staging_partidos AS st
         CROSS APPLY OPENJSON(st.detalle, N'$.lineup') AS l
         CROSS APPLY OPENJSON(l.value, N'$.subs') AS c
@@ -1128,11 +1132,11 @@ BEGIN
         FROM penales;
 
         -- Tarjetas: bookings[0] son las de team1. Y/R se registra como amarilla y como roja por doble
-        -- amarilla. El archivo no tiene el motivo.
+        -- amarilla. El archivo no tiene el motivo (queda vacío).
         INSERT INTO #staging_eventos (tipo, id_registro, numero_partido, lado, orden, nombre_txt, minuto_txt, tipo_txt,
-                                      tipo_tarjeta, es_doble_amarilla, motivo)
+                                      tipo_tarjeta, es_doble_amarilla)
         SELECT 'TARJETA', st.id_registro, st.numero_partido, CAST(b.[key] AS INT) + 1, CAST(t.[key] AS INT) + 1,
-               NULLIF(TRIM(d.nombre), N''), NULLIF(TRIM(d.minuto), N''), d.tipo, c.tarjeta, c.doble, 'Sin detalle en la fuente'
+               NULLIF(TRIM(d.nombre), N''), NULLIF(TRIM(d.minuto), N''), d.tipo, c.tarjeta, c.doble
         FROM #staging_partidos AS st
         CROSS APPLY OPENJSON(st.detalle, N'$.bookings') AS b
         CROSS APPLY OPENJSON(b.value) AS t
@@ -1272,7 +1276,8 @@ BEGIN
     FROM #staging_partidos
     UNION ALL
     SELECT @id_importacion, N'Formaciones, cambios, goles, penales y tarjetas', COUNT(*),
-           ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0), 0,
+           ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+           ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
            ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
            ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
     FROM #staging_eventos;

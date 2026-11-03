@@ -1402,7 +1402,7 @@ GO
 
 /*
   usp_ImportarDesarrolloPartidos
-  Carga lo que pasó en partidos ya cargados (por número de partido), desde
+  Upsert de lo que pasó en partidos ya cargados (por número de partido), desde
   #staging_eventos, con un evento por fila según su tipo:
     FORMACION  un jugador de la formación de su selección (es_titular y, si
                es titular, posicion_en_cancha)
@@ -1421,14 +1421,29 @@ GO
   Es una carga histórica: no repite las reglas de los SP que registran el
   partido en vivo (equipo en cancha en ese minuto, ventanas de cambio,
   suspensiones), sino las de las tablas.
+  Cada evento se busca entre los ya cargados del partido. De uno cargado se
+  actualiza lo que dejan cambiar los SP de modificación de la Entrega 5; lo
+  que lo identifica no cambia, y si cambia, es otro evento:
+    FORMACION  lo identifica el jugador; se actualiza si es titular y su
+               posición
+    CAMBIO     los dos jugadores; se actualizan el minuto, el adicional, si
+               fue en el entretiempo y el motivo
+    GOL/PENAL  el autor, si es de la definición y si es en contra; se
+               actualizan el tipo, el período y el minuto
+    TARJETA    el jugador, el tipo y si es por doble amarilla; se actualizan
+               el minuto y el motivo
+  Primero se emparejan los iguales y después, en orden de minuto, los que
+  quedan con lo mismo que los identifica, si quedan tantos de un lado como
+  del otro: si el archivo corrige un gol del minuto 67 al 68, el gol se
+  actualiza y no se repite. Los demás son nuevos. Lo cargado que no viene no
+  se borra.
   - La formación de cada selección se arma con sus jugadores del conjunto. El
-    esquema táctico sale de las posiciones habituales de los titulares
-    (defensores, mediocampistas y delanteros, ej. 4-3-3). Una formación ya
-    cargada se completa con los jugadores que le falten: no se le quita ni
-    se le cambia ninguno.
-  - Los cambios, goles y tarjetas que ya están cargados no se repiten (mismo
-    partido, jugadores, tipo, período y minuto) y los cargados que no vienen
-    no se borran.
+    esquema táctico de una formación nueva sale de las posiciones habituales
+    de los titulares (defensores, mediocampistas y delanteros, ej. 4-3-3); el
+    de una ya cargada no se cambia.
+  - El motivo de un cambio o una tarjeta puede no venir (NULL): uno nuevo se
+    registra como TACTICO o "Sin detalle en la fuente", y uno cargado
+    conserva el suyo.
   Valida cada evento pendiente: tipo válido; partido existente; jugadores
   existentes y de una de las dos selecciones del partido; en la formación,
   si es titular y la posición de los titulares; en los cambios, jugadores
@@ -1437,11 +1452,15 @@ GO
   LESION o PRECAUCION; tipos de gol existentes y minuto de acuerdo con el
   período; tarjetas AMARILLA o ROJA (la doble amarilla, solo roja), minuto
   entre 0 y 120 con hasta 30 de adicional y motivo de hasta 200
-  caracteres. Y entre los eventos: un jugador una sola vez en la formación;
-  cada formación con 11 titulares (los ya cargados más los nuevos), o se
-  rechazan todos los jugadores de esa formación; los jugadores de cambios,
-  goles y tarjetas, en la formación del partido (la cargada o la válida del
-  conjunto); cada jugador sale y entra una sola vez por partido.
+  caracteres. Y con los válidos, cada partido como quedaría: un jugador una
+  sola vez en la formación; cada formación con 11 titulares (los del
+  conjunto más los cargados que no vienen), o se rechazan todos los
+  jugadores de esa formación; los jugadores de cambios, goles y tarjetas,
+  en la formación del partido (la cargada o la válida del conjunto); cada
+  jugador sale y entra una sola vez por partido; y ninguna selección con más
+  goles que su resultado, ni con más penales convertidos que los de su
+  definición: si pasa, se rechazan sus goles nuevos (un gol que el archivo
+  le atribuye a otro jugador es otro gol, y el cargado no se borra).
 */
 CREATE OR ALTER PROCEDURE DesarrolloPartido.usp_ImportarDesarrolloPartidos
 AS
@@ -1462,8 +1481,10 @@ BEGIN
         entra_de_un_equipo  BIT,
         posicion_habitual   VARCHAR(15),
         id_tipo_gol         TINYINT,
+        es_en_contra        BIT,
         formacion_existe    BIT,
-        ya_alineado         BIT
+        ya_alineado         BIT,
+        id_cargado          INT        -- el cambio, gol o tarjeta ya cargado que es este mismo evento
     );
 
     IF OBJECT_ID(N'tempdb..#staging_eventos') IS NULL
@@ -1480,11 +1501,11 @@ BEGIN
     WHERE accion IS NULL;
 
     INSERT INTO @eventos (id_evento, id_partido, id_seleccion, de_un_equipo, id_seleccion_entra, entra_de_un_equipo,
-                          posicion_habitual, id_tipo_gol)
+                          posicion_habitual, id_tipo_gol, es_en_contra)
     SELECT e.id_evento, p.id_partido,
            lc.id_seleccion, IIF(lc.id_seleccion IN (p.id_seleccion_local, p.id_seleccion_visitante), 1, 0),
            lce.id_seleccion, IIF(lce.id_seleccion IN (p.id_seleccion_local, p.id_seleccion_visitante), 1, 0),
-           j.posicion_habitual, tg.id_tipo_gol
+           j.posicion_habitual, tg.id_tipo_gol, tg.es_en_contra
     FROM #staging_eventos AS e
     LEFT JOIN Torneo.PARTIDO AS p ON p.numero_partido = e.numero_partido
     LEFT JOIN Torneo.JUGADOR AS j ON j.id_jugador = e.id_jugador
@@ -1533,7 +1554,7 @@ BEGIN
                 @nl + N'- El minuto de un cambio va del 1 al 120, con hasta 30 de adicional.', NULL),
             IIF(e.tipo = 'CAMBIO' AND e.en_entretiempo = 1 AND (e.minuto NOT IN (46, 91, 106) OR ISNULL(e.minuto_adicional, 0) <> 0),
                 @nl + N'- Un cambio en el entretiempo va en el minuto 46, 91 o 106.', NULL),
-            IIF(e.tipo = 'CAMBIO' AND (e.motivo IS NULL OR e.motivo NOT IN ('TACTICO', 'LESION', 'PRECAUCION')),
+            IIF(e.tipo = 'CAMBIO' AND e.motivo NOT IN ('TACTICO', 'LESION', 'PRECAUCION'),
                 @nl + N'- El motivo de un cambio es TACTICO, LESION o PRECAUCION.', NULL),
             -- Goles y penales
             IIF(e.tipo IN ('GOL', 'PENAL') AND ev.id_tipo_gol IS NULL,
@@ -1557,8 +1578,8 @@ BEGIN
             END,
             IIF(e.tipo = 'TARJETA' AND (e.minuto IS NULL OR e.minuto > 120 OR ISNULL(e.minuto_adicional, 0) > 30),
                 @nl + N'- El minuto de una tarjeta va del 0 al 120, con hasta 30 de adicional.', NULL),
-            IIF(e.tipo = 'TARJETA' AND (e.motivo IS NULL OR LEN(e.motivo) > 200),
-                @nl + N'- El motivo de la tarjeta es obligatorio y de hasta 200 caracteres.', NULL)), N'')
+            IIF(e.tipo = 'TARJETA' AND LEN(e.motivo) > 200,
+                @nl + N'- El motivo de la tarjeta no puede superar los 200 caracteres.', NULL)), N'')
     FROM #staging_eventos AS e
     INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento;
 
@@ -1571,18 +1592,26 @@ BEGIN
                   WHERE o.tipo = 'FORMACION' AND o.numero_partido = e.numero_partido
                     AND o.id_jugador = e.id_jugador AND o.id_evento <> e.id_evento);
 
-    -- Cada formación tiene que quedar con 11 titulares: los ya cargados más los nuevos válidos.
-    WITH formaciones AS (
-        SELECT ev.id_partido, ev.id_seleccion,
-               SUM(IIF(e.es_titular = 1 AND e.errores IS NULL AND ev.ya_alineado = 0, 1, 0)) + MAX(c.titulares) AS titulares
+    -- Cada formación tiene que quedar con 11 titulares: los válidos del conjunto, como vienen, y los cargados
+    -- que no vienen, como están.
+    WITH conjunto AS (
+        SELECT ev.id_partido, ev.id_seleccion, e.id_jugador, e.es_titular, e.errores
         FROM #staging_eventos AS e
         INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
-        CROSS APPLY (SELECT COUNT(*) AS titulares
-                     FROM DesarrolloPartido.ALINEACION AS al
-                     INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = al.id_formacion
-                     WHERE f.id_partido = ev.id_partido AND f.id_seleccion = ev.id_seleccion AND al.es_titular = 1) AS c
         WHERE e.tipo = 'FORMACION' AND ev.id_partido IS NOT NULL AND ev.id_seleccion IS NOT NULL
-        GROUP BY ev.id_partido, ev.id_seleccion
+    ),
+    formaciones AS (
+        SELECT f.id_partido, f.id_seleccion,
+               SUM(IIF(f.es_titular = 1 AND f.errores IS NULL, 1, 0))
+             + (SELECT COUNT(*)
+                FROM DesarrolloPartido.ALINEACION AS al
+                INNER JOIN DesarrolloPartido.FORMACION AS fo ON fo.id_formacion = al.id_formacion
+                WHERE fo.id_partido = f.id_partido AND fo.id_seleccion = f.id_seleccion AND al.es_titular = 1
+                  AND NOT EXISTS (SELECT 1 FROM conjunto AS c
+                                  WHERE c.id_partido = f.id_partido AND c.id_jugador = al.id_jugador AND c.errores IS NULL))
+                   AS titulares
+        FROM conjunto AS f
+        GROUP BY f.id_partido, f.id_seleccion
     )
     UPDATE e
     SET errores = CONCAT(e.errores, @nl, N'- La formación de la selección quedaría con ', f.titulares,
@@ -1630,40 +1659,236 @@ BEGIN
         HAVING COUNT(*) > 1
     )
     UPDATE e
-    SET errores = CONCAT(e.errores, @nl, N'- Un jugador de este cambio sale o entra más de una vez en el partido.')
+    SET errores = CONCAT(e.errores, @nl, N'- Un jugador de este cambio sale o entra más de una vez en el partido (un cambio '
+                         + N'cargado no cambia de jugadores: si el archivo lo corrige, el cargado se da de baja con usp_CAMBIO_Baja).')
     FROM #staging_eventos AS e
     WHERE e.tipo = 'CAMBIO' AND e.accion IS NULL AND e.errores IS NULL
       AND EXISTS (SELECT 1 FROM repetidos AS r
                   WHERE r.numero_partido = e.numero_partido
                     AND ((r.tipo = 'S' AND r.id_jugador = e.id_jugador) OR (r.tipo = 'E' AND r.id_jugador = e.id_jugador_entra)));
 
+    /* 3. Cada evento válido con el ya cargado que es el mismo: un cambio, el de sus dos jugadores; un gol, uno
+          de su autor, de la definición o no y en contra o no; una tarjeta, una de su jugador, de su tipo y por
+          doble amarilla o no. De los goles y las tarjetas se emparejan primero los iguales y después, en orden
+          de minuto, los que quedan sin pareja, si quedan tantos de un lado como del otro (si no, no se sabe
+          cuál corrige a cuál y los del conjunto son nuevos). El jugador de una formación ya alineado es el
+          mismo (ya_alineado). */
+    UPDATE ev
+    SET id_cargado = ca.id_cambio
+    FROM @eventos AS ev
+    INNER JOIN #staging_eventos AS e ON e.id_evento = ev.id_evento
+    INNER JOIN DesarrolloPartido.CAMBIO AS ca ON ca.id_partido = ev.id_partido
+                                             AND ca.id_jugador_sale = e.id_jugador
+                                             AND ca.id_jugador_entra = e.id_jugador_entra
+    WHERE e.tipo = 'CAMBIO' AND e.accion IS NULL AND e.errores IS NULL;
+
+    -- Goles iguales (copia numera los que se repiten igual, para emparejarlos de a uno).
+    WITH conjunto AS (
+        SELECT ev.id_evento, ev.id_partido, e.id_jugador, ev.id_tipo_gol, e.periodo, ISNULL(e.minuto, 255) AS minuto,
+               ISNULL(e.minuto_adicional, 0) AS minuto_adicional,
+               ROW_NUMBER() OVER (PARTITION BY ev.id_partido, e.id_jugador, ev.id_tipo_gol, e.periodo, e.minuto,
+                                               ISNULL(e.minuto_adicional, 0)
+                                  ORDER BY e.id_evento) AS copia
+        FROM #staging_eventos AS e
+        INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
+        WHERE e.tipo IN ('GOL', 'PENAL') AND e.accion IS NULL AND e.errores IS NULL
+    ),
+    cargados AS (
+        SELECT g.id_gol, g.id_partido, g.id_jugador_autor, g.id_tipo_gol, g.periodo, ISNULL(g.minuto, 255) AS minuto,
+               g.minuto_adicional,
+               ROW_NUMBER() OVER (PARTITION BY g.id_partido, g.id_jugador_autor, g.id_tipo_gol, g.periodo, g.minuto,
+                                               g.minuto_adicional
+                                  ORDER BY g.id_gol) AS copia
+        FROM DesarrolloPartido.GOL AS g
+        WHERE g.id_partido IN (SELECT id_partido FROM conjunto)
+    )
+    UPDATE ev
+    SET id_cargado = ca.id_gol
+    FROM @eventos AS ev
+    INNER JOIN conjunto AS c ON c.id_evento = ev.id_evento
+    INNER JOIN cargados AS ca ON ca.id_partido = c.id_partido AND ca.id_jugador_autor = c.id_jugador
+                             AND ca.id_tipo_gol = c.id_tipo_gol AND ca.periodo = c.periodo
+                             AND ca.minuto = c.minuto AND ca.minuto_adicional = c.minuto_adicional AND ca.copia = c.copia;
+
+    -- Los goles que quedan sin pareja, en orden de minuto.
+    WITH conjunto AS (
+        SELECT ev.id_evento, ev.id_partido, e.id_jugador, ev.es_en_contra, IIF(e.periodo = 'PENALES', 1, 0) AS es_definicion,
+               ROW_NUMBER() OVER (PARTITION BY ev.id_partido, e.id_jugador, ev.es_en_contra, IIF(e.periodo = 'PENALES', 1, 0)
+                                  ORDER BY ISNULL(e.minuto, 255), ISNULL(e.minuto_adicional, 0), e.id_evento) AS orden,
+               COUNT(*) OVER (PARTITION BY ev.id_partido, e.id_jugador, ev.es_en_contra, IIF(e.periodo = 'PENALES', 1, 0))
+                   AS sin_pareja
+        FROM #staging_eventos AS e
+        INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
+        WHERE e.tipo IN ('GOL', 'PENAL') AND e.accion IS NULL AND e.errores IS NULL AND ev.id_cargado IS NULL
+    ),
+    cargados AS (
+        SELECT g.id_gol, g.id_partido, g.id_jugador_autor, tg.es_en_contra, IIF(g.periodo = 'PENALES', 1, 0) AS es_definicion,
+               ROW_NUMBER() OVER (PARTITION BY g.id_partido, g.id_jugador_autor, tg.es_en_contra, IIF(g.periodo = 'PENALES', 1, 0)
+                                  ORDER BY ISNULL(g.minuto, 255), g.minuto_adicional, g.id_gol) AS orden,
+               COUNT(*) OVER (PARTITION BY g.id_partido, g.id_jugador_autor, tg.es_en_contra, IIF(g.periodo = 'PENALES', 1, 0))
+                   AS sin_pareja
+        FROM DesarrolloPartido.GOL AS g
+        INNER JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.id_tipo_gol = g.id_tipo_gol
+        WHERE g.id_partido IN (SELECT id_partido FROM conjunto)
+          AND NOT EXISTS (SELECT 1 FROM @eventos AS x
+                          INNER JOIN #staging_eventos AS xe ON xe.id_evento = x.id_evento
+                          WHERE xe.tipo IN ('GOL', 'PENAL') AND x.id_cargado = g.id_gol)
+    )
+    UPDATE ev
+    SET id_cargado = ca.id_gol
+    FROM @eventos AS ev
+    INNER JOIN conjunto AS c ON c.id_evento = ev.id_evento
+    INNER JOIN cargados AS ca ON ca.id_partido = c.id_partido AND ca.id_jugador_autor = c.id_jugador
+                             AND ca.es_en_contra = c.es_en_contra AND ca.es_definicion = c.es_definicion
+                             AND ca.orden = c.orden AND ca.sin_pareja = c.sin_pareja;
+
+    -- Tarjetas en el mismo minuto (si cambia el motivo, se actualiza).
+    WITH conjunto AS (
+        SELECT ev.id_evento, ev.id_partido, e.id_jugador, e.tipo_tarjeta, ISNULL(e.es_doble_amarilla, 0) AS es_doble_amarilla,
+               e.minuto, ISNULL(e.minuto_adicional, 0) AS minuto_adicional,
+               ROW_NUMBER() OVER (PARTITION BY ev.id_partido, e.id_jugador, e.tipo_tarjeta, ISNULL(e.es_doble_amarilla, 0),
+                                               e.minuto, ISNULL(e.minuto_adicional, 0)
+                                  ORDER BY e.id_evento) AS copia
+        FROM #staging_eventos AS e
+        INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
+        WHERE e.tipo = 'TARJETA' AND e.accion IS NULL AND e.errores IS NULL
+    ),
+    cargadas AS (
+        SELECT am.id_amonestacion, am.id_partido, am.id_jugador, am.tipo_tarjeta, am.es_doble_amarilla, am.minuto,
+               am.minuto_adicional,
+               ROW_NUMBER() OVER (PARTITION BY am.id_partido, am.id_jugador, am.tipo_tarjeta, am.es_doble_amarilla, am.minuto,
+                                               am.minuto_adicional
+                                  ORDER BY am.id_amonestacion) AS copia
+        FROM DesarrolloPartido.AMONESTACION AS am
+        WHERE am.id_partido IN (SELECT id_partido FROM conjunto) AND am.id_jugador IS NOT NULL
+    )
+    UPDATE ev
+    SET id_cargado = ca.id_amonestacion
+    FROM @eventos AS ev
+    INNER JOIN conjunto AS c ON c.id_evento = ev.id_evento
+    INNER JOIN cargadas AS ca ON ca.id_partido = c.id_partido AND ca.id_jugador = c.id_jugador
+                             AND ca.tipo_tarjeta = c.tipo_tarjeta AND ca.es_doble_amarilla = c.es_doble_amarilla
+                             AND ca.minuto = c.minuto AND ca.minuto_adicional = c.minuto_adicional AND ca.copia = c.copia;
+
+    -- Las tarjetas que quedan sin pareja, en orden de minuto.
+    WITH conjunto AS (
+        SELECT ev.id_evento, ev.id_partido, e.id_jugador, e.tipo_tarjeta, ISNULL(e.es_doble_amarilla, 0) AS es_doble_amarilla,
+               ROW_NUMBER() OVER (PARTITION BY ev.id_partido, e.id_jugador, e.tipo_tarjeta, ISNULL(e.es_doble_amarilla, 0)
+                                  ORDER BY e.minuto, ISNULL(e.minuto_adicional, 0), e.id_evento) AS orden,
+               COUNT(*) OVER (PARTITION BY ev.id_partido, e.id_jugador, e.tipo_tarjeta, ISNULL(e.es_doble_amarilla, 0))
+                   AS sin_pareja
+        FROM #staging_eventos AS e
+        INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
+        WHERE e.tipo = 'TARJETA' AND e.accion IS NULL AND e.errores IS NULL AND ev.id_cargado IS NULL
+    ),
+    cargadas AS (
+        SELECT am.id_amonestacion, am.id_partido, am.id_jugador, am.tipo_tarjeta, am.es_doble_amarilla,
+               ROW_NUMBER() OVER (PARTITION BY am.id_partido, am.id_jugador, am.tipo_tarjeta, am.es_doble_amarilla
+                                  ORDER BY am.minuto, am.minuto_adicional, am.id_amonestacion) AS orden,
+               COUNT(*) OVER (PARTITION BY am.id_partido, am.id_jugador, am.tipo_tarjeta, am.es_doble_amarilla) AS sin_pareja
+        FROM DesarrolloPartido.AMONESTACION AS am
+        WHERE am.id_partido IN (SELECT id_partido FROM conjunto) AND am.id_jugador IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM @eventos AS x
+                          INNER JOIN #staging_eventos AS xe ON xe.id_evento = x.id_evento
+                          WHERE xe.tipo = 'TARJETA' AND x.id_cargado = am.id_amonestacion)
+    )
+    UPDATE ev
+    SET id_cargado = ca.id_amonestacion
+    FROM @eventos AS ev
+    INNER JOIN conjunto AS c ON c.id_evento = ev.id_evento
+    INNER JOIN cargadas AS ca ON ca.id_partido = c.id_partido AND ca.id_jugador = c.id_jugador
+                             AND ca.tipo_tarjeta = c.tipo_tarjeta AND ca.es_doble_amarilla = c.es_doble_amarilla
+                             AND ca.orden = c.orden AND ca.sin_pareja = c.sin_pareja;
+
+    /* 4. Los goles de cada partido como quedarían (los válidos del conjunto y los cargados sin pareja, que
+          quedan): ninguna selección con más goles que su resultado ni con más penales convertidos que los de
+          su definición. Si pasa, se rechazan sus goles nuevos: un gol que el archivo le atribuye a otro
+          jugador es otro gol, y el cargado no se borra. */
+    WITH goles AS (
+        SELECT e.id_evento, ev.id_cargado, ev.id_partido, IIF(e.periodo = 'PENALES', 1, 0) AS es_definicion,
+               IIF(ev.es_en_contra = 1, IIF(ev.id_seleccion = p.id_seleccion_local, p.id_seleccion_visitante, p.id_seleccion_local),
+                   ev.id_seleccion) AS id_seleccion_que_suma
+        FROM #staging_eventos AS e
+        INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
+        INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = ev.id_partido
+        WHERE e.tipo IN ('GOL', 'PENAL') AND e.accion IS NULL AND e.errores IS NULL
+        UNION ALL
+        SELECT NULL, g.id_gol, g.id_partido, IIF(g.periodo = 'PENALES', 1, 0),
+               IIF(tg.es_en_contra = 1, IIF(lc.id_seleccion = p.id_seleccion_local, p.id_seleccion_visitante, p.id_seleccion_local),
+                   lc.id_seleccion)
+        FROM DesarrolloPartido.GOL AS g
+        INNER JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.id_tipo_gol = g.id_tipo_gol
+        INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = g.id_jugador_autor
+        INNER JOIN Torneo.LISTA_CONVOCADOS AS lc ON lc.id_lista = j.id_lista
+        INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = g.id_partido
+        WHERE g.id_partido IN (SELECT ev.id_partido FROM @eventos AS ev
+                               INNER JOIN #staging_eventos AS e ON e.id_evento = ev.id_evento
+                               WHERE e.tipo IN ('GOL', 'PENAL'))
+          AND NOT EXISTS (SELECT 1 FROM @eventos AS x
+                          INNER JOIN #staging_eventos AS xe ON xe.id_evento = x.id_evento
+                          WHERE xe.tipo IN ('GOL', 'PENAL') AND x.id_cargado = g.id_gol)
+    ),
+    cuentas AS (
+        SELECT id_evento, id_cargado, id_partido, es_definicion, id_seleccion_que_suma,
+               COUNT(*) OVER (PARTITION BY id_partido, es_definicion, id_seleccion_que_suma) AS goles
+        FROM goles
+    )
+    UPDATE e
+    SET errores = CONCAT(e.errores, @nl, N'- La selección quedaría con ', c.goles,
+                         IIF(c.es_definicion = 1, N' penales convertidos en la definición', N' goles'),
+                         N' y su resultado es ', r.resultado, N': no se carga ningún gol nuevo suyo. Un gol que el archivo '
+                         + N'le atribuye a otro jugador es otro gol: el cargado se da de baja con usp_GOL_Baja.')
+    FROM #staging_eventos AS e
+    INNER JOIN cuentas AS c ON c.id_evento = e.id_evento
+    INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = c.id_partido
+    CROSS APPLY (SELECT ISNULL(IIF(c.es_definicion = 1,
+                                   IIF(c.id_seleccion_que_suma = p.id_seleccion_local, p.penales_local, p.penales_visitante),
+                                   IIF(c.id_seleccion_que_suma = p.id_seleccion_local, p.goles_local, p.goles_visitante)), 0)
+                        AS resultado) AS r
+    WHERE c.id_cargado IS NULL AND p.goles_local IS NOT NULL AND c.goles > r.resultado;
+
     UPDATE #staging_eventos SET accion = 'RECHAZADO' WHERE accion IS NULL AND errores IS NOT NULL;
 
-    /* 3. Lo que le pasa a cada evento válido, antes de cargar: lo que ya está cargado no se repite. */
+    /* 5. Lo que le pasa a cada evento válido, antes de cargar: el que no es uno cargado es nuevo, y el que sí
+          se actualiza si trae algo distinto (un motivo que no viene no cuenta). */
     UPDATE e
-    SET accion = IIF(CASE e.tipo
-                         WHEN 'FORMACION' THEN ev.ya_alineado
-                         WHEN 'CAMBIO' THEN IIF(EXISTS (SELECT 1 FROM DesarrolloPartido.CAMBIO AS ca
-                                                        WHERE ca.id_partido = ev.id_partido
-                                                          AND ca.id_jugador_sale = e.id_jugador
-                                                          AND ca.id_jugador_entra = e.id_jugador_entra), 1, 0)
-                         WHEN 'TARJETA' THEN IIF(EXISTS (SELECT 1 FROM DesarrolloPartido.AMONESTACION AS am
-                                                         WHERE am.id_partido = ev.id_partido AND am.id_jugador = e.id_jugador
-                                                           AND am.tipo_tarjeta = e.tipo_tarjeta
-                                                           AND am.es_doble_amarilla = ISNULL(e.es_doble_amarilla, 0)
-                                                           AND am.minuto = e.minuto
-                                                           AND am.minuto_adicional = ISNULL(e.minuto_adicional, 0)), 1, 0)
-                         ELSE IIF(EXISTS (SELECT 1 FROM DesarrolloPartido.GOL AS g
-                                          WHERE g.id_partido = ev.id_partido AND g.id_jugador_autor = e.id_jugador
-                                            AND g.id_tipo_gol = ev.id_tipo_gol AND g.periodo = e.periodo
-                                            AND ISNULL(g.minuto, 0) = ISNULL(e.minuto, 0)
-                                            AND g.minuto_adicional = ISNULL(e.minuto_adicional, 0)), 1, 0)
-                     END = 1, 'SIN CAMBIOS', 'INSERTADO')
+    SET accion = CASE WHEN (e.tipo = 'FORMACION' AND ev.ya_alineado = 0) OR (e.tipo <> 'FORMACION' AND ev.id_cargado IS NULL)
+                          THEN 'INSERTADO'
+                      WHEN e.tipo = 'FORMACION'
+                           AND EXISTS (SELECT 1 FROM DesarrolloPartido.ALINEACION AS al
+                                       INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = al.id_formacion
+                                       WHERE f.id_partido = ev.id_partido AND al.id_jugador = e.id_jugador
+                                         AND (al.es_titular <> e.es_titular
+                                              OR al.posicion_en_cancha IS DISTINCT FROM ISNULL(e.posicion_en_cancha,
+                                                                                               al.posicion_en_cancha)))
+                          THEN 'ACTUALIZADO'
+                      WHEN e.tipo = 'CAMBIO'
+                           AND EXISTS (SELECT 1 FROM DesarrolloPartido.CAMBIO AS ca
+                                       WHERE ca.id_cambio = ev.id_cargado
+                                         AND (ca.minuto <> e.minuto OR ca.minuto_adicional <> ISNULL(e.minuto_adicional, 0)
+                                              OR ca.en_entretiempo <> ISNULL(e.en_entretiempo, 0)
+                                              OR ca.motivo <> ISNULL(e.motivo, ca.motivo)))
+                          THEN 'ACTUALIZADO'
+                      WHEN e.tipo IN ('GOL', 'PENAL')
+                           AND EXISTS (SELECT 1 FROM DesarrolloPartido.GOL AS g
+                                       WHERE g.id_gol = ev.id_cargado
+                                         AND (g.id_tipo_gol <> ev.id_tipo_gol OR g.periodo <> e.periodo
+                                              OR g.minuto IS DISTINCT FROM e.minuto
+                                              OR g.minuto_adicional <> ISNULL(e.minuto_adicional, 0)))
+                          THEN 'ACTUALIZADO'
+                      WHEN e.tipo = 'TARJETA'
+                           AND EXISTS (SELECT 1 FROM DesarrolloPartido.AMONESTACION AS am
+                                       WHERE am.id_amonestacion = ev.id_cargado
+                                         AND (am.minuto <> e.minuto OR am.minuto_adicional <> ISNULL(e.minuto_adicional, 0)
+                                              OR am.motivo <> ISNULL(e.motivo, am.motivo)))
+                          THEN 'ACTUALIZADO'
+                      ELSE 'SIN CAMBIOS'
+                 END
     FROM #staging_eventos AS e
     INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
     WHERE e.accion IS NULL;
 
-    /* 4. Carga, todos juntos. */
+    /* 6. Carga, todos juntos. */
     BEGIN TRY
         IF @tran_propia = 1 BEGIN TRANSACTION;
 
@@ -1678,6 +1903,17 @@ BEGIN
         WHERE e.tipo = 'FORMACION' AND e.accion = 'INSERTADO' AND ev.formacion_existe = 0
         GROUP BY ev.id_partido, ev.id_seleccion;
 
+        -- Jugadores de las formaciones: los alineados que pasan al banco (o del banco a titulares) o cambian de
+        -- posición, y los nuevos.
+        UPDATE al
+        SET es_titular         = e.es_titular,
+            posicion_en_cancha = ISNULL(e.posicion_en_cancha, al.posicion_en_cancha)
+        FROM DesarrolloPartido.ALINEACION AS al
+        INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = al.id_formacion
+        INNER JOIN @eventos AS ev ON ev.id_partido = f.id_partido AND ev.id_seleccion = f.id_seleccion
+        INNER JOIN #staging_eventos AS e ON e.id_evento = ev.id_evento AND e.id_jugador = al.id_jugador
+        WHERE e.tipo = 'FORMACION' AND e.accion = 'ACTUALIZADO';
+
         INSERT INTO DesarrolloPartido.ALINEACION (id_formacion, id_jugador, es_titular, posicion_en_cancha)
         SELECT f.id_formacion, e.id_jugador, e.es_titular, e.posicion_en_cancha
         FROM #staging_eventos AS e
@@ -1685,13 +1921,36 @@ BEGIN
         INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_partido = ev.id_partido AND f.id_seleccion = ev.id_seleccion
         WHERE e.tipo = 'FORMACION' AND e.accion = 'INSERTADO';
 
+        -- Cambios: los cargados que cambian (un motivo que no viene queda como está) y los nuevos (sin motivo,
+        -- TACTICO).
+        UPDATE ca
+        SET minuto           = e.minuto,
+            minuto_adicional = ISNULL(e.minuto_adicional, 0),
+            en_entretiempo   = ISNULL(e.en_entretiempo, 0),
+            motivo           = ISNULL(e.motivo, ca.motivo)
+        FROM DesarrolloPartido.CAMBIO AS ca
+        INNER JOIN @eventos AS ev ON ev.id_cargado = ca.id_cambio
+        INNER JOIN #staging_eventos AS e ON e.id_evento = ev.id_evento
+        WHERE e.tipo = 'CAMBIO' AND e.accion = 'ACTUALIZADO';
+
         INSERT INTO DesarrolloPartido.CAMBIO
             (id_partido, id_jugador_sale, id_jugador_entra, minuto, minuto_adicional, en_entretiempo, motivo)
         SELECT ev.id_partido, e.id_jugador, e.id_jugador_entra, e.minuto, ISNULL(e.minuto_adicional, 0),
-               ISNULL(e.en_entretiempo, 0), e.motivo
+               ISNULL(e.en_entretiempo, 0), ISNULL(e.motivo, 'TACTICO')
         FROM #staging_eventos AS e
         INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
         WHERE e.tipo = 'CAMBIO' AND e.accion = 'INSERTADO';
+
+        -- Goles: los cargados con otro tipo, período o minuto, y los nuevos.
+        UPDATE g
+        SET id_tipo_gol      = ev.id_tipo_gol,
+            periodo          = e.periodo,
+            minuto           = e.minuto,
+            minuto_adicional = ISNULL(e.minuto_adicional, 0)
+        FROM DesarrolloPartido.GOL AS g
+        INNER JOIN @eventos AS ev ON ev.id_cargado = g.id_gol
+        INNER JOIN #staging_eventos AS e ON e.id_evento = ev.id_evento
+        WHERE e.tipo IN ('GOL', 'PENAL') AND e.accion = 'ACTUALIZADO';
 
         INSERT INTO DesarrolloPartido.GOL (id_partido, id_jugador_autor, id_tipo_gol, periodo, minuto, minuto_adicional)
         SELECT ev.id_partido, e.id_jugador, ev.id_tipo_gol, e.periodo, e.minuto, ISNULL(e.minuto_adicional, 0)
@@ -1699,10 +1958,21 @@ BEGIN
         INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
         WHERE e.tipo IN ('GOL', 'PENAL') AND e.accion = 'INSERTADO';
 
+        -- Tarjetas: las cargadas que cambian (un motivo que no viene queda como está) y las nuevas (sin motivo,
+        -- "Sin detalle en la fuente").
+        UPDATE am
+        SET minuto           = e.minuto,
+            minuto_adicional = ISNULL(e.minuto_adicional, 0),
+            motivo           = ISNULL(e.motivo, am.motivo)
+        FROM DesarrolloPartido.AMONESTACION AS am
+        INNER JOIN @eventos AS ev ON ev.id_cargado = am.id_amonestacion
+        INNER JOIN #staging_eventos AS e ON e.id_evento = ev.id_evento
+        WHERE e.tipo = 'TARJETA' AND e.accion = 'ACTUALIZADO';
+
         INSERT INTO DesarrolloPartido.AMONESTACION
             (id_partido, id_jugador, tipo_tarjeta, es_doble_amarilla, minuto, minuto_adicional, motivo)
         SELECT ev.id_partido, e.id_jugador, e.tipo_tarjeta, ISNULL(e.es_doble_amarilla, 0), e.minuto,
-               ISNULL(e.minuto_adicional, 0), e.motivo
+               ISNULL(e.minuto_adicional, 0), ISNULL(e.motivo, 'Sin detalle en la fuente')
         FROM #staging_eventos AS e
         INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
         WHERE e.tipo = 'TARJETA' AND e.accion = 'INSERTADO';

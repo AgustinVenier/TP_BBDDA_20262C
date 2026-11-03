@@ -265,6 +265,8 @@ BEGIN
     EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
     SET @archivo = @carpeta + N'mundial_prueba_partidos.json';
     EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
+    SET @archivo = @carpeta + N'mundial_prueba_partidos_cambios.json';
+    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
     SET @archivo = @carpeta + N'mundial_prueba_designaciones.csv';
     EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
 END;
@@ -560,6 +562,63 @@ GO
 DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_partidos.json';
 
 EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @primer_numero = 201;
+GO
+
+
+/* MI8c (OK) Importación de mundial_prueba_partidos_cambios.json: el mismo
+   archivo, con correcciones de la fuente en el 201.
+   Esperado: los partidos como en MI8b (el 201 y el 202 SIN CAMBIOS y los
+   mismos 2 rechazados). De los eventos, 6 ACTUALIZADO: el gol de Jürgen
+   Rüdiger, del 9 al 10 (no se repite); el de Mostafa Ziko en el 45+2, de
+   PENAL a JUGADA; la amarilla de Diego Gómez, del 50 al 52; el cambio de
+   Alan por Damián, del 75 al 78 (sigue TACTICO); y en ZZB, Emilio titular y
+   Víctor al banco. 1 RECHAZADO: el gol del 60, que el archivo le atribuye a
+   Xavier en lugar de Yago (es otro gol, y ZZB quedaría con 3 y su
+   resultado es 2). El resto SIN CAMBIOS: el 201 sigue con 5 goles, 4
+   cambios y 5 tarjetas, y el de Yago queda. */
+DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400))
+                               + N'mundial_prueba_partidos_cambios.json';
+DECLARE @id_importacion INT;
+
+EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @primer_numero = 201, @id_importacion = @id_importacion OUTPUT;
+
+SELECT 'MI8c registro' AS caso, i.leidos, i.insertados, i.actualizados, i.sin_cambios, i.rechazados,
+       (SELECT COUNT(*) FROM DesarrolloPartido.ERRORES_EVENTO AS e WHERE e.id_importacion = i.id_importacion) AS errores_evento
+FROM DatosGenerales.IMPORTACION AS i
+WHERE i.id_importacion = @id_importacion;
+
+SELECT 'MI8c 201' AS caso, 'GOL' AS registro, j.nombre + N' ' + j.apellido AS detalle, tg.descripcion AS tipo, g.minuto,
+       g.minuto_adicional
+FROM DesarrolloPartido.GOL AS g
+INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = g.id_partido
+INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = g.id_jugador_autor
+INNER JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.id_tipo_gol = g.id_tipo_gol
+WHERE p.numero_partido = 201
+UNION ALL
+SELECT 'MI8c 201', 'CAMBIO', js.nombre + N' por ' + je.nombre, c.motivo, c.minuto, c.minuto_adicional
+FROM DesarrolloPartido.CAMBIO AS c
+INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = c.id_partido
+INNER JOIN Torneo.JUGADOR AS js ON js.id_jugador = c.id_jugador_sale
+INNER JOIN Torneo.JUGADOR AS je ON je.id_jugador = c.id_jugador_entra
+WHERE p.numero_partido = 201
+UNION ALL
+SELECT 'MI8c 201', 'TARJETA', j.nombre + N' ' + j.apellido, a.tipo_tarjeta, a.minuto, a.minuto_adicional
+FROM DesarrolloPartido.AMONESTACION AS a
+INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = a.id_partido
+INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = a.id_jugador
+WHERE p.numero_partido = 201
+ORDER BY 2, 5, 6;
+
+SELECT 'MI8c banco' AS caso, pa.codigo_fifa, STRING_AGG(j.nombre, N', ') WITHIN GROUP (ORDER BY j.dorsal) AS suplentes
+FROM DesarrolloPartido.ALINEACION AS a
+INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = a.id_formacion
+INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = f.id_partido
+INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = f.id_seleccion
+INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
+INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = a.id_jugador
+WHERE p.numero_partido = 201 AND a.es_titular = 0
+GROUP BY pa.codigo_fifa
+ORDER BY pa.codigo_fifa;
 GO
 
 

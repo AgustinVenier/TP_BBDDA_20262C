@@ -605,6 +605,104 @@ SELECT 'DP2 cargado' AS caso,
 GO
 
 
+/* DP3 (OK) Correcciones de la fuente sobre lo cargado del 221: los eventos
+   de DP2, con cambios.
+   Esperado:
+   - ACTUALIZADO: el gol de J9 de XQA, del 30 al 31 (no se repite); el de J10
+     de XQA en el 45+2, de PENAL a JUGADA; el cambio de J11 por J12 de XQA,
+     del entretiempo al minuto 60 y sin motivo (queda TACTICO); la amarilla
+     de J4 de XQB, del 20 al 22 y sin motivo (queda "Falta"); y J11 de XQB,
+     que pasa al banco.
+   - INSERTADO: J19 de XQB, titular en lugar de J11 (la formación sigue con
+     11 titulares y su esquema, 4-3-3), y una amarilla de J5 de XQB en el
+     80, sin motivo ("Sin detalle en la fuente").
+   - RECHAZADO: el gol del 60 de XQB, que el archivo le atribuye a J10 en
+     lugar de J9: es otro gol, y XQB quedaría con 2 y su resultado es 1. El
+     de J9 queda.
+   - El resto, 22 jugadores de las formaciones, SIN CAMBIOS. El 221 sigue con
+     3 goles y 1 cambio, y ahora tiene 2 tarjetas. */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+
+UPDATE #staging_eventos SET accion = NULL, errores = NULL;
+
+-- Las correcciones, por selección y dorsal del jugador.
+UPDATE e SET minuto = 31
+FROM #staging_eventos AS e INNER JOIN #jugadores_prueba AS j ON j.id_jugador = e.id_jugador
+WHERE e.tipo = 'GOL' AND j.codigo_fifa = 'XQA' AND j.dorsal = 9;
+
+UPDATE e SET tipo_gol = 'JUGADA'
+FROM #staging_eventos AS e INNER JOIN #jugadores_prueba AS j ON j.id_jugador = e.id_jugador
+WHERE e.tipo = 'GOL' AND j.codigo_fifa = 'XQA' AND j.dorsal = 10;
+
+UPDATE e SET id_jugador = (SELECT id_jugador FROM #jugadores_prueba WHERE codigo_fifa = 'XQB' AND dorsal = 10)
+FROM #staging_eventos AS e INNER JOIN #jugadores_prueba AS j ON j.id_jugador = e.id_jugador
+WHERE e.tipo = 'GOL' AND j.codigo_fifa = 'XQB' AND j.dorsal = 9;
+
+UPDATE #staging_eventos SET minuto = 60, en_entretiempo = 0, motivo = NULL WHERE tipo = 'CAMBIO';
+UPDATE #staging_eventos SET minuto = 22, motivo = NULL WHERE tipo = 'TARJETA';
+
+UPDATE e SET es_titular = 0, posicion_en_cancha = NULL
+FROM #staging_eventos AS e INNER JOIN #jugadores_prueba AS j ON j.id_jugador = e.id_jugador
+WHERE e.tipo = 'FORMACION' AND j.codigo_fifa = 'XQB' AND j.dorsal = 11;
+
+INSERT INTO #staging_eventos (tipo, numero_partido, id_jugador, es_titular, posicion_en_cancha, minuto, minuto_adicional,
+                              tipo_tarjeta, es_doble_amarilla)
+SELECT 'FORMACION', 221, id_jugador, 1, posicion_habitual, NULL, NULL, NULL, NULL
+FROM #jugadores_prueba WHERE codigo_fifa = 'XQB' AND dorsal = 19
+UNION ALL
+SELECT 'TARJETA', 221, id_jugador, NULL, NULL, 80, 0, 'AMARILLA', 0
+FROM #jugadores_prueba WHERE codigo_fifa = 'XQB' AND dorsal = 5;
+
+EXEC DesarrolloPartido.usp_ImportarDesarrolloPartidos;
+
+SELECT 'DP3' AS caso, e.id_evento, e.tipo, j.codigo_fifa, j.dorsal, je.dorsal AS entra, e.minuto, e.minuto_adicional,
+       e.accion, REPLACE(STUFF(e.errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM #staging_eventos AS e
+LEFT JOIN #jugadores_prueba AS j ON j.id_jugador = e.id_jugador
+LEFT JOIN #jugadores_prueba AS je ON je.id_jugador = e.id_jugador_entra
+WHERE e.accion <> 'SIN CAMBIOS'
+ORDER BY e.id_evento;
+
+SELECT 'DP3' AS caso, accion, COUNT(*) AS eventos FROM #staging_eventos GROUP BY accion;
+
+SELECT 'DP3 cargado' AS caso, 'GOL' AS registro, j.codigo_fifa, j.dorsal, CAST(tg.descripcion AS NVARCHAR(100)) AS detalle,
+       g.periodo AS otro, g.minuto, g.minuto_adicional
+FROM DesarrolloPartido.GOL AS g
+INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = g.id_partido
+INNER JOIN #jugadores_prueba AS j ON j.id_jugador = g.id_jugador_autor
+INNER JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.id_tipo_gol = g.id_tipo_gol
+WHERE p.numero_partido = 221
+UNION ALL
+SELECT 'DP3 cargado', 'CAMBIO', j.codigo_fifa, j.dorsal, CONCAT(N'entra J', je.dorsal, N', ', c.motivo),
+       IIF(c.en_entretiempo = 1, 'ENTRETIEMPO', ''), c.minuto, c.minuto_adicional
+FROM DesarrolloPartido.CAMBIO AS c
+INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = c.id_partido
+INNER JOIN #jugadores_prueba AS j ON j.id_jugador = c.id_jugador_sale
+INNER JOIN #jugadores_prueba AS je ON je.id_jugador = c.id_jugador_entra
+WHERE p.numero_partido = 221
+UNION ALL
+SELECT 'DP3 cargado', 'TARJETA', j.codigo_fifa, j.dorsal, CONCAT(a.tipo_tarjeta, N', ', a.motivo), '', a.minuto,
+       a.minuto_adicional
+FROM DesarrolloPartido.AMONESTACION AS a
+INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = a.id_partido
+INNER JOIN #jugadores_prueba AS j ON j.id_jugador = a.id_jugador
+WHERE p.numero_partido = 221
+ORDER BY registro, codigo_fifa, minuto;
+
+SELECT 'DP3 formación' AS caso, pa.codigo_fifa, f.esquema_tactico, SUM(IIF(a.es_titular = 1, 1, 0)) AS titulares,
+       STRING_AGG(IIF(a.es_titular = 0, CONCAT(N'J', j.dorsal), NULL), N', ') AS banco
+FROM DesarrolloPartido.FORMACION AS f
+INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = f.id_partido
+INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = f.id_seleccion
+INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
+INNER JOIN DesarrolloPartido.ALINEACION AS a ON a.id_formacion = f.id_formacion
+INNER JOIN #jugadores_prueba AS j ON j.id_jugador = a.id_jugador
+WHERE p.numero_partido = 221
+GROUP BY pa.codigo_fifa, f.esquema_tactico
+ORDER BY pa.codigo_fifa;
+GO
+
+
 /* PA3 (OK) El resultado del 221 ya tiene sus goles cargados (2 a 1).
    Esperado: el 221 con 3 a 1 RECHAZADO (el resultado cambia y no coincide
    con los goles cargados); el partido sigue 2 a 1. */
