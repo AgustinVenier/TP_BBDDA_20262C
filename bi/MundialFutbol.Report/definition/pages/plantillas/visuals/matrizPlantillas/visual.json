@@ -1,0 +1,267 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "matrizPlantillas",
+  "position": {
+    "x": 20,
+    "y": 130,
+    "z": 2000,
+    "height": 570,
+    "width": 1240,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "pivotTable",
+    "query": {
+      "queryState": {
+        "Rows": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Plantillas"
+                    }
+                  },
+                  "Property": "seleccion"
+                }
+              },
+              "queryRef": "Plantillas.seleccion",
+              "nativeQueryRef": "seleccion",
+              "active": true,
+              "displayName": "Selección"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Plantillas"
+                    }
+                  },
+                  "Property": "jugador"
+                }
+              },
+              "queryRef": "Plantillas.jugador",
+              "nativeQueryRef": "jugador",
+              "active": true,
+              "displayName": "Jugador"
+            }
+          ]
+        },
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Plantillas"
+                    }
+                  },
+                  "Property": "Dorsal del convocado"
+                }
+              },
+              "queryRef": "Plantillas.Dorsal del convocado",
+              "nativeQueryRef": "N.º",
+              "displayName": "N.º"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Plantillas"
+                    }
+                  },
+                  "Property": "Posición"
+                }
+              },
+              "queryRef": "Plantillas.Posición",
+              "nativeQueryRef": "Posición"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Plantillas"
+                    }
+                  },
+                  "Property": "Club"
+                }
+              },
+              "queryRef": "Plantillas.Club",
+              "nativeQueryRef": "Club"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Plantillas"
+                    }
+                  },
+                  "Property": "Baja"
+                }
+              },
+              "queryRef": "Plantillas.Baja",
+              "nativeQueryRef": "Baja",
+              "displayName": "Motivo de la baja"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Plantillas"
+                  }
+                },
+                "Property": "Dorsal del convocado"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ]
+      }
+    },
+    "objects": {
+      "subTotals": [
+        {
+          "properties": {
+            "rowSubtotals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "columnSubtotals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Selecciones y sus convocados, por puesto y dorsal'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "46a88716104773711209",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Plantillas"
+              }
+            },
+            "Property": "seleccion"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "9810a49d3e660dd17159",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Plantillas"
+              }
+            },
+            "Property": "jugador"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "dcb4f5545c5a8033686d",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Plantillas"
+              }
+            },
+            "Property": "Dorsal del convocado"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "b4c752523e03d040ede2",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Plantillas"
+              }
+            },
+            "Property": "Posición"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "c6404d8e1e8bd00a6b7a",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Plantillas"
+              }
+            },
+            "Property": "Club"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "4a05e717507197b3e820",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Plantillas"
+              }
+            },
+            "Property": "Baja"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  }
+}

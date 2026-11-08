@@ -1,0 +1,182 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "tablaSedes",
+  "position": {
+    "x": 660,
+    "y": 130,
+    "z": 1000,
+    "height": 570,
+    "width": 600,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Sedes"
+                    }
+                  },
+                  "Property": "sede"
+                }
+              },
+              "queryRef": "Sedes.sede",
+              "nativeQueryRef": "sede"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Sedes"
+                    }
+                  },
+                  "Property": "pais"
+                }
+              },
+              "queryRef": "Sedes.pais",
+              "nativeQueryRef": "pais"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Sedes"
+                    }
+                  },
+                  "Property": "capacidad"
+                }
+              },
+              "queryRef": "Sedes.capacidad",
+              "nativeQueryRef": "capacidad"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Sedes"
+                    }
+                  },
+                  "Property": "Partidos por sede"
+                }
+              },
+              "queryRef": "Sedes.Partidos por sede",
+              "nativeQueryRef": "Partidos por sede"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "Ingresos USD"
+                }
+              },
+              "queryRef": "Ocupacion.Ingresos USD",
+              "nativeQueryRef": "Ingresos USD"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Sedes"
+                  }
+                },
+                "Property": "sede"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ]
+      }
+    },
+    "objects": {
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "77.03952907554412D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Sedes.Partidos por sede"
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {}
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Sedes'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "dropShadow": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "border": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

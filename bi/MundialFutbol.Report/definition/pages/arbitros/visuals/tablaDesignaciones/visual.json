@@ -1,0 +1,283 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "tablaDesignaciones",
+  "position": {
+    "x": 460,
+    "y": 130,
+    "z": 4000,
+    "height": 280,
+    "width": 800,
+    "tabOrder": 4000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "arbitro"
+                }
+              },
+              "queryRef": "Designaciones.arbitro",
+              "nativeQueryRef": "arbitro",
+              "displayName": "Árbitro"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "rol"
+                }
+              },
+              "queryRef": "Designaciones.rol",
+              "nativeQueryRef": "rol",
+              "displayName": "Rol"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "numero_partido"
+                }
+              },
+              "queryRef": "Designaciones.numero_partido",
+              "nativeQueryRef": "numero_partido",
+              "displayName": "Partido"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "partido"
+                }
+              },
+              "queryRef": "Designaciones.partido",
+              "nativeQueryRef": "partido",
+              "displayName": "Selecciones"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "resultado"
+                }
+              },
+              "queryRef": "Designaciones.resultado",
+              "nativeQueryRef": "resultado",
+              "displayName": "Resultado"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "amarillas_senaladas"
+                }
+              },
+              "queryRef": "Designaciones.amarillas_senaladas",
+              "nativeQueryRef": "amarillas_senaladas",
+              "displayName": "Amarillas"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "rojas_senaladas"
+                }
+              },
+              "queryRef": "Designaciones.rojas_senaladas",
+              "nativeQueryRef": "rojas_senaladas",
+              "displayName": "Rojas"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Designaciones"
+                  }
+                },
+                "Property": "numero_partido"
+              }
+            },
+            "direction": "Ascending"
+          },
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Designaciones"
+                  }
+                },
+                "Property": "rol"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ]
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Designaciones (las tarjetas se atribuyen al árbitro principal)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "e45036547d1dc596a7ae",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Designaciones"
+              }
+            },
+            "Property": "arbitro"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "239f671ec9206bee290a",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Designaciones"
+              }
+            },
+            "Property": "rol"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "c9cef091481ce055b380",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Designaciones"
+              }
+            },
+            "Property": "numero_partido"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "ca5b64e09a0d8eb5dc3b",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Designaciones"
+              }
+            },
+            "Property": "partido"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "e710bb4fba054eee95d6",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Designaciones"
+              }
+            },
+            "Property": "resultado"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "6ad039f307db34a69960",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Designaciones"
+              }
+            },
+            "Property": "amarillas_senaladas"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "5463f79446b820442419",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Designaciones"
+              }
+            },
+            "Property": "rojas_senaladas"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  }
+}

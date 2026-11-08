@@ -1,0 +1,99 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "totales",
+  "position": {
+    "x": 560,
+    "y": 20,
+    "z": 2000,
+    "height": 100,
+    "width": 600,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "Partidos dirigidos"
+                }
+              },
+              "queryRef": "Designaciones.Partidos dirigidos",
+              "nativeQueryRef": "Partidos dirigidos",
+              "displayName": "Dirigidos"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "Designaciones"
+                }
+              },
+              "queryRef": "Designaciones.Designaciones",
+              "nativeQueryRef": "Designaciones",
+              "displayName": "Designaciones"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "Amarillas señaladas"
+                }
+              },
+              "queryRef": "Designaciones.Amarillas señaladas",
+              "nativeQueryRef": "Amarillas señaladas",
+              "displayName": "Amarillas"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Designaciones"
+                    }
+                  },
+                  "Property": "Rojas señaladas"
+                }
+              },
+              "queryRef": "Designaciones.Rojas señaladas",
+              "nativeQueryRef": "Rojas señaladas",
+              "displayName": "Rojas"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

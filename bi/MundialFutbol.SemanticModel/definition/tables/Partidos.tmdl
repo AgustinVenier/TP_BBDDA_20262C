@@ -1,0 +1,239 @@
+table Partidos
+	lineageTag: 483190f2-5eeb-5b65-8b8a-b3f68e58d2ab
+
+	measure 'Resultado de grupo' = IF(HASONEVALUE(Partidos[id_partido]) && SELECTEDVALUE(Partidos[grupo]) IN VALUES(Posiciones[grupo]), COALESCE(SELECTEDVALUE(Partidos[resultado]), "Pendiente"))
+		lineageTag: 4350d2a3-8c83-5802-958a-54e63c2e94bb
+
+	measure 'Resultado de eliminación' = IF(HASONEVALUE(Partidos[id_partido]) && SELECTEDVALUE(Partidos[fase]) <> "GRUPOS", COALESCE(SELECTEDVALUE(Partidos[resultado]), "Pendiente"))
+		lineageTag: 29bd5d1d-fe81-58b1-8f71-edca1d37fbd1
+
+	measure Campeón = COALESCE(CALCULATE(SELECTEDVALUE(Partidos[ganador]), Partidos[fase] = "FINAL"), "A definir")
+		lineageTag: af9bf311-e51e-510d-bc15-5cf572cf91ed
+
+	measure 'Segundo puesto' = VAR equipo_ganador = CALCULATE(SELECTEDVALUE(Partidos[ganador]), Partidos[fase] = "FINAL") VAR equipo_local = CALCULATE(SELECTEDVALUE(Partidos[seleccion_local]), Partidos[fase] = "FINAL") VAR equipo_visitante = CALCULATE(SELECTEDVALUE(Partidos[seleccion_visitante]), Partidos[fase] = "FINAL") RETURN IF(ISBLANK(equipo_ganador) || equipo_ganador = "Empate", "A definir", IF(equipo_ganador = equipo_local, equipo_visitante, equipo_local))
+		lineageTag: 64d7c5da-0f48-5fec-80f5-7c59dc4d0ee0
+
+	measure 'Tercer puesto' = COALESCE(CALCULATE(SELECTEDVALUE(Partidos[ganador]), Partidos[fase] = "TERCER_PUESTO"), "A definir")
+		lineageTag: 551489a9-0ab3-5443-95e3-f4a3f36cacb9
+
+	column id_partido
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: dca92b12-7f55-5daf-bb08-5c378ecc7026
+		summarizeBy: none
+		sourceColumn: id_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column numero_partido
+		dataType: int64
+		formatString: 0
+		lineageTag: e679d3af-214e-59b3-9d20-b1892fc330b2
+		summarizeBy: none
+		sourceColumn: numero_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column partido
+		dataType: string
+		lineageTag: c6b62900-2bd5-57d3-beb7-341f943fd71c
+		summarizeBy: none
+		sourceColumn: partido
+		sortByColumn: numero_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column fase
+		dataType: string
+		lineageTag: befba31e-2e32-57ee-b553-c349822858c2
+		summarizeBy: none
+		sourceColumn: fase
+		sortByColumn: orden_fase
+
+		annotation SummarizationSetBy = Automatic
+
+	column orden_fase
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 1812b6f2-86e7-59fc-9e69-ccb77407c67f
+		summarizeBy: none
+		sourceColumn: orden_fase
+
+		annotation SummarizationSetBy = Automatic
+
+	column grupo
+		dataType: string
+		lineageTag: d765d57c-4206-51b3-bb71-ac58f654c908
+		summarizeBy: none
+		sourceColumn: grupo
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_hora_local
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: b0d4c63e-1fce-518b-8c30-6e0569215661
+		summarizeBy: none
+		sourceColumn: fecha_hora_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_hora_utc
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 1d613320-5314-5b80-b758-82d3a07f4329
+		summarizeBy: none
+		sourceColumn: fecha_hora_utc
+
+		annotation SummarizationSetBy = Automatic
+
+	column nombre_estadio
+		dataType: string
+		lineageTag: 75e300ee-3be4-5adf-a76c-7770e25e4df2
+		summarizeBy: none
+		sourceColumn: nombre_estadio
+
+		annotation SummarizationSetBy = Automatic
+
+	column ciudad
+		dataType: string
+		lineageTag: 11c2d73a-a6dd-569e-9c8f-c8a517d9972f
+		summarizeBy: none
+		sourceColumn: ciudad
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_seleccion_local
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: d7f369c8-7c4c-58c5-94d0-e17417f95897
+		summarizeBy: none
+		sourceColumn: id_seleccion_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column seleccion_local
+		dataType: string
+		lineageTag: 3e08a5db-0d0a-5d78-b0b9-14216a2097ea
+		summarizeBy: none
+		sourceColumn: seleccion_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_seleccion_visitante
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 5c92e604-0f0d-5fba-b362-60b9c7a5b1ac
+		summarizeBy: none
+		sourceColumn: id_seleccion_visitante
+
+		annotation SummarizationSetBy = Automatic
+
+	column seleccion_visitante
+		dataType: string
+		lineageTag: 301aa3fa-a827-5de4-9ded-36f2e940aeda
+		summarizeBy: none
+		sourceColumn: seleccion_visitante
+
+		annotation SummarizationSetBy = Automatic
+
+	column goles_local
+		dataType: int64
+		formatString: 0
+		lineageTag: 2318adf3-f990-598d-a331-4bd2fc650b9f
+		summarizeBy: none
+		sourceColumn: goles_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column goles_visitante
+		dataType: int64
+		formatString: 0
+		lineageTag: e083cc50-683e-5e9b-ad45-00e130b92b4d
+		summarizeBy: none
+		sourceColumn: goles_visitante
+
+		annotation SummarizationSetBy = Automatic
+
+	column penales_local
+		dataType: int64
+		formatString: 0
+		lineageTag: 66feac6e-ad3e-5680-9d1a-0f54e6d8ab5d
+		summarizeBy: none
+		sourceColumn: penales_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column penales_visitante
+		dataType: int64
+		formatString: 0
+		lineageTag: abccb661-0de3-5383-aa47-b1db672e97a7
+		summarizeBy: none
+		sourceColumn: penales_visitante
+
+		annotation SummarizationSetBy = Automatic
+
+	column resultado
+		dataType: string
+		lineageTag: dab06589-267c-5043-bbff-67851f1af96e
+		summarizeBy: none
+		sourceColumn: resultado
+
+		annotation SummarizationSetBy = Automatic
+
+	column ganador
+		dataType: string
+		lineageTag: d9904732-252c-5ced-ad5d-589efa3e9ed5
+		summarizeBy: none
+		sourceColumn: ganador
+
+		annotation SummarizationSetBy = Automatic
+
+	column goles_del_local
+		dataType: string
+		lineageTag: 6cb38ee8-9ed1-5d4c-8092-e5a85c128c3f
+		summarizeBy: none
+		sourceColumn: goles_del_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column goles_del_visitante
+		dataType: string
+		lineageTag: a2c9dea4-54e4-5079-a5a6-53b7eadf9269
+		summarizeBy: none
+		sourceColumn: goles_del_visitante
+
+		annotation SummarizationSetBy = Automatic
+
+	column asistencia
+		dataType: int64
+		formatString: 0
+		lineageTag: e61291b0-3644-5b26-9e8c-2602b5b08d13
+		summarizeBy: none
+		sourceColumn: asistencia
+
+		annotation SummarizationSetBy = Automatic
+
+	column estado
+		dataType: string
+		lineageTag: 71f78cfa-e79d-5d9c-a59b-ad320005d1ec
+		summarizeBy: none
+		sourceColumn: estado
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Partidos = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_Resultados"]}[Data]
+				in
+				    Vista
+
+	annotation PBI_ResultType = Table
+

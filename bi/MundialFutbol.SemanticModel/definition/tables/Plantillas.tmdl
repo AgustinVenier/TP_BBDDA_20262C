@@ -1,0 +1,204 @@
+table Plantillas
+	lineageTag: e11624a6-f68d-4756-9234-48d32a53d128
+
+	measure Convocados = COUNTROWS(Plantillas)
+		formatString: 0
+		lineageTag: 9a0dc03a-b15a-4e7c-a347-2a559b7f90fd
+
+	measure 'Dorsal del convocado' = IF(ISINSCOPE(Plantillas[jugador]), MIN(Plantillas[dorsal]))
+		formatString: 0
+		lineageTag: ace7eb9f-240a-486e-93ae-af3f51b12a16
+
+	measure Posición = IF(ISINSCOPE(Plantillas[jugador]), MIN(Plantillas[posicion_habitual]))
+		lineageTag: 0ce45b61-14d8-48fa-b22b-f9ec62e80516
+
+	measure Club = IF(ISINSCOPE(Plantillas[jugador]), MIN(Plantillas[club_origen]))
+		lineageTag: f0dcb8b4-340a-4ccb-a920-4f89ed893e88
+
+	measure Baja = IF(ISINSCOPE(Plantillas[jugador]), MIN(Plantillas[motivo_baja]))
+		lineageTag: da953e8b-c31f-401c-ac53-ad1bfc23d1d6
+
+	column id_seleccion
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: d2b2b409-d8bd-4c65-ba07-e60284a930a3
+		summarizeBy: none
+		sourceColumn: id_seleccion
+
+		annotation SummarizationSetBy = Automatic
+
+	column seleccion
+		dataType: string
+		lineageTag: 879a4b97-58f2-4fb1-b4c1-09daef3a4c6b
+		summarizeBy: none
+		sourceColumn: seleccion
+
+		annotation SummarizationSetBy = Automatic
+
+	column codigo_fifa
+		dataType: string
+		lineageTag: b45d8ccc-b524-4c6b-97fd-7a175bf57d61
+		summarizeBy: none
+		sourceColumn: codigo_fifa
+
+		annotation SummarizationSetBy = Automatic
+
+	column confederacion
+		dataType: string
+		lineageTag: 76c10239-6336-4665-8a0c-403f34275dec
+		summarizeBy: none
+		sourceColumn: confederacion
+
+		annotation SummarizationSetBy = Automatic
+
+	column grupo
+		dataType: string
+		lineageTag: 324fafdd-ccf0-4d4d-ab42-b0aaa64e0baf
+		summarizeBy: none
+		sourceColumn: grupo
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_jugador
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 7b6c4a63-ded9-4c66-a3e2-1233537452bc
+		summarizeBy: none
+		sourceColumn: id_jugador
+
+		annotation SummarizationSetBy = Automatic
+
+	column dorsal
+		dataType: int64
+		formatString: 0
+		lineageTag: 2051a898-a502-4325-8595-d0b29c73db1c
+		summarizeBy: none
+		sourceColumn: dorsal
+
+		annotation SummarizationSetBy = Automatic
+
+	column apellido
+		dataType: string
+		lineageTag: 95e7aeea-9ac1-4f3a-adb8-e989820ea19f
+		summarizeBy: none
+		sourceColumn: apellido
+
+		annotation SummarizationSetBy = Automatic
+
+	column nombre
+		dataType: string
+		lineageTag: 64c0d760-bea1-4555-80d5-9b5c1f0af7bb
+		summarizeBy: none
+		sourceColumn: nombre
+
+		annotation SummarizationSetBy = Automatic
+
+	column posicion_habitual
+		dataType: string
+		lineageTag: e620e689-2bbb-4d19-b5ac-8db0f9b561e8
+		summarizeBy: none
+		sourceColumn: posicion_habitual
+
+		annotation SummarizationSetBy = Automatic
+
+	column club_origen
+		dataType: string
+		lineageTag: 3fa4c4a0-ded8-4d30-a90b-634bded55e1d
+		summarizeBy: none
+		sourceColumn: club_origen
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_nacimiento
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: db6083ee-acc5-42ab-b67b-830671d96ff5
+		summarizeBy: none
+		sourceColumn: fecha_nacimiento
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column activo
+		dataType: boolean
+		isHidden
+		lineageTag: 6bace5cd-63c6-452b-a27d-f06e22bf6220
+		summarizeBy: none
+		sourceColumn: activo
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_baja
+		dataType: dateTime
+		formatString: Short Date
+		lineageTag: 2fcfad7f-1add-4edd-adab-4d154837fbc6
+		summarizeBy: none
+		sourceColumn: fecha_baja
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column motivo_baja
+		dataType: string
+		lineageTag: 34f7b212-9f89-445b-9982-55950e2306e0
+		summarizeBy: none
+		sourceColumn: motivo_baja
+
+		annotation SummarizationSetBy = Automatic
+
+	column orden_jugador
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 653784c4-9215-4522-a38a-5b0828b7d479
+		summarizeBy: none
+		sourceColumn: orden_jugador
+
+		annotation SummarizationSetBy = Automatic
+
+	column jugador
+		dataType: string
+		lineageTag: 5b3f1d0e-8c2a-4e7b-9f61-2d4a8c0e7b13
+		summarizeBy: none
+		sourceColumn: jugador
+		sortByColumn: orden_jugador
+
+		annotation SummarizationSetBy = Automatic
+
+	column estado
+		dataType: string
+		lineageTag: c8e2a4f6-1b3d-4a5c-8e7f-9a0b1c2d3e4f
+		summarizeBy: none
+		sourceColumn: estado
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Plantillas = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_Plantillas"]}[Data],
+				    ConJugador = Table.AddColumn(Vista, "jugador", each [nombre] & " " & [apellido], type text),
+				    ConEstado = Table.AddColumn(ConJugador, "estado", each if [activo] then "Convocado" else "Dado de baja", type text),
+				    // jugador se ordena por puesto y dorsal, como el XML. Cada nombre lleva un solo
+				    // orden_jugador (el menor), porque sortByColumn no admite dos órdenes para el
+				    // mismo valor; dentro de una selección el nombre no se repite.
+				    ConOrden = Table.AddColumn(ConEstado, "orden", each
+				        (if [posicion_habitual] = "ARQUERO" then 1
+				         else if [posicion_habitual] = "DEFENSOR" then 2
+				         else if [posicion_habitual] = "MEDIOCAMPISTA" then 3
+				         else 4) * 100 + [dorsal], Int64.Type),
+				    OrdenPorNombre = Table.Group(ConOrden, {"jugador"}, {{"orden_jugador", each List.Min([orden]), Int64.Type}}),
+				    Claves = Table.RenameColumns(OrdenPorNombre, {{"jugador", "jugador_clave"}}),
+				    ConOrdenJugador = Table.Join(ConOrden, "jugador", Claves, "jugador_clave"),
+				    Resultado = Table.RemoveColumns(ConOrdenJugador, {"orden", "jugador_clave"})
+				in
+				    Resultado
+
+	annotation PBI_ResultType = Table
+

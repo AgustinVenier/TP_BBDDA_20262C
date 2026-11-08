@@ -1,0 +1,87 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "tarjetaCampeon",
+  "position": {
+    "x": 20,
+    "y": 20,
+    "z": 0,
+    "height": 100,
+    "width": 1140,
+    "tabOrder": 0
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Partidos"
+                    }
+                  },
+                  "Property": "Campeón"
+                }
+              },
+              "queryRef": "Partidos.Campeón",
+              "nativeQueryRef": "Campeón",
+              "displayName": "🥇 Campeón"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Partidos"
+                    }
+                  },
+                  "Property": "Segundo puesto"
+                }
+              },
+              "queryRef": "Partidos.Segundo puesto",
+              "nativeQueryRef": "Segundo puesto",
+              "displayName": "🥈 Segundo puesto"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Partidos"
+                    }
+                  },
+                  "Property": "Tercer puesto"
+                }
+              },
+              "queryRef": "Partidos.Tercer puesto",
+              "nativeQueryRef": "Tercer puesto",
+              "displayName": "🥉 Tercer puesto"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "objects": {
+      "value": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "28D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "id": "default"
+          }
+        }
+      ]
+    }
+  }
+}

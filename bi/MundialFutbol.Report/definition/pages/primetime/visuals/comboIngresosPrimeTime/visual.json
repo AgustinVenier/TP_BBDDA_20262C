@@ -1,0 +1,114 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "comboIngresosPrimeTime",
+  "position": {
+    "x": 20,
+    "y": 490,
+    "z": 2000,
+    "height": 210,
+    "width": 1240,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "lineClusteredColumnComboChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Partidos"
+                    }
+                  },
+                  "Property": "partido"
+                }
+              },
+              "queryRef": "Partidos.partido",
+              "nativeQueryRef": "partido",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "Ingresos USD"
+                }
+              },
+              "queryRef": "Ocupacion.Ingresos USD",
+              "nativeQueryRef": "Ingresos USD"
+            }
+          ]
+        },
+        "Y2": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "PrimeTime"
+                    }
+                  },
+                  "Property": "Mercados en prime time"
+                }
+              },
+              "queryRef": "PrimeTime.Mercados en prime time",
+              "nativeQueryRef": "Mercados en prime time"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Partidos"
+                  }
+                },
+                "Property": "partido"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ]
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Ingresos por partido (columnas) y mercados en prime time (línea)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

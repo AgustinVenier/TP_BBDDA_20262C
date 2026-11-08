@@ -1,0 +1,301 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "matrizPosiciones",
+  "position": {
+    "x": 20,
+    "y": 130,
+    "z": 1000,
+    "height": 570,
+    "width": 620,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "pivotTable",
+    "query": {
+      "queryState": {
+        "Rows": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Posiciones"
+                    }
+                  },
+                  "Property": "grupo"
+                }
+              },
+              "queryRef": "Posiciones.grupo",
+              "nativeQueryRef": "grupo",
+              "displayName": "Grupo",
+              "active": true
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Posiciones"
+                    }
+                  },
+                  "Property": "seleccion"
+                }
+              },
+              "queryRef": "Posiciones.seleccion",
+              "nativeQueryRef": "seleccion",
+              "displayName": "Selección",
+              "active": true
+            }
+          ]
+        },
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "Posiciones"
+                        }
+                      },
+                      "Property": "posicion"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(Posiciones.posicion)",
+              "nativeQueryRef": "Pos",
+              "displayName": "Pos"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "Posiciones"
+                        }
+                      },
+                      "Property": "pj"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(Posiciones.pj)",
+              "nativeQueryRef": "PJ",
+              "displayName": "PJ"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "Posiciones"
+                        }
+                      },
+                      "Property": "pg"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(Posiciones.pg)",
+              "nativeQueryRef": "PG",
+              "displayName": "PG"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "Posiciones"
+                        }
+                      },
+                      "Property": "pe"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(Posiciones.pe)",
+              "nativeQueryRef": "PE",
+              "displayName": "PE"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "Posiciones"
+                        }
+                      },
+                      "Property": "pp"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(Posiciones.pp)",
+              "nativeQueryRef": "PP",
+              "displayName": "PP"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "Posiciones"
+                        }
+                      },
+                      "Property": "gf"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(Posiciones.gf)",
+              "nativeQueryRef": "GF",
+              "displayName": "GF"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "Posiciones"
+                        }
+                      },
+                      "Property": "gc"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(Posiciones.gc)",
+              "nativeQueryRef": "GC",
+              "displayName": "GC"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "Posiciones"
+                        }
+                      },
+                      "Property": "dg"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(Posiciones.dg)",
+              "nativeQueryRef": "DG",
+              "displayName": "DG"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "Posiciones"
+                        }
+                      },
+                      "Property": "pts"
+                    }
+                  },
+                  "Function": 0
+                }
+              },
+              "queryRef": "Sum(Posiciones.pts)",
+              "nativeQueryRef": "Pts",
+              "displayName": "Pts"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Posiciones"
+                  }
+                },
+                "Property": "grupo"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ]
+      }
+    },
+    "objects": {
+      "subTotals": [
+        {
+          "properties": {
+            "rowSubtotals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "columnSubtotals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Tabla de posiciones por grupo'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

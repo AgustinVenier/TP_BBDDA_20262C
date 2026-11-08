@@ -1,0 +1,370 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "tablaSuspensiones",
+  "position": {
+    "x": 20,
+    "y": 130,
+    "z": 2000,
+    "height": 570,
+    "width": 1240,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Suspensiones"
+                    }
+                  },
+                  "Property": "momento"
+                }
+              },
+              "queryRef": "Suspensiones.momento",
+              "nativeQueryRef": "momento",
+              "displayName": "Momento"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Suspensiones"
+                    }
+                  },
+                  "Property": "seleccion"
+                }
+              },
+              "queryRef": "Suspensiones.seleccion",
+              "nativeQueryRef": "seleccion",
+              "displayName": "Selección"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Suspensiones"
+                    }
+                  },
+                  "Property": "dorsal"
+                }
+              },
+              "queryRef": "Suspensiones.dorsal",
+              "nativeQueryRef": "dorsal",
+              "displayName": "N.º"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Suspensiones"
+                    }
+                  },
+                  "Property": "jugador"
+                }
+              },
+              "queryRef": "Suspensiones.jugador",
+              "nativeQueryRef": "jugador",
+              "displayName": "Jugador"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Suspensiones"
+                    }
+                  },
+                  "Property": "motivo"
+                }
+              },
+              "queryRef": "Suspensiones.motivo",
+              "nativeQueryRef": "motivo",
+              "displayName": "Motivo"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Suspensiones"
+                    }
+                  },
+                  "Property": "numero_partido_origen"
+                }
+              },
+              "queryRef": "Suspensiones.numero_partido_origen",
+              "nativeQueryRef": "numero_partido_origen",
+              "displayName": "Sanción en"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Suspensiones"
+                    }
+                  },
+                  "Property": "partidos_de_suspension"
+                }
+              },
+              "queryRef": "Suspensiones.partidos_de_suspension",
+              "nativeQueryRef": "partidos_de_suspension",
+              "displayName": "Fechas"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Suspensiones"
+                    }
+                  },
+                  "Property": "partidos_cumplidos"
+                }
+              },
+              "queryRef": "Suspensiones.partidos_cumplidos",
+              "nativeQueryRef": "partidos_cumplidos",
+              "displayName": "Cumplidas"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Suspensiones"
+                    }
+                  },
+                  "Property": "partidos_pendientes"
+                }
+              },
+              "queryRef": "Suspensiones.partidos_pendientes",
+              "nativeQueryRef": "partidos_pendientes",
+              "displayName": "Pendientes"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Suspensiones"
+                    }
+                  },
+                  "Property": "proximo_partido"
+                }
+              },
+              "queryRef": "Suspensiones.proximo_partido",
+              "nativeQueryRef": "proximo_partido",
+              "displayName": "No juega el"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Suspensiones"
+                  }
+                },
+                "Property": "momento"
+              }
+            },
+            "direction": "Ascending"
+          },
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Suspensiones"
+                  }
+                },
+                "Property": "seleccion"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ]
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Suspensiones activas, por acumulación de amarillas, doble amarilla o roja directa'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "79a6254672508c8011cb",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Suspensiones"
+              }
+            },
+            "Property": "momento"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "b7a2c862c032605916cd",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Suspensiones"
+              }
+            },
+            "Property": "seleccion"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "43957107191352685aba",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Suspensiones"
+              }
+            },
+            "Property": "dorsal"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "856304d004e17c1976dc",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Suspensiones"
+              }
+            },
+            "Property": "jugador"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "8df90d0253d5b0c9730d",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Suspensiones"
+              }
+            },
+            "Property": "motivo"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "4c3d8881b56ac5aa3831",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Suspensiones"
+              }
+            },
+            "Property": "numero_partido_origen"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "da0b81cb0409c33717c0",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Suspensiones"
+              }
+            },
+            "Property": "partidos_de_suspension"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "2045887c90da2d7cab36",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Suspensiones"
+              }
+            },
+            "Property": "partidos_cumplidos"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "235922fa7468dc9e7bdd",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Suspensiones"
+              }
+            },
+            "Property": "partidos_pendientes"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "c7da1f6515b8901ee083",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Suspensiones"
+              }
+            },
+            "Property": "proximo_partido"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  }
+}

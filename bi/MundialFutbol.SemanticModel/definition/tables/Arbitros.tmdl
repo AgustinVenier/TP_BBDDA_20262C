@@ -1,0 +1,32 @@
+table Arbitros
+	lineageTag: 14fc6cf4-3fc2-4b5e-92e1-dc11e4a773f1
+
+	column id_arbitro
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 4f34e8cd-5eb3-457e-848a-f07a3b9a22af
+		summarizeBy: none
+		sourceColumn: id_arbitro
+
+		annotation SummarizationSetBy = Automatic
+
+	column arbitro
+		dataType: string
+		lineageTag: 922bdd52-0420-46a2-81bf-11f8710bbd06
+		summarizeBy: none
+		sourceColumn: arbitro
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Arbitros = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_DesignacionesArbitrales"]}[Data],
+				    Arbitros = Table.Distinct(Table.SelectColumns(Vista, {"id_arbitro", "arbitro"}))
+				in
+				    Arbitros
+
+	annotation PBI_ResultType = Table

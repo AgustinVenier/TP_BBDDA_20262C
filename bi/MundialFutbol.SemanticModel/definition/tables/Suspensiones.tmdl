@@ -1,0 +1,135 @@
+table Suspensiones
+	lineageTag: 1bfeb950-7d0d-49a0-919a-64021f360930
+
+	measure 'Jugadores suspendidos' = DISTINCTCOUNT(Suspensiones[id_jugador])
+		formatString: 0
+		lineageTag: dfaf4b2f-b750-4dc9-873b-a1a7c41fe050
+
+	column orden_momento
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: bd7f783e-7546-41f1-b946-5095263a8266
+		summarizeBy: none
+		sourceColumn: orden_momento
+
+		annotation SummarizationSetBy = Automatic
+
+	column momento
+		dataType: string
+		lineageTag: 727a6e44-a02b-4d23-94a8-5eaf40cdd144
+		summarizeBy: none
+		sourceColumn: momento
+		sortByColumn: orden_momento
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_corte_utc
+		dataType: dateTime
+		isHidden
+		formatString: General Date
+		lineageTag: 43096841-cb62-4030-b66e-20a268901ce5
+		summarizeBy: none
+		sourceColumn: fecha_corte_utc
+
+		annotation SummarizationSetBy = Automatic
+
+	column seleccion
+		dataType: string
+		lineageTag: 4adbb4f4-42ad-40ea-9993-6dccca3e433b
+		summarizeBy: none
+		sourceColumn: seleccion
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_jugador
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 7a013673-b9a9-47b6-af06-c1faca85a9f1
+		summarizeBy: none
+		sourceColumn: id_jugador
+
+		annotation SummarizationSetBy = Automatic
+
+	column dorsal
+		dataType: int64
+		formatString: 0
+		lineageTag: c747ec8b-d9be-42be-89dc-f8560c3529a6
+		summarizeBy: none
+		sourceColumn: dorsal
+
+		annotation SummarizationSetBy = Automatic
+
+	column jugador
+		dataType: string
+		lineageTag: d062252c-60d5-40a9-970e-2c3211d0959a
+		summarizeBy: none
+		sourceColumn: jugador
+
+		annotation SummarizationSetBy = Automatic
+
+	column motivo
+		dataType: string
+		lineageTag: 546af498-a881-4a66-96f2-49d7cf2b3ee8
+		summarizeBy: none
+		sourceColumn: motivo
+
+		annotation SummarizationSetBy = Automatic
+
+	column numero_partido_origen
+		dataType: int64
+		formatString: 0
+		lineageTag: ea25d331-537e-49f8-a1fe-a3c745efbf48
+		summarizeBy: none
+		sourceColumn: numero_partido_origen
+
+		annotation SummarizationSetBy = Automatic
+
+	column partidos_de_suspension
+		dataType: int64
+		formatString: 0
+		lineageTag: c2b6e329-d588-4bb5-8984-7b5493b3125b
+		summarizeBy: none
+		sourceColumn: partidos_de_suspension
+
+		annotation SummarizationSetBy = Automatic
+
+	column partidos_cumplidos
+		dataType: int64
+		formatString: 0
+		lineageTag: 2da52887-8aad-4656-a882-3425e2dc829d
+		summarizeBy: none
+		sourceColumn: partidos_cumplidos
+
+		annotation SummarizationSetBy = Automatic
+
+	column partidos_pendientes
+		dataType: int64
+		formatString: 0
+		lineageTag: c1f2f2fd-6661-4e99-9477-338f10c524d6
+		summarizeBy: none
+		sourceColumn: partidos_pendientes
+
+		annotation SummarizationSetBy = Automatic
+
+	column proximo_partido
+		dataType: int64
+		formatString: 0
+		lineageTag: 2c916104-04dd-4b61-87bf-e43aa5447361
+		summarizeBy: none
+		sourceColumn: proximo_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Suspensiones = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_SuspensionesActivas"]}[Data]
+				in
+				    Vista
+
+	annotation PBI_ResultType = Table
+

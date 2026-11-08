@@ -1,0 +1,140 @@
+table PrimeTime
+	lineageTag: ed84a590-4894-5193-b0f5-1e0572f33a0f
+
+	measure 'Mercados en prime time' = CALCULATE(COUNTROWS(PrimeTime), PrimeTime[en_prime_time] = TRUE(), PrimeTime[es_mercado_publicitario] = TRUE()) + 0
+		formatString: 0
+		lineageTag: 53ee09c2-399d-52fc-a0e4-9cf085edaa10
+
+	measure 'Prime time' = VAR filas = CALCULATETABLE(PrimeTime, PrimeTime[es_mercado_publicitario] = TRUE()) VAR en_prime = COUNTROWS(FILTER(filas, PrimeTime[en_prime_time] = TRUE())) VAR feriado = COUNTROWS(FILTER(filas, PrimeTime[es_feriado] = TRUE())) RETURN IF(ISEMPTY(filas), BLANK(), IF(en_prime > 0, "SI", "NO") & IF(feriado > 0, " + FERIADO", ""))
+		lineageTag: ca39fb6a-adcb-5709-b8c5-8660cf451e83
+
+	column id_partido
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 492798e3-bad6-5698-a4f7-2f483ea38098
+		summarizeBy: none
+		sourceColumn: id_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column numero_partido
+		dataType: int64
+		formatString: 0
+		lineageTag: 99259106-ee99-5f9d-8d2c-b7bb6fc6e0c3
+		summarizeBy: none
+		sourceColumn: numero_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column fase
+		dataType: string
+		lineageTag: 1af55c17-c89d-59c9-ac75-f6ef7dc67caf
+		summarizeBy: none
+		sourceColumn: fase
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_hora_utc
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 5dfed91e-5513-53eb-8a85-ae98c7cf0a4b
+		summarizeBy: none
+		sourceColumn: fecha_hora_utc
+
+		annotation SummarizationSetBy = Automatic
+
+	column partido
+		dataType: string
+		lineageTag: 3a4ff9f5-d439-5a0d-8be3-4aaa8429f505
+		summarizeBy: none
+		sourceColumn: partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column nombre_estadio
+		dataType: string
+		lineageTag: fd2b5820-9f8e-51a0-b0d5-0a8372c2c867
+		summarizeBy: none
+		sourceColumn: nombre_estadio
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_pais
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 19e90317-cdec-5a97-a508-2accf08605f1
+		summarizeBy: none
+		sourceColumn: id_pais
+
+		annotation SummarizationSetBy = Automatic
+
+	column mercado
+		dataType: string
+		lineageTag: f9ccd2ab-d0e4-5e1c-9f6b-8be2540d138c
+		summarizeBy: none
+		sourceColumn: mercado
+
+		annotation SummarizationSetBy = Automatic
+
+	column hora_local
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: e26680b7-d2af-53b1-ad55-2dc6c2f5ac03
+		summarizeBy: none
+		sourceColumn: hora_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column en_prime_time
+		dataType: boolean
+		lineageTag: 10572fe7-d75a-554d-a6b8-f54bd94c0440
+		summarizeBy: none
+		sourceColumn: en_prime_time
+
+		annotation SummarizationSetBy = Automatic
+
+	column es_feriado
+		dataType: boolean
+		lineageTag: a483602f-e8fa-5125-8aa4-e7ea603f25a4
+		summarizeBy: none
+		sourceColumn: es_feriado
+
+		annotation SummarizationSetBy = Automatic
+
+	column feriado
+		dataType: string
+		lineageTag: 0fd93a5c-e9b3-5b3e-a17e-866672f3f9b4
+		summarizeBy: none
+		sourceColumn: feriado
+
+		annotation SummarizationSetBy = Automatic
+
+	column juega_el_partido
+		dataType: boolean
+		lineageTag: 4ed9db9d-dbbf-5615-8cd8-949dc533b72b
+		summarizeBy: none
+		sourceColumn: juega_el_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column es_mercado_publicitario
+		dataType: boolean
+		lineageTag: 70f88617-6c47-5ef6-9544-5b835de7d294
+		summarizeBy: none
+		sourceColumn: es_mercado_publicitario
+
+		annotation SummarizationSetBy = Automatic
+
+	partition PrimeTime = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_PrimeTimePorMercado"]}[Data]
+				in
+				    Vista
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,110 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "barrasSeleccion",
+  "position": {
+    "x": 20,
+    "y": 130,
+    "z": 2000,
+    "height": 570,
+    "width": 620,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "barChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "seleccion"
+                }
+              },
+              "queryRef": "Tarjetas.seleccion",
+              "nativeQueryRef": "seleccion",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "Amarillas"
+                }
+              },
+              "queryRef": "Tarjetas.Amarillas",
+              "nativeQueryRef": "Amarillas"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "Rojas"
+                }
+              },
+              "queryRef": "Tarjetas.Rojas",
+              "nativeQueryRef": "Rojas"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Tarjetas"
+                  }
+                },
+                "Property": "Amarillas"
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Tarjetas por selección'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -1,0 +1,216 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "matrizPartidos",
+  "position": {
+    "x": 20,
+    "y": 130,
+    "z": 1000,
+    "height": 570,
+    "width": 1240,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "pivotTable",
+    "query": {
+      "queryState": {
+        "Rows": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "sede"
+                }
+              },
+              "queryRef": "Ocupacion.sede",
+              "nativeQueryRef": "sede",
+              "active": true
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Partidos"
+                    }
+                  },
+                  "Property": "partido"
+                }
+              },
+              "queryRef": "Partidos.partido",
+              "nativeQueryRef": "partido",
+              "active": true
+            }
+          ]
+        },
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "Espacio 1"
+                }
+              },
+              "queryRef": "Ocupacion.Espacio 1",
+              "nativeQueryRef": "Espacio 1"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "Espacio 2"
+                }
+              },
+              "queryRef": "Ocupacion.Espacio 2",
+              "nativeQueryRef": "Espacio 2"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "Espacio 3"
+                }
+              },
+              "queryRef": "Ocupacion.Espacio 3",
+              "nativeQueryRef": "Espacio 3"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "Espacio 4"
+                }
+              },
+              "queryRef": "Ocupacion.Espacio 4",
+              "nativeQueryRef": "Espacio 4"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "Espacios ocupados"
+                }
+              },
+              "queryRef": "Ocupacion.Espacios ocupados",
+              "nativeQueryRef": "Espacios ocupados"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Ocupacion"
+                    }
+                  },
+                  "Property": "Ingresos USD"
+                }
+              },
+              "queryRef": "Ocupacion.Ingresos USD",
+              "nativeQueryRef": "Ingresos USD"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Ocupacion"
+                  }
+                },
+                "Property": "sede"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ]
+      }
+    },
+    "objects": {
+      "subTotals": [
+        {
+          "properties": {
+            "rowSubtotals": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "columnSubtotals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "rowHeaders": [
+        {
+          "properties": {
+            "stepped": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Anunciantes en los cuatro espacios e ingresos, por sede y partido'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

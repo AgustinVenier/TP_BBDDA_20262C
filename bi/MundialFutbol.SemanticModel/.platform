@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "MundialFutbol"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "ce3fa1f4-2328-5856-9e8c-8ff8f155b832"
+  }
+}

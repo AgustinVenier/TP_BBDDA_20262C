@@ -1,0 +1,52 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "name": "ingresosMoneda",
+  "position": {
+    "x": 240,
+    "y": 20,
+    "z": 1000,
+    "height": 100,
+    "width": 500,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "IngresosPorMoneda"
+                    }
+                  },
+                  "Property": "Moneda mostrada"
+                }
+              },
+              "queryRef": "IngresosPorMoneda.Moneda mostrada",
+              "nativeQueryRef": "Moneda mostrada"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "IngresosPorMoneda"
+                    }
+                  },
+                  "Property": "Ingresos en moneda"
+                }
+              },
+              "queryRef": "IngresosPorMoneda.Ingresos en moneda",
+              "nativeQueryRef": "Ingresos en moneda"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

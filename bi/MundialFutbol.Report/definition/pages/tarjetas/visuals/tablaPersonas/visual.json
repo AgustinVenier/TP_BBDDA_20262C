@@ -1,0 +1,207 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "tablaPersonas",
+  "position": {
+    "x": 660,
+    "y": 130,
+    "z": 3000,
+    "height": 570,
+    "width": 600,
+    "tabOrder": 3000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "persona"
+                }
+              },
+              "queryRef": "Tarjetas.persona",
+              "nativeQueryRef": "persona"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "seleccion"
+                }
+              },
+              "queryRef": "Tarjetas.seleccion",
+              "nativeQueryRef": "seleccion"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "receptor"
+                }
+              },
+              "queryRef": "Tarjetas.receptor",
+              "nativeQueryRef": "receptor"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "Amarillas"
+                }
+              },
+              "queryRef": "Tarjetas.Amarillas",
+              "nativeQueryRef": "Amarillas"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Tarjetas"
+                    }
+                  },
+                  "Property": "Rojas"
+                }
+              },
+              "queryRef": "Tarjetas.Rojas",
+              "nativeQueryRef": "Rojas"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Tarjetas"
+                  }
+                },
+                "Property": "seleccion"
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Tarjetas por jugador'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "688bc410990a04a80634",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Tarjetas"
+              }
+            },
+            "Property": "persona"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "b1158b419635db3068b2",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Tarjetas"
+              }
+            },
+            "Property": "seleccion"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "1dcd34575004c1284262",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Tarjetas"
+              }
+            },
+            "Property": "receptor"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "f233cace51316e703e1a",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Tarjetas"
+              }
+            },
+            "Property": "Amarillas"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "00ea02d582ce206679be",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Tarjetas"
+              }
+            },
+            "Property": "Rojas"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  }
+}

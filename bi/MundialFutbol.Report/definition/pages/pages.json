@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/pagesMetadata/1.1.0/schema.json",
+  "pageOrder": [
+    "plantillas",
+    "goleadores",
+    "tarjetas",
+    "suspensiones",
+    "arbitros",
+    "publicidad",
+    "publicidadPartidos",
+    "monedas",
+    "primetime",
+    "resultados",
+    "eliminacion",
+    "sedes"
+  ],
+  "activePageName": "plantillas"
+}

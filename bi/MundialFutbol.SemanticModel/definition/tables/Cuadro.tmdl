@@ -1,0 +1,295 @@
+table Cuadro
+	lineageTag: e28b9322-f6e5-5eb6-a1c8-942380b61692
+
+	measure 'Cuadro de eliminación' =
+			VAR Rondas = MAX(Cuadro[rondas])
+			-- Cuadro en espejo: la mitad de cada ronda a la izquierda, la otra mitad a la derecha y la
+			-- final (con el tercer puesto debajo) en la columna del centro.
+			VAR Columnas = 2 * Rondas - 1
+			VAR Centro = Rondas - 1
+			VAR PorLado = POWER(2, MAX(Rondas - 2, 0))
+			VAR AnchoCaja = 210
+			VAR MedioAncho = 105
+			VAR AnchoMarcador = 50
+			VAR MedioMarcador = 25
+			VAR AnchoNombre = 140
+			VAR Separacion = 24
+			VAR MediaSeparacion = 12
+			VAR AltoFila = 66
+			VAR AltoCaja = 56
+			VAR MedioAlto = 28
+			VAR Margen = 20
+			VAR Arriba = 58
+			VAR AltoCuadro = PorLado * AltoFila
+			VAR Ancho = 2 * Margen + Columnas * AnchoCaja + (Columnas - 1) * Separacion
+			VAR Alto = Arriba + AltoCuadro + 16
+			VAR CYFinal = INT(Arriba + AltoCuadro / 2)
+			VAR CYTercero = INT(Arriba + AltoCuadro * 0.84)
+			VAR Fuente = "font-family='Segoe UI' "
+			-- Azules del tema del reporte; dorado para la final y bronce para el tercer puesto.
+			VAR Azul = "rgb(17,141,255)"
+			VAR AzulOscuro = "rgb(18,35,158)"
+			VAR Dorado = "rgb(201,162,39)"
+			VAR Bronce = "rgb(184,115,51)"
+			VAR Fondo = "<rect x='0' y='0' width='" & Ancho & "' height='" & Alto & "' rx='14' fill='rgb(246,248,252)'/>"
+			VAR Titulos =
+			    CONCATENATEX(
+			        SUMMARIZE(Cuadro, Cuadro[ronda], Cuadro[es_tercer_puesto], Cuadro[etiqueta]),
+			        VAR EsTercero = Cuadro[es_tercer_puesto]
+			        VAR EsFinal = NOT EsTercero && Cuadro[ronda] = Rondas - 1
+			        VAR Color = IF(EsFinal, Dorado, IF(EsTercero, Bronce, AzulOscuro))
+			        VAR Y = IF(EsTercero, CYTercero - MedioAlto - 34, 14)
+			        VAR X1 = Margen + IF(EsFinal || EsTercero, Centro, Cuadro[ronda]) * (AnchoCaja + Separacion)
+			        VAR X2 = Margen + (Columnas - 1 - Cuadro[ronda]) * (AnchoCaja + Separacion)
+			        VAR Pastilla1 =
+			            "<rect x='" & X1 + 10 & "' y='" & Y & "' width='" & AnchoCaja - 20 & "' height='28' rx='14' fill='" & Color & "'/>"
+			                & "<text x='" & X1 + MedioAncho & "' y='" & Y + 19 & "' text-anchor='middle' " & Fuente & "font-size='14' font-weight='600' fill='white'>" & Cuadro[etiqueta] & "</text>"
+			        VAR Pastilla2 =
+			            "<rect x='" & X2 + 10 & "' y='" & Y & "' width='" & AnchoCaja - 20 & "' height='28' rx='14' fill='" & Color & "'/>"
+			                & "<text x='" & X2 + MedioAncho & "' y='" & Y + 19 & "' text-anchor='middle' " & Fuente & "font-size='14' font-weight='600' fill='white'>" & Cuadro[etiqueta] & "</text>"
+			        RETURN Pastilla1 & IF(NOT EsFinal && NOT EsTercero, Pastilla2),
+			        ""
+			    )
+			VAR Partidos =
+			    CONCATENATEX(
+			        Cuadro,
+			        VAR EsTercero = Cuadro[es_tercer_puesto]
+			        VAR EsFinal = NOT EsTercero && Cuadro[ronda] = Rondas - 1
+			        VAR Lugares = POWER(2, Rondas - 2 - Cuadro[ronda])
+			        VAR Derecha = NOT EsFinal && NOT EsTercero && Cuadro[posicion] >= Lugares
+			        VAR Fila = IF(Derecha, Cuadro[posicion] - Lugares, Cuadro[posicion])
+			        VAR Columna = IF(EsFinal || EsTercero, Centro, IF(Derecha, Columnas - 1 - Cuadro[ronda], Cuadro[ronda]))
+			        VAR X = Margen + Columna * (AnchoCaja + Separacion)
+			        VAR XM = X + AnchoCaja - AnchoMarcador
+			        VAR CY = SWITCH(TRUE(), EsFinal, CYFinal, EsTercero, CYTercero, INT(Arriba + (Fila + 0.5) * AltoCuadro / Lugares))
+			        VAR Y = CY - MedioAlto
+			        VAR GanaLocal = Cuadro[gana_local]
+			        VAR Definido = NOT ISBLANK(GanaLocal)
+			        VAR GanoLocal = Definido && GanaLocal = 1
+			        VAR GanoVisitante = Definido && GanaLocal = 0
+			        -- La línea que lleva al ganador al cruce siguiente (hacia el centro).
+			        VAR Conector =
+			            IF(
+			                NOT EsFinal && NOT EsTercero,
+			                VAR X1 = IF(Derecha, X, X + AnchoCaja)
+			                VAR XQ = IF(Derecha, X - MediaSeparacion, X + AnchoCaja + MediaSeparacion)
+			                VAR X2 = IF(Derecha, X - Separacion, X + AnchoCaja + Separacion)
+			                VAR CYP = IF(Lugares > 1, INT(Arriba + (INT(Fila / 2) + 0.5) * AltoCuadro * 2 / Lugares), CYFinal)
+			                RETURN "<polyline points='" & X1 & "," & CY & " " & XQ & "," & CY & " " & XQ & "," & CYP & " " & X2 & "," & CYP
+			                    & "' fill='none' stroke='" & IF(Definido, Azul, "rgb(190,198,210)") & "' stroke-opacity='" & IF(Definido, "0.6", "1")
+			                    & "' stroke-width='2'/>"
+			            )
+			        VAR Borde = IF(EsFinal, Dorado, IF(EsTercero, Bronce, "rgb(208,215,226)"))
+			        VAR GrosorBorde = IF(EsFinal || EsTercero, "2.5", "1")
+			        VAR Tinte = IF(EsFinal, "rgb(253,240,196)", IF(EsTercero, "rgb(246,229,212)", "rgb(231,243,255)"))
+			        VAR ColorGanador = IF(EsFinal, Dorado, IF(EsTercero, Bronce, Azul))
+			        -- Fila y celda del marcador del ganador. Los rect sin rx cuadran las esquinas interiores.
+			        VAR YG = IF(GanoLocal, Y, CY)
+			        VAR YInterior = IF(GanoLocal, YG + MedioAlto - 8, YG)
+			        VAR Resaltado =
+			            IF(
+			                Definido,
+			                "<rect x='" & X & "' y='" & YG & "' width='" & AnchoCaja & "' height='" & MedioAlto & "' rx='8' fill='" & Tinte & "'/>"
+			                    & "<rect x='" & X & "' y='" & YInterior & "' width='" & AnchoCaja & "' height='8' fill='" & Tinte & "'/>"
+			            )
+			        VAR Marcadores =
+			            "<rect x='" & XM & "' y='" & Y & "' width='" & AnchoMarcador & "' height='" & AltoCaja & "' rx='8' fill='rgb(236,239,244)'/>"
+			                & "<rect x='" & XM & "' y='" & Y & "' width='8' height='" & AltoCaja & "' fill='rgb(236,239,244)'/>"
+			                & IF(
+			                    Definido,
+			                    "<rect x='" & XM & "' y='" & YG & "' width='" & AnchoMarcador & "' height='" & MedioAlto & "' rx='8' fill='" & ColorGanador & "'/>"
+			                        & "<rect x='" & XM & "' y='" & YG & "' width='8' height='" & MedioAlto & "' fill='" & ColorGanador & "'/>"
+			                        & "<rect x='" & XM & "' y='" & YInterior & "' width='" & AnchoMarcador & "' height='8' fill='" & ColorGanador & "'/>"
+			                )
+			        -- Nombres: hasta 22 letras; desde 18 se angostan para que entren al lado del marcador.
+			        VAR NombreLocal = IF(LEN(Cuadro[seleccion_local]) > 22, LEFT(Cuadro[seleccion_local], 21) & "…", Cuadro[seleccion_local])
+			        VAR NombreVisitante = IF(LEN(Cuadro[seleccion_visitante]) > 22, LEFT(Cuadro[seleccion_visitante], 21) & "…", Cuadro[seleccion_visitante])
+			        VAR Local = SUBSTITUTE(SUBSTITUTE(NombreLocal, "&", "&amp;"), "<", "&lt;")
+			        VAR Visitante = SUBSTITUTE(SUBSTITUTE(NombreVisitante, "&", "&amp;"), "<", "&lt;")
+			        VAR AjusteLocal = IF(LEN(NombreLocal) > 17, "textLength='" & AnchoNombre & "' lengthAdjust='spacingAndGlyphs' ")
+			        VAR AjusteVisitante = IF(LEN(NombreVisitante) > 17, "textLength='" & AnchoNombre & "' lengthAdjust='spacingAndGlyphs' ")
+			        VAR PenalesLocal = IF(NOT ISBLANK(Cuadro[penales_local]), "<tspan font-size='11' font-weight='600' dx='2'>(" & Cuadro[penales_local] & ")</tspan>")
+			        VAR PenalesVisitante = IF(NOT ISBLANK(Cuadro[penales_visitante]), "<tspan font-size='11' font-weight='600' dx='2'>(" & Cuadro[penales_visitante] & ")</tspan>")
+			        VAR ColorLocal = IF(GanoVisitante, "rgb(115,115,115)", "rgb(20,20,20)")
+			        VAR ColorVisitante = IF(GanoLocal, "rgb(115,115,115)", "rgb(20,20,20)")
+			        VAR PesoLocal = IF(GanoLocal, "700", "400")
+			        VAR PesoVisitante = IF(GanoVisitante, "700", "400")
+			        RETURN
+			            Conector
+			                & "<rect x='" & X & "' y='" & Y & "' width='" & AnchoCaja & "' height='" & AltoCaja & "' rx='8' fill='white'/>"
+			                & Resaltado
+			                & Marcadores
+			                & "<line x1='" & X & "' y1='" & CY & "' x2='" & X + AnchoCaja & "' y2='" & CY & "' stroke='rgb(225,230,237)'/>"
+			                & "<rect x='" & X & "' y='" & Y & "' width='" & AnchoCaja & "' height='" & AltoCaja & "' rx='8' fill='none' stroke='" & Borde & "' stroke-width='" & GrosorBorde & "'/>"
+			                & "<text x='" & X + 12 & "' y='" & Y + 20 & "' " & Fuente & AjusteLocal & "font-size='16' font-weight='" & PesoLocal & "' fill='" & ColorLocal & "'>" & Local & "</text>"
+			                & "<text x='" & XM + MedioMarcador & "' y='" & Y + 20 & "' text-anchor='middle' " & Fuente & "font-size='16' font-weight='700' fill='" & IF(GanoLocal, "white", "rgb(105,105,105)") & "'>" & Cuadro[goles_local] & PenalesLocal & "</text>"
+			                & "<text x='" & X + 12 & "' y='" & CY + 20 & "' " & Fuente & AjusteVisitante & "font-size='16' font-weight='" & PesoVisitante & "' fill='" & ColorVisitante & "'>" & Visitante & "</text>"
+			                & "<text x='" & XM + MedioMarcador & "' y='" & CY + 20 & "' text-anchor='middle' " & Fuente & "font-size='16' font-weight='700' fill='" & IF(GanoVisitante, "white", "rgb(105,105,105)") & "'>" & Cuadro[goles_visitante] & PenalesVisitante & "</text>",
+			        "",
+			        Cuadro[ronda], ASC
+			    )
+			-- El campeón, sobre la final.
+			VAR NombreCampeon =
+			    CONCATENATEX(
+			        FILTER(Cuadro, NOT Cuadro[es_tercer_puesto] && Cuadro[ronda] = Rondas - 1 && NOT ISBLANK(Cuadro[gana_local])),
+			        SUBSTITUTE(SUBSTITUTE(IF(Cuadro[gana_local] = 1, Cuadro[seleccion_local], Cuadro[seleccion_visitante]), "&", "&amp;"), "<", "&lt;"),
+			        ""
+			    )
+			VAR XCentro = Margen + Centro * (AnchoCaja + Separacion) + MedioAncho
+			VAR Campeon =
+			    IF(
+			        NombreCampeon <> "",
+			        "<text x='" & XCentro & "' y='" & CYFinal - MedioAlto - 70 & "' text-anchor='middle' " & Fuente & "font-size='13' font-weight='700' letter-spacing='3' fill='" & Dorado & "'>★ CAMPEÓN ★</text>"
+			            & "<text x='" & XCentro & "' y='" & CYFinal - MedioAlto - 36 & "' text-anchor='middle' " & Fuente & "font-size='26' font-weight='700' fill='rgb(150,112,18)'>" & NombreCampeon & "</text>"
+			    )
+			RETURN
+			    IF(
+			        NOT ISEMPTY(Cuadro),
+			        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='" & Ancho & "' height='" & Alto & "' viewBox='0 0 " & Ancho & " " & Alto & "'>"
+			            & Fondo & Titulos & Partidos & Campeon & "</svg>"
+			    )
+		lineageTag: 9e523547-c634-5295-bf68-66f96ff87665
+		dataCategory: ImageUrl
+
+	column id_partido
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 713743dc-15cd-554f-9e97-d3aa000c9446
+		summarizeBy: none
+		sourceColumn: id_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column numero_partido
+		dataType: int64
+		formatString: 0
+		lineageTag: acf08e96-9292-5c39-b678-548d43628cc1
+		summarizeBy: none
+		sourceColumn: numero_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column fase
+		dataType: string
+		lineageTag: a997006d-b88a-5b20-b3b1-989b01ca188d
+		summarizeBy: none
+		sourceColumn: fase
+
+		annotation SummarizationSetBy = Automatic
+
+	column etiqueta
+		dataType: string
+		lineageTag: 5d9edccc-7d2d-5156-aa35-327d3aaafc53
+		summarizeBy: none
+		sourceColumn: etiqueta
+
+		annotation SummarizationSetBy = Automatic
+
+	column ronda
+		dataType: int64
+		formatString: 0
+		lineageTag: 76dfaf1d-c7af-51c4-a325-f42c4428156e
+		summarizeBy: none
+		sourceColumn: ronda
+
+		annotation SummarizationSetBy = Automatic
+
+	column rondas
+		dataType: int64
+		formatString: 0
+		lineageTag: dcf6ae36-2eff-5046-9425-59cfc75f3959
+		summarizeBy: none
+		sourceColumn: rondas
+
+		annotation SummarizationSetBy = Automatic
+
+	column posicion
+		dataType: int64
+		formatString: 0
+		lineageTag: 1880aa65-3c0f-5961-94ea-6e510e72a71f
+		summarizeBy: none
+		sourceColumn: posicion
+
+		annotation SummarizationSetBy = Automatic
+
+	column es_tercer_puesto
+		dataType: boolean
+		lineageTag: 75d70e12-51b0-5dd8-b150-88883bcad1e2
+		summarizeBy: none
+		sourceColumn: es_tercer_puesto
+
+		annotation SummarizationSetBy = Automatic
+
+	column seleccion_local
+		dataType: string
+		lineageTag: 98878574-7f60-5892-8801-35440fb0e2d2
+		summarizeBy: none
+		sourceColumn: seleccion_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column seleccion_visitante
+		dataType: string
+		lineageTag: 96e09002-350c-560f-9b56-bca215edc42f
+		summarizeBy: none
+		sourceColumn: seleccion_visitante
+
+		annotation SummarizationSetBy = Automatic
+
+	column goles_local
+		dataType: int64
+		formatString: 0
+		lineageTag: c43983f7-3f25-586c-a055-d87a89c30077
+		summarizeBy: none
+		sourceColumn: goles_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column goles_visitante
+		dataType: int64
+		formatString: 0
+		lineageTag: 5eea7af8-4420-5fb7-beaa-f1e1f2dbcd75
+		summarizeBy: none
+		sourceColumn: goles_visitante
+
+		annotation SummarizationSetBy = Automatic
+
+	column penales_local
+		dataType: int64
+		formatString: 0
+		lineageTag: dcdaa7d2-68eb-5027-bf3f-72bf4621bf67
+		summarizeBy: none
+		sourceColumn: penales_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column penales_visitante
+		dataType: int64
+		formatString: 0
+		lineageTag: 178c1a67-b626-5cb5-9083-c6177896c6e8
+		summarizeBy: none
+		sourceColumn: penales_visitante
+
+		annotation SummarizationSetBy = Automatic
+
+	column gana_local
+		dataType: int64
+		formatString: 0
+		lineageTag: fd02542f-3de0-59ef-afed-a1639f814b8c
+		summarizeBy: none
+		sourceColumn: gana_local
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Cuadro = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_CuadroEliminacion"]}[Data]
+				in
+				    Vista
+
+	annotation PBI_ResultType = Table
+

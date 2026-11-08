@@ -1,0 +1,176 @@
+table Goles
+	lineageTag: bf50ba81-007c-52fe-b19f-f2c826ebc132
+
+	measure 'Total goles' = COUNTROWS(Goles)
+		formatString: 0
+		lineageTag: a6582645-8b8a-57f2-9a1c-ae6cf64ac542
+
+	column id_gol
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 2d3f1555-4fc8-5a91-a9a9-c9f56a07fc7f
+		summarizeBy: none
+		sourceColumn: id_gol
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_partido
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 5f150b86-1cf5-5756-af24-8d2bd7aa5c33
+		summarizeBy: none
+		sourceColumn: id_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column numero_partido
+		dataType: int64
+		formatString: 0
+		lineageTag: 7aa25428-2979-5aee-9379-e31571f54a76
+		summarizeBy: none
+		sourceColumn: numero_partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column fase
+		dataType: string
+		lineageTag: 815e98a6-cc98-5def-8f55-190819a0039d
+		summarizeBy: none
+		sourceColumn: fase
+		sortByColumn: orden_fase
+
+		annotation SummarizationSetBy = Automatic
+
+	column orden_fase
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 50b2b4ca-8bd6-5ddd-a515-05daf18694ee
+		summarizeBy: none
+		sourceColumn: orden_fase
+
+		annotation SummarizationSetBy = Automatic
+
+	column fecha_hora_local
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: f4de52c0-1a76-5297-b360-ff5438ff8a8a
+		summarizeBy: none
+		sourceColumn: fecha_hora_local
+
+		annotation SummarizationSetBy = Automatic
+
+	column partido
+		dataType: string
+		lineageTag: 04b34dc5-8bea-56eb-9ec6-fb35700efe7c
+		summarizeBy: none
+		sourceColumn: partido
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_seleccion
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 81c2aa80-e8ae-57e9-a3d5-a02ed6732acb
+		summarizeBy: none
+		sourceColumn: id_seleccion
+
+		annotation SummarizationSetBy = Automatic
+
+	column seleccion
+		dataType: string
+		lineageTag: 6f2d10d5-5d71-58e8-b118-348e2e697420
+		summarizeBy: none
+		sourceColumn: seleccion
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_jugador
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 1b6ec864-d30d-54e1-aaa8-20353ed10454
+		summarizeBy: none
+		sourceColumn: id_jugador
+
+		annotation SummarizationSetBy = Automatic
+
+	column apellido
+		dataType: string
+		lineageTag: e452340c-ac07-5e97-8f2a-ad71d4c1fe1d
+		summarizeBy: none
+		sourceColumn: apellido
+
+		annotation SummarizationSetBy = Automatic
+
+	column nombre
+		dataType: string
+		lineageTag: 2943e139-d91a-57bb-9306-4200ce013c17
+		summarizeBy: none
+		sourceColumn: nombre
+
+		annotation SummarizationSetBy = Automatic
+
+	column jugador
+		dataType: string
+		lineageTag: 01ec0ed8-2708-5e4f-a4bb-935804ad0b3a
+		summarizeBy: none
+		sourceColumn: jugador
+
+		annotation SummarizationSetBy = Automatic
+
+	column dorsal
+		dataType: int64
+		formatString: 0
+		lineageTag: 723e1ee7-83cb-5c00-9689-122a409b3e1e
+		summarizeBy: none
+		sourceColumn: dorsal
+
+		annotation SummarizationSetBy = Automatic
+
+	column posicion_habitual
+		dataType: string
+		lineageTag: 54b1ad53-07a9-5b26-8d4a-9fc6faf3f570
+		summarizeBy: none
+		sourceColumn: posicion_habitual
+
+		annotation SummarizationSetBy = Automatic
+
+	column tipo_gol
+		dataType: string
+		lineageTag: 852daaec-d920-5450-8326-af896c2021bc
+		summarizeBy: none
+		sourceColumn: tipo_gol
+
+		annotation SummarizationSetBy = Automatic
+
+	column periodo
+		dataType: string
+		lineageTag: fe0cc3fc-36ad-56a5-8a2b-bdb1d55d8b1d
+		summarizeBy: none
+		sourceColumn: periodo
+
+		annotation SummarizationSetBy = Automatic
+
+	column minuto
+		dataType: string
+		lineageTag: 9293f10e-78e5-54cc-aebc-e42fc2eb056f
+		summarizeBy: none
+		sourceColumn: minuto
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Goles = m
+		mode: import
+		source =
+				let
+				    Origen = Sql.Database(Servidor, BaseDeDatos),
+				    Vista = Origen{[Schema="Reportes",Item="vw_Goles"]}[Data]
+				in
+				    Vista
+
+	annotation PBI_ResultType = Table
+
