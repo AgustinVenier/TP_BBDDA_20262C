@@ -1,4 +1,4 @@
-﻿/*
+/*
 ================================================================================
  Universidad Nacional de La Matanza
  Materia: 3641 - Bases de Datos Aplicada
@@ -9,12 +9,13 @@
    Tavella, Tomás - TomasTavella
    Venier, Agustin - AgustinVenier
 
- Fecha: 03/11/2026
+ Fecha: 08/11/2026
  Archivo: 37_Ejecutar_PrepararBase.sql
  Objetivo: Dejar la base lista para importar en vivo: la recrea desde cero, crea
            todos los objetos y carga los datos iniciales, sin importar nada. Es
            el primer script que se ejecuta, aunque tenga este número: ejecuta 00
-           a 25, 27, 28 y 30, y deja afuera 26, 29, 31, 32 y 33.
+           a 25, 27, 28 y 30, además de los scripts 40 y 41; deja afuera 26, 29,
+           31, 32, 33 y los tests 81 a 85.
 ================================================================================
 
  ATENCIÓN: ELIMINA LA BASE MundialFutbol, con todos sus datos (lo hace
@@ -26,6 +27,9 @@
      ninguno de los scripts.
    - CAMBIAR la ruta de :setvar src por la carpeta src\ del repositorio en tu
      máquina, terminada en \.
+   - Antes, provisionar en master el certificado CertMundialFutbolTDE y respaldar
+     su clave privada según doc\Seguridad-y-Respaldo-Entrega-8.md. Requiere
+     SQL Server Standard o Enterprise; TDE no está disponible en Express.
    Si un script falla, se detiene ahí (:on error exit).
 
  Después de este script, en este orden:
@@ -37,6 +41,7 @@
    4. 31_Ejecutar_ImportarMundial2026.sql   el torneo, con errores parciales
    5. 32_Ejecutar_DatosComplementarios.sql  lo que las fuentes no traen
    6. 33_Ejecutar_SedesAdicionales.sql      sedes propias del juego de datos
+   7. 81 a 85_Test_*.sql                    permisos por rol y cifrado TDE
 */
 
 -- CAMBIAR: ruta de la carpeta src\ del repositorio en tu máquina, terminada en \ (ver "Antes de ejecutar").
@@ -109,6 +114,12 @@ GO
 GO
 
 
+-- Roles de aplicación y TDE: el certificado del servidor debe estar provisionado antes de ejecutar este runner.
+:r $(src)40_Seguridad.sql
+GO
+:r $(src)41_Activar_CifradoTDE.sql
+GO
+
 -- Evidencia: los objetos creados, los datos iniciales y nada importado.
 SET NOCOUNT ON;
 
@@ -121,3 +132,9 @@ SELECT N'Base lista para importar' AS estado,
        (SELECT COUNT(*) FROM Torneo.JUGADOR)                   AS jugadores,
        (SELECT COUNT(*) FROM Torneo.PARTIDO)                   AS partidos;
 GO
+
+
+
+
+
+

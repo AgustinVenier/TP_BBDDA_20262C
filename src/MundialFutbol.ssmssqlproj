@@ -382,6 +382,48 @@
           <AssociatedConnUserName />
           <FullPath>80_Test_SP_Reportes.sql</FullPath>
         </FileNode>
+        <FileNode Name="40_Seguridad.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>40_Seguridad.sql</FullPath>
+        </FileNode>
+        <FileNode Name="41_Activar_CifradoTDE.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>41_Activar_CifradoTDE.sql</FullPath>
+        </FileNode>
+        <FileNode Name="81_Test_Rol_Administrador.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>81_Test_Rol_Administrador.sql</FullPath>
+        </FileNode>
+        <FileNode Name="82_Test_Rol_CargadorResultados.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>82_Test_Rol_CargadorResultados.sql</FullPath>
+        </FileNode>
+        <FileNode Name="83_Test_Rol_GestorPublicidad.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>83_Test_Rol_GestorPublicidad.sql</FullPath>
+        </FileNode>
+        <FileNode Name="84_Test_Rol_ConsultaReportes.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>84_Test_Rol_ConsultaReportes.sql</FullPath>
+        </FileNode>
+        <FileNode Name="85_Test_CifradoTDE.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>85_Test_CifradoTDE.sql</FullPath>
+        </FileNode>
       </Items>
     </LogicalFolder>
     <LogicalFolder Name="Miscellaneous" Type="3" Sorted="true">
