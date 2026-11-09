@@ -11,7 +11,7 @@
 
  Fecha: 31/10/2026
  Archivo: 78_Test_SP_Importar_Feriados.sql
- Objetivo: Probar la importación de feriados de 28_SP_Importar_Feriados.sql,
+ Objetivo: Probar la importación de feriados de 27_SP_Importar_Feriados.sql,
            con el registro de cada importación y de sus rechazados
            (DatosGenerales.ERRORES_FERIADO). Las reglas de los feriados las
            prueba 66_Test_SP_Importacion.sql, con
@@ -22,10 +22,10 @@
                feriados el mismo día, importación con errores parciales y los
                documentos que no se pueden importar;
              - consultando la API Nager.Date (casos AP, necesitan internet).
-           Requiere haber ejecutado 00 a 28 (usa Argentina, Inglaterra y
+           Requiere haber ejecutado 01 a 27 (usa Argentina, Inglaterra y
            Escocia de 20_Ejecutar_DatosIniciales.sql). No depende del juego de datos:
            las respuestas escritas son de 2001, un año que no importa
-           29_Ejecutar_ImportarAPIs.sql, y el caso de la API corre
+           31_Ejecutar_ImportarAPIs.sql, y el caso de la API corre
            dentro de una transacción que se deshace. Al final se borra lo que
            cargó el test, con el registro de sus importaciones, así que se
            puede ejecutar más de una vez.
@@ -66,7 +66,7 @@ IF OBJECT_ID(N'DatosGenerales.usp_ImportarFeriadosAPI', N'P') IS NULL
    OR OBJECT_ID(N'DatosGenerales.usp_ImportarFeriados', N'P') IS NULL
    OR (SELECT COUNT(*) FROM DatosGenerales.PAIS WHERE codigo_fifa IN ('ARG', 'ENG', 'SCO')) < 3
 BEGIN
-    RAISERROR(N'Faltan los SP de importación de feriados o los datos iniciales: ejecutar los scripts 00 a 28.', 16, 1);
+    RAISERROR(N'Faltan los SP de importación de feriados o los datos iniciales: ejecutar los scripts 01 a 27.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

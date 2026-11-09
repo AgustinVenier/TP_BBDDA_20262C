@@ -10,15 +10,15 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 04_SP_ABM_DatosGenerales.sql
+ Archivo: 05_SP_ABM_DatosGenerales.sql
  Objetivo: Crear los stored procedures de alta, baja y modificación de las
            tablas del esquema DatosGenerales: PAIS, IDIOMA, INDICADOR_ECONOMICO,
            COTIZACION, FERIADO y PARAMETRO_REGLAMENTO. Requiere haber
-           ejecutado 00 a 03.
+           ejecutado 01 a 04.
            Su script de testing es 54_Test_SP_ABM_DatosGenerales.sql.
 ================================================================================
 
- Convenciones de los SP de ABM (las siguen los scripts 04 a 08):
+ Convenciones de los SP de ABM (las siguen los scripts 05 a 09):
    - Un SP por tabla y operación: usp_<TABLA>_Alta, usp_<TABLA>_Modificacion
      y usp_<TABLA>_Baja.
    - Las validaciones no se cortan en la primera falla: cada condición que no

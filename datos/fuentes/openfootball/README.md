@@ -8,7 +8,7 @@ Los tres archivos son del proyecto [openfootball/worldcup.json](https://github.c
 | `worldcup.teams.json` | Las 48 selecciones: nombre en inglés, código FIFA, grupo y confederación | `Torneo.usp_ImportarSeleccionesJSON` |
 | `worldcup-full.json` | Los 104 partidos: fecha y hora local, sede, resultado (90 minutos, alargue y penales), asistencia, formaciones, cambios, goles, penales de la definición, tarjetas y árbitro principal | `Torneo.usp_ImportarPartidosJSON` |
 
-Los SP están en `src/23_SP_Importar_Mundial2026.sql`. `src/31_Ejecutar_ImportarMundial2026.sql` carga el torneo completo, junto con los jugadores del CSV del scraping (`scraping/datos/jugadores.csv`).
+Los SP están en `src/23_SP_Importar_Mundial2026.sql`. `src/32_Ejecutar_ImportarMundial2026.sql` carga el torneo completo, junto con los jugadores del CSV del scraping (`scraping/datos/jugadores.csv`).
 
 ## Cómo se obtuvieron
 
@@ -20,7 +20,7 @@ curl -o worldcup.teams.json    https://raw.githubusercontent.com/openfootball/wo
 curl -o worldcup.stadiums.json https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.stadiums.json
 ```
 
-La cuenta del servicio de SQL Server tiene que poder leer esta carpeta (ver "Antes de ejecutar" en `src/31_Ejecutar_ImportarMundial2026.sql`).
+La cuenta del servicio de SQL Server tiene que poder leer esta carpeta (ver "Antes de ejecutar" en `src/32_Ejecutar_ImportarMundial2026.sql`).
 
 ## Límites de uso
 
@@ -39,4 +39,4 @@ La cuenta del servicio de SQL Server tiene que poder leer esta carpeta (ver "Ant
 
 - `worldcup-full.json` nombra a tres selecciones distinto que `worldcup.teams.json` ("Bosnia and Herzegovina", "Côte d'Ivoire", "Congo DR").
 - Escribe algunos jugadores de otra forma que el CSV del scraping (otra transliteración, el apodo o el nombre completo).
-- `src/31_Ejecutar_ImportarMundial2026.sql` registra esos nombres en `Torneo.NOMBRE_ALTERNATIVO` y reprocesa solo los partidos que se habían rechazado (`@reprocesar_importacion`).
+- `src/32_Ejecutar_ImportarMundial2026.sql` registra esos nombres en `Torneo.NOMBRE_ALTERNATIVO` y reprocesa solo los partidos que se habían rechazado (`@reprocesar_importacion`).

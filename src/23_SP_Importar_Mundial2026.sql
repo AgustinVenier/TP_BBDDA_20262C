@@ -28,12 +28,12 @@
              Torneo.usp_ImportarSeleccionesJSON       worldcup.teams.json
              Torneo.usp_ImportarPartidosJSON          worldcup-full.json
              Arbitraje.usp_ImportarDesignacionesCSV   designaciones_arbitrales.csv (scraping)
-           Requiere haber ejecutado 00 a 22. Su script de testing es
+           Requiere haber ejecutado 01 a 22. Su script de testing es
            73_Test_SP_Importar_Mundial2026.sql. La carga del torneo real está
-           en 31_Ejecutar_ImportarMundial2026.sql.
+           en 32_Ejecutar_ImportarMundial2026.sql.
 ================================================================================
 
- Cómo importa cada SP (igual que 24, 25, 27 y 28):
+ Cómo importa cada SP (igual que 24, 25, 26 y 27):
    1. Se controla el archivo: que se pueda leer, que sea JSON y que tenga la
       estructura del archivo de openfootball que corresponde (o, el CSV del
       equipo arbitral, sus columnas). Si no, no se importa nada (THROW 50002).
@@ -893,6 +893,7 @@ BEGIN
         codigo_fifa         VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
         id_jugador          INT           NULL,
         id_jugador_entra    INT           NULL,
+        id_jugador_asistencia INT         NULL,                               -- el archivo no trae asistencias
         es_titular          BIT           NULL,
         posicion_en_cancha  VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
         minuto              TINYINT       NULL,

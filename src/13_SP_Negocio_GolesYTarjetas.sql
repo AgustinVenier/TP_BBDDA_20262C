@@ -18,9 +18,9 @@
              DesarrolloPartido.usp_RegistrarAmonestacion  tarjeta, roja por doble amarilla
                                                           y suspensión resultante
            Las sanciones y suspensiones las calculan fn_Sanciones y
-           fn_JugadoresSuspendidos (03_CrearFuncionesYVistas.sql) con los
+           fn_JugadoresSuspendidos (04_CrearFuncionesYVistas.sql) con los
            criterios de PARAMETRO_REGLAMENTO. Siguen las convenciones de
-           10_SP_Negocio_SedesYPartidos.sql. Requiere haber ejecutado 00 a 08.
+           10_SP_Negocio_SedesYPartidos.sql. Requiere haber ejecutado 01 a 09.
            Su script de testing es 63_Test_SP_Negocio_GolesYTarjetas.sql.
 ================================================================================
 */

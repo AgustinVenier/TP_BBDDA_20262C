@@ -17,7 +17,7 @@
            empate; tarjetas, roja automática por doble amarilla y cálculo de
            la suspensión (doble amarilla, roja directa y acumulación de
            amarillas en partidos distintos).
-           Requiere haber ejecutado 00 a 20; no depende del juego de datos.
+           Requiere haber ejecutado 01 a 20; no depende del juego de datos.
            Usa sus propios datos de prueba: la sede "Estadio Prueba Goles",
            dos selecciones de prueba (XGA y XGB, con 23 jugadores cada una),
            el partido 241 (XGA - XGB, de dieciseisavos, ya jugado, con una
@@ -47,7 +47,7 @@ IF OBJECT_ID(N'DesarrolloPartido.usp_RegistrarAmonestacion', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DesarrolloPartido.TIPO_GOL WHERE descripcion IN ('JUGADA', 'EN CONTRA', 'PENAL', 'CABEZAZO')
                   HAVING COUNT(*) = 4)
 BEGIN
-    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

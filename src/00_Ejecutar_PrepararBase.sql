@@ -10,16 +10,17 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 08/11/2026
- Archivo: 37_Ejecutar_PrepararBase.sql
+ Archivo: 00_Ejecutar_PrepararBase.sql
  Objetivo: Dejar la base lista para importar en vivo: la recrea desde cero, crea
-           todos los objetos y carga los datos iniciales, sin importar nada. Es
-           el primer script que se ejecuta, aunque tenga este número: ejecuta 00
-           a 25, 27, 28, 30 y 40 (roles); deja afuera 26, 29, 31, 32, 33, 36,
-           el cifrado (38) y los tests 81 a 85.
+           todos los objetos y carga los datos iniciales, sin importar nada.
+           Ejecuta, en orden, los scripts 01 a 29 (el 29 crea los roles). Las
+           importaciones (30 a 35), los reportes (36), el cifrado (40 a 45),
+           las consultas de la Entrega 9 (46) y los tests (53 a 95) se
+           ejecutan aparte.
 ================================================================================
 
  ATENCIÓN: ELIMINA LA BASE MundialFutbol, con todos sus datos (lo hace
- 00_CrearBaseDeDatos.sql), y cierra las conexiones que tenga abiertas.
+ 01_CrearBaseDeDatos.sql), y cierra las conexiones que tenga abiertas.
 
  Antes de ejecutar:
    - En SSMS, activar el modo SQLCMD: menú Query > SQLCMD Mode. Sin él, las
@@ -29,23 +30,24 @@
      máquina, terminada en \.
    Si un script falla, se detiene ahí (:on error exit).
 
- Después de este script, en este orden:
-   1. 26_Ejecutar_ImportarIndicadores.sql   PBI per cápita (API)
-   2. 29_Ejecutar_ImportarAPIs.sql          campañas, cotizaciones y feriados (APIs)
-   3. El scraping, en una terminal, desde la carpeta del repositorio:
+ Después de este script, en el orden de su número:
+   30_Ejecutar_ImportarIndicadores.sql     PBI per cápita (API)
+   31_Ejecutar_ImportarAPIs.sql            campañas, cotizaciones y feriados (APIs)
+   el scraping, en una terminal, desde la carpeta del repositorio:
         python scraping/Scraping_Jugadores.py
         python scraping/Scraping_Arbitros.py
-   4. 31_Ejecutar_ImportarMundial2026.sql   el torneo, con errores parciales
-   5. 32_Ejecutar_DatosComplementarios.sql  lo que las fuentes no traen
-   6. 33_Ejecutar_SedesAdicionales.sql      sedes propias del juego de datos
-   7. 36_Ejecutar_ImportarImagenesSedes.sql la foto de cada sede (datos\fuentes\sedes)
-   8. 53 a 80_Test_*.sql                    tests de las entregas 5 a 7, antes de cifrar
-   9. 38_Ejecutar_Cifrado.sql               cifrado de los datos personales
-  10. 81 a 85_Test_*.sql                    permisos por rol y cifrado
-  11. 35_Ejecutar_Entrega9_ConsultasToBe.sql  lee las vistas descifradas que crea 38
+   32_Ejecutar_ImportarMundial2026.sql     el torneo, con errores parciales
+   33_Ejecutar_DatosComplementarios.sql    lo que las fuentes no traen
+   34_Ejecutar_SedesAdicionales.sql        sedes propias del juego de datos
+   35_Ejecutar_ImportarImagenesSedes.sql   la foto de cada sede (datos\fuentes\sedes)
+   36_Ejecutar_Entrega7_Reportes.sql       los reportes de la Entrega 7
+   40_Ejecutar_Cifrado.sql                 cifrado de los datos personales (ejecuta 41 a 45)
+   46_Ejecutar_Entrega9_ConsultasToBe.sql  lee las vistas descifradas que crea 40
 
- Los tests 53 a 80 van antes del cifrado: después, los que buscan personas por
- nombre en las tablas no las encuentran y su limpieza deja datos de prueba.
+ Los tests no siguen ese orden: los 53 a 80 van antes del cifrado (40), porque
+ después los que buscan personas por nombre en las tablas no las encuentran y
+ su limpieza deja datos de prueba; los 81 a 84 (permisos por rol) y 91 a 95
+ (cifrado), después.
 */
 
 -- CAMBIAR: ruta de la carpeta src\ del repositorio en tu máquina, terminada en \ (ver "Antes de ejecutar").
@@ -58,25 +60,25 @@ SET QUOTED_IDENTIFIER ON;
 GO
 
 -- Base, esquemas, tablas, funciones y vistas.
-:r $(src)00_CrearBaseDeDatos.sql
+:r $(src)01_CrearBaseDeDatos.sql
 GO
-:r $(src)01_CrearEsquemas.sql
+:r $(src)02_CrearEsquemas.sql
 GO
-:r $(src)02_CrearTablas.sql
+:r $(src)03_CrearTablas.sql
 GO
-:r $(src)03_CrearFuncionesYVistas.sql
+:r $(src)04_CrearFuncionesYVistas.sql
 GO
 
 -- SP de ABM.
-:r $(src)04_SP_ABM_DatosGenerales.sql
+:r $(src)05_SP_ABM_DatosGenerales.sql
 GO
-:r $(src)05_SP_ABM_Torneo.sql
+:r $(src)06_SP_ABM_Torneo.sql
 GO
-:r $(src)06_SP_ABM_DesarrolloPartido.sql
+:r $(src)07_SP_ABM_DesarrolloPartido.sql
 GO
-:r $(src)07_SP_ABM_Arbitraje.sql
+:r $(src)08_SP_ABM_Arbitraje.sql
 GO
-:r $(src)08_SP_ABM_Publicidad.sql
+:r $(src)09_SP_ABM_Publicidad.sql
 GO
 
 -- SP de negocio y SP masivos de la importación.
@@ -114,16 +116,16 @@ GO
 GO
 :r $(src)25_SP_Importar_Indicadores.sql
 GO
-:r $(src)27_SP_Importar_Cotizaciones.sql
+:r $(src)26_SP_Importar_Cotizaciones.sql
 GO
-:r $(src)28_SP_Importar_Feriados.sql
+:r $(src)27_SP_Importar_Feriados.sql
 GO
-:r $(src)30_SP_Reportes.sql
+:r $(src)28_SP_Reportes.sql
 GO
 
 
 -- Roles de aplicación.
-:r $(src)40_Seguridad.sql
+:r $(src)29_Seguridad.sql
 GO
 
 -- Evidencia: los objetos creados, los datos iniciales y nada importado.

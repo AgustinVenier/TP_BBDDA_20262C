@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 03_CrearFuncionesYVistas.sql
+ Archivo: 04_CrearFuncionesYVistas.sql
  Objetivo: Crear las funciones y vistas que usan los SP y las consultas del
            sistema: parámetros del sistema, cotización vigente de una
            moneda, fixture filtrable, equipo en
@@ -19,7 +19,7 @@
            de prime time y feriados por mercado, prioridad de piezas
            publicitarias, historial de
            titularidad, goleadores e historial de árbitros.
-           Requiere haber ejecutado 00, 01 y 02. Su script de testing es
+           Requiere haber ejecutado 01, 02 y 03. Su script de testing es
            53_Test_FuncionesYVistas.sql.
 ================================================================================
 

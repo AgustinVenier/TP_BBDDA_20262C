@@ -10,12 +10,12 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 02_CrearTablas.sql
+ Archivo: 03_CrearTablas.sql
  Objetivo: Crear todas las tablas del sistema con sus claves primarias,
            claves foraneas, restricciones UNIQUE, CHECK y DEFAULT, y los
            indices sobre claves foraneas.
-           Requiere haber ejecutado 00_CrearBaseDeDatos.sql y
-           01_CrearEsquemas.sql.
+           Requiere haber ejecutado 01_CrearBaseDeDatos.sql y
+           02_CrearEsquemas.sql.
 
 ================================================================================
 
@@ -984,7 +984,7 @@ GO
 /* ============================================================================
    REGISTRO DE LAS IMPORTACIONES
    No figuran en el DER: son el registro tecnico de los procesos de
-   importacion de la Entrega 6 (23 a 28), como PARAMETRO_REGLAMENTO es
+   importacion de la Entrega 6 (23 a 27), como PARAMETRO_REGLAMENTO es
    configuracion. Cada corrida de un proceso queda en IMPORTACION, y los
    registros que rechazo, en la tabla ERRORES_ de lo que importo (en el
    esquema de esa tabla), tal como venian en el origen y con todos los

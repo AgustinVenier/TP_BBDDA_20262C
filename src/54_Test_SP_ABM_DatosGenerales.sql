@@ -11,11 +11,11 @@
 
  Fecha: 25/10/2026
  Archivo: 54_Test_SP_ABM_DatosGenerales.sql
- Objetivo: Probar los SP de 04_SP_ABM_DatosGenerales.sql. Para cada tabla hay
+ Objetivo: Probar los SP de 05_SP_ABM_DatosGenerales.sql. Para cada tabla hay
            casos exitosos, con la evidencia de los datos antes y después, y
            casos que no cumplen las validaciones, que deben fallar con un único
            mensaje que liste todas las condiciones incumplidas.
-           Requiere haber ejecutado 00 a 20: los casos de parámetros usan los
+           Requiere haber ejecutado 01 a 20: los casos de parámetros usan los
            valores del reglamento de 20_Ejecutar_DatosIniciales.sql, e I6, el idioma
            inglés que carga ese script. No depende del juego de
            datos: crea sus propios datos de prueba (dos países, un
@@ -51,7 +51,7 @@ IF OBJECT_ID(N'DatosGenerales.usp_PAIS_Alta', N'P') IS NULL
    OR OBJECT_ID(N'Arbitraje.usp_ARBITRO_Alta', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'MAX_CONVOCADOS')
 BEGIN
-    RAISERROR(N'Faltan los SP de ABM o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de ABM o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

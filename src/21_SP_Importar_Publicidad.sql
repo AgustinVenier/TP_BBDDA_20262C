@@ -20,10 +20,10 @@
              Publicidad.usp_ImportarCampaniasAPI   consulta la API y procesa la respuesta
            El pedido a la API lo hace DatosGenerales.usp_ConsumirAPI
            (22_SP_ConsumirAPI.sql), que tiene que existir cuando se ejecutan
-           (no cuando se crean). Requiere haber ejecutado 00 a 20. Su script
+           (no cuando se crean). Requiere haber ejecutado 01 a 20. Su script
            de testing es 71_Test_SP_Importar_Publicidad.sql y la importación
-           la hace 29_Ejecutar_ImportarAPIs.sql, antes de los datos complementarios
-           (32), para que sus piezas compitan en la asignación de publicidad.
+           la hace 31_Ejecutar_ImportarAPIs.sql, antes de los datos complementarios
+           (33), para que sus piezas compitan en la asignación de publicidad.
 ================================================================================
 
  Fuente: la página no trae las campañas en el HTML: las lee con JavaScript

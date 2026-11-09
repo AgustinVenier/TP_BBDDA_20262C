@@ -13,11 +13,13 @@
  Archivo: 20_Ejecutar_DatosIniciales.sql
  Objetivo: Cargar los datos que el sistema necesita para funcionar: los
            parámetros del reglamento, los idiomas, los países y los tipos de
-           gol. Todo se carga con los SP de ABM, nunca con INSERT directo
-           sobre las tablas. Requiere haber ejecutado 00 a 16.
-           Es re-ejecutable: lo que ya existe no se vuelve a cargar. Si una
-           fila no pasa las validaciones, se informa el motivo y se sigue con
-           las demás.
+           gol. Cada tabla se arma en una tabla de staging y se carga por
+           conjuntos con su SP de 16_SP_Importacion.sql, que aplica las
+           mismas reglas que el SP de alta de la tabla; nunca con INSERT
+           directo sobre las tablas. Requiere haber ejecutado 01 a 16.
+           Es re-ejecutable: lo que ya existe no se vuelve a cargar (queda
+           SIN CAMBIOS). Si una fila no pasa las validaciones, se informa el
+           motivo y se cargan las demás.
 ================================================================================
 
  Criterios de los datos:
@@ -44,27 +46,34 @@ GO
 SET NOCOUNT ON;
 GO
 
--- Si faltan los SP de ABM no se ejecuta el resto del script (SET NOEXEC, como en 01).
-IF OBJECT_ID(N'DatosGenerales.usp_PAIS_Alta', N'P') IS NULL
-   OR OBJECT_ID(N'DesarrolloPartido.usp_TIPO_GOL_Alta', N'P') IS NULL
+-- Si faltan los SP de carga no se ejecuta el resto del script (SET NOEXEC, como en 02).
+IF OBJECT_ID(N'DatosGenerales.usp_ImportarParametrosReglamento', N'P') IS NULL
+   OR OBJECT_ID(N'DatosGenerales.usp_ImportarIdiomas', N'P') IS NULL
+   OR OBJECT_ID(N'DatosGenerales.usp_ImportarPaises', N'P') IS NULL
+   OR OBJECT_ID(N'DesarrolloPartido.usp_ImportarTiposGol', N'P') IS NULL
 BEGIN
-    RAISERROR(N'Faltan los SP de ABM (scripts 04 a 08): no se cargó ningún dato.', 16, 1);
+    RAISERROR(N'Faltan los SP de carga (16_SP_Importacion.sql): no se cargó ningún dato.', 16, 1);
     SET NOEXEC ON;
 END;
+GO
+
+-- Las tablas de staging de una ejecución anterior en esta sesión.
+DROP TABLE IF EXISTS #staging_parametros, #staging_idiomas, #staging_paises, #staging_tipos_gol;
 GO
 
 
 /* ============================================================================
    1. PARÁMETROS DEL REGLAMENTO
    ============================================================================ */
-DECLARE @parametros TABLE (
-    orden        INT IDENTITY(1,1) PRIMARY KEY,
-    codigo       VARCHAR(50),
-    descripcion  VARCHAR(200),
-    valor        TINYINT
+CREATE TABLE #staging_parametros (
+    codigo       VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
+    descripcion  VARCHAR(400)  COLLATE DATABASE_DEFAULT NULL,
+    valor        TINYINT       NULL,
+    errores      NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+    accion       VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
 );
 
-INSERT INTO @parametros (codigo, descripcion, valor)
+INSERT INTO #staging_parametros (codigo, descripcion, valor)
 VALUES
     ('AMARILLAS_PARA_SUSPENSION',        'Amarillas en partidos distintos que generan una suspensión', 2),
     ('FECHAS_SUSPENSION_ACUMULACION',    'Partidos de suspensión por acumulación de amarillas', 1),
@@ -84,34 +93,17 @@ VALUES
     ('PRIME_TIME_HASTA',                 'Hora local en que termina el prime time de un mercado (exclusive)', 23),
     ('PBI_FRANJA_MILES_USD',             'Ancho, en miles de USD, de las franjas de PBI per cápita para priorizar publicidad', 10);
 
-DECLARE @i INT = 1, @total INT = (SELECT COUNT(*) FROM @parametros);
-DECLARE @cargados INT = 0, @existentes INT = 0, @rechazados INT = 0;
-DECLARE @codigo VARCHAR(50), @descripcion VARCHAR(200), @valor TINYINT;
+EXEC DatosGenerales.usp_ImportarParametrosReglamento;
 
-WHILE @i <= @total
-BEGIN
-    SELECT @codigo = codigo, @descripcion = descripcion, @valor = valor
-    FROM @parametros
-    WHERE orden = @i;
+DECLARE @cargados INT, @existentes INT, @rechazados INT, @motivos NVARCHAR(MAX);
+SELECT @cargados   = COUNT(CASE WHEN accion = 'INSERTADO'   THEN 1 END),
+       @existentes = COUNT(CASE WHEN accion = 'SIN CAMBIOS' THEN 1 END),
+       @rechazados = COUNT(CASE WHEN accion = 'RECHAZADO'   THEN 1 END),
+       @motivos    = STRING_AGG(CASE WHEN accion = 'RECHAZADO' THEN CONCAT(N'Rechazado ', codigo, N':', errores) END,
+                                NCHAR(13) + NCHAR(10))
+FROM #staging_parametros;
 
-    IF EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = @codigo)
-        SET @existentes += 1;
-    ELSE
-    BEGIN
-        BEGIN TRY
-            EXEC DatosGenerales.usp_PARAMETRO_REGLAMENTO_Alta
-                @codigo = @codigo, @descripcion = @descripcion, @valor = @valor;
-            SET @cargados += 1;
-        END TRY
-        BEGIN CATCH
-            SET @rechazados += 1;
-            PRINT N'Rechazado ' + @codigo + N': ' + ERROR_MESSAGE();
-        END CATCH;
-    END;
-
-    SET @i += 1;
-END;
-
+IF @motivos IS NOT NULL PRINT @motivos;
 PRINT CONCAT(N'Parámetros: ', @cargados, N' cargados, ', @existentes, N' ya existían, ',
              @rechazados, N' rechazados.');
 GO
@@ -120,13 +112,14 @@ GO
 /* ============================================================================
    2. IDIOMAS (código ISO 639-1)
    ============================================================================ */
-DECLARE @idiomas TABLE (
-    orden       INT IDENTITY(1,1) PRIMARY KEY,
-    nombre      VARCHAR(40),
-    codigo_iso  CHAR(2)
+CREATE TABLE #staging_idiomas (
+    nombre      VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
+    codigo_iso  VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    errores     NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+    accion      VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
 );
 
-INSERT INTO @idiomas (nombre, codigo_iso)
+INSERT INTO #staging_idiomas (nombre, codigo_iso)
 VALUES
     ('Español',    'es'),
     ('Inglés',     'en'),
@@ -148,33 +141,17 @@ VALUES
     ('Sueco',      'sv'),
     ('Uzbeko',     'uz');
 
-DECLARE @i INT = 1, @total INT = (SELECT COUNT(*) FROM @idiomas);
-DECLARE @cargados INT = 0, @existentes INT = 0, @rechazados INT = 0;
-DECLARE @nombre VARCHAR(40), @codigo_iso CHAR(2);
+EXEC DatosGenerales.usp_ImportarIdiomas;
 
-WHILE @i <= @total
-BEGIN
-    SELECT @nombre = nombre, @codigo_iso = codigo_iso
-    FROM @idiomas
-    WHERE orden = @i;
+DECLARE @cargados INT, @existentes INT, @rechazados INT, @motivos NVARCHAR(MAX);
+SELECT @cargados   = COUNT(CASE WHEN accion = 'INSERTADO'   THEN 1 END),
+       @existentes = COUNT(CASE WHEN accion = 'SIN CAMBIOS' THEN 1 END),
+       @rechazados = COUNT(CASE WHEN accion = 'RECHAZADO'   THEN 1 END),
+       @motivos    = STRING_AGG(CASE WHEN accion = 'RECHAZADO' THEN CONCAT(N'Rechazado ', nombre, N':', errores) END,
+                                NCHAR(13) + NCHAR(10))
+FROM #staging_idiomas;
 
-    IF EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA WHERE nombre = @nombre)
-        SET @existentes += 1;
-    ELSE
-    BEGIN
-        BEGIN TRY
-            EXEC DatosGenerales.usp_IDIOMA_Alta @nombre = @nombre, @codigo_iso = @codigo_iso;
-            SET @cargados += 1;
-        END TRY
-        BEGIN CATCH
-            SET @rechazados += 1;
-            PRINT N'Rechazado ' + @nombre + N': ' + ERROR_MESSAGE();
-        END CATCH;
-    END;
-
-    SET @i += 1;
-END;
-
+IF @motivos IS NOT NULL PRINT @motivos;
 PRINT CONCAT(N'Idiomas: ', @cargados, N' cargados, ', @existentes, N' ya existían, ',
              @rechazados, N' rechazados.');
 GO
@@ -184,17 +161,18 @@ GO
    3. PAÍSES
    Huso: nombre de zona de Windows (sys.time_zone_info). Moneda: ISO 4217.
    ============================================================================ */
-DECLARE @paises TABLE (
-    orden          INT IDENTITY(1,1) PRIMARY KEY,
-    nombre         VARCHAR(60),
-    codigo_fifa    CHAR(3),
-    codigo_iso2    CHAR(2),
-    codigo_iso3    CHAR(3),
-    huso_horario   VARCHAR(50),
-    codigo_moneda  CHAR(3)
+CREATE TABLE #staging_paises (
+    nombre         VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
+    codigo_fifa    VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    codigo_iso2    VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    codigo_iso3    VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    huso_horario   VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
+    codigo_moneda  VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    errores        NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+    accion         VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
 );
 
-INSERT INTO @paises (nombre, codigo_fifa, codigo_iso2, codigo_iso3, huso_horario, codigo_moneda)
+INSERT INTO #staging_paises (nombre, codigo_fifa, codigo_iso2, codigo_iso3, huso_horario, codigo_moneda)
 VALUES
     -- Sedes del torneo
     ('Estados Unidos',         'USA', 'US', 'USA', 'Eastern Standard Time',           'USD'),
@@ -278,45 +256,17 @@ VALUES
     ('Mauritania',             'MTN', 'MR', 'MRT', 'Greenwich Standard Time',         'MRU'),
     ('Grecia',                 'GRE', 'GR', 'GRC', 'GTB Standard Time',               'EUR');
 
-DECLARE @i INT = 1, @total INT = (SELECT COUNT(*) FROM @paises);
-DECLARE @cargados INT = 0, @existentes INT = 0, @rechazados INT = 0;
-DECLARE @nombre VARCHAR(60), @codigo_fifa CHAR(3), @codigo_iso2 CHAR(2), @codigo_iso3 CHAR(3),
-        @huso_horario VARCHAR(50), @codigo_moneda CHAR(3);
+EXEC DatosGenerales.usp_ImportarPaises;
 
-WHILE @i <= @total
-BEGIN
-    SELECT @nombre        = nombre,
-           @codigo_fifa   = codigo_fifa,
-           @codigo_iso2   = codigo_iso2,
-           @codigo_iso3   = codigo_iso3,
-           @huso_horario  = huso_horario,
-           @codigo_moneda = codigo_moneda
-    FROM @paises
-    WHERE orden = @i;
+DECLARE @cargados INT, @existentes INT, @rechazados INT, @motivos NVARCHAR(MAX);
+SELECT @cargados   = COUNT(CASE WHEN accion = 'INSERTADO'   THEN 1 END),
+       @existentes = COUNT(CASE WHEN accion = 'SIN CAMBIOS' THEN 1 END),
+       @rechazados = COUNT(CASE WHEN accion = 'RECHAZADO'   THEN 1 END),
+       @motivos    = STRING_AGG(CASE WHEN accion = 'RECHAZADO' THEN CONCAT(N'Rechazado ', nombre, N':', errores) END,
+                                NCHAR(13) + NCHAR(10))
+FROM #staging_paises;
 
-    IF EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE nombre = @nombre)
-        SET @existentes += 1;
-    ELSE
-    BEGIN
-        BEGIN TRY
-            EXEC DatosGenerales.usp_PAIS_Alta
-                @nombre        = @nombre,
-                @huso_horario  = @huso_horario,
-                @codigo_fifa   = @codigo_fifa,
-                @codigo_iso2   = @codigo_iso2,
-                @codigo_iso3   = @codigo_iso3,
-                @codigo_moneda = @codigo_moneda;
-            SET @cargados += 1;
-        END TRY
-        BEGIN CATCH
-            SET @rechazados += 1;
-            PRINT N'Rechazado ' + @nombre + N': ' + ERROR_MESSAGE();
-        END CATCH;
-    END;
-
-    SET @i += 1;
-END;
-
+IF @motivos IS NOT NULL PRINT @motivos;
 PRINT CONCAT(N'Países: ', @cargados, N' cargados, ', @existentes, N' ya existían, ',
              @rechazados, N' rechazados.');
 GO
@@ -325,13 +275,14 @@ GO
 /* ============================================================================
    4. TIPOS DE GOL
    ============================================================================ */
-DECLARE @tipos TABLE (
-    orden         INT IDENTITY(1,1) PRIMARY KEY,
-    descripcion   VARCHAR(40),
-    es_en_contra  BIT
+CREATE TABLE #staging_tipos_gol (
+    descripcion   VARCHAR(80)   COLLATE DATABASE_DEFAULT NULL,
+    es_en_contra  BIT           NULL,
+    errores       NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+    accion        VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
 );
 
-INSERT INTO @tipos (descripcion, es_en_contra)
+INSERT INTO #staging_tipos_gol (descripcion, es_en_contra)
 VALUES
     ('JUGADA',     0),
     ('CABEZAZO',   0),
@@ -339,33 +290,17 @@ VALUES
     ('PENAL',      0),
     ('EN CONTRA',  1);
 
-DECLARE @i INT = 1, @total INT = (SELECT COUNT(*) FROM @tipos);
-DECLARE @cargados INT = 0, @existentes INT = 0, @rechazados INT = 0;
-DECLARE @descripcion VARCHAR(40), @es_en_contra BIT;
+EXEC DesarrolloPartido.usp_ImportarTiposGol;
 
-WHILE @i <= @total
-BEGIN
-    SELECT @descripcion = descripcion, @es_en_contra = es_en_contra
-    FROM @tipos
-    WHERE orden = @i;
+DECLARE @cargados INT, @existentes INT, @rechazados INT, @motivos NVARCHAR(MAX);
+SELECT @cargados   = COUNT(CASE WHEN accion = 'INSERTADO'   THEN 1 END),
+       @existentes = COUNT(CASE WHEN accion = 'SIN CAMBIOS' THEN 1 END),
+       @rechazados = COUNT(CASE WHEN accion = 'RECHAZADO'   THEN 1 END),
+       @motivos    = STRING_AGG(CASE WHEN accion = 'RECHAZADO' THEN CONCAT(N'Rechazado ', descripcion, N':', errores) END,
+                                NCHAR(13) + NCHAR(10))
+FROM #staging_tipos_gol;
 
-    IF EXISTS (SELECT 1 FROM DesarrolloPartido.TIPO_GOL WHERE descripcion = @descripcion)
-        SET @existentes += 1;
-    ELSE
-    BEGIN
-        BEGIN TRY
-            EXEC DesarrolloPartido.usp_TIPO_GOL_Alta @descripcion = @descripcion, @es_en_contra = @es_en_contra;
-            SET @cargados += 1;
-        END TRY
-        BEGIN CATCH
-            SET @rechazados += 1;
-            PRINT N'Rechazado ' + @descripcion + N': ' + ERROR_MESSAGE();
-        END CATCH;
-    END;
-
-    SET @i += 1;
-END;
-
+IF @motivos IS NOT NULL PRINT @motivos;
 PRINT CONCAT(N'Tipos de gol: ', @cargados, N' cargados, ', @existentes, N' ya existían, ',
              @rechazados, N' rechazados.');
 GO

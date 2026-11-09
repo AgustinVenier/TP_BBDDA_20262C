@@ -6,7 +6,7 @@ La fuente es la API [Frankfurter](https://frankfurter.dev/) v2. Junta las cotiza
 
 ## Consumo desde SQL Server
 
-`DatosGenerales.usp_ImportarCotizacionesAPI` (`src/27_SP_Importar_Cotizaciones.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`) y procesa la respuesta con `DatosGenerales.usp_ProcesarCotizacionesJSON`. Por defecto trae las monedas de todos los países del sistema, sin el dólar, de los últimos 30 días. `src/29_Ejecutar_ImportarAPIs.sql` importa junio y julio de 2026, el período del torneo y de las campañas.
+`DatosGenerales.usp_ImportarCotizacionesAPI` (`src/26_SP_Importar_Cotizaciones.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`) y procesa la respuesta con `DatosGenerales.usp_ProcesarCotizacionesJSON`. Por defecto trae las monedas de todos los países del sistema, sin el dólar, de los últimos 30 días. `src/31_Ejecutar_ImportarAPIs.sql` importa junio y julio de 2026, el período del torneo y de las campañas.
 
 Ejemplo de pedido, sin clave:
 

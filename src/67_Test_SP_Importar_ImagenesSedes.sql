@@ -14,8 +14,8 @@
  Objetivo: Probar Torneo.usp_ImportarImagenesSedes
            (17_SP_Importar_ImagenesSedes.sql), con casos exitosos y su
            evidencia y casos que no cumplen las validaciones.
-           Requiere haber ejecutado 00 a 33: la lista fija del SP son las 16
-           sedes del Mundial (31) y las 8 propias del juego de datos (33).
+           Requiere haber ejecutado 01 a 34: la lista fija del SP son las 16
+           sedes del Mundial (32) y las 8 propias del juego de datos (34).
            Las cargas (IS3 a IS5) van dentro de una transacción que se deshace
            al final, así que las fotos de las sedes quedan como estaban y se
            puede ejecutar más de una vez.
@@ -23,7 +23,7 @@
 
  Antes de ejecutar: CAMBIAR @repositorio, en el primer lote, por la carpeta del
  repositorio en tu máquina. La cuenta del servicio de SQL Server tiene que
- poder leerla (ver "Antes de ejecutar" en 31_Ejecutar_ImportarMundial2026.sql).
+ poder leerla (ver "Antes de ejecutar" en 32_Ejecutar_ImportarMundial2026.sql).
 
  Archivos que usa:
    datos\fuentes\sedes\    las 24 fotos reales
@@ -55,7 +55,7 @@ IF OBJECT_ID(N'Torneo.usp_ImportarImagenesSedes', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM Torneo.SEDE WHERE nombre_estadio = 'BC Place')
    OR NOT EXISTS (SELECT 1 FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Hernando Siles')
 BEGIN
-    RAISERROR(N'Faltan el SP o las sedes: ejecutar los scripts 00 a 33.', 16, 1);
+    RAISERROR(N'Faltan el SP o las sedes: ejecutar los scripts 01 a 34.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

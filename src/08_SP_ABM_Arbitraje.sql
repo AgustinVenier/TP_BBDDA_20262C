@@ -10,11 +10,11 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 07_SP_ABM_Arbitraje.sql
+ Archivo: 08_SP_ABM_Arbitraje.sql
  Objetivo: Crear los stored procedures de alta, baja y modificación de las
            tablas del esquema Arbitraje: ARBITRO, ARBITRO_IDIOMA y
            DESIGNACION_ARBITRAL. Siguen las convenciones descriptas en
-           04_SP_ABM_DatosGenerales.sql. Requiere haber ejecutado 00 a 06.
+           05_SP_ABM_DatosGenerales.sql. Requiere haber ejecutado 01 a 07.
            Su script de testing es 57_Test_SP_ABM_Arbitraje.sql.
 ================================================================================
 

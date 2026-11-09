@@ -23,7 +23,7 @@
                internet).
            Las reglas de los indicadores las prueba 66_Test_SP_Importacion.sql,
            con DatosGenerales.usp_ImportarIndicadoresEconomicos.
-           Requiere haber ejecutado 00 a 25. No depende del juego de datos:
+           Requiere haber ejecutado 01 a 25. No depende del juego de datos:
            las respuestas escritas usan su propio indicador (TP.PRUEBA.PBI) y
            el caso de la API importa solo la población de Argentina en 2024
            (SP.POP.TOTL). Al final se borra lo que cargó el test, con el
@@ -72,7 +72,7 @@ IF OBJECT_ID(N'DatosGenerales.usp_ImportarIndicadoresAPI', N'P') IS NULL
    OR OBJECT_ID(N'DatosGenerales.usp_ConsumirAPI', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE codigo_iso3 = 'GBR')
 BEGIN
-    RAISERROR(N'Faltan los SP de importación o los datos iniciales: ejecutar los scripts 00 a 25.', 16, 1);
+    RAISERROR(N'Faltan los SP de importación o los datos iniciales: ejecutar los scripts 01 a 25.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

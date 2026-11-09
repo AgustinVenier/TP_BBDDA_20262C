@@ -16,7 +16,7 @@
            usp_ReemplazarJugador), con casos exitosos y su evidencia, casos
            que no cumplen las validaciones y casos en que falla un paso
            intermedio y la transacción deshace los anteriores.
-           Requiere haber ejecutado 00 a 20; no depende del juego de datos.
+           Requiere haber ejecutado 01 a 20; no depende del juego de datos.
            Usa las selecciones de prueba de Prueba XCA y Prueba XCB (sin grupo),
            la sede "Estadio Prueba Convocatoria" y el partido de prueba 230, y
            los borra al empezar y al terminar, así que se puede ejecutar más
@@ -43,7 +43,7 @@ GO
 IF OBJECT_ID(N'Torneo.usp_RegistrarConvocatoria', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'MIN_CONVOCADOS')
 BEGIN
-    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

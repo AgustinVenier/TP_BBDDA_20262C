@@ -16,10 +16,11 @@
            árbitros): el SP que crea las claves, los SP que abren y cierran la
            clave, y las funciones que cifran. Para leer los datos descifrados,
            42_Cifrado_Tablas.sql crea una vista por tabla.
+           Su script de testing es 91_Test_SP_Cifrado.sql.
 ================================================================================
 
- Orden: lo ejecuta 38_Ejecutar_Cifrado.sql, después de 40_Seguridad.sql (que
- crea el esquema Seguridad). Este script solo crea los objetos; 38 ejecuta
+ Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 29_Seguridad.sql (que
+ crea el esquema Seguridad). Este script solo crea los objetos; 40 ejecuta
  Seguridad.usp_ConfigurarCifrado con la contraseña de la clave maestra.
 
  Cómo funciona el cifrado:
@@ -54,13 +55,13 @@
          DENY de ALTER y TAKE OWNERSHIP, así el rol puede usarlo pero no
          quitarle la clave privada ni apropiárselo; borrarlo tampoco puede,
          porque protege a la clave.
-       * Seguridad.usp_ConfigurarRoles (40) da esos permisos solo a los roles
+       * Seguridad.usp_ConfigurarRoles (29) da esos permisos solo a los roles
          que trabajan con datos personales. Para los demás, los datos
          descifrados salen NULL.
      Las funciones de cifrado no usan EXECUTE AS a propósito: con EXECUTE AS
      una función no se puede integrar en la consulta y cambia de contexto en
      cada fila.
-   - Nadie usa directamente estos objetos: 40 deniega el esquema Seguridad a
+   - Nadie usa directamente estos objetos: 29 deniega el esquema Seguridad a
      todos los roles; los SP y las vistas los usan por el encadenamiento de
      propiedad.
 

@@ -6,7 +6,7 @@ La fuente es la API [Nager.Date](https://date.nager.at/) v3.
 
 ## Consumo desde SQL Server
 
-`DatosGenerales.usp_ImportarFeriadosAPI` (`src/28_SP_Importar_Feriados.sql`) pide los feriados de un país y un año con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`), y procesa la respuesta con `DatosGenerales.usp_ProcesarFeriadosJSON`. La API no tiene un pedido para varios países, así que `src/29_Ejecutar_ImportarAPIs.sql` hace un pedido por cada código ISO de los países del sistema, para 2026.
+`DatosGenerales.usp_ImportarFeriadosAPI` (`src/27_SP_Importar_Feriados.sql`) pide los feriados de un país y un año con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`), y procesa la respuesta con `DatosGenerales.usp_ProcesarFeriadosJSON`. La API no tiene un pedido para varios países, así que `src/31_Ejecutar_ImportarAPIs.sql` hace un pedido por cada código ISO de los países del sistema, para 2026.
 
 Ejemplo de pedido, sin clave (año y código ISO alfa-2):
 
@@ -57,7 +57,7 @@ Se hacen todas en T-SQL, al importar:
 
 ## Países sin datos
 
-Nager.Date no tiene feriados de Irán, Arabia Saudita, Catar, Uzbekistán, Jordania, India ni Emiratos Árabes Unidos (responde 204). `src/29_Ejecutar_ImportarAPIs.sql` carga a mano los del período del torneo (11/06 al 19/07/2026):
+Nager.Date no tiene feriados de Irán, Arabia Saudita, Catar, Uzbekistán, Jordania, India ni Emiratos Árabes Unidos (responde 204). `src/31_Ejecutar_ImportarAPIs.sql` carga a mano los del período del torneo (11/06 al 19/07/2026):
 
 | País | Fecha | Feriado |
 |---|---|---|
@@ -72,7 +72,7 @@ Arabia Saudita, Catar y Uzbekistán no tienen feriados nacionales en ese períod
 ## Límites de uso
 
 - No hace falta clave ni registro.
-- No publica un límite de pedidos. Cada importación de un país es un pedido, y el script 29 hace uno por código ISO: 50, de los que 43 traen datos.
+- No publica un límite de pedidos. Cada importación de un país es un pedido, y el script 31 hace uno por código ISO: 50, de los que 43 traen datos.
 - La API responde con `Cache-Control: max-age=604800` (una semana).
 - Los datos son de un proyecto de código abierto mantenido por la comunidad. La cobertura de los feriados del calendario lunar es parcial: por ejemplo, no trae el Eid al-Adha de 2026 de Marruecos, Argelia ni Túnez.
 - El proyecto publica una v4 en `nagerholidays.com`. Se usa la v3 porque sigue activa y trae el nombre en el idioma del país (`localName`), que la v4 no tiene.

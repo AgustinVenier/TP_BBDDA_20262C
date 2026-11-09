@@ -18,7 +18,7 @@
              Torneo.usp_ReemplazarJugador      baja con motivo y alta del reemplazante
            y el tipo de tabla Torneo.TT_CONVOCADO, con el que se pasa la lista.
            Siguen las convenciones de 10_SP_Negocio_SedesYPartidos.sql.
-           Requiere haber ejecutado 00 a 08. Su script de testing es
+           Requiere haber ejecutado 01 a 09. Su script de testing es
            61_Test_SP_Negocio_Convocatoria.sql.
 ================================================================================
 */

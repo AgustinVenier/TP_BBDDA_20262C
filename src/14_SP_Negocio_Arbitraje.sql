@@ -17,7 +17,7 @@
              Arbitraje.usp_RegistrarArbitro        árbitro con sus idiomas
              Arbitraje.usp_DesignarTernaArbitral   los cinco roles de un partido
            Siguen las convenciones de 10_SP_Negocio_SedesYPartidos.sql.
-           Requiere haber ejecutado 00 a 08. Su script de testing es
+           Requiere haber ejecutado 01 a 09. Su script de testing es
            64_Test_SP_Negocio_Arbitraje.sql.
 ================================================================================
 

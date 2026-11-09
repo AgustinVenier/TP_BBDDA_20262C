@@ -19,8 +19,8 @@
              Torneo.usp_IniciarPartido     controles previos y paso a EN_JUEGO
              Torneo.usp_FinalizarPartido   resultado, asistencia y paso a FINALIZADO
            El alta de un partido (con el cálculo de la hora local a partir de
-           la UTC) es Torneo.usp_PARTIDO_Alta (05_SP_ABM_Torneo.sql).
-           Requiere haber ejecutado 00 a 08. Su script de testing es
+           la UTC) es Torneo.usp_PARTIDO_Alta (06_SP_ABM_Torneo.sql).
+           Requiere haber ejecutado 01 a 09. Su script de testing es
            60_Test_SP_Negocio_SedesYPartidos.sql.
 ================================================================================
 

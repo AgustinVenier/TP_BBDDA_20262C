@@ -10,15 +10,15 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 08/11/2026
- Archivo: 38_Ejecutar_Cifrado.sql
+ Archivo: 40_Ejecutar_Cifrado.sql
  Objetivo: Entrega 8. Aplicar el cifrado de los datos personales sobre la base
            ya cargada: crea los objetos de cifrado y las claves, cifra las
            columnas de jugadores, cuerpos técnicos y árbitros con los datos que
            tienen, y modifica los SP, funciones y vistas que las usan.
 ================================================================================
 
- Orden: después de 37_Ejecutar_PrepararBase.sql y de las importaciones (26, 29,
- 31, 32 y 33). Ejecuta 41 a 45. Después van los tests 81 a 85. Se puede
+ Orden: después de 00_Ejecutar_PrepararBase.sql y de las importaciones (30 a
+ 35). Ejecuta 41 a 45. Después van los tests 81 a 84 y 91 a 95, y 46. Se puede
  ejecutar más de una vez: lo que ya está cifrado no se vuelve a cifrar.
 
  Los tests de las entregas anteriores (53 a 80) se ejecutan ANTES que este
@@ -50,12 +50,12 @@ SET QUOTED_IDENTIFIER ON;
 GO
 
 IF DB_ID(N'MundialFutbol') IS NULL
-    THROW 50001, N'38_Ejecutar_Cifrado.sql: no existe la base MundialFutbol. Ejecutá primero 37_Ejecutar_PrepararBase.sql.', 1;
+    THROW 50001, N'40_Ejecutar_Cifrado.sql: no existe la base MundialFutbol. Ejecutá primero 00_Ejecutar_PrepararBase.sql.', 1;
 GO
 USE MundialFutbol;
 GO
 IF SCHEMA_ID(N'Seguridad') IS NULL
-    THROW 50001, N'38_Ejecutar_Cifrado.sql: falta el esquema Seguridad. Ejecutá primero 37_Ejecutar_PrepararBase.sql.', 1;
+    THROW 50001, N'40_Ejecutar_Cifrado.sql: falta el esquema Seguridad. Ejecutá primero 00_Ejecutar_PrepararBase.sql.', 1;
 GO
 
 -- Objetos de cifrado y claves.
@@ -65,7 +65,7 @@ USE MundialFutbol;
 EXEC Seguridad.usp_ConfigurarCifrado @contrasenia_clave_maestra = N'$(ClaveMaestra)';
 GO
 
--- Permisos de los roles sobre la clave recién creada (Seguridad.usp_ConfigurarRoles, de 40).
+-- Permisos de los roles sobre la clave recién creada (Seguridad.usp_ConfigurarRoles, de 29).
 EXEC Seguridad.usp_ConfigurarRoles;
 GO
 

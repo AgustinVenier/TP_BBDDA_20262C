@@ -11,14 +11,14 @@
 
  Fecha: 25/10/2026
  Archivo: 53_Test_FuncionesYVistas.sql
- Objetivo: Probar las funciones y vistas de 03_CrearFuncionesYVistas.sql:
+ Objetivo: Probar las funciones y vistas de 04_CrearFuncionesYVistas.sql:
            cotización vigente, fixture filtrable, equipo en cancha en
            distintos minutos, marcador según los goles, sanciones y
            suspensiones (también cambiando sus parámetros), selecciones en
            competencia, simulación de prime time y feriados por mercado,
            prioridad de piezas, historial de titularidad, goleadores e
            historial de árbitros.
-           Requiere haber ejecutado 00 a 20 y no depende del juego de datos.
+           Requiere haber ejecutado 01 a 20 y no depende del juego de datos.
            Arma su propio mini torneo con los SP de ABM y de negocio y lo borra
            al empezar y al terminar, así que se puede ejecutar más de una vez:
              - Países de prueba XVA a XVD (con selección del grupo I y 23
@@ -62,7 +62,7 @@ IF OBJECT_ID(N'DesarrolloPartido.fn_EquipoEnCancha', N'IF') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DesarrolloPartido.TIPO_GOL WHERE descripcion IN ('JUGADA', 'EN CONTRA', 'PENAL', 'CABEZAZO')
                   HAVING COUNT(*) = 4)
 BEGIN
-    RAISERROR(N'Faltan las funciones, los SP o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan las funciones, los SP o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

@@ -15,7 +15,7 @@
            y usp_DesignarTernaArbitral): alta de árbitros con sus idiomas,
            designación de los cinco roles, rechazo por conflicto de
            nacionalidad (caso obligatorio) y advertencia por posible cruce
-           desde dieciseisavos. Requiere haber ejecutado 00 a 20; no depende del
+           desde dieciseisavos. Requiere haber ejecutado 01 a 20; no depende del
            juego de datos.
            Usa sus propios datos de prueba: la sede "Estadio Prueba
            Designaciones", cuatro selecciones de prueba (XRA a XRD, sin
@@ -52,7 +52,7 @@ IF OBJECT_ID(N'Arbitraje.usp_DesignarTernaArbitral', N'P') IS NULL
    OR OBJECT_ID(N'Torneo.usp_RegistrarSeleccion', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA WHERE codigo_iso IN ('en', 'fr', 'es', 'de') HAVING COUNT(*) = 4)
 BEGIN
-    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

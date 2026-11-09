@@ -10,12 +10,12 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 08_SP_ABM_Publicidad.sql
+ Archivo: 09_SP_ABM_Publicidad.sql
  Objetivo: Crear los stored procedures de alta, baja y modificación de las
            tablas del esquema Publicidad: ANUNCIANTE, CAMPANIA,
            PIEZA_PUBLICITARIA, PIEZA_PAIS_INTERES, ESPACIO_PUBLICITARIO y
            EXHIBICION. Siguen las convenciones descriptas en
-           04_SP_ABM_DatosGenerales.sql. Requiere haber ejecutado 00 a 07.
+           05_SP_ABM_DatosGenerales.sql. Requiere haber ejecutado 01 a 08.
            Su script de testing es 58_Test_SP_ABM_Publicidad.sql.
 ================================================================================
 

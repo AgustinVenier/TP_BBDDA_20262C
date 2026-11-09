@@ -21,7 +21,7 @@
              DatosGenerales.usp_ImportarIndicadoresAPI  consulta la API y procesa la respuesta
            El pedido a la API lo hace DatosGenerales.usp_ConsumirAPI
            (22_SP_ConsumirAPI.sql).
-           Requiere haber ejecutado 00 a 22. Su script de testing es
+           Requiere haber ejecutado 01 a 22. Su script de testing es
            75_Test_SP_Importar_Indicadores.sql.
 ================================================================================
 

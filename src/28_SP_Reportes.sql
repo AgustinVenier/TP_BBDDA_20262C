@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 31/10/2026
- Archivo: 30_SP_Reportes.sql
+ Archivo: 28_SP_Reportes.sql
  Objetivo: Crear las vistas y los SP de reportes del esquema Reportes:
              Reportes.usp_Goleadores                 goleadores por selección, fase y torneo
              Reportes.usp_TarjetasXML                tarjetas por selección y jugador, con
@@ -25,9 +25,9 @@
            sin filtrar y los SP las filtran y les dan forma. Las suspensiones
            activas, que dependen de la fecha de corte, están para Power BI en
            Reportes.vw_SuspensionesActivas, una vez antes de cada partido. Las cotizaciones
-           (27) y los feriados (28) de las APIs se usan para convertir los
+           (26) y los feriados (27) de las APIs se usan para convertir los
            ingresos a otras monedas y para marcar los feriados de cada mercado.
-           Requiere haber ejecutado 00 a 20. Su script de testing es
+           Requiere haber ejecutado 01 a 20. Su script de testing es
            80_Test_SP_Reportes.sql.
 ================================================================================
 
@@ -389,7 +389,7 @@ GO
   vw_Plantillas
   Un convocado por fila con su selección. activo = 0 son los dados de baja
   (reemplazados). No incluye la fecha de nacimiento: el reporte no la pide y
-  la vista la leen roles que no la necesitan (40_Seguridad.sql).
+  la vista la leen roles que no la necesitan (29_Seguridad.sql).
 */
 CREATE OR ALTER VIEW Reportes.vw_Plantillas
 AS

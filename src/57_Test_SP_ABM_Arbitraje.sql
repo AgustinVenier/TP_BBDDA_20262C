@@ -11,10 +11,10 @@
 
  Fecha: 25/10/2026
  Archivo: 57_Test_SP_ABM_Arbitraje.sql
- Objetivo: Probar los SP de 07_SP_ABM_Arbitraje.sql (ARBITRO, ARBITRO_IDIOMA y
+ Objetivo: Probar los SP de 08_SP_ABM_Arbitraje.sql (ARBITRO, ARBITRO_IDIOMA y
            DESIGNACION_ARBITRAL), con casos exitosos y su evidencia y casos
            que no cumplen las validaciones, entre ellos el conflicto de
-           nacionalidad. Requiere haber ejecutado 00 a 20; no depende del juego de
+           nacionalidad. Requiere haber ejecutado 01 a 20; no depende del juego de
            datos.
            Usa sus propios datos de prueba: cuatro selecciones de prueba (XAA
            a XAD, sin jugadores), las sedes "Estadio Prueba Arbitraje" y
@@ -43,7 +43,7 @@ IF OBJECT_ID(N'Arbitraje.usp_DESIGNACION_ARBITRAL_Alta', N'P') IS NULL
    OR OBJECT_ID(N'Torneo.usp_RegistrarSeleccion', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA WHERE codigo_iso IN ('en', 'fr') HAVING COUNT(*) = 2)
 BEGIN
-    RAISERROR(N'Faltan los SP o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

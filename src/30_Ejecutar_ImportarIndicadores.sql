@@ -10,13 +10,13 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 29/10/2026
- Archivo: 26_Ejecutar_ImportarIndicadores.sql
+ Archivo: 30_Ejecutar_ImportarIndicadores.sql
  Objetivo: Importar el PBI per cápita (NY.GDP.PCAP.CD) de los últimos 10
            años de todos los países del sistema, consultando la API del Banco
            Mundial con DatosGenerales.usp_ImportarIndicadoresAPI
            (25_SP_Importar_Indicadores.sql).
-           Requiere haber ejecutado 00 a 20, 22 y 25. Va antes de
-           32_Ejecutar_DatosComplementarios.sql, que usa este PBI para asignar la
+           Requiere haber ejecutado 01 a 20, 22 y 25. Va antes de
+           33_Ejecutar_DatosComplementarios.sql, que usa este PBI para asignar la
            publicidad. Se puede ejecutar más de una vez: lo que ya está
            cargado queda SIN CAMBIOS, y si el Banco Mundial revisó el valor
            de un año, se actualiza.

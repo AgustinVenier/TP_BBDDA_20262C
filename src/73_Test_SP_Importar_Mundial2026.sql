@@ -13,18 +13,20 @@
  Archivo: 73_Test_SP_Importar_Mundial2026.sql
  Objetivo: Probar la importación del Mundial 2026 de
            23_SP_Importar_Mundial2026.sql (sedes, selecciones y partidos en
-           JSON, y el equipo arbitral en CSV) y 24_SP_Importar_Jugadores.sql
-           (jugadores y directores técnicos en CSV), y el ABM
-           de Torneo.NOMBRE_ALTERNATIVO de 05_SP_ABM_Torneo.sql, con los
+           JSON, y el equipo arbitral en CSV) y el ABM de
+           Torneo.NOMBRE_ALTERNATIVO de 06_SP_ABM_Torneo.sql, con los
            archivos chicos de datos/pruebas/mundial_prueba_*: alta,
            reimportación sin duplicados, actualización, importación con
            errores parciales (con el registro de la importación y sus
            rechazados en las tablas ERRORES_), reconocimiento de jugadores por
            nombre y los archivos que no se pueden importar. Las reglas de cada
            tabla las prueba 66_Test_SP_Importacion.sql, con los SP de
-           16_SP_Importacion.sql.
-           Requiere haber ejecutado 00 a 24. No depende del juego de datos
-           (sirve con o sin el torneo real del 31 cargado): crea
+           16_SP_Importacion.sql. La importación de jugadores y cuerpos
+           técnicos (24_SP_Importar_Jugadores.sql) la prueba
+           74_Test_SP_Importar_Jugadores.sql; acá solo se usa para cargar los
+           jugadores que necesitan los partidos.
+           Requiere haber ejecutado 01 a 24. No depende del juego de datos
+           (sirve con o sin el torneo real del 32 cargado): crea
            sus propios países (códigos ZZA, ZZB y ZZC), selecciones, sede,
            partidos (números 201 a 203) y árbitros ("Árbitro Prueba ...", con
            sus designaciones), y al final los borra con los SP de
@@ -36,7 +38,7 @@
  Antes de ejecutar: CAMBIAR @carpeta, en el primer lote, por la ruta de la
  carpeta datos\pruebas\ del repositorio en tu máquina. La cuenta del servicio
  de SQL Server tiene que poder leerla (ver "Antes de ejecutar" en
- 31_Ejecutar_ImportarMundial2026.sql).
+ 32_Ejecutar_ImportarMundial2026.sql).
 
  Los jugadores de los archivos de prueba están escritos para pasar por cada
  paso de Torneo.usp_IdentificarJugadores:
@@ -74,7 +76,7 @@ IF OBJECT_ID(N'Torneo.usp_ImportarPartidosJSON', N'P') IS NULL
    OR OBJECT_ID(N'Torneo.usp_ImportarJugadoresCSV', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE codigo_fifa = 'USA')
 BEGIN
-    RAISERROR(N'Faltan los SP de importación o los datos iniciales: ejecutar los scripts 00 a 24.', 16, 1);
+    RAISERROR(N'Faltan los SP de importación o los datos iniciales: ejecutar los scripts 01 a 24.', 16, 1);
     SET NOEXEC ON;
 END;
 GO
@@ -210,12 +212,6 @@ BEGIN
         EXEC Torneo.usp_LISTA_CONVOCADOS_Baja @id_lista = @id;
     END;
 
-    DELETE ct
-    FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
-    INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = ct.id_seleccion
-    INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
-    WHERE p.codigo_fifa IN ('ZZA', 'ZZB', 'ZZC');
-
     WHILE EXISTS (SELECT 1 FROM Torneo.SELECCION AS s
                   INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
                   WHERE p.codigo_fifa IN ('ZZA', 'ZZB', 'ZZC'))
@@ -267,22 +263,16 @@ BEGIN
     EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
     SET @archivo = @carpeta + N'mundial_prueba_jugadores.csv';
     EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
-    SET @archivo = @carpeta + N'mundial_prueba_jugadores_cambios.csv';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
     SET @archivo = @carpeta + N'mundial_prueba_partidos.json';
     EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
     SET @archivo = @carpeta + N'mundial_prueba_partidos_cambios.json';
     EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
     SET @archivo = @carpeta + N'mundial_prueba_designaciones.csv';
     EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
-    SET @archivo = @carpeta + N'mundial_prueba_cuerpo_tecnico.csv';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
-    SET @archivo = @carpeta + N'mundial_prueba_cuerpo_tecnico_cambios.csv';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = @archivo;
 END;
 GO
 
--- Por si una corrida anterior del test quedó a medias.
+-- Por si una corrida anterior del test (o del 74, que usa los mismos países) quedó a medias.
 EXEC #usp_LimpiarPruebas;
 GO
 
@@ -367,65 +357,13 @@ GO
 
 
 /* ============================================================================
-   JUGADORES (CSV)
+   JUGADORES
+   Los carga Torneo.usp_ImportarJugadoresCSV (24), que se prueba en
+   74_Test_SP_Importar_Jugadores.sql: 23 jugadores de ZZA y 23 de ZZB, que
+   usan los partidos y los nombres alternativos.
    ============================================================================ */
-
-/* MI4 (OK) Importación con errores parciales de mundial_prueba_jugadores.csv:
-   23 jugadores de ZZA y 23 de ZZB, más 4 filas con errores.
-   Esperado: 50 leídos, 46 insertados y 4 rechazados (línea 25: el dorsal 150
-   no está entre 1 y 99; línea 49: la posición "XX" no es ARQUERO, DEFENSOR,
-   MEDIOCAMPISTA ni DELANTERO; línea 50: la fecha "1999-13-40" no es una
-   fecha; línea 51: no hay una selección con lista con código QQQ). Los
-   cuatro quedan en Torneo.ERRORES_JUGADOR con el número de la importación.
-   El club de ZZB, que viene entre comillas porque tiene una coma, queda
-   completo. */
 DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_jugadores.csv';
-DECLARE @id_importacion INT;
-
-EXEC Torneo.usp_ImportarJugadoresCSV @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
-
-SELECT 'MI4 rechazados' AS caso, registro AS linea, codigo_fifa, dorsal, posicion, nombre, apellido, fecha_nacimiento,
-       REPLACE(motivos, NCHAR(13) + NCHAR(10), N' | ') AS motivos
-FROM Torneo.ERRORES_JUGADOR
-WHERE id_importacion = @id_importacion
-ORDER BY registro;
-
-SELECT 'MI4 listas' AS caso, p.codigo_fifa, COUNT(*) AS jugadores, SUM(IIF(j.posicion_habitual = 'ARQUERO', 1, 0)) AS arqueros,
-       MIN(j.fecha_alta) AS fecha_alta, MIN(j.motivo_alta) AS motivo_alta, MAX(j.club_origen) AS club
-FROM Torneo.JUGADOR AS j
-INNER JOIN Torneo.LISTA_CONVOCADOS AS lc ON lc.id_lista = j.id_lista
-INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = lc.id_seleccion
-INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
-WHERE p.codigo_fifa IN ('ZZA', 'ZZB')
-GROUP BY p.codigo_fifa;
-GO
-
-
-/* MI5 (OK) Reimportación de mundial_prueba_jugadores.csv.
-   Esperado: 46 sin cambios y los mismos 4 rechazados; siguen 46 jugadores. */
-DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_jugadores.csv';
-
 EXEC Torneo.usp_ImportarJugadoresCSV @ruta_archivo = @archivo;
-GO
-
-
-/* MI6 (OK) Importación de mundial_prueba_jugadores_cambios.csv sobre las
-   listas cargadas.
-   Esperado: 4 leídos: 1 actualizado (Bruno Prueba cambia de club), 1 sin
-   cambios (Carlos Prueba), 1 insertado (Nuevo Prueba, dorsal 24: la lista
-   queda con 24) y 1 rechazado (Otro Prueba: el dorsal 4 ya lo tiene Darío
-   Prueba, que no viene en el archivo). */
-DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_jugadores_cambios.csv';
-
-EXEC Torneo.usp_ImportarJugadoresCSV @ruta_archivo = @archivo;
-
-SELECT 'MI6 jugadores' AS caso, j.dorsal, j.nombre, j.apellido, j.club_origen
-FROM Torneo.JUGADOR AS j
-INNER JOIN Torneo.LISTA_CONVOCADOS AS lc ON lc.id_lista = j.id_lista
-INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = lc.id_seleccion
-INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
-WHERE p.codigo_fifa = 'ZZA' AND j.dorsal IN (2, 3, 4, 24)
-ORDER BY j.dorsal;
 GO
 
 
@@ -693,77 +631,17 @@ GO
    ARCHIVOS QUE NO SE PUEDEN IMPORTAR Y VALIDACIONES DE PARÁMETROS
    ============================================================================ */
 
-/* MI14 (OK) Importación con errores parciales de mundial_prueba_cuerpo_tecnico.csv
-   (24_SP_Importar_Jugadores.sql, usp_ImportarCuerpoTecnicoCSV).
-   Esperado: 6 leídos, 3 insertados (el director técnico de ZZA, nacido en
-   Argentina; un ayudante de campo de ZZA, sin país; la directora técnica de
-   ZZB) y 3 rechazados: línea 5, la selección QQQ no existe; línea 6, el rol
-   UTILERO no es válido; línea 7, el país XXX no existe. Quedan en
-   Torneo.ERRORES_CUERPO_TECNICO con el número de la importación. */
-DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_cuerpo_tecnico.csv';
-DECLARE @id_importacion INT;
-
-EXEC Torneo.usp_ImportarCuerpoTecnicoCSV @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
-
-SELECT 'MI14 registro' AS caso, i.leidos, i.insertados, i.rechazados,
-       (SELECT COUNT(*) FROM Torneo.ERRORES_CUERPO_TECNICO AS e WHERE e.id_importacion = i.id_importacion) AS en_errores,
-       IIF(i.leidos = 6 AND i.insertados = 3 AND i.rechazados = 3, 'OK', 'FALLÓ') AS verificacion
-FROM DatosGenerales.IMPORTACION AS i
-WHERE i.id_importacion = @id_importacion;
-
-SELECT 'MI14 cuerpo tecnico' AS caso, p.codigo_fifa, ct.rol, ct.nombre, ct.apellido, pn.nombre AS pais_nacimiento
-FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
-INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = ct.id_seleccion
-INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
-LEFT JOIN DatosGenerales.PAIS AS pn ON pn.id_pais = ct.id_pais_nacimiento
-WHERE p.codigo_fifa IN ('ZZA', 'ZZB')
-ORDER BY p.codigo_fifa, ct.rol;
-GO
-
-
-/* MI15 (OK) Importación de mundial_prueba_cuerpo_tecnico_cambios.csv sobre lo
-   cargado en MI14.
-   Esperado: 3 leídos, 1 sin cambios (el director técnico de ZZA), 1
-   actualizado (el ayudante de campo, ahora nacido en Uruguay) y 1 rechazado:
-   otro director técnico para ZZB, que ya tiene. Siguen 3 personas en el
-   cuerpo técnico de prueba. */
-DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_cuerpo_tecnico_cambios.csv';
-DECLARE @id_importacion INT;
-
-EXEC Torneo.usp_ImportarCuerpoTecnicoCSV @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
-
-SELECT 'MI15 verificacion' AS caso, i.leidos, i.insertados, i.actualizados, i.sin_cambios, i.rechazados,
-       (SELECT pn.codigo_fifa FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
-        INNER JOIN DatosGenerales.PAIS AS pn ON pn.id_pais = ct.id_pais_nacimiento
-        WHERE ct.apellido = N'Ayudante' AND ct.nombre = N'Rubén') AS pais_ayudante,
-       IIF(i.leidos = 3 AND i.insertados = 0 AND i.actualizados = 1 AND i.sin_cambios = 1 AND i.rechazados = 1
-           AND (SELECT COUNT(*) FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
-                INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = ct.id_seleccion
-                INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
-                WHERE p.codigo_fifa IN ('ZZA', 'ZZB')) = 3, 'OK', 'FALLÓ') AS verificacion
-FROM DatosGenerales.IMPORTACION AS i
-WHERE i.id_importacion = @id_importacion;
-
-SELECT 'MI15 rechazados' AS caso, registro AS linea, codigo_fifa, rol, nombre, apellido,
-       REPLACE(motivos, NCHAR(13) + NCHAR(10), N' | ') AS motivos
-FROM Torneo.ERRORES_CUERPO_TECNICO
-WHERE id_importacion = @id_importacion
-ORDER BY registro;
-GO
-
-
 /* MI9 (ERROR) Archivos que no se pueden importar:
      a) un archivo que no existe;
      b) mundial_prueba_invalido.json, cortado (no es JSON válido);
      c) mundial_prueba_otro_formato.json, un JSON sin la lista "matches";
      d) mundial_prueba_otro_formato.json como archivo de estadios (no tiene "stadiums");
      e) mundial_prueba_estadios.json como archivo de selecciones (no es una lista con fifa_code);
-     f) mundial_prueba_columnas.csv, un CSV con otras columnas;
-     g) el reproceso de MI7 numerando desde el 1 (sus eventos rechazados
+     f) el reproceso de MI7 numerando desde el 1 (sus eventos rechazados
         eran del partido 201);
-     h) mundial_prueba_jugadores.csv como archivo del equipo arbitral (otras
+     g) mundial_prueba_jugadores.csv como archivo del equipo arbitral (otras
         columnas).
-   Esperado: ocho errores 50002, cada uno con su motivo, sin nada importado. */
+   Esperado: siete errores 50002, cada uno con su motivo, sin nada importado. */
 DECLARE @carpeta NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400));
 DECLARE @archivo NVARCHAR(400);
 
@@ -813,8 +691,9 @@ BEGIN CATCH
 END CATCH;
 
 BEGIN TRY
-    SET @archivo = @carpeta + N'mundial_prueba_columnas.csv';
-    EXEC Torneo.usp_ImportarJugadoresCSV @ruta_archivo = @archivo;
+    DECLARE @reprocesar INT = CAST(SESSION_CONTEXT(N'importacion_mi7') AS INT);
+    SET @archivo = @carpeta + N'mundial_prueba_partidos.json';
+    EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @primer_numero = 1, @reprocesar_importacion = @reprocesar;
     PRINT N'MI9f: FALLÓ, se esperaba un error.';
 END TRY
 BEGIN CATCH
@@ -822,34 +701,23 @@ BEGIN CATCH
 END CATCH;
 
 BEGIN TRY
-    DECLARE @reprocesar INT = CAST(SESSION_CONTEXT(N'importacion_mi7') AS INT);
-    SET @archivo = @carpeta + N'mundial_prueba_partidos.json';
-    EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @primer_numero = 1, @reprocesar_importacion = @reprocesar;
+    SET @archivo = @carpeta + N'mundial_prueba_jugadores.csv';
+    EXEC Arbitraje.usp_ImportarDesignacionesCSV @ruta_archivo = @archivo;
     PRINT N'MI9g: FALLÓ, se esperaba un error.';
 END TRY
 BEGIN CATCH
     EXEC #usp_MostrarError @caso = 'MI9g', @error_esperado = 50002;
-END CATCH;
-
-BEGIN TRY
-    SET @archivo = @carpeta + N'mundial_prueba_jugadores.csv';
-    EXEC Arbitraje.usp_ImportarDesignacionesCSV @ruta_archivo = @archivo;
-    PRINT N'MI9h: FALLÓ, se esperaba un error.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'MI9h', @error_esperado = 50002;
 END CATCH;
 GO
 
 
 /* MI10 (ERROR) Parámetros inválidos:
      a) ruta vacía y primer número 0;
-     b) un .txt como CSV de jugadores;
-     c) tarifas negativas para las sedes nuevas;
-     d) reprocesar la importación de MI7 (de mundial_prueba_partidos.json)
+     b) tarifas negativas para las sedes nuevas;
+     c) reprocesar la importación de MI7 (de mundial_prueba_partidos.json)
         con otro archivo (mundial_prueba_otro_formato.json);
-     e) el equipo arbitral con la categoría NACIONAL.
-   Esperado: cinco errores 50001, sin leer el archivo. */
+     d) el equipo arbitral con la categoría NACIONAL.
+   Esperado: cuatro errores 50001, sin leer el archivo. */
 BEGIN TRY
     EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = N' ', @primer_numero = 0;
     PRINT N'MI10a: FALLÓ, se esperaba un error.';
@@ -859,7 +727,7 @@ BEGIN CATCH
 END CATCH;
 
 BEGIN TRY
-    EXEC Torneo.usp_ImportarJugadoresCSV @ruta_archivo = N'C:\jugadores.txt';
+    EXEC Torneo.usp_ImportarSedesJSON @ruta_archivo = N'C:\estadios.json', @tarifa_espacio_1 = -1;
     PRINT N'MI10b: FALLÓ, se esperaba un error.';
 END TRY
 BEGIN CATCH
@@ -867,7 +735,9 @@ BEGIN CATCH
 END CATCH;
 
 BEGIN TRY
-    EXEC Torneo.usp_ImportarSedesJSON @ruta_archivo = N'C:\estadios.json', @tarifa_espacio_1 = -1;
+    DECLARE @reprocesar INT = CAST(SESSION_CONTEXT(N'importacion_mi7') AS INT);
+    DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_otro_formato.json';
+    EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @reprocesar_importacion = @reprocesar;
     PRINT N'MI10c: FALLÓ, se esperaba un error.';
 END TRY
 BEGIN CATCH
@@ -875,21 +745,11 @@ BEGIN CATCH
 END CATCH;
 
 BEGIN TRY
-    DECLARE @reprocesar INT = CAST(SESSION_CONTEXT(N'importacion_mi7') AS INT);
-    DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_otro_formato.json';
-    EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @reprocesar_importacion = @reprocesar;
+    EXEC Arbitraje.usp_ImportarDesignacionesCSV @ruta_archivo = N'C:\designaciones.csv', @categoria = 'NACIONAL';
     PRINT N'MI10d: FALLÓ, se esperaba un error.';
 END TRY
 BEGIN CATCH
     EXEC #usp_MostrarError @caso = 'MI10d', @error_esperado = 50001;
-END CATCH;
-
-BEGIN TRY
-    EXEC Arbitraje.usp_ImportarDesignacionesCSV @ruta_archivo = N'C:\designaciones.csv', @categoria = 'NACIONAL';
-    PRINT N'MI10e: FALLÓ, se esperaba un error.';
-END TRY
-BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'MI10e', @error_esperado = 50001;
 END CATCH;
 GO
 
@@ -948,7 +808,6 @@ SELECT 'Final' AS caso,
        (SELECT COUNT(*) FROM Torneo.PARTIDO WHERE numero_partido BETWEEN 201 AND 211) AS partidos_de_prueba,
        (SELECT COUNT(*) FROM Torneo.SEDE WHERE nombre_estadio LIKE 'Estadio Prueba%') AS sedes_de_prueba,
        (SELECT COUNT(*) FROM DatosGenerales.PAIS WHERE codigo_fifa IN ('ZZA', 'ZZB', 'ZZC')) AS paises_de_prueba,
-       (SELECT COUNT(*) FROM Torneo.PERSONA_CUERPO_TECNICO WHERE apellido IN (N'Prueba', N'Ayudante', N'Técnica')) AS cuerpo_tecnico_de_prueba,
        (SELECT COUNT(*) FROM Arbitraje.ARBITRO WHERE apellido LIKE N'Prueba %' AND nombre LIKE N'Árbitro%') AS arbitros_de_prueba,
        (SELECT COUNT(*) FROM Torneo.NOMBRE_ALTERNATIVO
         WHERE nombre IN (N'Testland A', N'Testland B', N'Diego GOMEZ')) AS nombres_de_prueba,

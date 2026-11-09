@@ -10,9 +10,9 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 31/10/2026
- Archivo: 29_Ejecutar_ImportarAPIs.sql
+ Archivo: 31_Ejecutar_ImportarAPIs.sql
  Objetivo: Importar, con los SP de 21_SP_Importar_Publicidad.sql,
-           27_SP_Importar_Cotizaciones.sql y 28_SP_Importar_Feriados.sql:
+           26_SP_Importar_Cotizaciones.sql y 27_SP_Importar_Feriados.sql:
              0. las campañas publicitarias del Mundial 2026 del Dossier
                 Mundial, con sus anunciantes y piezas, desde la API de
                 Firestore que usa la página;
@@ -23,8 +23,8 @@
                 la API Nager.Date, de a un país por consulta;
              3. a mano, los feriados del período del torneo de los países que
                 Nager.Date no cubre.
-           Requiere haber ejecutado 00 a 28. Va antes de los datos
-           complementarios (32): así las piezas del Dossier compiten en la
+           Requiere haber ejecutado 01 a 30. Va antes de los datos
+           complementarios (33): así las piezas del Dossier compiten en la
            asignación de publicidad de sus partidos. Se puede ejecutar más de una vez: lo
            que ya está cargado queda SIN CAMBIOS.
 ================================================================================
@@ -232,7 +232,7 @@ BEGIN TRY
         FROM #staging_feriados;
 
         EXEC DatosGenerales.usp_RegistrarImportacion
-            @proceso = '29_Ejecutar_ImportarAPIs.sql', @origen = N'Feriados cargados a mano (parte 3 del script)',
+            @proceso = '31_Ejecutar_ImportarAPIs.sql', @origen = N'Feriados cargados a mano (parte 3 del script)',
             @leidos = @leidos, @insertados = @insertados, @actualizados = @actualizados, @sin_cambios = @sin_cambios,
             @rechazados = @rechazados, @id_importacion = @id_importacion OUTPUT;
 

@@ -17,9 +17,9 @@
                                                          los que no tienen publicidad
            La simulación de prime time es Publicidad.fn_MercadosEnPrimeTime y
            el criterio de prioridad está documentado en
-           Publicidad.fn_PrioridadPiezas (03_CrearFuncionesYVistas.sql).
+           Publicidad.fn_PrioridadPiezas (04_CrearFuncionesYVistas.sql).
            Siguen las convenciones de 10_SP_Negocio_SedesYPartidos.sql.
-           Requiere haber ejecutado 00 a 08. Su script de testing es
+           Requiere haber ejecutado 01 a 09. Su script de testing es
            65_Test_SP_Negocio_Publicidad.sql.
 ================================================================================
 */

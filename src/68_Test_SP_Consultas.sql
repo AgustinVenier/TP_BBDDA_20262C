@@ -13,7 +13,7 @@
  Archivo: 68_Test_SP_Consultas.sql
  Objetivo: Probar los SP de consulta de 18_SP_Consultas.sql y que funcionan con
            un usuario de rol_AdministradorOperativo, que no puede leer las
-           tablas directamente. Requiere haber ejecutado 00 a 20 y 40 (roles);
+           tablas directamente. Requiere haber ejecutado 01 a 20 y 29 (roles);
            no depende del juego de datos.
            Usa una sede de prueba ("Estadio Prueba Consultas", con foto) que
            se borra al empezar y al terminar, así que se puede ejecutar más de
@@ -37,7 +37,7 @@ IF OBJECT_ID(N'Torneo.usp_ConsultarSedes', N'P') IS NULL
    OR DATABASE_PRINCIPAL_ID(N'usr_test_administrador') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE codigo_fifa = 'ARG')
 BEGIN
-    RAISERROR(N'Faltan los SP de consulta, los roles o los datos iniciales: ejecutar 00 a 20 y 40.', 16, 1);
+    RAISERROR(N'Faltan los SP de consulta, los roles o los datos iniciales: ejecutar 01 a 20 y 29.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

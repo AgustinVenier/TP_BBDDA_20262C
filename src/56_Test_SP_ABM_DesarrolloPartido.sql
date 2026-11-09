@@ -11,10 +11,10 @@
 
  Fecha: 25/10/2026
  Archivo: 56_Test_SP_ABM_DesarrolloPartido.sql
- Objetivo: Probar los SP de 06_SP_ABM_DesarrolloPartido.sql (TIPO_GOL,
+ Objetivo: Probar los SP de 07_SP_ABM_DesarrolloPartido.sql (TIPO_GOL,
            FORMACION, ALINEACION, CAMBIO, GOL y AMONESTACION), con casos
            exitosos y su evidencia y casos que no cumplen las validaciones.
-           Requiere haber ejecutado 00 a 20; no depende del juego de datos.
+           Requiere haber ejecutado 01 a 20; no depende del juego de datos.
            Crea sus propios datos de prueba con los SP: tres selecciones de
            prueba (XDA y XDB con 23 jugadores, XDC sin jugadores), la sede
            "Estadio Prueba DesarrolloPartido", el partido 211 (XDA - XDB, ya
@@ -46,7 +46,7 @@ IF OBJECT_ID(N'DesarrolloPartido.usp_GOL_Alta', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DesarrolloPartido.TIPO_GOL WHERE descripcion IN ('JUGADA', 'EN CONTRA', 'PENAL', 'CABEZAZO')
                   HAVING COUNT(*) = 4)
 BEGIN
-    RAISERROR(N'Faltan los SP o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

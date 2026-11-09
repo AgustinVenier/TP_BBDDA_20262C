@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 00_CrearBaseDeDatos.sql
+ Archivo: 01_CrearBaseDeDatos.sql
  Objetivo: Crear la base de datos MundialFutbol desde cero. Si ya existe, se
            elimina y se vuelve a crear con intercalación
            Modern_Spanish_100_CI_AS_SC y modelo de recuperación FULL.

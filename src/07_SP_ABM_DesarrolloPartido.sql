@@ -10,12 +10,12 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 06_SP_ABM_DesarrolloPartido.sql
+ Archivo: 07_SP_ABM_DesarrolloPartido.sql
  Objetivo: Crear los stored procedures de alta, baja y modificación de las
            tablas del esquema DesarrolloPartido: TIPO_GOL, FORMACION,
            ALINEACION, CAMBIO, GOL y AMONESTACION. Siguen las convenciones
-           descriptas en 04_SP_ABM_DatosGenerales.sql. Requiere haber
-           ejecutado 00 a 05. Su script de testing es
+           descriptas en 05_SP_ABM_DatosGenerales.sql. Requiere haber
+           ejecutado 01 a 06. Su script de testing es
            56_Test_SP_ABM_DesarrolloPartido.sql.
 ================================================================================
 
@@ -834,7 +834,7 @@ GO
   usp_GOL_Alta
   Valida: partido existente y EN_JUEGO; autor en la formación del partido;
   tipo de gol existente; período válido y minuto coherente con el período
-  (ver 02_CrearTablas.sql); ALARGUE, PENALES y los adicionales del alargue
+  (ver 03_CrearTablas.sql); ALARGUE, PENALES y los adicionales del alargue
   (105 y 120) solo en eliminación directa; un gol en contra no puede ser de
   la definición por penales ni tener asistencia; la asistencia es de otro
   jugador de la misma selección que figure en la formación.

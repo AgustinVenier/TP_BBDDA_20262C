@@ -15,7 +15,7 @@
            sus validaciones, un pedido a la API del Banco Mundial, una ruta
            que la API no tiene y un servidor que no existe. Los casos CA2 y
            CA3 necesitan internet.
-           Requiere haber ejecutado 00 a 22. No modifica ninguna tabla, así
+           Requiere haber ejecutado 01 a 22. No modifica ninguna tabla, así
            que se puede ejecutar más de una vez.
 ================================================================================
 
@@ -49,7 +49,7 @@ EXEC sp_set_session_context @key = N'avanzadas_antes', @value = @avanzadas_antes
 
 IF OBJECT_ID(N'DatosGenerales.usp_ConsumirAPI', N'P') IS NULL
 BEGIN
-    RAISERROR(N'Falta el SP que consume APIs: ejecutar los scripts 00 a 22.', 16, 1);
+    RAISERROR(N'Falta el SP que consume APIs: ejecutar los scripts 01 a 22.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

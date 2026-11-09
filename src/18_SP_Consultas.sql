@@ -21,12 +21,12 @@
              Torneo.usp_ConsultarSede                         una sede, con sus 4 tarifas
              Torneo.usp_ConsultarImagenSede                   la foto de una sede
              Torneo.usp_ConsultarSelecciones                  selecciones y su lista
-           Requiere haber ejecutado 00 a 05. Su script de testing es
+           Requiere haber ejecutado 01 a 06. Su script de testing es
            68_Test_SP_Consultas.sql.
 ================================================================================
 
  Por qué SP y no SELECT sobre las tablas: con la seguridad de la Entrega 8
- (40_Seguridad.sql), los roles de aplicación tienen DENY SELECT sobre los
+ (29_Seguridad.sql), los roles de aplicación tienen DENY SELECT sobre los
  esquemas de datos. rol_AdministradorOperativo tiene EXECUTE sobre esos
  esquemas, y como los SP y las tablas son de dbo, el encadenamiento de
  propiedad deja que el SP lea las tablas sin dar SELECT a quien lo ejecuta:

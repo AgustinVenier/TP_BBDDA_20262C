@@ -11,7 +11,7 @@
 
  Fecha: 31/10/2026
  Archivo: 77_Test_SP_Importar_Cotizaciones.sql
- Objetivo: Probar la importación de cotizaciones de 27_SP_Importar_Cotizaciones.sql,
+ Objetivo: Probar la importación de cotizaciones de 26_SP_Importar_Cotizaciones.sql,
            con el registro de cada importación y de sus rechazados
            (DatosGenerales.ERRORES_COTIZACION):
              - procesando respuestas con el formato de la API Frankfurter
@@ -21,7 +21,7 @@
              - consultando la API Frankfurter (casos AP, necesitan internet).
            Las reglas de las cotizaciones las prueba 66_Test_SP_Importacion.sql,
            con DatosGenerales.usp_ImportarCotizaciones.
-           Requiere haber ejecutado 00 a 27. No depende del juego de datos:
+           Requiere haber ejecutado 01 a 26. No depende del juego de datos:
            las respuestas escritas usan XTS y XXX, los códigos de ISO 4217
            para pruebas y para "sin moneda", que ninguna API cotiza, y el
            caso de la API trae ARS y EUR de dos días de 2024 dentro de una
@@ -63,7 +63,7 @@ EXEC sp_set_session_context @key = N'avanzadas_antes', @value = @avanzadas_antes
 IF OBJECT_ID(N'DatosGenerales.usp_ImportarCotizacionesAPI', N'P') IS NULL
    OR OBJECT_ID(N'DatosGenerales.usp_ImportarCotizaciones', N'P') IS NULL
 BEGIN
-    RAISERROR(N'Faltan los SP de importación de cotizaciones: ejecutar los scripts 00 a 27.', 16, 1);
+    RAISERROR(N'Faltan los SP de importación de cotizaciones: ejecutar los scripts 01 a 26.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

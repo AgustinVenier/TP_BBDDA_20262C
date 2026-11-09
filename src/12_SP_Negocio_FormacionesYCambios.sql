@@ -18,8 +18,8 @@
            y el tipo de tabla DesarrolloPartido.TT_ALINEACION, con el que se
            pasan los jugadores de la formación. El equipo en cancha en
            cualquier minuto lo reconstruye DesarrolloPartido.fn_EquipoEnCancha
-           (03_CrearFuncionesYVistas.sql). Siguen las convenciones de
-           10_SP_Negocio_SedesYPartidos.sql. Requiere haber ejecutado 00 a 08.
+           (04_CrearFuncionesYVistas.sql). Siguen las convenciones de
+           10_SP_Negocio_SedesYPartidos.sql. Requiere haber ejecutado 01 a 09.
            Su script de testing es 62_Test_SP_Negocio_FormacionesYCambios.sql.
 ================================================================================
 */

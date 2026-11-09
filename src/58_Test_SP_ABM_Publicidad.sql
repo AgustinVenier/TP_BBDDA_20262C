@@ -11,10 +11,10 @@
 
  Fecha: 25/10/2026
  Archivo: 58_Test_SP_ABM_Publicidad.sql
- Objetivo: Probar los SP de 08_SP_ABM_Publicidad.sql (ANUNCIANTE, CAMPANIA,
+ Objetivo: Probar los SP de 09_SP_ABM_Publicidad.sql (ANUNCIANTE, CAMPANIA,
            PIEZA_PUBLICITARIA, PIEZA_PAIS_INTERES, ESPACIO_PUBLICITARIO y
            EXHIBICION), con casos exitosos y su evidencia y casos que no
-           cumplen las validaciones. Requiere haber ejecutado 00 a 20; no
+           cumplen las validaciones. Requiere haber ejecutado 01 a 20; no
            depende del juego de datos.
            Usa datos de prueba propios ("Anunciante Prueba S.A." con sus
            campañas y piezas, "Anunciante Prueba Dos", sin campañas, las
@@ -44,7 +44,7 @@ GO
 IF OBJECT_ID(N'Publicidad.usp_EXHIBICION_Alta', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA WHERE codigo_iso = 'es')
 BEGIN
-    RAISERROR(N'Faltan los SP de ABM o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de ABM o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

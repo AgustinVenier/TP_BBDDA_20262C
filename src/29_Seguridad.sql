@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 08/11/2026
- Archivo: 40_Seguridad.sql
+ Archivo: 29_Seguridad.sql
  Objetivo: Crear el esquema Seguridad y el SP Seguridad.usp_ConfigurarRoles, que
            crea los roles de aplicación con privilegios mínimos, los usuarios sin
            login para probarlos y sus permisos sobre los SP y las vistas. Se
@@ -18,8 +18,8 @@
            SP existentes y las consultas, con las vistas de Reportes.
 ================================================================================
 
- Orden: ejecutar después de 30_SP_Reportes.sql. Se incluye en
- 37_Ejecutar_PrepararBase.sql. Se puede volver a ejecutar: el SP crea solo lo
+ Orden: ejecutar después de 28_SP_Reportes.sql. Se incluye en
+ 00_Ejecutar_PrepararBase.sql. Se puede volver a ejecutar: el SP crea solo lo
  que falta y vuelve a aplicar los permisos.
 
  Los usuarios usr_test_* son PRINCIPALS SIN LOGIN únicamente para demostrar los
@@ -45,7 +45,7 @@
    rol_CargadorResultados      descifrar (los nombres en formaciones, tarjetas, avisos y plantillas).
    rol_ConsultaReportes        descifrar (los nombres en los reportes).
    rol_GestorPublicidad        ninguno: no trabaja con datos personales.
- 38_Ejecutar_Cifrado.sql vuelve a ejecutar el SP después de crear las claves.
+ 40_Ejecutar_Cifrado.sql vuelve a ejecutar el SP después de crear las claves.
 */
 
 USE MundialFutbol;
@@ -167,7 +167,7 @@ BEGIN
     DENY SELECT, INSERT, UPDATE, DELETE ON SCHEMA::Publicidad TO rol_AdministradorOperativo, rol_CargadorResultados, rol_GestorPublicidad, rol_ConsultaReportes;
     DENY SELECT, EXECUTE ON SCHEMA::Seguridad TO rol_AdministradorOperativo, rol_CargadorResultados, rol_GestorPublicidad, rol_ConsultaReportes;
 
-    /* Uso de la clave de los datos personales, si ya está creada (38_Ejecutar_Cifrado.sql).
+    /* Uso de la clave de los datos personales, si ya está creada (40_Ejecutar_Cifrado.sql).
        Cifrar necesita ver la clave (VIEW DEFINITION); los SP la abren con
        Seguridad.usp_AbrirClave, que se ejecuta como su dueño. Descifrar necesita
        además CONTROL sobre el certificado: se otorga sin ALTER ni TAKE OWNERSHIP,

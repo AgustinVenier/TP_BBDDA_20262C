@@ -16,9 +16,9 @@
            No depende de ninguna API: lo usan los procesos que consultan una,
            como la importación de indicadores del Banco Mundial
            (25_SP_Importar_Indicadores.sql), de cotizaciones de Frankfurter
-           (27_SP_Importar_Cotizaciones.sql) y de feriados de Nager.Date
-           (28_SP_Importar_Feriados.sql).
-           Requiere haber ejecutado 00 y 01. Su script de testing es
+           (26_SP_Importar_Cotizaciones.sql) y de feriados de Nager.Date
+           (27_SP_Importar_Feriados.sql).
+           Requiere haber ejecutado 01 y 02. Su script de testing es
            72_Test_SP_ConsumirAPI.sql.
 ================================================================================
 
@@ -30,7 +30,7 @@
  OLE Automation: requiere la opción de instancia 'Ole Automation Procedures',
  que viene deshabilitada. Quien consulta una API la habilita solo mientras
  llama a este SP y después la deja como estaba, como hace
- 26_Ejecutar_ImportarIndicadores.sql. Hace falta ser sysadmin.
+ 30_Ejecutar_ImportarIndicadores.sql. Hace falta ser sysadmin.
 */
 
 USE MundialFutbol;

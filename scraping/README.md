@@ -41,7 +41,7 @@ Las demás columnas de `JUGADOR` no vienen en el archivo:
 
 ### 1.1 Director técnico
 
-De la misma página (no hace pedidos nuevos) sale **`cuerpo_tecnico.csv`**, con el director técnico de las 48 selecciones. Se carga en **`Torneo.PERSONA_CUERPO_TECNICO`**; el resto del cuerpo técnico (ayudante de campo, preparador físico, entrenador de arqueros) no lo publica la fuente y lo completa `src/32_Ejecutar_DatosComplementarios.sql`.
+De la misma página (no hace pedidos nuevos) sale **`cuerpo_tecnico.csv`**, con el director técnico de las 48 selecciones. Se carga en **`Torneo.PERSONA_CUERPO_TECNICO`**; el resto del cuerpo técnico (ayudante de campo, preparador físico, entrenador de arqueros) no lo publica la fuente y lo completa `src/33_Ejecutar_DatosComplementarios.sql`.
 
 | Columna del CSV | Columna de `PERSONA_CUERPO_TECNICO` | Observación |
 |---|---|---|

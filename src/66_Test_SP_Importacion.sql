@@ -20,7 +20,7 @@
            inválidos: es el caso obligatorio de importación con errores
            parciales. Los válidos se cargan y los inválidos quedan marcados
            RECHAZADO con todos sus motivos.
-           Requiere haber ejecutado 00 a 20; no depende del juego de datos.
+           Requiere haber ejecutado 01 a 20; no depende del juego de datos.
            Todo se hace dentro de una transacción que se deshace al final,
            así que no deja datos y se puede ejecutar más de una vez:
              - Países de prueba XQA, XQB, XQC y XQE (códigos FIFA que empiezan
@@ -40,6 +40,11 @@
              - "Anunciante Prueba 66" (XQA), con las campañas "Campaña Prueba
                66 A" y "B" y sus piezas, y el partido 226 (25/08/2026), en el
                que se exhibe una pieza de A.
+             - Datos iniciales: el parámetro PRUEBA_66, los idiomas "Idioma
+               Prueba 66 A" y "B", el país XQF y el tipo de gol "PRUEBA 66".
+               Para probar las reglas entre parámetros se borran
+               MAX_CONVOCADOS, MAX_CAMBIOS, PRIME_TIME_HASTA y
+               CAMBIOS_EXTRA_ALARGUE; la transacción los devuelve.
            SELECCIONES_POR_GRUPO se ajusta dentro de la transacción para que
            el grupo L tenga lugar para las tres selecciones de prueba.
            Los casos que hacen fallar un SP con un error (THROW) van al final,
@@ -66,7 +71,7 @@ IF OBJECT_ID(N'DesarrolloPartido.usp_ImportarDesarrolloPartidos', N'P') IS NULL
    OR OBJECT_ID(N'DatosGenerales.usp_RegistrarImportacion', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'SELECCIONES_POR_GRUPO')
 BEGIN
-    RAISERROR(N'Faltan los SP de importación o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de importación o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
     SET NOEXEC ON;
 END;
 ELSE IF @@TRANCOUNT > 0
@@ -579,6 +584,7 @@ CREATE TABLE #staging_eventos (
     numero_partido      TINYINT       NULL,
     id_jugador          INT           NULL,
     id_jugador_entra    INT           NULL,
+    id_jugador_asistencia INT         NULL,
     es_titular          BIT           NULL,
     posicion_en_cancha  VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
     minuto              TINYINT       NULL,
@@ -791,6 +797,58 @@ INNER JOIN #jugadores_prueba AS j ON j.id_jugador = a.id_jugador
 WHERE p.numero_partido = 221
 GROUP BY pa.codigo_fifa, f.esquema_tactico
 ORDER BY pa.codigo_fifa;
+GO
+
+
+/* DP4 (OK) Asistencias de los goles del 221, tal como quedaron en DP3.
+   Esperado:
+   - ACTUALIZADO: el gol de J9 de XQA en el 31, que ahora lo asiste J7 de XQA.
+   - RECHAZADO: el gol de J10 de XQA en el 45+2, asistido por él mismo; el de
+     J9 de XQB en el 60, asistido por J5 de XQA (otra selección); y la
+     amarilla de J4 de XQB, con asistencia (solo los goles la tienen).
+   - Reimportación del gol de J9 de XQA sin asistencia: SIN CAMBIOS, y
+     conserva la de J7. */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+
+DELETE FROM #staging_eventos;
+
+INSERT INTO #staging_eventos (tipo, numero_partido, id_jugador, id_jugador_asistencia, minuto, minuto_adicional, periodo,
+                              tipo_gol, tipo_tarjeta, es_doble_amarilla)
+SELECT v.tipo, 221, j.id_jugador, ja.id_jugador, v.minuto, v.adicional, v.periodo, v.tipo_gol, v.tarjeta, v.doble
+FROM (VALUES ('GOL',     'XQA', 9,  'XQA', 7,  31, 0, 'PRIMER_TIEMPO',  'JUGADA', NULL,       NULL),
+             ('GOL',     'XQA', 10, 'XQA', 10, 45, 2, 'ADICIONALES',    'JUGADA', NULL,       NULL),
+             ('GOL',     'XQB', 9,  'XQA', 5,  60, 0, 'SEGUNDO_TIEMPO', 'JUGADA', NULL,       NULL),
+             ('TARJETA', 'XQB', 4,  'XQB', 5,  22, 0, NULL,             NULL,     'AMARILLA', 0))
+     AS v (tipo, codigo, dorsal, codigo_asist, dorsal_asist, minuto, adicional, periodo, tipo_gol, tarjeta, doble)
+INNER JOIN #jugadores_prueba AS j ON j.codigo_fifa = v.codigo AND j.dorsal = v.dorsal
+INNER JOIN #jugadores_prueba AS ja ON ja.codigo_fifa = v.codigo_asist AND ja.dorsal = v.dorsal_asist;
+
+EXEC DesarrolloPartido.usp_ImportarDesarrolloPartidos;
+
+SELECT 'DP4' AS caso, e.id_evento, e.tipo, j.codigo_fifa, j.dorsal, ja.codigo_fifa AS asiste_seleccion,
+       ja.dorsal AS asiste_dorsal, e.minuto, e.accion,
+       REPLACE(STUFF(e.errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM #staging_eventos AS e
+LEFT JOIN #jugadores_prueba AS j ON j.id_jugador = e.id_jugador
+LEFT JOIN #jugadores_prueba AS ja ON ja.id_jugador = e.id_jugador_asistencia
+ORDER BY e.id_evento;
+
+-- Reimportación del gol asistido, sin asistencia.
+DELETE FROM #staging_eventos WHERE accion = 'RECHAZADO';
+UPDATE #staging_eventos SET accion = NULL, errores = NULL, id_jugador_asistencia = NULL;
+
+EXEC DesarrolloPartido.usp_ImportarDesarrolloPartidos;
+
+SELECT 'DP4 reimportación' AS caso, accion, COUNT(*) AS eventos FROM #staging_eventos GROUP BY accion;
+
+SELECT 'DP4 cargado' AS caso, j.codigo_fifa, j.dorsal, g.periodo, g.minuto, g.minuto_adicional,
+       ja.codigo_fifa AS asiste_seleccion, ja.dorsal AS asiste_dorsal
+FROM DesarrolloPartido.GOL AS g
+INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = g.id_partido
+INNER JOIN #jugadores_prueba AS j ON j.id_jugador = g.id_jugador_autor
+LEFT JOIN #jugadores_prueba AS ja ON ja.id_jugador = g.id_jugador_asistencia
+WHERE p.numero_partido = 221
+ORDER BY g.minuto;
 GO
 
 
@@ -1238,6 +1296,181 @@ GO
 
 
 /* ============================================================================
+   DATOS INICIALES (usp_ImportarParametrosReglamento, usp_ImportarIdiomas,
+   usp_ImportarPaises, usp_ImportarTiposGol)
+   Solo dan de alta: lo que ya existe queda SIN CAMBIOS aunque traiga otros
+   datos.
+   ============================================================================ */
+
+/* DI1 (OK) Parámetros con errores parciales.
+   Para probar las reglas que dependen de otro parámetro, cuatro parámetros
+   del sistema se borran con un DELETE directo (el SP de baja no deja borrar
+   los parámetros del sistema); la transacción del test los devuelve.
+   Esperado: 2 INSERTADO (MAX_CAMBIOS, escrito en minúsculas y no menor que
+   MAX_VENTANAS; y PRUEBA_66, que no es del sistema y no tiene rango);
+   1 SIN CAMBIOS (AMARILLAS_PARA_SUSPENSION, que ya existe, aunque traiga otro
+   valor); y 6 RECHAZADO: MAX_CONVOCADOS menor que MIN_CONVOCADOS (el de la
+   tabla); PRIME_TIME_HASTA igual a PRIME_TIME_DESDE; CAMBIOS_EXTRA_ALARGUE
+   fuera de su rango (0 a 5); un código con guión, sin descripción ni valor
+   (los tres motivos juntos); y PRUEBA_66_REP dos veces (las dos filas).
+   La columna resultado dice OK si cada fila terminó como se esperaba. */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+
+DELETE FROM DatosGenerales.PARAMETRO_REGLAMENTO
+WHERE codigo IN ('MAX_CONVOCADOS', 'MAX_CAMBIOS', 'PRIME_TIME_HASTA', 'CAMBIOS_EXTRA_ALARGUE');
+
+CREATE TABLE #staging_parametros (
+    id_registro  INT IDENTITY(1,1) PRIMARY KEY,
+    codigo       VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
+    descripcion  VARCHAR(400)  COLLATE DATABASE_DEFAULT NULL,
+    valor        TINYINT       NULL,
+    esperado     VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL,
+    errores      NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+    accion       VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+);
+
+INSERT INTO #staging_parametros (codigo, descripcion, valor, esperado)
+SELECT v.codigo, v.descripcion, v.valor, v.esperado
+FROM (VALUES
+    (' max_cambios ',              'Cambios de prueba',             5,  'INSERTADO'),
+    ('PRUEBA_66',                  'Parámetro que no es del sistema', 200, 'INSERTADO'),
+    ('AMARILLAS_PARA_SUSPENSION',  'Ya existe',                     9,  'SIN CAMBIOS'),
+    ('MAX_CONVOCADOS',             'Menor que MIN_CONVOCADOS',
+         (SELECT valor - 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'MIN_CONVOCADOS'), 'RECHAZADO'),
+    ('PRIME_TIME_HASTA',           'Igual a PRIME_TIME_DESDE',
+         (SELECT valor FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'PRIME_TIME_DESDE'), 'RECHAZADO'),
+    ('CAMBIOS_EXTRA_ALARGUE',      'Fuera de rango',                9,  'RECHAZADO'),
+    ('PRUEBA-66',                  NULL,                            NULL, 'RECHAZADO'),
+    ('PRUEBA_66_REP',              'Primera',                       1,  'RECHAZADO'),
+    ('PRUEBA_66_REP',              'Segunda',                       2,  'RECHAZADO')
+) AS v (codigo, descripcion, valor, esperado);
+
+EXEC DatosGenerales.usp_ImportarParametrosReglamento;
+
+SELECT 'DI1' AS caso, id_registro, codigo, valor, esperado, accion,
+       IIF(accion = esperado, 'OK', 'FALLÓ') AS resultado,
+       REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM #staging_parametros ORDER BY id_registro;
+GO
+
+
+/* DI2 (OK) Idiomas con errores parciales.
+   Esperado: 2 INSERTADO ("Idioma Prueba 66 A", con el código "XQ" que se
+   guarda en minúsculas, y "Idioma Prueba 66 B", sin código, que es
+   opcional); 1 SIN CAMBIOS (Español, aunque traiga otro código); y 5
+   RECHAZADO: el código "es", que ya tiene el español; un código de una letra
+   y un número; sin nombre; y el código "xr" dos veces (las dos filas). */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+
+CREATE TABLE #staging_idiomas (
+    id_registro  INT IDENTITY(1,1) PRIMARY KEY,
+    nombre       VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
+    codigo_iso   VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    esperado     VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL,
+    errores      NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+    accion       VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+);
+
+INSERT INTO #staging_idiomas (nombre, codigo_iso, esperado)
+VALUES ('Idioma Prueba 66 A', ' XQ ', 'INSERTADO'),
+       ('Idioma Prueba 66 B', NULL,   'INSERTADO'),
+       ('Español',            'zz',   'SIN CAMBIOS'),
+       ('Idioma Prueba 66 C', 'es',   'RECHAZADO'),
+       ('Idioma Prueba 66 D', 'x1',   'RECHAZADO'),
+       ('  ',                 NULL,   'RECHAZADO'),
+       ('Idioma Prueba 66 E', 'xr',   'RECHAZADO'),
+       ('Idioma Prueba 66 F', 'xr',   'RECHAZADO');
+
+EXEC DatosGenerales.usp_ImportarIdiomas;
+
+SELECT 'DI2' AS caso, i.id_registro, i.nombre, i.codigo_iso, i.esperado, i.accion,
+       IIF(i.accion = i.esperado, 'OK', 'FALLÓ') AS resultado,
+       REPLACE(STUFF(i.errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos,
+       d.codigo_iso AS codigo_guardado
+FROM #staging_idiomas AS i
+LEFT JOIN DatosGenerales.IDIOMA AS d ON d.nombre = i.nombre AND i.accion = 'INSERTADO'
+ORDER BY i.id_registro;
+GO
+
+
+/* DI3 (OK) Países con errores parciales.
+   Esperado: 1 INSERTADO ("Prueba 66 XQF", con códigos en minúsculas que se
+   guardan en mayúsculas y el huso escrito en minúsculas, que se guarda como
+   "Argentina Standard Time"); 1 SIN CAMBIOS ("Prueba XQA", de la
+   preparación, aunque traiga otros datos); y 5 RECHAZADO: el código FIFA XQB,
+   que ya tiene otro país; sin huso; huso inexistente, ISO alfa-2 y alfa-3 y
+   moneda mal formados (los cuatro motivos juntos); y el código FIFA XQG dos
+   veces (las dos filas). */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+
+CREATE TABLE #staging_paises (
+    id_registro    INT IDENTITY(1,1) PRIMARY KEY,
+    nombre         VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
+    codigo_fifa    VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    codigo_iso2    VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    codigo_iso3    VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    huso_horario   VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
+    codigo_moneda  VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    esperado       VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL,
+    errores        NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+    accion         VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+);
+
+INSERT INTO #staging_paises (nombre, codigo_fifa, codigo_iso2, codigo_iso3, huso_horario, codigo_moneda, esperado)
+VALUES ('Prueba 66 XQF', 'xqf', 'xf', 'xqf', 'argentina standard time', 'xts',     'INSERTADO'),
+       ('Prueba XQA',    'XQZ', 'XZ', 'XQZ', 'UTC',                     'XTS',     'SIN CAMBIOS'),
+       ('Prueba 66 XQH', 'XQB', 'XH', 'XQH', 'UTC',                     'XTS',     'RECHAZADO'),
+       ('Prueba 66 XQI', 'XQI', 'XI', 'XQI', NULL,                      'XTS',     'RECHAZADO'),
+       ('Prueba 66 XQJ', 'XQJ', 'X1', 'XQ',  'Hora de prueba',          'XTSX',    'RECHAZADO'),
+       ('Prueba 66 XQK', 'XQG', 'XK', 'XQK', 'UTC',                     'XTS',     'RECHAZADO'),
+       ('Prueba 66 XQL', 'XQG', 'XL', 'XQL', 'UTC',                     'XTS',     'RECHAZADO');
+
+EXEC DatosGenerales.usp_ImportarPaises;
+
+SELECT 'DI3' AS caso, s.id_registro, s.nombre, s.codigo_fifa, s.huso_horario, s.esperado, s.accion,
+       IIF(s.accion = s.esperado, 'OK', 'FALLÓ') AS resultado,
+       REPLACE(STUFF(s.errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos,
+       p.codigo_fifa AS fifa_guardado, p.codigo_moneda AS moneda_guardada, p.huso_horario AS huso_guardado
+FROM #staging_paises AS s
+LEFT JOIN DatosGenerales.PAIS AS p ON p.nombre = s.nombre AND s.accion = 'INSERTADO'
+ORDER BY s.id_registro;
+GO
+
+
+/* DI4 (OK) Tipos de gol con errores parciales.
+   Esperado: 1 INSERTADO ("PRUEBA 66", escrito en minúsculas); 1 SIN CAMBIOS
+   (PENAL, aunque diga que es en contra); y 4 RECHAZADO: sin indicar si es en
+   contra; una descripción de 41 caracteres; y "Prueba 66 B" dos veces, una
+   con espacios de más (las dos filas). */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+
+CREATE TABLE #staging_tipos_gol (
+    id_registro   INT IDENTITY(1,1) PRIMARY KEY,
+    descripcion   VARCHAR(80)   COLLATE DATABASE_DEFAULT NULL,
+    es_en_contra  BIT           NULL,
+    esperado      VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL,
+    errores       NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+    accion        VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+);
+
+INSERT INTO #staging_tipos_gol (descripcion, es_en_contra, esperado)
+VALUES ('prueba 66',             0,    'INSERTADO'),
+       ('Penal',                 1,    'SIN CAMBIOS'),
+       ('Prueba 66 A',           NULL, 'RECHAZADO'),
+       (REPLICATE('X', 41),      0,    'RECHAZADO'),
+       ('Prueba 66 B',           0,    'RECHAZADO'),
+       (' prueba 66 b ',         0,    'RECHAZADO');
+
+EXEC DesarrolloPartido.usp_ImportarTiposGol;
+
+SELECT 'DI4' AS caso, id_registro, LEFT(descripcion, 20) AS descripcion, es_en_contra, esperado, accion,
+       IIF(accion = esperado, 'OK', 'FALLÓ') AS resultado,
+       REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM #staging_tipos_gol ORDER BY id_registro;
+GO
+
+
+/* ============================================================================
    CAMPAÑAS PUBLICITARIAS (usp_ImportarCampanias)
    ============================================================================ */
 
@@ -1549,7 +1782,8 @@ GO
 
 /* ============================================================================
    VERIFICACIÓN FINAL
-   Esperado: 0 en todas las columnas, y SELECCIONES_POR_GRUPO como estaba.
+   Esperado: 0 en todas las columnas, salvo parametros_borrados_devueltos en
+   4, y SELECCIONES_POR_GRUPO como estaba.
    ============================================================================ */
 SELECT 'Final' AS caso,
        (SELECT COUNT(*) FROM DatosGenerales.PAIS WHERE codigo_fifa LIKE 'XQ_')                    AS paises_de_prueba,
@@ -1558,6 +1792,11 @@ SELECT 'Final' AS caso,
        (SELECT COUNT(*) FROM Publicidad.ANUNCIANTE WHERE razon_social LIKE N'%66')                AS anunciantes_de_prueba,
        (SELECT COUNT(*) FROM DatosGenerales.COTIZACION WHERE codigo_moneda IN ('XTS', 'XXX'))     AS cotizaciones_de_prueba,
        (SELECT COUNT(*) FROM DatosGenerales.IMPORTACION WHERE proceso = 'Prueba 66')              AS importaciones_de_prueba,
+       (SELECT COUNT(*) FROM DatosGenerales.IDIOMA WHERE nombre LIKE 'Idioma Prueba 66%')         AS idiomas_de_prueba,
+       (SELECT COUNT(*) FROM DesarrolloPartido.TIPO_GOL WHERE descripcion LIKE 'PRUEBA 66%')      AS tipos_de_gol_de_prueba,
+       (SELECT COUNT(*) FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo LIKE 'PRUEBA[_]66%') AS parametros_de_prueba,
+       (SELECT COUNT(*) FROM DatosGenerales.PARAMETRO_REGLAMENTO
+        WHERE codigo IN ('MAX_CONVOCADOS', 'MAX_CAMBIOS', 'PRIME_TIME_HASTA', 'CAMBIOS_EXTRA_ALARGUE')) AS parametros_borrados_devueltos,
        (SELECT valor FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'SELECCIONES_POR_GRUPO') AS selecciones_por_grupo;
 GO
 

@@ -17,7 +17,7 @@
            prioridad de piezas (fn_PrioridadPiezas), incluido el caso
            obligatorio de un partido en prime time en más de cuatro mercados,
            en el que el sistema elige solo cuatro piezas.
-           Requiere haber ejecutado 00 a 20; no depende del juego de datos.
+           Requiere haber ejecutado 01 a 20; no depende del juego de datos.
            Usa sus propios datos de prueba: los países de prueba XPA y XPB
            (con selección, sin jugadores) y XPC a XPI (mercados, con su huso
            horario y su PBI per cápita 2024), el anunciante "Anunciante Prueba
@@ -65,7 +65,7 @@ IF OBJECT_ID(N'Publicidad.usp_AsignarPublicidadPartido', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO
                   WHERE codigo IN ('PRIME_TIME_DESDE', 'PRIME_TIME_HASTA', 'PBI_FRANJA_MILES_USD') HAVING COUNT(*) = 3)
 BEGIN
-    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

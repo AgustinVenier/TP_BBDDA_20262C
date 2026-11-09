@@ -12,7 +12,7 @@
 
 Los países y los husos horarios de las listas salen de `DatosGenerales.usp_ConsultarPaises` y `usp_ConsultarHusosHorarios` (`src/18_SP_Consultas.sql`). Al elegir el país, sugiere su huso horario.
 
-Antes de subir una foto la achica a 1280 px de lado y la guarda como JPEG (o PNG si tiene transparencia); la base acepta PNG o JPEG de hasta 2 MB. El botón "Importar fotos del repositorio" carga de una vez las 24 fotos prebajadas de `datos/fuentes/sedes/` con `Torneo.usp_ImportarImagenesSedes` (lo mismo que `src/36_Ejecutar_ImportarImagenesSedes.sql`). Como lee archivos del servidor, es una tarea de DBA: `rol_AdministradorOperativo` tiene denegado ese SP, igual que las demás importaciones, y la carpeta tiene que ser visible para el servicio de SQL Server.
+Antes de subir una foto la achica a 1280 px de lado y la guarda como JPEG (o PNG si tiene transparencia); la base acepta PNG o JPEG de hasta 2 MB. El botón "Importar fotos del repositorio" carga de una vez las 24 fotos prebajadas de `datos/fuentes/sedes/` con `Torneo.usp_ImportarImagenesSedes` (lo mismo que `src/35_Ejecutar_ImportarImagenesSedes.sql`). Como lee archivos del servidor, es una tarea de DBA: `rol_AdministradorOperativo` tiene denegado ese SP, igual que las demás importaciones, y la carpeta tiene que ser visible para el servicio de SQL Server.
 
 El ícono de la ventana y de la barra de tareas es `copa.ico`, un trofeo dibujado para el proyecto (no el trofeo oficial).
 
@@ -23,4 +23,4 @@ pip install -r requirements.txt
 python abm_sedes.py
 ```
 
-Requiere la base `MundialFutbol` creada desde cero con `src/37_Ejecutar_PrepararBase.sql` (incluye los SP de consulta) y el ODBC Driver 18 for SQL Server; para ver las sedes del Mundial y sus fotos, también `31`, `33` y `36`. Por defecto se conecta a `localhost` (la instancia por defecto de SQL Server) con autenticación de Windows. Se puede cambiar con las variables de entorno `MUNDIAL_SERVER` (por ejemplo `localhost\SQLEXPRESS` para una instancia con nombre), `MUNDIAL_DATABASE` y `MUNDIAL_DRIVER`.
+Requiere la base `MundialFutbol` creada desde cero con `src/00_Ejecutar_PrepararBase.sql` (incluye los SP de consulta) y el ODBC Driver 18 for SQL Server; para ver las sedes del Mundial y sus fotos, también `32`, `34` y `35`. Por defecto se conecta a `localhost` (la instancia por defecto de SQL Server) con autenticación de Windows. Se puede cambiar con las variables de entorno `MUNDIAL_SERVER` (por ejemplo `localhost\SQLEXPRESS` para una instancia con nombre), `MUNDIAL_DATABASE` y `MUNDIAL_DRIVER`.

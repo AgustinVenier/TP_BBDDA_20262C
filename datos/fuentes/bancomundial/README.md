@@ -6,7 +6,7 @@ La fuente es la API de indicadores del Banco Mundial (v2). Responde en XML.
 
 ## Consumo desde SQL Server
 
-`DatosGenerales.usp_ImportarIndicadoresAPI` (`src/25_SP_Importar_Indicadores.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`) y procesa la respuesta con `DatosGenerales.usp_ProcesarIndicadoresXML`. Por defecto trae el PBI per cápita de todos los países en los últimos 10 años. Se puede pedir otro indicador anual del Banco Mundial, otro rango de años o solo algunos países (`@paises = 'ARG;BRA'`). `src/26_Ejecutar_ImportarIndicadores.sql` importa el PBI per cápita con los valores por defecto.
+`DatosGenerales.usp_ImportarIndicadoresAPI` (`src/25_SP_Importar_Indicadores.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`) y procesa la respuesta con `DatosGenerales.usp_ProcesarIndicadoresXML`. Por defecto trae el PBI per cápita de todos los países en los últimos 10 años. Se puede pedir otro indicador anual del Banco Mundial, otro rango de años o solo algunos países (`@paises = 'ARG;BRA'`). `src/30_Ejecutar_ImportarIndicadores.sql` importa el PBI per cápita con los valores por defecto.
 
 Ejemplo de pedido, sin clave:
 
@@ -27,7 +27,7 @@ curl "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.PCAP.CD?date=201
 
 Los registros se cargan con el SP de la Entrega 5 `DatosGenerales.usp_ImportarIndicadoresEconomicos` (`src/16_SP_Importacion.sql`). Lee la tabla de staging que arma el proceso, valida cada registro con las reglas de los indicadores y hace el upsert de los válidos de una vez. Los rechazados quedan en `DatosGenerales.ERRORES_INDICADOR_ECONOMICO`, con el número de la importación (`DatosGenerales.IMPORTACION`).
 
-SQL Server 2022 no trae un procedimiento para llamar a una API REST (`sp_invoke_external_rest_endpoint` recién está en SQL Server 2025), así que el pedido se hace con OLE Automation (`MSXML2.ServerXMLHTTP`) en `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`), que sirve para cualquier API REST sin clave. Hace falta la opción de instancia `Ole Automation Procedures`, que viene deshabilitada. `src/26_Ejecutar_ImportarIndicadores.sql` la habilita solo mientras consulta la API y después la deja como estaba.
+SQL Server 2022 no trae un procedimiento para llamar a una API REST (`sp_invoke_external_rest_endpoint` recién está en SQL Server 2025), así que el pedido se hace con OLE Automation (`MSXML2.ServerXMLHTTP`) en `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`), que sirve para cualquier API REST sin clave. Hace falta la opción de instancia `Ole Automation Procedures`, que viene deshabilitada. `src/30_Ejecutar_ImportarIndicadores.sql` la habilita solo mientras consulta la API y después la deja como estaba.
 
 ## Formato
 

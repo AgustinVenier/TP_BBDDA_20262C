@@ -14,7 +14,7 @@ La clave maestra de la base protege al certificado `CertDatosPersonales`, y el c
 
 ### Cómo se aplica
 
-El cifrado es un script de modificación sobre la base ya cargada. `38_Ejecutar_Cifrado.sql` se ejecuta después de las importaciones y corre, en orden:
+El cifrado es un script de modificación sobre la base ya cargada. `40_Ejecutar_Cifrado.sql` se ejecuta después de las importaciones y corre, en orden:
 
 | Script | Qué hace |
 |---|---|
@@ -24,7 +24,7 @@ El cifrado es un script de modificación sobre la base ya cargada. `38_Ejecutar_
 | `44_Cifrado_DesarrolloYArbitraje.sql` | Lo mismo para `DesarrolloPartido` y `Arbitraje`. |
 | `45_Cifrado_Reportes.sql` | Actualiza las vistas y los SP de `Reportes` que muestran nombres. |
 
-La contraseña de la clave maestra se pasa con `:setvar ClaveMaestra` en el runner. El valor del repositorio es de ejemplo y hay que cambiarlo antes de ejecutar. `38` se puede ejecutar más de una vez: lo que ya está cifrado no se vuelve a cifrar, y las claves no se recrean, porque recrearlas dejaría ilegibles los datos cifrados. Después de cifrar se puede seguir importando: los SP de importación cifran lo que guardan.
+La contraseña de la clave maestra se pasa con `:setvar ClaveMaestra` en el runner. El valor del repositorio es de ejemplo y hay que cambiarlo antes de ejecutar. `40` se puede ejecutar más de una vez: lo que ya está cifrado no se vuelve a cifrar, y las claves no se recrean, porque recrearlas dejaría ilegibles los datos cifrados. Después de cifrar se puede seguir importando: los SP de importación cifran lo que guardan.
 
 ### Cómo se guardan y se leen los datos
 
@@ -35,11 +35,11 @@ La contraseña de la clave maestra se pasa con `:setvar ClaveMaestra` en el runn
 ### Consecuencias en el diseño
 
 - `ENCRYPTBYKEY` da un resultado distinto cada vez, aun para el mismo texto. Por eso no se puede indexar ni comparar el dato cifrado, y se quitaron las restricciones `UNIQUE` que incluían esas columnas (en `JUGADOR` y `ARBITRO`). Los SP controlan los duplicados comparando sobre las vistas descifradas.
-- Los tests de entregas anteriores que buscan personas por nombre directamente en las tablas dejan de encontrarlas: 53, 54, 55, 57, 60, 61, 64 y 73. Como su limpieza también busca por nombre, dejan datos de prueba. Los tests 56, 62, 63, 66 y 80 muestran los datos cifrados en lugar de los nombres. Las consultas de evidencia de las secciones 9 y 10 de `32_Ejecutar_DatosComplementarios.sql` también leen las tablas y fallan sobre la base cifrada; la carga de datos de ese script funciona.
+- Los tests de entregas anteriores que buscan personas por nombre directamente en las tablas dejan de encontrarlas: 53, 54, 55, 57, 60, 61, 64 y 73. Como su limpieza también busca por nombre, dejan datos de prueba. Los tests 56, 62, 63, 66 y 80 muestran los datos cifrados en lugar de los nombres. Las consultas de evidencia de las secciones 9 y 10 de `33_Ejecutar_DatosComplementarios.sql` también leen las tablas y fallan sobre la base cifrada; la carga de datos de ese script funciona.
 
 ### Resguardo del certificado
 
-Si se pierde el certificado, los datos cifrados no se pueden recuperar. Después de la primera ejecución de `38`, el DBA respalda el certificado con su clave privada fuera del servidor, con acceso restringido, y nunca en el repositorio:
+Si se pierde el certificado, los datos cifrados no se pueden recuperar. Después de la primera ejecución de `40`, el DBA respalda el certificado con su clave privada fuera del servidor, con acceso restringido, y nunca en el repositorio:
 
 ```sql
 BACKUP CERTIFICATE CertDatosPersonales
@@ -63,7 +63,7 @@ La contraseña de la clave maestra se guarda con el mismo cuidado.
 
 La fecha de nacimiento no la ve ningún rol: `Reportes.vw_Plantillas` no la devuelve, porque el reporte de plantillas no la pide (nombre, posición, club y dorsal) y esa vista la leen el cargador de resultados y el rol de consulta, que no la necesitan. Se guarda cifrada y solo la lee el DBA, con las vistas de `Seguridad`. Los tipos de gol que usa el cargador son un catálogo fijo (`20_Ejecutar_DatosIniciales.sql`), así que no tiene una vista para consultarlos.
 
-`40_Seguridad.sql` crea el esquema `Seguridad` y el SP `Seguridad.usp_ConfigurarRoles`. El SP crea los roles y los usuarios de prueba, y otorga los permisos por esquema o por procedimiento. Deniega `SELECT`, `INSERT`, `UPDATE` y `DELETE` directos en los cinco esquemas de datos, y `SELECT` y `EXECUTE` sobre `Seguridad`. Los objetos pertenecen a `dbo`, así que el encadenamiento de propiedad deja que los SP y las vistas usen las tablas sin dar esos permisos a quien los invoca. `38` vuelve a ejecutar el SP después de crear las claves, para dar los permisos sobre la clave.
+`29_Seguridad.sql` crea el esquema `Seguridad` y el SP `Seguridad.usp_ConfigurarRoles`. El SP crea los roles y los usuarios de prueba, y otorga los permisos por esquema o por procedimiento. Deniega `SELECT`, `INSERT`, `UPDATE` y `DELETE` directos en los cinco esquemas de datos, y `SELECT` y `EXECUTE` sobre `Seguridad`. Los objetos pertenecen a `dbo`, así que el encadenamiento de propiedad deja que los SP y las vistas usen las tablas sin dar esos permisos a quien los invoca. `40` vuelve a ejecutar el SP después de crear las claves, para dar los permisos sobre la clave.
 
 ### Permiso sobre la clave
 
@@ -101,26 +101,26 @@ La base usa recuperación `FULL`, así que los backups del log se ejecutan de fo
 
 ## Orden de ejecución y pruebas
 
-1. `37_Ejecutar_PrepararBase.sql`: recrea la base, crea los objetos y los roles (`40`).
-2. Las importaciones: `26`, `29`, el scraping, `31`, `32`, `33` y `36` (fotos de las sedes).
+1. `00_Ejecutar_PrepararBase.sql`: recrea la base, crea los objetos y los roles (`29`).
+2. Las importaciones: `30`, `31`, el scraping, `32`, `33`, `34` y `35` (fotos de las sedes).
 3. Los tests de las entregas anteriores (`53` a `80`). Van antes del cifrado: después, los que buscan personas por nombre en las tablas no las encuentran y su limpieza deja datos de prueba (ver "Consecuencias en el diseño").
-4. `38_Ejecutar_Cifrado.sql`: cifra los datos personales.
+4. `40_Ejecutar_Cifrado.sql`: cifra los datos personales.
 5. Los tests de seguridad.
-6. `35_Ejecutar_Entrega9_ConsultasToBe.sql`, que lee las vistas descifradas que crea `38`.
+6. `46_Ejecutar_Entrega9_ConsultasToBe.sql`, que lee las vistas descifradas que crea `40`.
 
 Hay un script de test por usuario: `81_Test_Rol_Administrador.sql`, `82_Test_Rol_CargadorResultados.sql`, `83_Test_Rol_GestorPublicidad.sql` y `84_Test_Rol_ConsultaReportes.sql`. Cada uno tiene dos partes:
 
 1. Los permisos declarados del usuario (`HAS_PERMS_BY_NAME`), incluidos los de la clave y el certificado.
 2. La ejecución real: cada operación se ejecuta como el usuario (`EXECUTE AS USER`) dentro de una transacción que se deshace, así que no queda nada. El resultado dice si la operación quedó permitida o denegada, y, cuando lee datos personales, si el usuario los ve descifrados o como `NULL`.
 
-`85_Test_Cifrado.sql` comprueba:
+El cifrado tiene un script de test por cada script del 41 al 45:
 
-- que existan las claves y que las nueve columnas estén cifradas;
-- que no queden restricciones `UNIQUE` sobre ellas;
-- que todas las filas se puedan descifrar y que lo guardado no sea el texto original;
-- que el mismo texto cifrado dos veces dé resultados distintos;
-- que sin abrir la clave no se pueda guardar una persona;
-- que un alta por SP se lea descifrada y que el SP rechace el duplicado;
-- que no queden claves abiertas.
+- `91_Test_SP_Cifrado.sql` (41): que existan las claves; que `usp_AbrirClave` y `usp_CerrarClave` abran y cierren la clave, sin cerrarla cuando un SP llama a otro; que las funciones den `NULL` con la clave cerrada; que el mismo texto cifrado dos veces dé resultados distintos y se descifre igual.
+- `92_Test_Cifrado_Tablas.sql` (42): que las nueve columnas estén cifradas y no queden restricciones `UNIQUE` sobre ellas; que las vistas de `Seguridad` tengan las columnas de su tabla; que todas las filas se puedan descifrar y lo guardado no sea el texto original; que sin abrir la clave no se pueda guardar una persona; que `usp_CifrarDatosPersonales` no vuelva a cifrar lo que ya está cifrado.
+- `93_Test_Cifrado_Torneo.sql` (43): que el alta y la modificación de jugadores y cuerpos técnicos guarden cifrado, se lean descifrados y rechacen los duplicados.
+- `94_Test_Cifrado_DesarrolloYArbitraje.sql` (44): lo mismo para los árbitros, y que las vistas y la función de partidos y árbitros devuelvan los nombres descifrados.
+- `95_Test_Cifrado_Reportes.sql` (45): que las vistas de `Reportes` y el reporte XML devuelvan los nombres descifrados, también para un jugador recién dado de alta.
+
+Todos comprueban, además, que no queden claves abiertas.
 
 Todos los tests terminan con error si algún control no da lo esperado.

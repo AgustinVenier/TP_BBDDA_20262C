@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 31/10/2026
- Archivo: 27_SP_Importar_Cotizaciones.sql
+ Archivo: 26_SP_Importar_Cotizaciones.sql
  Objetivo: Crear el proceso de importación de cotizaciones de monedas desde
            la API Frankfurter, con las que se factura la publicidad en otra
            moneda (las tarifas de los espacios están en dólares). Los SP, en
@@ -19,7 +19,7 @@
              DatosGenerales.usp_ImportarCotizacionesAPI   consulta la API y procesa la respuesta
            El pedido a la API lo hace DatosGenerales.usp_ConsumirAPI
            (22_SP_ConsumirAPI.sql).
-           Requiere haber ejecutado 00 a 22. Su script de testing es
+           Requiere haber ejecutado 01 a 22. Su script de testing es
            77_Test_SP_Importar_Cotizaciones.sql.
 ================================================================================
 

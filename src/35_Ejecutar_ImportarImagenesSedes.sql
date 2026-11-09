@@ -10,19 +10,19 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 09/11/2026
- Archivo: 36_Ejecutar_ImportarImagenesSedes.sql
+ Archivo: 35_Ejecutar_ImportarImagenesSedes.sql
  Objetivo: Cargar la foto de cada sede (las 16 del Mundial 2026 y las 8 propias
            del juego de datos) desde datos\fuentes\sedes\, con
            Torneo.usp_ImportarImagenesSedes (17_SP_Importar_ImagenesSedes.sql).
-           Requiere haber ejecutado 00 a 33: las sedes que no estén cargadas
-           quedan OMITIDAS. Va después de 33 y antes del cifrado (38), aunque
+           Requiere haber ejecutado 01 a 34: las sedes que no estén cargadas
+           quedan OMITIDAS. Va después de 34 y antes del cifrado (40), aunque
            no depende de él. Se puede ejecutar más de una vez: las fotos que
            ya están cargadas quedan SIN CAMBIOS.
 ================================================================================
 
  Antes de ejecutar: CAMBIAR @repositorio por la carpeta del repositorio en tu
  máquina, terminada en \. La cuenta del servicio de SQL Server tiene que poder
- leerla (ver "Antes de ejecutar" en 31_Ejecutar_ImportarMundial2026.sql).
+ leerla (ver "Antes de ejecutar" en 32_Ejecutar_ImportarMundial2026.sql).
 
  Una foto suelta se carga, reemplaza o quita desde la aplicación
  app_abm\abm_sedes.py, con los SP de ABM de SEDE_IMAGEN.
@@ -36,8 +36,8 @@ GO
 
 IF OBJECT_ID(N'Torneo.usp_ImportarImagenesSedes', N'P') IS NULL
 BEGIN
-    PRINT N'36_Ejecutar_ImportarImagenesSedes.sql: falta el SP de 17_SP_Importar_ImagenesSedes.sql. '
-        + N'Ejecutá los scripts 00 a 33 y volvé a ejecutar este.';
+    PRINT N'35_Ejecutar_ImportarImagenesSedes.sql: falta el SP de 17_SP_Importar_ImagenesSedes.sql. '
+        + N'Ejecutá los scripts 01 a 34 y volvé a ejecutar este.';
     SET NOEXEC ON;
 END;
 GO

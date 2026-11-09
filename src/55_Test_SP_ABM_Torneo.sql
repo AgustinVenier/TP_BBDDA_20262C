@@ -11,10 +11,10 @@
 
  Fecha: 25/10/2026
  Archivo: 55_Test_SP_ABM_Torneo.sql
- Objetivo: Probar los SP de 05_SP_ABM_Torneo.sql (SEDE, SEDE_IMAGEN, SELECCION,
+ Objetivo: Probar los SP de 06_SP_ABM_Torneo.sql (SEDE, SEDE_IMAGEN, SELECCION,
            LISTA_CONVOCADOS, JUGADOR, PERSONA_CUERPO_TECNICO y PARTIDO), con
            casos exitosos y su evidencia y casos que no cumplen las
-           validaciones. Requiere haber ejecutado 00 a 20 y no depende del
+           validaciones. Requiere haber ejecutado 01 a 20 y no depende del
            juego de datos.
            Crea sus propios datos de prueba (las sedes "Estadio Prueba ABM" y
            "Estadio Prueba ABM 2", los países de prueba XTA a XTE con sus
@@ -53,7 +53,7 @@ IF OBJECT_ID(N'Torneo.usp_PARTIDO_Alta', N'P') IS NULL
    OR OBJECT_ID(N'DesarrolloPartido.usp_AMONESTACION_Alta', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'MAX_CONVOCADOS')
 BEGIN
-    RAISERROR(N'Faltan los SP de ABM o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de ABM o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

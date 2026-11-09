@@ -18,8 +18,8 @@
              Torneo.usp_ImportarCuerpoTecnicoCSV  importa el archivo cuerpo_tecnico.csv
            Las selecciones y sus listas tienen que estar cargadas antes
            (Torneo.usp_ImportarSeleccionesJSON, en 23_SP_Importar_Mundial2026.sql).
-           Requiere haber ejecutado 00 a 23. Su script de testing es
-           73_Test_SP_Importar_Mundial2026.sql, junto con el de 23.
+           Requiere haber ejecutado 01 a 23. Su script de testing es
+           74_Test_SP_Importar_Jugadores.sql.
 ================================================================================
 
  Lo que sigue describe la importación de jugadores; la del cuerpo técnico
@@ -30,7 +30,7 @@
    codigo_fifa,dorsal,posicion,nombre,apellido,fecha_nacimiento,club
  La posición viene como GK, DF, MF o FW y la fecha como AAAA-MM-DD.
 
- Cómo importa (igual que 23, 25, 27 y 28):
+ Cómo importa (igual que 23, 25, 26 y 27):
    1. Se controla el archivo: que se pueda leer y que su primera fila tenga
       esas columnas. Si no, o si alguna fila no es CSV válido, no se importa
       nada (THROW 50002).

@@ -15,9 +15,10 @@
            Arbitraje que leen o escriben el nombre, el apellido o la fecha de
            nacimiento de jugadores y árbitros, para que los lean descifrados y
            los guarden cifrados.
+           Su script de testing es 94_Test_Cifrado_DesarrolloYArbitraje.sql.
 ================================================================================
 
- Orden: lo ejecuta 38_Ejecutar_Cifrado.sql, después de 42_Cifrado_Tablas.sql.
+ Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 42_Cifrado_Tablas.sql.
 
  Cada objeto es el de su script original (indicado arriba de cada uno), con
  estos cambios:
@@ -41,7 +42,7 @@ SET NOCOUNT ON;
 GO
 
 
--- Original en 03_CrearFuncionesYVistas.sql. Cambio: lee los jugadores de Seguridad.vw_Jugador.
+-- Original en 04_CrearFuncionesYVistas.sql. Cambio: lee los jugadores de Seguridad.vw_Jugador.
 /*
   fn_EquipoEnCancha
   Reconstruye los jugadores de una selección que estaban en cancha en un
@@ -94,7 +95,7 @@ RETURN
 GO
 
 
--- Original en 03_CrearFuncionesYVistas.sql. Cambio: lee los jugadores de Seguridad.vw_Jugador.
+-- Original en 04_CrearFuncionesYVistas.sql. Cambio: lee los jugadores de Seguridad.vw_Jugador.
 /*
   vw_HistorialTitularidad
   Una fila por jugador y partido en el que figuró en la formación: si fue
@@ -143,7 +144,7 @@ OUTER APPLY (SELECT TOP (1) r.minuto, r.minuto_adicional
 GO
 
 
--- Original en 03_CrearFuncionesYVistas.sql. Cambio: lee los jugadores de Seguridad.vw_Jugador.
+-- Original en 04_CrearFuncionesYVistas.sql. Cambio: lee los jugadores de Seguridad.vw_Jugador.
 /*
   vw_Goleadores
   Goles por jugador. No cuentan los goles en contra ni los penales de la
@@ -171,7 +172,7 @@ GROUP BY j.id_jugador, j.apellido, j.nombre, s.id_seleccion, ps.nombre;
 GO
 
 
--- Original en 03_CrearFuncionesYVistas.sql. Cambio: lee los árbitros de Seguridad.vw_Arbitro.
+-- Original en 04_CrearFuncionesYVistas.sql. Cambio: lee los árbitros de Seguridad.vw_Arbitro.
 /*
   vw_HistorialArbitro
   Partidos de cada árbitro con su rol, el resultado, las tarjetas del partido
@@ -208,7 +209,7 @@ OUTER APPLY (SELECT SUM(IIF(am.tipo_tarjeta = 'AMARILLA', 1, 0)) AS amarillas,
 GO
 
 
--- Original en 07_SP_ABM_Arbitraje.sql. Cambio: el control de árbitro repetido lee Seguridad.vw_Arbitro (reemplaza a
+-- Original en 08_SP_ABM_Arbitraje.sql. Cambio: el control de árbitro repetido lee Seguridad.vw_Arbitro (reemplaza a
 -- UQ_ARBITRO_pais_apellido_nombre); el INSERT cifra nombre, apellido y fecha de nacimiento.
 /*
   usp_ARBITRO_Alta
@@ -286,7 +287,7 @@ END;
 GO
 
 
--- Original en 07_SP_ABM_Arbitraje.sql. Cambio: lee los datos actuales y controla el árbitro repetido sobre Seguridad.vw_Arbitro;
+-- Original en 08_SP_ABM_Arbitraje.sql. Cambio: lee los datos actuales y controla el árbitro repetido sobre Seguridad.vw_Arbitro;
 -- el UPDATE cifra los datos informados.
 /*
   usp_ARBITRO_Modificacion
@@ -400,7 +401,7 @@ END;
 GO
 
 
--- Original en 07_SP_ABM_Arbitraje.sql. Cambio: lee el árbitro (y su nombre para los mensajes) de Seguridad.vw_Arbitro.
+-- Original en 08_SP_ABM_Arbitraje.sql. Cambio: lee el árbitro (y su nombre para los mensajes) de Seguridad.vw_Arbitro.
 /*
   usp_DESIGNACION_ARBITRAL_Alta
   Valida: partido existente y PROGRAMADO; árbitro existente y activo; rol

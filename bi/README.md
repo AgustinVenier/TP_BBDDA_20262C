@@ -2,11 +2,11 @@
 
 `MundialFutbol.pbip` es el reporte de la Entrega 9 (sección J del enunciado), guardado como proyecto de Power BI (PBIP): el modelo en `MundialFutbol.SemanticModel` (formato TMDL) y el reporte en `MundialFutbol.Report` (formato PBIR). Son archivos de texto, así que los cambios se ven en git como cualquier script.
 
-Los datos salen directo de la base SQL: el modelo importa las vistas del esquema `Reportes` (`src/30_SP_Reportes.sql`), y **Actualizar** las vuelve a leer.
+Los datos salen directo de la base SQL: el modelo importa las vistas del esquema `Reportes` (`src/28_SP_Reportes.sql`), y **Actualizar** las vuelve a leer.
 
 ## Cómo abrirlo
 
-1. Tener la base con las vistas al día. Correr `src/30_SP_Reportes.sql` después de cada cambio en las vistas: el reporte usa columnas que agregó la última versión (`jugador`, `persona`, `partido` y la vista `vw_Sedes`).
+1. Tener la base con las vistas al día. Correr `src/28_SP_Reportes.sql` después de cada cambio en las vistas: el reporte usa columnas que agregó la última versión (`jugador`, `persona`, `partido` y la vista `vw_Sedes`).
 2. Abrir `MundialFutbol.pbip` con Power BI Desktop (doble clic).
 3. **Inicio → Actualizar**. La primera vez pide las credenciales de `localhost;MundialFutbol`: elegir **Windows → Usar mis credenciales actuales**. Si avisa que el certificado del servidor no es de confianza, aceptar la conexión sin cifrado (es una instancia local).
 

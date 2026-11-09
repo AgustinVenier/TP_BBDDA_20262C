@@ -14,10 +14,10 @@
  Objetivo: Crear el SP que carga la foto de cada sede desde los archivos
            prebajados del repositorio:
              Torneo.usp_ImportarImagenesSedes  las 24 fotos de datos\fuentes\sedes
-           Lo ejecuta 36_Ejecutar_ImportarImagenesSedes.sql. Una foto suelta
+           Lo ejecuta 35_Ejecutar_ImportarImagenesSedes.sql. Una foto suelta
            se carga, reemplaza o quita con los SP de ABM de SEDE_IMAGEN
-           (05_SP_ABM_Torneo.sql), que usa la aplicación abm_sedes.py.
-           Requiere haber ejecutado 00 a 05. Su script de testing es
+           (06_SP_ABM_Torneo.sql), que usa la aplicación abm_sedes.py.
+           Requiere haber ejecutado 01 a 06. Su script de testing es
            67_Test_SP_Importar_ImagenesSedes.sql.
 ================================================================================
 
@@ -53,7 +53,7 @@ GO
     CARGADA      no tenía foto y se cargó
     ACTUALIZADA  tenía otra foto y se reemplazó
     SIN CAMBIOS  ya tenía esa misma foto (se comparan los hashes SHA-256)
-    OMITIDA      la sede no está cargada (por ejemplo, sin ejecutar 33)
+    OMITIDA      la sede no está cargada (por ejemplo, sin ejecutar 34)
     RECHAZADA    falta el archivo, no es PNG ni JPEG o supera los 2 MB
   Las sedes que no están en la lista (las que se agregan a mano) no se tocan.
   Valida: carpeta obligatoria y existente en el servidor. Si la lectura de los

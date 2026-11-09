@@ -10,17 +10,17 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 03/11/2026
- Archivo: 35_Ejecutar_Entrega9_ConsultasToBe.sql
+ Archivo: 46_Ejecutar_Entrega9_ConsultasToBe.sql
  Objetivo: Entrega 9. Recorrer los puntos del alcance (sección 2, "To Be") con
            las consultas que muestran que el sistema los cumple, sobre el
            torneo real cargado. Usa las vistas y funciones de
-           03_CrearFuncionesYVistas.sql y 30_SP_Reportes.sql; los reportes
-           de la Entrega 7 se ven en 34_Ejecutar_Entrega7_Reportes.sql.
-           Requiere haber ejecutado 00 a 33: el torneo real
-           (31_Ejecutar_ImportarMundial2026.sql) con sus datos complementarios
-           (32_Ejecutar_DatosComplementarios.sql) y las sedes propias del juego de
-           datos (33_Ejecutar_SedesAdicionales.sql), y el cifrado de la
-           Entrega 8 (38_Ejecutar_Cifrado.sql): los jugadores, cuerpos
+           04_CrearFuncionesYVistas.sql y 28_SP_Reportes.sql; los reportes
+           de la Entrega 7 se ven en 36_Ejecutar_Entrega7_Reportes.sql.
+           Requiere haber ejecutado 01 a 34: el torneo real
+           (32_Ejecutar_ImportarMundial2026.sql) con sus datos complementarios
+           (33_Ejecutar_DatosComplementarios.sql) y las sedes propias del juego de
+           datos (34_Ejecutar_SedesAdicionales.sql), y el cifrado de la
+           Entrega 8 (40_Ejecutar_Cifrado.sql): los jugadores, cuerpos
            técnicos y árbitros se leen de las vistas descifradas de
            Seguridad (vw_Jugador, vw_PersonaCuerpoTecnico, vw_Arbitro).
 ================================================================================
@@ -56,7 +56,7 @@ GO
 IF OBJECT_ID(N'Reportes.vw_Plantillas', N'V') IS NULL
    OR NOT EXISTS (SELECT 1 FROM Torneo.PARTIDO WHERE estado = 'FINALIZADO')
 BEGIN
-    RAISERROR(N'Faltan los objetos o los datos: ejecutar 00 a 33.', 16, 1);
+    RAISERROR(N'Faltan los objetos o los datos: ejecutar 01 a 34.', 16, 1);
     SET NOEXEC ON;
 END;
 GO
@@ -132,7 +132,7 @@ FROM Torneo.fn_Fixture(NULL, 'GRUPOS', @id_seleccion, NULL)
 ORDER BY fecha_hora_utc;
 GO
 
--- La segunda corrida de los partidos es el reproceso de los rechazados (ver 31): lo que ya
+-- La segunda corrida de los partidos es el reproceso de los rechazados (ver 32): lo que ya
 -- estaba cargado queda sin cambios, no se duplica.
 SELECT N'A4. Importación del fixture, las sedes y los resultados oficiales (openfootball)' AS consulta;
 SELECT id_importacion, proceso, origen, fecha_hora, leidos, insertados, actualizados, sin_cambios, omitidos, rechazados
@@ -585,7 +585,7 @@ GO
 -- (fn_JugadoresSuspendidos). figura_en_la_formacion es NO: la formación de un suspendido la
 -- rechaza usp_RegistrarFormacion. La excepción es Balogun (Estados Unidos): la FIFA dejó sin
 -- efecto su suspensión y el partido se importó tal como se jugó, como carga histórica que no
--- controla suspensiones (ver 16 y 32).
+-- controla suspensiones (ver 16 y 33).
 SELECT N'F4. Suspensiones calculadas y el partido en que se cumplen (incluye la acumulación de amarillas)' AS consulta;
 SELECT pa.nombre AS seleccion,
        CONCAT(j.nombre, N' ', j.apellido) AS jugador,
@@ -912,8 +912,8 @@ GO
    I. Importación de datos externos
    ============================================================================ */
 
--- Upsert y sin duplicados: el PBI per cápita entra primero por XML (26) y después por la
--- API del Banco Mundial (29), que encuentra los mismos registros y los deja sin cambios.
+-- Upsert y sin duplicados: el PBI per cápita entra primero por XML (30) y después por la
+-- API del Banco Mundial (31), que encuentra los mismos registros y los deja sin cambios.
 SELECT N'I1. Procesos de importación: registros leídos, insertados, actualizados, sin cambios, omitidos y rechazados' AS consulta;
 SELECT proceso, COUNT(*) AS corridas, SUM(leidos) AS leidos, SUM(insertados) AS insertados,
        SUM(actualizados) AS actualizados, SUM(sin_cambios) AS sin_cambios, SUM(omitidos) AS omitidos,

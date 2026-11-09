@@ -11,11 +11,11 @@
 
  Fecha: 31/10/2026
  Archivo: 80_Test_SP_Reportes.sql
- Objetivo: Probar las vistas y los SP de 30_SP_Reportes.sql. Trabaja sobre
-           los datos que haya cargados (el torneo real del 31 y lo que
-           completa el 32): muestra cada reporte y verifica que sus totales coincidan
+ Objetivo: Probar las vistas y los SP de 28_SP_Reportes.sql. Trabaja sobre
+           los datos que haya cargados (el torneo real del 32 y lo que
+           completa el 33): muestra cada reporte y verifica que sus totales coincidan
            con las tablas base, sin depender de valores fijos.
-           Requiere haber ejecutado 00 a 20 y 30, y tener partidos jugados.
+           Requiere haber ejecutado 01 a 20 y 28, y tener partidos jugados.
            Para probar la conversión de monedas usa su propia cotización: la
            moneda XTS (código ISO 4217 reservado para pruebas), que se borra
            al empezar y al terminar.
@@ -41,7 +41,7 @@ GO
 IF OBJECT_ID(N'Reportes.usp_Goleadores', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM Torneo.PARTIDO WHERE estado = 'FINALIZADO')
 BEGIN
-    RAISERROR(N'Faltan los reportes o los datos: ejecutar 00 a 20 y 30, y cargar partidos (por ejemplo, con 31).', 16, 1);
+    RAISERROR(N'Faltan los reportes o los datos: ejecutar 01 a 20 y 28, y cargar partidos (por ejemplo, con 32).', 16, 1);
     SET NOEXEC ON;
 END;
 GO

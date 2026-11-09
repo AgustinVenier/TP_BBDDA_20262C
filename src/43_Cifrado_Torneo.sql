@@ -15,9 +15,10 @@
            apellido o la fecha de nacimiento de jugadores y cuerpos técnicos
            (ABM, convocatoria, inicio de partido e importación), para que los
            lean descifrados y los guarden cifrados.
+           Su script de testing es 93_Test_Cifrado_Torneo.sql.
 ================================================================================
 
- Orden: lo ejecuta 38_Ejecutar_Cifrado.sql, después de 42_Cifrado_Tablas.sql.
+ Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 42_Cifrado_Tablas.sql.
 
  Cada objeto es el de su script original (indicado arriba de cada uno), con
  estos cambios:
@@ -43,7 +44,7 @@ SET NOCOUNT ON;
 GO
 
 
--- Original en 05_SP_ABM_Torneo.sql. Cambio: el control de jugador repetido en la lista y el del dorsal ocupado leen
+-- Original en 06_SP_ABM_Torneo.sql. Cambio: el control de jugador repetido en la lista y el del dorsal ocupado leen
 -- Seguridad.vw_Jugador (reemplaza a UQ_JUGADOR_lista_apellido_nombre); el INSERT cifra nombre, apellido y
 -- fecha de nacimiento.
 /*
@@ -182,7 +183,7 @@ END;
 GO
 
 
--- Original en 05_SP_ABM_Torneo.sql. Cambio: lee los datos actuales y hace los controles sobre Seguridad.vw_Jugador; el UPDATE
+-- Original en 06_SP_ABM_Torneo.sql. Cambio: lee los datos actuales y hace los controles sobre Seguridad.vw_Jugador; el UPDATE
 -- cifra los datos informados.
 /*
   usp_JUGADOR_Modificacion
@@ -305,7 +306,7 @@ END;
 GO
 
 
--- Original en 05_SP_ABM_Torneo.sql. Cambio: el control de persona repetida lee Seguridad.vw_PersonaCuerpoTecnico; el INSERT
+-- Original en 06_SP_ABM_Torneo.sql. Cambio: el control de persona repetida lee Seguridad.vw_PersonaCuerpoTecnico; el INSERT
 -- cifra nombre, apellido y fecha de nacimiento.
 /*
   usp_PERSONA_CUERPO_TECNICO_Alta
@@ -397,7 +398,7 @@ END;
 GO
 
 
--- Original en 05_SP_ABM_Torneo.sql. Cambio: lee los datos actuales y controla la persona repetida sobre
+-- Original en 06_SP_ABM_Torneo.sql. Cambio: lee los datos actuales y controla la persona repetida sobre
 -- Seguridad.vw_PersonaCuerpoTecnico; el UPDATE cifra los datos informados.
 /*
   usp_PERSONA_CUERPO_TECNICO_Modificacion
@@ -1179,7 +1180,7 @@ GO
   nombre, apellido, rol, fecha_nacimiento, codigo_fifa_nacimiento (del país
   de nacimiento), errores y accion. Los directores técnicos los importa
   usp_ImportarCuerpoTecnicoCSV (24) del scraping de Wikipedia; el resto del
-  cuerpo técnico lo carga 32_Ejecutar_DatosComplementarios.sql. En una persona
+  cuerpo técnico lo carga 33_Ejecutar_DatosComplementarios.sql. En una persona
   existente, la fecha y el país de nacimiento que no vienen no se borran.
   Valida cada persona pendiente: selección registrada; nombre y apellido
   obligatorios y de hasta 60 caracteres; rol DIRECTOR_TECNICO,

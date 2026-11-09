@@ -10,22 +10,22 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 03/11/2026
- Archivo: 32_Ejecutar_DatosComplementarios.sql
+ Archivo: 33_Ejecutar_DatosComplementarios.sql
  Objetivo: Completar el Mundial 2026 real con lo que no traen las fuentes
            importadas, para que todas las tablas tengan datos y los reportes
            muestren información representativa. No repite nada de lo que ya
            se importa: sedes, selecciones, jugadores, partidos y árbitros
-           vienen del 31 (openfootball y scraping), las campañas argentinas
+           vienen del 32 (openfootball y scraping), las campañas argentinas
            del Dossier Mundial y las cotizaciones y feriados de las APIs
-           vienen del 29, y el PBI per cápita del 26.
-           Requiere haber ejecutado 00 a 31. Se puede ejecutar más de una
+           vienen del 31, y el PBI per cápita del 30.
+           Requiere haber ejecutado 01 a 32. Se puede ejecutar más de una
            vez: lo que ya está cargado no se vuelve a cargar.
 ================================================================================
 
  Qué carga (son datos inventados, porque no hay una fuente de donde sacarlos):
    1. Los roles del cuerpo técnico que le faltan a cada selección: ayudante
       de campo, preparador físico y entrenador de arqueros (el director
-      técnico real lo importa el 31; si alguna selección no lo tuviera, se
+      técnico real lo importa el 32; si alguna selección no lo tuviera, se
       inventa también). Los nombres se arman combinando dos listas y no son
       personas reales.
    2. Los idiomas de cada árbitro que no los tiene: el del país del árbitro
@@ -50,7 +50,12 @@
       partidos trae solo a los suplentes que entraron. Se agregan los demás
       convocados que estaban en la lista el día del partido, salvo los
       suspendidos para ese partido.
-   8. El informe post-partido del árbitro principal de cada partido, que
+   8. La asistencia de unos 2 de cada 3 goles de jugada: el archivo de
+      partidos no dice quién asistió. El que asiste es un compañero del
+      autor que estaba en cancha en ese minuto (con más chance un
+      mediocampista o un delantero que un defensor; nunca el arquero),
+      elegido con un hash para que sea siempre el mismo.
+   9. El informe post-partido del árbitro principal de cada partido, que
       resume la disciplina real del partido (amarillas y expulsiones, por
       dorsal y selección), y dos sanciones ficticias basadas en hechos del
       torneo: la terna del partido de la expulsión de Balogun, que la FIFA
@@ -64,11 +69,11 @@
  Casos obligatorios de la consigna (sección IV), al final del script:
    - Doble amarilla y roja directa, suspensión por acumulación que deja al
      jugador afuera del partido siguiente, importación con errores
-     parciales: vienen del torneo real y de su importación (31).
+     parciales: vienen del torneo real y de su importación (32).
    - Cambio por lesión en los primeros 20 minutos: los de la parte 5.
    - Partido en prime time en más de cuatro mercados candidatos, en el que
      la asignación elige solo cuatro piezas: los de la parte 4.
-   - Designación descartada por conflicto de nacionalidad: la parte 9 la
+   - Designación descartada por conflicto de nacionalidad: la parte 10 la
      intenta, dentro de una transacción que se deshace.
 */
 
@@ -78,13 +83,13 @@ GO
 SET NOCOUNT ON;
 GO
 
--- Se ejecuta sobre la base con el torneo real (31) y el PBI per cápita (26), que usa la
+-- Se ejecuta sobre la base con el torneo real (32) y el PBI per cápita (30), que usa la
 -- asignación de publicidad para priorizar las piezas.
 IF NOT EXISTS (SELECT 1 FROM Torneo.PARTIDO)
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.INDICADOR_ECONOMICO WHERE codigo_indicador = 'NY.GDP.PCAP.CD')
 BEGIN
-    PRINT N'32_Ejecutar_DatosComplementarios.sql: la base tiene que tener el torneo real (31) y el PBI per cápita (26). '
-        + N'Ejecutá los scripts 00 a 31 y volvé a ejecutar este.';
+    PRINT N'33_Ejecutar_DatosComplementarios.sql: la base tiene que tener el torneo real (32) y el PBI per cápita (30). '
+        + N'Ejecutá los scripts 01 a 32 y volvé a ejecutar este.';
     SET NOEXEC ON;
 END;
 GO
@@ -212,7 +217,7 @@ VALUES ('ALG', 'ar,fr'), ('ANG', 'pt'), ('ARG', 'es'), ('AUT', 'de'), ('BEL', 'f
 -- Solo los árbitros que todavía no tienen idiomas; la categoría es la que ya tienen. El nombre y
 -- el apellido salen de Arbitraje.vw_HistorialArbitro, que los devuelve legibles también con los
 -- datos personales cifrados (Entrega 8); todos los árbitros tienen designaciones, porque se
--- cargan desde el archivo de designaciones (31).
+-- cargan desde el archivo de designaciones (32).
 INSERT INTO #staging_arbitros (id_registro, codigo_fifa, nombre, apellido, categoria, idiomas)
 SELECT ROW_NUMBER() OVER (ORDER BY a.id_arbitro), pa.codigo_fifa, h.nombre, h.apellido, a.categoria,
        CONCAT(ip.idiomas + ',', 'en')
@@ -376,6 +381,7 @@ CREATE TABLE #staging_eventos (
     codigo_fifa         VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
     id_jugador          INT           NULL,
     id_jugador_entra    INT           NULL,
+    id_jugador_asistencia INT         NULL,
     es_titular          BIT           NULL,
     posicion_en_cancha  VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
     minuto              TINYINT       NULL,
@@ -509,6 +515,7 @@ CREATE TABLE #staging_eventos (
     codigo_fifa         VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
     id_jugador          INT           NULL,
     id_jugador_entra    INT           NULL,
+    id_jugador_asistencia INT         NULL,
     es_titular          BIT           NULL,
     posicion_en_cancha  VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
     minuto              TINYINT       NULL,
@@ -567,7 +574,124 @@ GO
 
 
 /* ============================================================================
-   8. INFORMES POST-PARTIDO Y SANCIONES DE LOS ÁRBITROS
+   8. ASISTENCIAS DE LOS GOLES
+   El archivo de partidos no trae quién asistió. Se inventa la asistencia de
+   unos 2 de cada 3 goles de jugada (la proporción habitual en el fútbol);
+   los de penal, en contra y de la definición no tienen. Qué goles y quién
+   asiste salen de un hash del partido, el minuto y los dorsales, no del
+   azar: cada ejecución elige lo mismo. El que asiste es un compañero del
+   autor que estaba en cancha en ese minuto: titular que todavía no había
+   salido o suplente que ya había entrado (en el entretiempo, si el gol es
+   en ese mismo minuto), sin roja antes del gol. Un mediocampista o un
+   delantero tiene más chance que un defensor, y el arquero nunca asiste.
+   Se cargan con el SP
+   de eventos de la Entrega 5, que a un gol ya cargado le agrega la
+   asistencia. Solo se completan los goles que no tienen asistencia.
+   ============================================================================ */
+CREATE TABLE #staging_eventos (
+    id_evento           INT           PRIMARY KEY,
+    tipo                VARCHAR(12)   COLLATE DATABASE_DEFAULT NOT NULL,
+    numero_partido      TINYINT       NOT NULL,
+    codigo_fifa         VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    id_jugador          INT           NULL,
+    id_jugador_entra    INT           NULL,
+    id_jugador_asistencia INT         NULL,
+    es_titular          BIT           NULL,
+    posicion_en_cancha  VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
+    minuto              TINYINT       NULL,
+    minuto_adicional    TINYINT       NULL,
+    en_entretiempo      BIT           NULL,
+    motivo              VARCHAR(200)  COLLATE DATABASE_DEFAULT NULL,
+    periodo             VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL,
+    tipo_gol            VARCHAR(40)   COLLATE DATABASE_DEFAULT NULL,
+    tipo_tarjeta        VARCHAR(10)   COLLATE DATABASE_DEFAULT NULL,
+    es_doble_amarilla   BIT           NULL,
+    errores             NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+    accion              VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+);
+
+-- El momento de cada evento como un número que se puede comparar: el 45+2 (4502) va antes que el 46 (4600).
+WITH goles AS (
+    SELECT g.id_gol, p.id_partido, p.numero_partido, g.id_jugador_autor, ja.dorsal AS dorsal_autor, f.id_formacion,
+           tg.descripcion AS tipo_gol, g.periodo, g.minuto, g.minuto_adicional,
+           g.minuto * 100 + g.minuto_adicional AS momento
+    FROM DesarrolloPartido.GOL AS g
+    INNER JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.id_tipo_gol = g.id_tipo_gol
+    INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = g.id_partido
+    INNER JOIN Torneo.JUGADOR AS ja ON ja.id_jugador = g.id_jugador_autor
+    INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = ja.id_lista
+    INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_partido = g.id_partido AND f.id_seleccion = l.id_seleccion
+    WHERE tg.descripcion = 'JUGADA' AND g.periodo <> 'PENALES' AND g.id_jugador_asistencia IS NULL
+      AND ABS(CHECKSUM(p.numero_partido, g.minuto, g.minuto_adicional, ja.dorsal)) % 3 <> 0
+),
+candidatos AS (
+    SELECT go.id_gol, go.numero_partido, go.id_jugador_autor, go.tipo_gol, go.periodo, go.minuto, go.minuto_adicional,
+           a.id_jugador AS id_jugador_asistencia,
+           ROW_NUMBER() OVER (PARTITION BY go.id_gol
+                              -- Un puntaje del 0 al 99 por jugador; el de un defensor se duplica (menos chance).
+                              ORDER BY ABS(CHECKSUM(go.numero_partido, go.minuto, go.minuto_adicional, j.dorsal)) % 100
+                                       * IIF(j.posicion_habitual = 'DEFENSOR', 2, 1),
+                                       j.dorsal) AS orden
+    FROM goles AS go
+    INNER JOIN DesarrolloPartido.ALINEACION AS a ON a.id_formacion = go.id_formacion
+    INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = a.id_jugador
+    WHERE a.id_jugador <> go.id_jugador_autor
+      AND j.posicion_habitual <> 'ARQUERO'
+      -- En cancha: titular que no salió antes del gol, o suplente que entró antes (o en el entretiempo de ese minuto).
+      AND ((a.es_titular = 1
+            AND NOT EXISTS (SELECT 1 FROM DesarrolloPartido.CAMBIO AS c
+                            WHERE c.id_partido = go.id_partido AND c.id_jugador_sale = a.id_jugador
+                              AND c.minuto * 100 + c.minuto_adicional <= go.momento))
+           OR (a.es_titular = 0
+               AND EXISTS (SELECT 1 FROM DesarrolloPartido.CAMBIO AS c
+                           WHERE c.id_partido = go.id_partido AND c.id_jugador_entra = a.id_jugador
+                             AND (c.minuto * 100 + c.minuto_adicional < go.momento
+                                  OR (c.en_entretiempo = 1 AND c.minuto * 100 + c.minuto_adicional = go.momento)))
+               AND NOT EXISTS (SELECT 1 FROM DesarrolloPartido.CAMBIO AS c
+                               WHERE c.id_partido = go.id_partido AND c.id_jugador_sale = a.id_jugador
+                                 AND c.minuto * 100 + c.minuto_adicional <= go.momento)))
+      AND NOT EXISTS (SELECT 1 FROM DesarrolloPartido.AMONESTACION AS am
+                      WHERE am.id_partido = go.id_partido AND am.id_jugador = a.id_jugador AND am.tipo_tarjeta = 'ROJA'
+                        AND am.minuto * 100 + am.minuto_adicional <= go.momento)
+)
+INSERT INTO #staging_eventos (id_evento, tipo, numero_partido, id_jugador, id_jugador_asistencia, periodo, tipo_gol, minuto,
+                              minuto_adicional)
+SELECT ROW_NUMBER() OVER (ORDER BY numero_partido, minuto, minuto_adicional, id_gol), 'GOL', numero_partido,
+       id_jugador_autor, id_jugador_asistencia, periodo, tipo_gol, minuto, minuto_adicional
+FROM candidatos
+WHERE orden = 1;
+
+BEGIN TRY
+    BEGIN TRANSACTION;
+    EXEC DesarrolloPartido.usp_ImportarDesarrolloPartidos;
+
+    IF EXISTS (SELECT 1 FROM #staging_eventos WHERE accion = 'RECHAZADO')
+    BEGIN
+        SELECT numero_partido, id_jugador, id_jugador_asistencia, minuto, STUFF(errores, 1, 2, N'') AS motivos
+        FROM #staging_eventos WHERE accion = 'RECHAZADO' ORDER BY id_evento;
+        ROLLBACK TRANSACTION;
+        PRINT N'Asistencias: hay asistencias rechazadas (ver la grilla); no se cargó ninguna.';
+        SET NOEXEC ON;
+    END
+    ELSE
+    BEGIN
+        COMMIT TRANSACTION;
+        DECLARE @asistencias INT = (SELECT COUNT(*) FROM #staging_eventos WHERE accion = 'ACTUALIZADO');
+        PRINT CONCAT(N'Asistencias: se agregó la asistencia a ', @asistencias, N' goles (los que ya la tenían no cambian).');
+    END;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+    PRINT N'Error al cargar las asistencias: ' + ERROR_MESSAGE();
+    SET NOEXEC ON;
+END CATCH;
+
+DROP TABLE #staging_eventos;
+GO
+
+
+/* ============================================================================
+   9. INFORMES POST-PARTIDO Y SANCIONES DE LOS ÁRBITROS
    El informe del principal: resultado y disciplina del partido (los
    jugadores por dorsal y selección: el informe es VARCHAR). Las sanciones:
    el principal y el VAR del partido de la expulsión de Balogun (USA-BIH,
@@ -663,7 +787,7 @@ GO
 
 
 /* ============================================================================
-   9. DESIGNACIÓN DESCARTADA POR CONFLICTO DE NACIONALIDAD
+   10. DESIGNACIÓN DESCARTADA POR CONFLICTO DE NACIONALIDAD
    Un árbitro del país de una de las selecciones, como cuarto árbitro del
    primer partido de esa selección. La regla está en el SP de la Entrega 5
    (y en usp_DesignarTernaArbitral y usp_DESIGNACION_ARBITRAL_Alta). Se
@@ -714,7 +838,7 @@ GO
 
 
 /* ============================================================================
-   10. RESUMEN Y CASOS OBLIGATORIOS
+   11. RESUMEN Y CASOS OBLIGATORIOS
    ============================================================================ */
 SELECT s.name + N'.' + t.name AS tabla, SUM(p.rows) AS filas
 FROM sys.tables AS t
@@ -808,6 +932,22 @@ INNER JOIN Torneo.SELECCION AS se ON se.id_seleccion = l.id_seleccion
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = se.id_pais
 WHERE b.fecha_baja IS NOT NULL
 ORDER BY a.fecha_alta, pa.nombre;
+
+-- Asistencias: cuántos goles de cada tipo la tienen (solo los de jugada) y quiénes asistieron más.
+SELECT tg.descripcion AS tipo_gol, COUNT(*) AS goles, COUNT(g.id_jugador_asistencia) AS con_asistencia
+FROM DesarrolloPartido.GOL AS g
+INNER JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.id_tipo_gol = g.id_tipo_gol
+GROUP BY tg.descripcion
+ORDER BY goles DESC;
+
+SELECT TOP (5) pa.nombre AS seleccion, j.apellido, j.nombre, j.posicion_habitual, COUNT(*) AS asistencias
+FROM DesarrolloPartido.GOL AS g
+INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = g.id_jugador_asistencia
+INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
+INNER JOIN Torneo.SELECCION AS se ON se.id_seleccion = l.id_seleccion
+INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = se.id_pais
+GROUP BY pa.nombre, j.id_jugador, j.apellido, j.nombre, j.posicion_habitual
+ORDER BY asistencias DESC, pa.nombre;
 
 -- Informes y sanciones de los árbitros: los partidos con expulsiones o con sanción.
 SELECT p.numero_partido, d.rol, ar.nombre + N' ' + ar.apellido AS arbitro, d.informe_postpartido, d.sancion

@@ -18,7 +18,7 @@ La clave de una app web de Firebase no es secreta: va en el código que descarga
 
 ## Consumo desde SQL Server
 
-`Publicidad.usp_ImportarCampaniasAPI` (`src/21_SP_Importar_Publicidad.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`) y procesa la respuesta con `Publicidad.usp_ProcesarCampaniasJSON`. `src/29_Ejecutar_ImportarAPIs.sql` la ejecuta antes de los datos complementarios (`src/32_Ejecutar_DatosComplementarios.sql`), que asignan la publicidad de cada partido: así las piezas del Dossier compiten en esa asignación. El 32 agrega anunciantes de otros países, porque el Dossier cubre solo el mercado argentino.
+`Publicidad.usp_ImportarCampaniasAPI` (`src/21_SP_Importar_Publicidad.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`) y procesa la respuesta con `Publicidad.usp_ProcesarCampaniasJSON`. `src/31_Ejecutar_ImportarAPIs.sql` la ejecuta antes de los datos complementarios (`src/33_Ejecutar_DatosComplementarios.sql`), que asignan la publicidad de cada partido: así las piezas del Dossier compiten en esa asignación. El 33 agrega anunciantes de otros países, porque el Dossier cubre solo el mercado argentino.
 
 Pedido:
 
@@ -101,7 +101,7 @@ Se rechazan las campañas sin anunciante o sin nombre, las de más de 150 caract
 
 - No hace falta registrarse: la única clave es la pública de la página.
 - Cada documento leído descuenta de la cuota del proyecto del Dossier. En el plan gratuito de Firebase (Spark) son 50.000 lecturas por día ([cuotas de Firestore](https://firebase.google.com/docs/firestore/quotas)). Una importación es un solo pedido y lee 75 documentos.
-- Firestore aplica además sus límites de tráfico por proyecto (ver el mismo enlace). Las importaciones son esporádicas: un pedido por ejecución del 29 o del test, sin reintentos automáticos.
+- Firestore aplica además sus límites de tráfico por proyecto (ver el mismo enlace). Las importaciones son esporádicas: un pedido por ejecución del 31 o del test, sin reintentos automáticos.
 - Si el dueño del sitio cambia las reglas de seguridad, la clave o el nombre de la colección, la consulta deja de funcionar y el SP lo informa con el error de la API.
 - El contenido es del Dossier. Solo se guardan los nombres de los anunciantes y los títulos de las campañas, sin los créditos ni los textos de las notas.
 

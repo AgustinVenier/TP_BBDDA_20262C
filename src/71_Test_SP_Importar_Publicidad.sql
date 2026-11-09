@@ -21,7 +21,7 @@
              - consultando la API (caso AP1, necesita internet).
            Las reglas de anunciantes, campañas y piezas las prueba
            66_Test_SP_Importacion.sql, con Publicidad.usp_ImportarCampanias.
-           Requiere haber ejecutado 00 a 22. No depende del juego de datos:
+           Requiere haber ejecutado 01 a 22. No depende del juego de datos:
            las campañas de prueba son del "Anunciante Prueba 71". Los casos
            CD y AP1 corren dentro de una transacción que se deshace, así que
            el test no deja datos y se puede ejecutar más de una vez.
@@ -61,7 +61,7 @@ IF OBJECT_ID(N'Publicidad.usp_ImportarCampaniasAPI', N'P') IS NULL
    OR OBJECT_ID(N'Publicidad.usp_ImportarCampanias', N'P') IS NULL
    OR OBJECT_ID(N'DatosGenerales.usp_ConsumirAPI', N'P') IS NULL
 BEGIN
-    RAISERROR(N'Faltan los SP de importación de campañas: ejecutar los scripts 00 a 22.', 16, 1);
+    RAISERROR(N'Faltan los SP de importación de campañas: ejecutar los scripts 01 a 22.', 16, 1);
     SET NOEXEC ON;
 END;
 ELSE IF @@TRANCOUNT > 0
@@ -307,7 +307,7 @@ GO
 /* AP1 (OK) Importación desde la API, dentro de una transacción que se deshace.
    Esperado: el resumen con tantos leídos como campañas tenga el Dossier (75
    el 02/11/2026) y 0 rechazados. Si la base no tenía las campañas, quedan
-   INSERTADO; si ya las importó 29_Ejecutar_ImportarAPIs.sql, SIN CAMBIOS. Sin
+   INSERTADO; si ya las importó 31_Ejecutar_ImportarAPIs.sql, SIN CAMBIOS. Sin
    conexión, se imprime el error 50002 de la consulta y no se carga nada. */
 SET XACT_ABORT OFF;
 BEGIN TRANSACTION;

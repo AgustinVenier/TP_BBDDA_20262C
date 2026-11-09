@@ -31,15 +31,20 @@
              Arbitraje.usp_ImportarInformesArbitrales          #staging_informes     número de partido + rol
              Publicidad.usp_ImportarCampanias                  #staging_campanias    anunciante + nombre de la campaña
                                                                y #staging_piezas     (y título de cada pieza)
-           Y los del registro de las importaciones (02_CrearTablas.sql):
+           Los de los datos iniciales, que solo dan de alta (los usa 20_Ejecutar_DatosIniciales.sql):
+             DatosGenerales.usp_ImportarParametrosReglamento   #staging_parametros   código
+             DatosGenerales.usp_ImportarIdiomas                #staging_idiomas      nombre
+             DatosGenerales.usp_ImportarPaises                 #staging_paises       nombre
+             DesarrolloPartido.usp_ImportarTiposGol            #staging_tipos_gol    descripción
+           Y los del registro de las importaciones (03_CrearTablas.sql):
              DatosGenerales.usp_RegistrarImportacion  registra una importación y devuelve su número
              DatosGenerales.usp_BorrarImportacion     la borra, con sus registros rechazados
            Siguen las convenciones de 10_SP_Negocio_SedesYPartidos.sql.
-           Requiere haber ejecutado 00 a 15. Su script de testing es
+           Requiere haber ejecutado 01 a 15. Su script de testing es
            66_Test_SP_Importacion.sql.
 ================================================================================
 
- Cómo se usan (así lo hacen los procesos de 23 a 28):
+ Cómo se usan (así lo hacen los procesos de 23 a 27):
    1. El proceso lee el archivo o la API a una tabla temporal con el nombre
       que espera el SP (#staging_sedes, por ejemplo), convierte los datos y
       marca accion = 'RECHAZADO', con el motivo en errores, los registros que
@@ -51,10 +56,11 @@
       INSERTADO, ACTUALIZADO o SIN CAMBIOS.
    3. El proceso registra la importación (usp_RegistrarImportacion) y guarda
       los rechazados en la tabla ERRORES_ de lo que importó.
-   32_Ejecutar_DatosComplementarios.sql también los usa, con tablas que arma a mano,
+   33_Ejecutar_DatosComplementarios.sql también los usa, con tablas que arma a mano,
    para cargar por conjuntos lo que no traen las fuentes (cuerpos técnicos,
    idiomas de los árbitros, campañas de otros países, reemplazos de último
-   momento, informes y sanciones de los árbitros).
+   momento, informes y sanciones de los árbitros), y 20_Ejecutar_DatosIniciales.sql,
+   para los datos que el sistema necesita para funcionar.
    Las reglas de cada tabla están una sola vez, acá; el proceso solo rechaza
    lo que no puede convertir. Así se importan los registros válidos y se
    informan los errores de los demás. No se usa un parámetro de tipo tabla
@@ -242,7 +248,7 @@ GO
 
 /* ============================================================================
    INDICADORES, COTIZACIONES Y FERIADOS
-   Llegan de a cientos por archivo o consulta a la API (25, 27 y 28).
+   Llegan de a cientos por archivo o consulta a la API (25, 26 y 27).
    ============================================================================ */
 
 /*
@@ -553,6 +559,417 @@ BEGIN
         INSERT INTO DatosGenerales.FERIADO (id_pais, fecha, nombre)
         SELECT id_pais, fecha, nombre
         FROM #staging_feriados
+        WHERE accion = 'INSERTADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+/* ============================================================================
+   DATOS INICIALES
+   Parámetros del reglamento, idiomas, países y tipos de gol, que carga
+   20_Ejecutar_DatosIniciales.sql. A diferencia de los demás, solo dan de
+   alta: lo que ya existe queda SIN CAMBIOS aunque traiga otros datos, para
+   no pisar lo que se cambió con los SP de modificación. Las reglas son las de
+   los SP de alta de cada tabla (05 y 07), evaluadas por conjuntos.
+   ============================================================================ */
+
+/*
+  usp_ImportarParametrosReglamento
+  Alta de parámetros del reglamento por código, desde #staging_parametros.
+  Columnas que usa: codigo, descripcion, valor, errores y accion.
+  Valida cada registro pendiente: código obligatorio, de hasta 50
+  caracteres, solo con letras sin acentos, números y guiones bajos;
+  descripción obligatoria de hasta 200 caracteres; valor obligatorio y, si es
+  un parámetro del sistema, dentro de su rango
+  (DatosGenerales.fn_ParametrosDelSistema); que no venga dos veces el mismo
+  código. Después, con los válidos y los que ya están cargados, que los
+  parámetros que van de a pares sigan siendo coherentes y que la franja de
+  prime time no empiece y termine a la misma hora. Con eso cubre las reglas
+  de usp_PARAMETRO_REGLAMENTO_Alta.
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_ImportarParametrosReglamento
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @nl           NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia  BIT      = IIF(@@TRANCOUNT = 0, 1, 0);
+
+    IF OBJECT_ID(N'tempdb..#staging_parametros') IS NULL
+        THROW 50001, N'DatosGenerales.usp_ImportarParametrosReglamento: no se importó nada, falta la tabla #staging_parametros con los parámetros.', 1;
+
+    UPDATE #staging_parametros
+    SET codigo      = UPPER(NULLIF(TRIM(codigo), '')),
+        descripcion = NULLIF(TRIM(descripcion), '')
+    WHERE accion IS NULL;
+
+    -- Los que ya existen no se tocan.
+    UPDATE st
+    SET accion = 'SIN CAMBIOS'
+    FROM #staging_parametros AS st
+    WHERE st.accion IS NULL
+      AND EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO AS p WHERE p.codigo = st.codigo);
+
+    /* 1. Cada regla anota su motivo en los registros que no la cumplen. */
+    UPDATE st
+    SET errores = NULLIF(CONCAT(st.errores,
+            CASE WHEN st.codigo IS NULL
+                     THEN @nl + N'- El código es obligatorio.'
+                 WHEN LEN(st.codigo) > 50
+                     THEN @nl + N'- El código no puede superar los 50 caracteres.'
+                 WHEN st.codigo COLLATE Latin1_General_BIN LIKE '%[^A-Z0-9_]%'
+                     THEN @nl + N'- El código solo admite letras sin acentos, números y guiones bajos.'
+            END,
+            CASE WHEN st.descripcion IS NULL
+                     THEN @nl + N'- La descripción es obligatoria.'
+                 WHEN LEN(st.descripcion) > 200
+                     THEN @nl + N'- La descripción no puede superar los 200 caracteres.'
+            END,
+            CASE WHEN st.valor IS NULL
+                     THEN @nl + N'- El valor es obligatorio.'
+                 WHEN st.valor NOT BETWEEN ps.valor_minimo AND ps.valor_maximo
+                     THEN @nl + N'- ' + ps.codigo + N' admite valores entre '
+                          + CAST(ps.valor_minimo AS NVARCHAR(3)) + N' y ' + CAST(ps.valor_maximo AS NVARCHAR(3)) + N'.'
+            END), N'')
+    FROM #staging_parametros AS st
+    LEFT JOIN DatosGenerales.fn_ParametrosDelSistema() AS ps ON ps.codigo = st.codigo
+    WHERE st.accion IS NULL;
+
+    -- Mismo código más de una vez: no se sabe cuál cargar y se rechazan todos.
+    WITH repetidos AS (
+        SELECT errores, COUNT(*) OVER (PARTITION BY codigo) AS veces
+        FROM #staging_parametros
+        WHERE accion IS NULL AND codigo IS NOT NULL
+    )
+    UPDATE repetidos
+    SET errores = CONCAT(errores, @nl, N'- Este código viene ', veces, N' veces.')
+    WHERE veces > 1;
+
+    UPDATE #staging_parametros SET accion = 'RECHAZADO' WHERE accion IS NULL AND errores IS NOT NULL;
+
+    /* 2. Reglas entre parámetros: con los válidos y los que ya están cargados (un
+          código pendiente nunca está cargado). Se rechazan los pendientes que las rompen. */
+    WITH valores AS (
+        SELECT codigo, valor FROM #staging_parametros WHERE accion IS NULL
+        UNION ALL
+        SELECT codigo, valor FROM DatosGenerales.PARAMETRO_REGLAMENTO
+    ),
+    violaciones AS (
+        SELECT r.codigo_a, r.codigo_b,
+               IIF(r.es_par = 1,
+                   @nl + N'- ' + r.codigo_a + N' (' + CAST(va.valor AS NVARCHAR(10)) + N') no puede superar a '
+                       + r.codigo_b + N' (' + CAST(vb.valor AS NVARCHAR(10)) + N').',
+                   @nl + N'- PRIME_TIME_DESDE y PRIME_TIME_HASTA no pueden tener el mismo valor.') AS motivo
+        FROM (VALUES ('MIN_CONVOCADOS',         'MAX_CONVOCADOS',         1),
+                     ('MAX_VENTANAS',           'MAX_CAMBIOS',            1),
+                     ('VENTANAS_EXTRA_ALARGUE', 'CAMBIOS_EXTRA_ALARGUE',  1),
+                     ('PRIME_TIME_DESDE',       'PRIME_TIME_HASTA',       0)) AS r (codigo_a, codigo_b, es_par)
+        INNER JOIN valores AS va ON va.codigo = r.codigo_a
+        INNER JOIN valores AS vb ON vb.codigo = r.codigo_b
+        WHERE (r.es_par = 1 AND va.valor > vb.valor)
+           OR (r.es_par = 0 AND va.valor = vb.valor)
+    )
+    UPDATE st
+    SET errores = CONCAT(st.errores,
+                         (SELECT STRING_AGG(v.motivo, N'') FROM violaciones AS v
+                          WHERE st.codigo IN (v.codigo_a, v.codigo_b))),
+        accion  = 'RECHAZADO'
+    FROM #staging_parametros AS st
+    WHERE st.accion IS NULL
+      AND EXISTS (SELECT 1 FROM violaciones AS v WHERE st.codigo IN (v.codigo_a, v.codigo_b));
+
+    UPDATE #staging_parametros SET accion = 'INSERTADO' WHERE accion IS NULL;
+
+    /* 3. Carga, todos juntos. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        INSERT INTO DatosGenerales.PARAMETRO_REGLAMENTO (codigo, descripcion, valor)
+        SELECT codigo, descripcion, valor
+        FROM #staging_parametros
+        WHERE accion = 'INSERTADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+/*
+  usp_ImportarIdiomas
+  Alta de idiomas por nombre, desde #staging_idiomas. Columnas que usa:
+  nombre, codigo_iso, errores y accion.
+  Valida cada registro pendiente: nombre obligatorio de hasta 40 caracteres;
+  código ISO 639-1 opcional, de 2 letras y que no lo tenga otro idioma; que
+  no venga dos veces el mismo nombre ni el mismo código. Con eso cubre las
+  reglas de usp_IDIOMA_Alta. El código se guarda en minúsculas.
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_ImportarIdiomas
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @nl           NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia  BIT      = IIF(@@TRANCOUNT = 0, 1, 0);
+
+    IF OBJECT_ID(N'tempdb..#staging_idiomas') IS NULL
+        THROW 50001, N'DatosGenerales.usp_ImportarIdiomas: no se importó nada, falta la tabla #staging_idiomas con los idiomas.', 1;
+
+    UPDATE #staging_idiomas
+    SET nombre     = NULLIF(TRIM(nombre), ''),
+        codigo_iso = LOWER(NULLIF(TRIM(codigo_iso), ''))
+    WHERE accion IS NULL;
+
+    -- Los que ya existen no se tocan.
+    UPDATE st
+    SET accion = 'SIN CAMBIOS'
+    FROM #staging_idiomas AS st
+    WHERE st.accion IS NULL
+      AND EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA AS i WHERE i.nombre = st.nombre);
+
+    /* 1. Cada regla anota su motivo en los registros que no la cumplen. */
+    UPDATE st
+    SET errores = NULLIF(CONCAT(st.errores,
+            CASE WHEN st.nombre IS NULL
+                     THEN @nl + N'- El nombre es obligatorio.'
+                 WHEN LEN(st.nombre) > 40
+                     THEN @nl + N'- El nombre no puede superar los 40 caracteres.'
+            END,
+            CASE WHEN st.codigo_iso COLLATE Latin1_General_BIN NOT LIKE '[a-z][a-z]'
+                     THEN @nl + N'- El código ISO 639-1 debe tener 2 letras (ej. "es").'
+                 WHEN EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA AS i WHERE i.codigo_iso = st.codigo_iso)
+                     THEN @nl + N'- El código ISO "' + st.codigo_iso + N'" ya lo tiene otro idioma.'
+            END), N'')
+    FROM #staging_idiomas AS st
+    WHERE st.accion IS NULL;
+
+    -- Mismo nombre o mismo código más de una vez: se rechazan todos.
+    WITH repetidos AS (
+        SELECT errores,
+               IIF(nombre IS NULL, 1, COUNT(*) OVER (PARTITION BY nombre))         AS veces_nombre,
+               IIF(codigo_iso IS NULL, 1, COUNT(*) OVER (PARTITION BY codigo_iso)) AS veces_codigo
+        FROM #staging_idiomas
+        WHERE accion IS NULL
+    )
+    UPDATE repetidos
+    SET errores = CONCAT(errores,
+                         IIF(veces_nombre > 1, CONCAT(@nl, N'- Este nombre viene ', veces_nombre, N' veces.'), NULL),
+                         IIF(veces_codigo > 1, CONCAT(@nl, N'- Este código ISO viene ', veces_codigo, N' veces.'), NULL))
+    WHERE veces_nombre > 1 OR veces_codigo > 1;
+
+    UPDATE #staging_idiomas SET accion = 'RECHAZADO' WHERE accion IS NULL AND errores IS NOT NULL;
+    UPDATE #staging_idiomas SET accion = 'INSERTADO' WHERE accion IS NULL;
+
+    /* 2. Carga, todos juntos. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        INSERT INTO DatosGenerales.IDIOMA (nombre, codigo_iso)
+        SELECT nombre, codigo_iso
+        FROM #staging_idiomas
+        WHERE accion = 'INSERTADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+/*
+  usp_ImportarPaises
+  Alta de países por nombre, desde #staging_paises. Columnas que usa:
+  nombre, codigo_fifa, codigo_iso2, codigo_iso3, huso_horario,
+  codigo_moneda, errores y accion.
+  Valida cada registro pendiente: nombre obligatorio de hasta 60
+  caracteres; huso horario obligatorio y existente en sys.time_zone_info;
+  código FIFA opcional, de 3 letras y que no lo tenga otro país; códigos ISO
+  alfa-2 y alfa-3 y moneda opcionales, de 2, 3 y 3 letras; que no venga dos
+  veces el mismo nombre ni el mismo código FIFA (el ISO sí se repite:
+  Inglaterra y Escocia comparten el del Reino Unido). Con eso cubre las
+  reglas de usp_PAIS_Alta. Los códigos se guardan en mayúsculas y el huso con
+  el nombre exacto de sys.time_zone_info.
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_ImportarPaises
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @nl           NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia  BIT      = IIF(@@TRANCOUNT = 0, 1, 0);
+
+    IF OBJECT_ID(N'tempdb..#staging_paises') IS NULL
+        THROW 50001, N'DatosGenerales.usp_ImportarPaises: no se importó nada, falta la tabla #staging_paises con los países.', 1;
+
+    UPDATE #staging_paises
+    SET nombre        = NULLIF(TRIM(nombre), ''),
+        huso_horario  = NULLIF(TRIM(huso_horario), ''),
+        codigo_fifa   = UPPER(NULLIF(TRIM(codigo_fifa), '')),
+        codigo_iso2   = UPPER(NULLIF(TRIM(codigo_iso2), '')),
+        codigo_iso3   = UPPER(NULLIF(TRIM(codigo_iso3), '')),
+        codigo_moneda = UPPER(NULLIF(TRIM(codigo_moneda), ''))
+    WHERE accion IS NULL;
+
+    -- El huso se guarda con el nombre exacto de sys.time_zone_info.
+    UPDATE st
+    SET huso_horario = z.name
+    FROM #staging_paises AS st
+    INNER JOIN sys.time_zone_info AS z ON z.name COLLATE DATABASE_DEFAULT = st.huso_horario
+    WHERE st.accion IS NULL;
+
+    -- Los que ya existen no se tocan.
+    UPDATE st
+    SET accion = 'SIN CAMBIOS'
+    FROM #staging_paises AS st
+    WHERE st.accion IS NULL
+      AND EXISTS (SELECT 1 FROM DatosGenerales.PAIS AS p WHERE p.nombre = st.nombre);
+
+    /* 1. Cada regla anota su motivo en los registros que no la cumplen.
+          Con la intercalación binaria, [A-Z] acepta solo letras sin acentos. */
+    UPDATE st
+    SET errores = NULLIF(CONCAT(st.errores,
+            CASE WHEN st.nombre IS NULL
+                     THEN @nl + N'- El nombre es obligatorio.'
+                 WHEN LEN(st.nombre) > 60
+                     THEN @nl + N'- El nombre no puede superar los 60 caracteres.'
+            END,
+            CASE WHEN st.huso_horario IS NULL
+                     THEN @nl + N'- El huso horario es obligatorio.'
+                 WHEN NOT EXISTS (SELECT 1 FROM sys.time_zone_info AS z
+                                  WHERE z.name COLLATE DATABASE_DEFAULT = st.huso_horario)
+                     THEN @nl + N'- El huso horario "' + st.huso_horario
+                          + N'" no existe en sys.time_zone_info (ej. "Argentina Standard Time").'
+            END,
+            CASE WHEN st.codigo_fifa COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
+                     THEN @nl + N'- El código FIFA debe tener 3 letras.'
+                 WHEN EXISTS (SELECT 1 FROM DatosGenerales.PAIS AS p WHERE p.codigo_fifa = st.codigo_fifa)
+                     THEN @nl + N'- El código FIFA "' + st.codigo_fifa + N'" ya lo tiene otro país.'
+            END,
+            IIF(st.codigo_iso2 COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z]',
+                @nl + N'- El código ISO alfa-2 debe tener 2 letras.', NULL),
+            IIF(st.codigo_iso3 COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]',
+                @nl + N'- El código ISO alfa-3 debe tener 3 letras.', NULL),
+            IIF(st.codigo_moneda COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]',
+                @nl + N'- El código de moneda debe tener 3 letras (ISO 4217).', NULL)), N'')
+    FROM #staging_paises AS st
+    WHERE st.accion IS NULL;
+
+    -- Mismo nombre o mismo código FIFA más de una vez: se rechazan todos.
+    WITH repetidos AS (
+        SELECT errores,
+               IIF(nombre IS NULL, 1, COUNT(*) OVER (PARTITION BY nombre))           AS veces_nombre,
+               IIF(codigo_fifa IS NULL, 1, COUNT(*) OVER (PARTITION BY codigo_fifa)) AS veces_fifa
+        FROM #staging_paises
+        WHERE accion IS NULL
+    )
+    UPDATE repetidos
+    SET errores = CONCAT(errores,
+                         IIF(veces_nombre > 1, CONCAT(@nl, N'- Este nombre viene ', veces_nombre, N' veces.'), NULL),
+                         IIF(veces_fifa > 1, CONCAT(@nl, N'- Este código FIFA viene ', veces_fifa, N' veces.'), NULL))
+    WHERE veces_nombre > 1 OR veces_fifa > 1;
+
+    UPDATE #staging_paises SET accion = 'RECHAZADO' WHERE accion IS NULL AND errores IS NOT NULL;
+    UPDATE #staging_paises SET accion = 'INSERTADO' WHERE accion IS NULL;
+
+    /* 2. Carga, todos juntos. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        INSERT INTO DatosGenerales.PAIS (nombre, codigo_fifa, codigo_iso2, codigo_iso3, huso_horario, codigo_moneda)
+        SELECT nombre, codigo_fifa, codigo_iso2, codigo_iso3, huso_horario, codigo_moneda
+        FROM #staging_paises
+        WHERE accion = 'INSERTADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+/*
+  usp_ImportarTiposGol
+  Alta de tipos de gol por descripción, desde #staging_tipos_gol. Columnas
+  que usa: descripcion, es_en_contra, errores y accion.
+  Valida cada registro pendiente: descripción obligatoria de hasta 40
+  caracteres; que se indique si es un gol en contra; que no venga dos veces
+  la misma descripción. Con eso cubre las reglas de usp_TIPO_GOL_Alta. La
+  descripción se guarda en mayúsculas.
+*/
+CREATE OR ALTER PROCEDURE DesarrolloPartido.usp_ImportarTiposGol
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @nl           NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia  BIT      = IIF(@@TRANCOUNT = 0, 1, 0);
+
+    IF OBJECT_ID(N'tempdb..#staging_tipos_gol') IS NULL
+        THROW 50001, N'DesarrolloPartido.usp_ImportarTiposGol: no se importó nada, falta la tabla #staging_tipos_gol con los tipos de gol.', 1;
+
+    UPDATE #staging_tipos_gol
+    SET descripcion = UPPER(NULLIF(TRIM(descripcion), ''))
+    WHERE accion IS NULL;
+
+    -- Los que ya existen no se tocan.
+    UPDATE st
+    SET accion = 'SIN CAMBIOS'
+    FROM #staging_tipos_gol AS st
+    WHERE st.accion IS NULL
+      AND EXISTS (SELECT 1 FROM DesarrolloPartido.TIPO_GOL AS t WHERE t.descripcion = st.descripcion);
+
+    /* 1. Cada regla anota su motivo en los registros que no la cumplen. */
+    UPDATE #staging_tipos_gol
+    SET errores = NULLIF(CONCAT(errores,
+            CASE WHEN descripcion IS NULL
+                     THEN @nl + N'- La descripción es obligatoria.'
+                 WHEN LEN(descripcion) > 40
+                     THEN @nl + N'- La descripción no puede superar los 40 caracteres.'
+            END,
+            IIF(es_en_contra IS NULL, @nl + N'- Hay que indicar si el tipo es un gol en contra (0 o 1).', NULL)), N'')
+    WHERE accion IS NULL;
+
+    -- Misma descripción más de una vez: se rechazan todas.
+    WITH repetidos AS (
+        SELECT errores, COUNT(*) OVER (PARTITION BY descripcion) AS veces
+        FROM #staging_tipos_gol
+        WHERE accion IS NULL AND descripcion IS NOT NULL
+    )
+    UPDATE repetidos
+    SET errores = CONCAT(errores, @nl, N'- Esta descripción viene ', veces, N' veces.')
+    WHERE veces > 1;
+
+    UPDATE #staging_tipos_gol SET accion = 'RECHAZADO' WHERE accion IS NULL AND errores IS NOT NULL;
+    UPDATE #staging_tipos_gol SET accion = 'INSERTADO' WHERE accion IS NULL;
+
+    /* 2. Carga, todos juntos. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        INSERT INTO DesarrolloPartido.TIPO_GOL (descripcion, es_en_contra)
+        SELECT descripcion, es_en_contra
+        FROM #staging_tipos_gol
         WHERE accion = 'INSERTADO';
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
@@ -1159,7 +1576,7 @@ GO
   nombre, apellido, rol, fecha_nacimiento, codigo_fifa_nacimiento (del país
   de nacimiento), errores y accion. Los directores técnicos los importa
   usp_ImportarCuerpoTecnicoCSV (24) del scraping de Wikipedia; el resto del
-  cuerpo técnico lo carga 32_Ejecutar_DatosComplementarios.sql. En una persona
+  cuerpo técnico lo carga 33_Ejecutar_DatosComplementarios.sql. En una persona
   existente, la fecha y el país de nacimiento que no vienen no se borran.
   Valida cada persona pendiente: selección registrada; nombre y apellido
   obligatorios y de hasta 60 caracteres; rol DIRECTOR_TECNICO,
@@ -1776,15 +2193,15 @@ GO
     CAMBIO     sale id_jugador y entra id_jugador_entra (minuto,
                minuto_adicional, en_entretiempo, motivo)
     GOL        lo convierte id_jugador (tipo_gol, periodo, minuto,
-               minuto_adicional)
+               minuto_adicional) y lo asiste id_jugador_asistencia
     PENAL      un penal convertido en la definición: un gol del período
                PENALES, sin minuto
     TARJETA    la recibe id_jugador (tipo_tarjeta, es_doble_amarilla,
                minuto, minuto_adicional, motivo)
   Columnas que usa: id_evento (distinto en cada fila), tipo, numero_partido,
-  id_jugador, id_jugador_entra, es_titular, posicion_en_cancha, minuto,
-  minuto_adicional, en_entretiempo, motivo, periodo, tipo_gol,
-  tipo_tarjeta, es_doble_amarilla, errores y accion.
+  id_jugador, id_jugador_entra, id_jugador_asistencia, es_titular,
+  posicion_en_cancha, minuto, minuto_adicional, en_entretiempo, motivo,
+  periodo, tipo_gol, tipo_tarjeta, es_doble_amarilla, errores y accion.
   Es una carga histórica: no repite las reglas de los SP que registran el
   partido en vivo (equipo en cancha en ese minuto, ventanas de cambio,
   suspensiones), sino las de las tablas.
@@ -1796,7 +2213,7 @@ GO
     CAMBIO     los dos jugadores; se actualizan el minuto, el adicional, si
                fue en el entretiempo y el motivo
     GOL/PENAL  el autor, si es de la definición y si es en contra; se
-               actualizan el tipo, el período y el minuto
+               actualizan el tipo, el período, el minuto y la asistencia
     TARJETA    el jugador, el tipo y si es por doble amarilla; se actualizan
                el minuto y el motivo
   Primero se emparejan los iguales y después, en orden de minuto, los que
@@ -1811,19 +2228,25 @@ GO
   - El motivo de un cambio o una tarjeta puede no venir (NULL): uno nuevo se
     registra como TACTICO o "Sin detalle en la fuente", y uno cargado
     conserva el suyo.
+  - La asistencia de un gol también puede no venir (NULL): uno nuevo queda
+    sin asistencia y uno cargado conserva la suya, salvo que pase a ser en
+    contra, que no tiene asistencia.
   Valida cada evento pendiente: tipo válido; partido existente; jugadores
   existentes y de una de las dos selecciones del partido; en la formación,
   si es titular y la posición de los titulares; en los cambios, jugadores
   distintos de la misma selección, minuto entre 1 y 120 con hasta 30 de
   adicional, los del entretiempo en el 46, 91 o 106 y motivo TACTICO,
   LESION o PRECAUCION; tipos de gol existentes y minuto de acuerdo con el
-  período; tarjetas AMARILLA o ROJA (la doble amarilla, solo roja), minuto
-  entre 0 y 120 con hasta 30 de adicional y motivo de hasta 200
-  caracteres. Y con los válidos, cada partido como quedaría: un jugador una
-  sola vez en la formación; cada formación con 11 titulares (los del
-  conjunto más los cargados que no vienen), o se rechazan todos los
-  jugadores de esa formación; los jugadores de cambios, goles y tarjetas,
-  en la formación del partido (la cargada o la válida del conjunto); cada
+  período; la asistencia, solo en un gol que no sea en contra ni de la
+  definición, de un jugador de la selección del autor y distinto de él
+  (las reglas de usp_GOL_Alta); tarjetas AMARILLA o ROJA (la doble
+  amarilla, solo roja), minuto entre 0 y 120 con hasta 30 de adicional y
+  motivo de hasta 200 caracteres. Y con los válidos, cada partido como
+  quedaría: un jugador una sola vez en la formación; cada formación con 11
+  titulares (los del conjunto más los cargados que no vienen), o se
+  rechazan todos los jugadores de esa formación; los jugadores de cambios,
+  goles (autor y asistencia) y tarjetas, en la formación del partido (la
+  cargada o la válida del conjunto); cada
   jugador sale y entra una sola vez por partido; y ninguna selección con más
   goles que su resultado, ni con más penales convertidos que los de su
   definición: si pasa, se rechazan sus goles nuevos (un gol que el archivo
@@ -1846,6 +2269,7 @@ BEGIN
         de_un_equipo        BIT,       -- ese jugador es de una de las dos selecciones del partido
         id_seleccion_entra  INT,
         entra_de_un_equipo  BIT,
+        id_seleccion_asist  INT,       -- del que asiste el gol (NULL: no existe o no tiene lista)
         posicion_habitual   VARCHAR(15),
         id_tipo_gol         TINYINT,
         es_en_contra        BIT,
@@ -1868,17 +2292,19 @@ BEGIN
     WHERE accion IS NULL;
 
     INSERT INTO @eventos (id_evento, id_partido, id_seleccion, de_un_equipo, id_seleccion_entra, entra_de_un_equipo,
-                          posicion_habitual, id_tipo_gol, es_en_contra)
+                          id_seleccion_asist, posicion_habitual, id_tipo_gol, es_en_contra)
     SELECT e.id_evento, p.id_partido,
            lc.id_seleccion, IIF(lc.id_seleccion IN (p.id_seleccion_local, p.id_seleccion_visitante), 1, 0),
            lce.id_seleccion, IIF(lce.id_seleccion IN (p.id_seleccion_local, p.id_seleccion_visitante), 1, 0),
-           j.posicion_habitual, tg.id_tipo_gol, tg.es_en_contra
+           lca.id_seleccion, j.posicion_habitual, tg.id_tipo_gol, tg.es_en_contra
     FROM #staging_eventos AS e
     LEFT JOIN Torneo.PARTIDO AS p ON p.numero_partido = e.numero_partido
     LEFT JOIN Torneo.JUGADOR AS j ON j.id_jugador = e.id_jugador
     LEFT JOIN Torneo.LISTA_CONVOCADOS AS lc ON lc.id_lista = j.id_lista
     LEFT JOIN Torneo.JUGADOR AS je ON je.id_jugador = e.id_jugador_entra
     LEFT JOIN Torneo.LISTA_CONVOCADOS AS lce ON lce.id_lista = je.id_lista
+    LEFT JOIN Torneo.JUGADOR AS ja ON ja.id_jugador = e.id_jugador_asistencia
+    LEFT JOIN Torneo.LISTA_CONVOCADOS AS lca ON lca.id_lista = ja.id_lista
     LEFT JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.descripcion = e.tipo_gol
     WHERE e.accion IS NULL;
 
@@ -1936,6 +2362,14 @@ BEGIN
                       OR (e.periodo = 'ADICIONALES'    AND e.minuto IN (45, 90, 105, 120) AND e.minuto_adicional BETWEEN 1 AND 30)),
                 @nl + N'- El minuto no corresponde al período (PRIMER_TIEMPO del 1 al 45, SEGUNDO_TIEMPO del 46 al 90, '
                     + N'ALARGUE del 91 al 120, ADICIONALES después del 45, 90, 105 o 120, y PENALES sin minuto).', NULL),
+            -- Asistencias (las reglas de usp_GOL_Alta; que el que asiste esté en la formación se valida en el paso 2)
+            CASE WHEN e.id_jugador_asistencia IS NULL THEN NULL
+                 WHEN ISNULL(e.tipo, '') <> 'GOL' OR e.periodo = 'PENALES' OR ev.es_en_contra = 1
+                     THEN @nl + N'- Solo un gol que no es en contra ni de la definición por penales tiene asistencia.'
+                 WHEN e.id_jugador_asistencia = e.id_jugador THEN @nl + N'- El autor no puede ser también el que asiste.'
+                 WHEN ev.id_seleccion_asist IS NULL OR ev.id_seleccion_asist <> ev.id_seleccion
+                     THEN @nl + N'- El que asiste no existe o no es de la selección del autor.'
+            END,
             -- Tarjetas
             CASE WHEN ISNULL(e.tipo, '') <> 'TARJETA' THEN NULL
                  WHEN e.tipo_tarjeta IS NULL OR e.tipo_tarjeta NOT IN ('AMARILLA', 'ROJA')
@@ -1988,13 +2422,14 @@ BEGIN
     INNER JOIN formaciones AS f ON f.id_partido = ev.id_partido AND f.id_seleccion = ev.id_seleccion
     WHERE e.tipo = 'FORMACION' AND f.titulares <> 11;
 
-    -- Cambios, goles, penales y tarjetas: los jugadores tienen que estar en la formación del partido.
+    -- Cambios, goles, penales y tarjetas: los jugadores (también el que asiste) tienen que estar en la formación
+    -- del partido.
     UPDATE e
     SET errores = CONCAT(e.errores, @nl, N'- El jugador no está en la formación del partido (o su formación se rechazó).')
     FROM #staging_eventos AS e
     INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
     WHERE e.tipo <> 'FORMACION' AND ev.id_partido IS NOT NULL
-      AND EXISTS (SELECT 1 FROM (VALUES (e.id_jugador), (e.id_jugador_entra)) AS j (id_jugador)
+      AND EXISTS (SELECT 1 FROM (VALUES (e.id_jugador), (e.id_jugador_entra), (e.id_jugador_asistencia)) AS j (id_jugador)
                   WHERE j.id_jugador IS NOT NULL
                     AND NOT EXISTS (SELECT 1 FROM #staging_eventos AS f
                                     WHERE f.tipo = 'FORMACION' AND f.accion IS NULL AND f.errores IS NULL
@@ -2241,7 +2676,10 @@ BEGIN
                                        WHERE g.id_gol = ev.id_cargado
                                          AND (g.id_tipo_gol <> ev.id_tipo_gol OR g.periodo <> e.periodo
                                               OR g.minuto IS DISTINCT FROM e.minuto
-                                              OR g.minuto_adicional <> ISNULL(e.minuto_adicional, 0)))
+                                              OR g.minuto_adicional <> ISNULL(e.minuto_adicional, 0)
+                                              OR g.id_jugador_asistencia IS DISTINCT FROM
+                                                 IIF(ev.es_en_contra = 1, NULL,
+                                                     ISNULL(e.id_jugador_asistencia, g.id_jugador_asistencia))))
                           THEN 'ACTUALIZADO'
                       WHEN e.tipo = 'TARJETA'
                            AND EXISTS (SELECT 1 FROM DesarrolloPartido.AMONESTACION AS am
@@ -2308,19 +2746,23 @@ BEGIN
         INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
         WHERE e.tipo = 'CAMBIO' AND e.accion = 'INSERTADO';
 
-        -- Goles: los cargados con otro tipo, período o minuto, y los nuevos.
+        -- Goles: los cargados con otro tipo, período, minuto o asistencia (una que no viene queda como está,
+        -- salvo en un gol en contra, que no tiene), y los nuevos.
         UPDATE g
-        SET id_tipo_gol      = ev.id_tipo_gol,
-            periodo          = e.periodo,
-            minuto           = e.minuto,
-            minuto_adicional = ISNULL(e.minuto_adicional, 0)
+        SET id_tipo_gol           = ev.id_tipo_gol,
+            periodo               = e.periodo,
+            minuto                = e.minuto,
+            minuto_adicional      = ISNULL(e.minuto_adicional, 0),
+            id_jugador_asistencia = IIF(ev.es_en_contra = 1, NULL, ISNULL(e.id_jugador_asistencia, g.id_jugador_asistencia))
         FROM DesarrolloPartido.GOL AS g
         INNER JOIN @eventos AS ev ON ev.id_cargado = g.id_gol
         INNER JOIN #staging_eventos AS e ON e.id_evento = ev.id_evento
         WHERE e.tipo IN ('GOL', 'PENAL') AND e.accion = 'ACTUALIZADO';
 
-        INSERT INTO DesarrolloPartido.GOL (id_partido, id_jugador_autor, id_tipo_gol, periodo, minuto, minuto_adicional)
-        SELECT ev.id_partido, e.id_jugador, ev.id_tipo_gol, e.periodo, e.minuto, ISNULL(e.minuto_adicional, 0)
+        INSERT INTO DesarrolloPartido.GOL
+            (id_partido, id_jugador_autor, id_jugador_asistencia, id_tipo_gol, periodo, minuto, minuto_adicional)
+        SELECT ev.id_partido, e.id_jugador, e.id_jugador_asistencia, ev.id_tipo_gol, e.periodo, e.minuto,
+               ISNULL(e.minuto_adicional, 0)
         FROM #staging_eventos AS e
         INNER JOIN @eventos AS ev ON ev.id_evento = e.id_evento
         WHERE e.tipo IN ('GOL', 'PENAL') AND e.accion = 'INSERTADO';
@@ -3034,7 +3476,7 @@ GO
 
 -- Los tipos de tabla de la versión anterior, por si la base los tiene. Los SP en bloque los
 -- recibían como parámetro; ahora ninguno los usa así, y un tipo que un SP solo usa en una
--- variable se puede borrar (los procesos de 23 a 28 que los usaban se recrean después).
+-- variable se puede borrar (los procesos de 23 a 27 que los usaban se recrean después).
 DROP TYPE IF EXISTS DatosGenerales.TT_INDICADOR_ECONOMICO;
 DROP TYPE IF EXISTS DatosGenerales.TT_COTIZACION;
 DROP TYPE IF EXISTS DatosGenerales.TT_FERIADO;

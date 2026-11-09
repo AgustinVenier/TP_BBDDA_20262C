@@ -11,10 +11,11 @@
 
  Fecha: 09/11/2026
  Archivo: abm_sedes.py
- Objetivo: Alta y baja de sedes del Mundial como aplicacion de escritorio.
-           Muestra las sedes cargadas, da de alta una nueva con
+ Objetivo: Alta, baja y modificacion de sedes del Mundial como aplicacion
+           de escritorio. Muestra las sedes cargadas, da de alta una nueva con
            Torneo.usp_RegistrarSede (la sede y sus 4 espacios publicitarios en
-           una sola transaccion) y elimina una que no se uso con
+           una sola transaccion), modifica una existente con
+           Torneo.usp_ModificarSede y elimina una que no se uso con
            Torneo.usp_EliminarSede (rechaza las que tienen partidos o
            exhibiciones). Las validaciones las hacen los SP; la aplicacion solo
            convierte los numeros y muestra lo que la base informa.

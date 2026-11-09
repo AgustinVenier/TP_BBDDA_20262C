@@ -15,9 +15,10 @@
            Arbitraje.ARBITRO para que guarden cifrados el nombre, el apellido y
            la fecha de nacimiento, cifrar los datos que ya tienen y crear una
            vista de cada tabla con esos datos descifrados.
+           Su script de testing es 92_Test_Cifrado_Tablas.sql.
 ================================================================================
 
- Orden: lo ejecuta 38_Ejecutar_Cifrado.sql, después de 41_SP_Cifrado.sql y de
+ Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 41_SP_Cifrado.sql y de
  configurar las claves. Después van 43, 44 y 45, que modifican los SP, las
  funciones y las vistas que usan estas columnas: entre este script y esos, los
  objetos que leen las columnas cifradas devuelven bytes.
@@ -39,7 +40,7 @@
  tabla; los que escriben, escriben la tabla y cifran con
  Seguridad.fn_CifrarTexto y Seguridad.fn_CifrarFecha. Descifran con los
  permisos del usuario que consulta: quien no tiene permiso sobre la clave
- (40_Seguridad.sql) ve NULL.
+ (29_Seguridad.sql) ve NULL.
 */
 
 USE MundialFutbol;
