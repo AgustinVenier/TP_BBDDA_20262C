@@ -15,9 +15,11 @@
              Publicidad.usp_RegistrarPiezaPublicitaria  pieza con sus mercados de interés
              Publicidad.usp_AsignarPublicidadPartido     las 4 piezas de un partido, o de todos
                                                          los que no tienen publicidad
-           La simulación de prime time es Publicidad.fn_MercadosEnPrimeTime y
+           La simulación de prime time es Publicidad.fn_MercadosEnPrimeTime,
            el criterio de prioridad está documentado en
-           Publicidad.fn_PrioridadPiezas (04_CrearFuncionesYVistas.sql).
+           Publicidad.fn_PrioridadPiezas y el recargo sobre la tarifa por
+           fase y prime time, en Publicidad.fn_RecargosPublicidad
+           (04_CrearFuncionesYVistas.sql).
            Siguen las convenciones de 10_SP_Negocio_SedesYPartidos.sql.
            Requiere haber ejecutado 01 a 09. Su script de testing es
            65_Test_SP_Negocio_Publicidad.sql.
@@ -124,7 +126,9 @@ GO
   Propone y registra las cuatro piezas que ocupan los espacios de la sede en
   un partido, según la prioridad de Publicidad.fn_PrioridadPiezas: la pieza
   de mayor prioridad va al espacio de mayor tarifa, y así sucesivamente. El
-  costo de cada exhibición es la tarifa del espacio en ese momento.
+  costo de cada exhibición es la tarifa del espacio en ese momento más el
+  recargo de la pieza en ese partido (Publicidad.fn_RecargosPublicidad: por
+  ronda eliminatoria y por mercados de la pieza en prime time), en dólares.
   Sin @id_partido, la asigna de una vez en todos los partidos que todavía no
   tienen publicidad: los que no cumplen las reglas quedan sin asignar y se
   informan con sus motivos, y los demás se asignan igual.
@@ -170,7 +174,7 @@ BEGIN
         orden       INT,
         id_espacio  INT,
         id_pieza    INT,
-        costo       DECIMAL(9,2),
+        costo       DECIMAL(19,4),
         PRIMARY KEY (id_partido, orden)
     );
 
@@ -213,13 +217,16 @@ BEGIN
     END;
 
     -- En cada partido, las 4 piezas de mayor prioridad, en los espacios de mayor a menor tarifa.
+    -- El costo es la tarifa del espacio más el recargo de la pieza en ese partido (fn_RecargosPublicidad
+    -- devuelve las mismas piezas que fn_PrioridadPiezas, con su prioridad y su recargo en porcentaje).
     INSERT INTO @propuesta (id_partido, orden, id_espacio, id_pieza, costo)
-    SELECT pt.id_partido, e.orden, e.id_espacio, pz.id_pieza, e.tarifa_usd
+    SELECT pt.id_partido, e.orden, e.id_espacio, pz.id_pieza,
+           ROUND(e.tarifa_usd * (100 + pz.recargo_total_pct) / 100.0, 2)
     FROM @partidos AS pt
     CROSS APPLY (SELECT id_espacio, tarifa_usd, ROW_NUMBER() OVER (ORDER BY tarifa_usd DESC, numero_espacio) AS orden
                  FROM Publicidad.ESPACIO_PUBLICITARIO
                  WHERE id_sede = pt.id_sede) AS e
-    CROSS APPLY Publicidad.fn_PrioridadPiezas(pt.id_partido) AS pz
+    CROSS APPLY Publicidad.fn_RecargosPublicidad(pt.id_partido) AS pz
     WHERE pt.errores IS NULL AND pz.prioridad = e.orden;
 
     BEGIN TRY
@@ -231,7 +238,7 @@ BEGIN
         INNER JOIN @partidos AS pt ON pt.id_partido = ex.id_partido
         WHERE pt.errores IS NULL;
 
-        -- El costo de cada exhibición es la tarifa del espacio en ese momento.
+        -- El costo de cada exhibición queda registrado como se calculó en ese momento (historial para facturar).
         INSERT INTO Publicidad.EXHIBICION (id_partido, id_espacio, id_pieza, costo, codigo_moneda)
         SELECT id_partido, id_espacio, id_pieza, costo, 'USD'
         FROM @propuesta;
@@ -259,11 +266,13 @@ BEGIN
     END;
 
     IF @mostrar = 1 AND @id_partido IS NOT NULL
-        SELECT ep.numero_espacio, ex.costo, ex.codigo_moneda, pr.prioridad, pr.anunciante, pr.campania,
-               pr.titulo, pr.dirigida_a_seleccion, pr.franja_pbi, pr.mercados_en_prime_time, pr.pbi_per_capita_max
+        SELECT ep.numero_espacio, ep.tarifa_usd, re.recargo_fase_pct, re.recargo_prime_time_pct, ex.costo, ex.codigo_moneda,
+               pr.prioridad, pr.anunciante, pr.campania, pr.titulo, pr.dirigida_a_seleccion, pr.franja_pbi,
+               pr.mercados_en_prime_time, pr.pbi_per_capita_max
         FROM Publicidad.EXHIBICION AS ex
         INNER JOIN Publicidad.ESPACIO_PUBLICITARIO AS ep ON ep.id_espacio = ex.id_espacio
         INNER JOIN Publicidad.fn_PrioridadPiezas(@id_partido) AS pr ON pr.id_pieza = ex.id_pieza
+        INNER JOIN Publicidad.fn_RecargosPublicidad(@id_partido) AS re ON re.id_pieza = ex.id_pieza
         WHERE ex.id_partido = @id_partido
         ORDER BY pr.prioridad;
 END;

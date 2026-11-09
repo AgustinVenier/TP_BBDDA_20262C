@@ -940,10 +940,10 @@ END;
 GO
 
 
--- Original en 16_SP_Importacion.sql. Cambio: reconoce a los jugadores ya cargados sobre Seguridad.vw_Jugador (lista, apellido
+-- Original en 16_SP_CargaMasiva.sql. Cambio: reconoce a los jugadores ya cargados sobre Seguridad.vw_Jugador (lista, apellido
 -- y nombre) y compara su fecha de nacimiento descifrada; cifra lo que carga.
 /*
-  usp_ImportarJugadores
+  usp_CargarJugadores
   Upsert de jugadores de las listas de convocados, por selección (código FIFA
   de su país), apellido y nombre, desde #staging_jugadores. Columnas que usa:
   id_registro (distinto en cada fila), codigo_fifa, nombre, apellido,
@@ -964,7 +964,7 @@ GO
   los de esa selección. Con eso cubre las reglas de usp_JUGADOR_Alta,
   usp_JUGADOR_Modificacion y usp_RegistrarConvocatoria.
 */
-CREATE OR ALTER PROCEDURE Torneo.usp_ImportarJugadores
+CREATE OR ALTER PROCEDURE Torneo.usp_CargarJugadores
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -987,7 +987,7 @@ BEGIN
     );
 
     IF OBJECT_ID(N'tempdb..#staging_jugadores') IS NULL
-        THROW 50001, N'Torneo.usp_ImportarJugadores: no se importó nada, falta la tabla #staging_jugadores con los jugadores.', 1;
+        THROW 50001, N'Torneo.usp_CargarJugadores: no se importó nada, falta la tabla #staging_jugadores con los jugadores.', 1;
 
     UPDATE #staging_jugadores
     SET codigo_fifa = UPPER(NULLIF(TRIM(codigo_fifa), '')),
@@ -1170,17 +1170,17 @@ END;
 GO
 
 
--- Original en 16_SP_Importacion.sql. Cambio: reconoce a las personas ya cargadas sobre Seguridad.vw_PersonaCuerpoTecnico
+-- Original en 16_SP_CargaMasiva.sql. Cambio: reconoce a las personas ya cargadas sobre Seguridad.vw_PersonaCuerpoTecnico
 -- (selección, apellido y nombre) y compara su fecha de nacimiento descifrada; cifra lo que carga.
 /*
-  usp_ImportarCuerpoTecnico
+  usp_CargarCuerpoTecnico
   Upsert de las personas del cuerpo técnico de las selecciones por
   selección, apellido y nombre, desde #staging_cuerpo_tecnico. Columnas que
   usa: id_registro (distinto en cada fila), codigo_fifa (de la selección),
   nombre, apellido, rol, fecha_nacimiento, codigo_fifa_nacimiento (del país
   de nacimiento), errores y accion. Los directores técnicos los importa
-  usp_ImportarCuerpoTecnicoCSV (24) del scraping de Wikipedia; el resto del
-  cuerpo técnico lo carga 33_Ejecutar_DatosComplementarios.sql. En una persona
+  usp_ImportarCuerpoTecnicoCSV (19) del scraping de Wikipedia; el resto del
+  cuerpo técnico lo carga 33_Cargar_DatosComplementarios.sql. En una persona
   existente, la fecha y el país de nacimiento que no vienen no se borran.
   Valida cada persona pendiente: selección registrada; nombre y apellido
   obligatorios y de hasta 60 caracteres; rol DIRECTOR_TECNICO,
@@ -1192,7 +1192,7 @@ GO
   Con eso cubre las reglas de usp_PERSONA_CUERPO_TECNICO_Alta y
   _Modificacion.
 */
-CREATE OR ALTER PROCEDURE Torneo.usp_ImportarCuerpoTecnico
+CREATE OR ALTER PROCEDURE Torneo.usp_CargarCuerpoTecnico
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1210,7 +1210,7 @@ BEGIN
     );
 
     IF OBJECT_ID(N'tempdb..#staging_cuerpo_tecnico') IS NULL
-        THROW 50001, N'Torneo.usp_ImportarCuerpoTecnico: no se importó nada, falta la tabla #staging_cuerpo_tecnico con el cuerpo técnico.', 1;
+        THROW 50001, N'Torneo.usp_CargarCuerpoTecnico: no se importó nada, falta la tabla #staging_cuerpo_tecnico con el cuerpo técnico.', 1;
 
     UPDATE #staging_cuerpo_tecnico
     SET codigo_fifa            = UPPER(NULLIF(TRIM(codigo_fifa), '')),
@@ -1346,10 +1346,10 @@ END;
 GO
 
 
--- Original en 16_SP_Importacion.sql. Cambio: reconoce al jugador que sale y al que entra sobre Seguridad.vw_Jugador; cifra el
+-- Original en 16_SP_CargaMasiva.sql. Cambio: reconoce al jugador que sale y al que entra sobre Seguridad.vw_Jugador; cifra el
 -- jugador que agrega.
 /*
-  usp_ImportarReemplazos
+  usp_CargarReemplazos
   Altas y bajas de último momento en las listas de convocados (un jugador
   que se lesiona y otro que lo reemplaza), desde #staging_reemplazos. Es una
   carga histórica: el reemplazante ya está en la lista (vino en la lista
@@ -1375,7 +1375,7 @@ GO
   Un reemplazo queda INSERTADO si el que sale no estaba; ACTUALIZADO si
   estaba dado de baja pero cambió alguna fecha o motivo; si no, SIN CAMBIOS.
 */
-CREATE OR ALTER PROCEDURE Torneo.usp_ImportarReemplazos
+CREATE OR ALTER PROCEDURE Torneo.usp_CargarReemplazos
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1403,7 +1403,7 @@ BEGIN
     );
 
     IF OBJECT_ID(N'tempdb..#staging_reemplazos') IS NULL
-        THROW 50001, N'Torneo.usp_ImportarReemplazos: no se importó nada, falta la tabla #staging_reemplazos con los reemplazos.', 1;
+        THROW 50001, N'Torneo.usp_CargarReemplazos: no se importó nada, falta la tabla #staging_reemplazos con los reemplazos.', 1;
 
     UPDATE #staging_reemplazos
     SET codigo_fifa    = UPPER(NULLIF(TRIM(codigo_fifa), '')),
@@ -1540,7 +1540,7 @@ END;
 GO
 
 
--- Original en 23_SP_Importar_Mundial2026.sql. Cambio: toma los candidatos de Seguridad.vw_Jugador.
+-- Original en 18_SP_Importar_Mundial2026.sql. Cambio: toma los candidatos de Seguridad.vw_Jugador.
 /*
   usp_IdentificarJugadores
   Reconoce a los jugadores que nombra un archivo. Trabaja sobre la tabla

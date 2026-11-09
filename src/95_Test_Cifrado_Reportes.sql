@@ -30,6 +30,7 @@
 */
 
 USE MundialFutbol;
+SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los índices filtrados y los métodos XML lo necesitan en ON
 GO
 
 SET NOCOUNT ON;

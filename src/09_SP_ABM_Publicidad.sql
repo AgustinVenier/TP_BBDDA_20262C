@@ -16,7 +16,7 @@
            PIEZA_PUBLICITARIA, PIEZA_PAIS_INTERES, ESPACIO_PUBLICITARIO y
            EXHIBICION. Siguen las convenciones descriptas en
            05_SP_ABM_DatosGenerales.sql. Requiere haber ejecutado 01 a 08.
-           Su script de testing es 58_Test_SP_ABM_Publicidad.sql.
+           Su script de testing es 59_Test_SP_ABM_Publicidad.sql.
 ================================================================================
 
  Particularidades de este esquema:

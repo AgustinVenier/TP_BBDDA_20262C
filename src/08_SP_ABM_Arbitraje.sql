@@ -15,7 +15,7 @@
            tablas del esquema Arbitraje: ARBITRO, ARBITRO_IDIOMA y
            DESIGNACION_ARBITRAL. Siguen las convenciones descriptas en
            05_SP_ABM_DatosGenerales.sql. Requiere haber ejecutado 01 a 07.
-           Su script de testing es 57_Test_SP_ABM_Arbitraje.sql.
+           Su script de testing es 58_Test_SP_ABM_Arbitraje.sql.
 ================================================================================
 
  Particularidades de este esquema:

@@ -6,7 +6,7 @@ La fuente es la API [Frankfurter](https://frankfurter.dev/) v2. Junta las cotiza
 
 ## Consumo desde SQL Server
 
-`DatosGenerales.usp_ImportarCotizacionesAPI` (`src/26_SP_Importar_Cotizaciones.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`) y procesa la respuesta con `DatosGenerales.usp_ProcesarCotizacionesJSON`. Por defecto trae las monedas de todos los países del sistema, sin el dólar, de los últimos 30 días. `src/31_Ejecutar_ImportarAPIs.sql` importa junio y julio de 2026, el período del torneo y de las campañas.
+`DatosGenerales.usp_ImportarCotizacionesAPI` (`src/22_SP_Importar_Cotizaciones.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/17_SP_Utilidades_Importacion.sql`) y procesa la respuesta con `DatosGenerales.usp_ProcesarCotizacionesJSON`. Por defecto trae las monedas de todos los países del sistema, sin el dólar, de los últimos 30 días. `src/31_Importar_APIs.sql` importa junio y julio de 2026, el período del torneo y de las campañas.
 
 Ejemplo de pedido, sin clave:
 
@@ -24,7 +24,7 @@ Para verlo desde una consola:
 curl "https://api.frankfurter.dev/v2/rates?base=USD&quotes=ARS,EUR&from=2026-06-11&to=2026-06-12"
 ```
 
-Cada registro se carga con el SP de la Entrega 5 `DatosGenerales.usp_ImportarCotizaciones` (`src/16_SP_Importacion.sql`). Lee la tabla de staging que arma el proceso, valida cada registro con las reglas de las cotizaciones y hace el upsert de los válidos de una vez. Los rechazados quedan en `DatosGenerales.ERRORES_COTIZACION`, con el número de la importación (`DatosGenerales.IMPORTACION`).
+Cada registro se carga con el SP de la Entrega 5 `DatosGenerales.usp_CargarCotizaciones` (`src/16_SP_CargaMasiva.sql`). Lee la tabla de staging que arma el proceso, valida cada registro con las reglas de las cotizaciones y hace el upsert de los válidos de una vez. Los rechazados quedan en `DatosGenerales.ERRORES_COTIZACION`, con el número de la importación (`DatosGenerales.IMPORTACION`).
 
 ## Por qué la v2 y no la v1
 

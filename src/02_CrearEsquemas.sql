@@ -26,6 +26,7 @@ GO
       Arbitraje         Árbitros, idiomas que hablan y designaciones por partido.
       Publicidad        Anunciantes, campañas, piezas, espacios publicitarios y exhibiciones.
       Reportes          Vistas y SP de reportes (fuente de datos de la herramienta de BI).
+      Seguridad         Roles y cifrado de los datos personales (Entrega 8).
 
     CREATE SCHEMA debe ser la única sentencia de su lote, por lo que no puede
     ir dentro de un IF. Para validar la existencia sin recurrir a SQL dinámico
@@ -75,9 +76,16 @@ GO
 SET NOEXEC OFF;
 GO
 
+IF SCHEMA_ID(N'Seguridad') IS NOT NULL SET NOEXEC ON;
+GO
+CREATE SCHEMA Seguridad AUTHORIZATION dbo;
+GO
+SET NOEXEC OFF;
+GO
+
 -- Evidencia: esquemas creados.
 SELECT name AS Esquema
 FROM sys.schemas
-WHERE name IN (N'DatosGenerales', N'Torneo', N'DesarrolloPartido', N'Arbitraje', N'Publicidad', N'Reportes')
+WHERE name IN (N'DatosGenerales', N'Torneo', N'DesarrolloPartido', N'Arbitraje', N'Publicidad', N'Reportes', N'Seguridad')
 ORDER BY name;
 GO

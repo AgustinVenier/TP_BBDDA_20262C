@@ -984,11 +984,11 @@ GO
 /* ============================================================================
    REGISTRO DE LAS IMPORTACIONES
    No figuran en el DER: son el registro tecnico de los procesos de
-   importacion de la Entrega 6 (23 a 27), como PARAMETRO_REGLAMENTO es
+   importacion de la Entrega 6 (18 a 23), como PARAMETRO_REGLAMENTO es
    configuracion. Cada corrida de un proceso queda en IMPORTACION, y los
    registros que rechazo, en la tabla ERRORES_ de lo que importo (en el
    esquema de esa tabla), tal como venian en el origen y con todos los
-   motivos. Se escriben y se borran con los SP de 16_SP_Importacion.sql.
+   motivos. Se escriben y se borran con los SP de 16_SP_CargaMasiva.sql.
    ============================================================================ */
 
 /*

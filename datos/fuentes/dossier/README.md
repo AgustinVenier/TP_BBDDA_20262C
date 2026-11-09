@@ -18,7 +18,7 @@ La clave de una app web de Firebase no es secreta: va en el código que descarga
 
 ## Consumo desde SQL Server
 
-`Publicidad.usp_ImportarCampaniasAPI` (`src/21_SP_Importar_Publicidad.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`) y procesa la respuesta con `Publicidad.usp_ProcesarCampaniasJSON`. `src/31_Ejecutar_ImportarAPIs.sql` la ejecuta antes de los datos complementarios (`src/33_Ejecutar_DatosComplementarios.sql`), que asignan la publicidad de cada partido: así las piezas del Dossier compiten en esa asignación. El 33 agrega anunciantes de otros países, porque el Dossier cubre solo el mercado argentino.
+`Publicidad.usp_ImportarCampaniasAPI` (`src/20_SP_Importar_Publicidad.sql`) hace un pedido GET con `DatosGenerales.usp_ConsumirAPI` (`src/17_SP_Utilidades_Importacion.sql`) y procesa la respuesta con `Publicidad.usp_ProcesarCampaniasJSON`. `src/31_Importar_APIs.sql` la ejecuta antes de los datos complementarios (`src/33_Cargar_DatosComplementarios.sql`), que asignan la publicidad de cada partido: así las piezas del Dossier compiten en esa asignación. El 33 agrega anunciantes de otros países, porque el Dossier cubre solo el mercado argentino.
 
 Pedido:
 
@@ -34,7 +34,7 @@ Para verlo desde una consola:
 curl "https://firestore.googleapis.com/v1/projects/repositorio2026-61a28/databases/(default)/documents/campanas?pageSize=300&key=AIzaSyAvVQTFWTCHwSCMIS2le22ZQ6aQBv8oUgo"
 ```
 
-Las campañas se cargan con el SP de la Entrega 5 `Publicidad.usp_ImportarCampanias` (`src/16_SP_Importacion.sql`). Lee las tablas de staging que arma el proceso, valida cada campaña con las reglas de anunciantes, campañas y piezas y hace el upsert de las válidas de una vez. Las rechazadas quedan en `Publicidad.ERRORES_CAMPANIA`, con el número de la importación (`DatosGenerales.IMPORTACION`).
+Las campañas se cargan con el SP de la Entrega 5 `Publicidad.usp_CargarCampanias` (`src/16_SP_CargaMasiva.sql`). Lee las tablas de staging que arma el proceso, valida cada campaña con las reglas de anunciantes, campañas y piezas y hace el upsert de las válidas de una vez. Las rechazadas quedan en `Publicidad.ERRORES_CAMPANIA`, con el número de la importación (`DatosGenerales.IMPORTACION`).
 
 ## Formato
 

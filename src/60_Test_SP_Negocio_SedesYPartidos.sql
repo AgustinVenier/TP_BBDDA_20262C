@@ -15,7 +15,7 @@
            (usp_RegistrarSede, usp_ModificarSede, usp_EliminarSede,
            usp_IniciarPartido y usp_FinalizarPartido),
            con casos exitosos y su evidencia y casos que no cumplen las
-           validaciones. Requiere haber ejecutado 01 a 20; no depende del juego de
+           validaciones. Requiere haber ejecutado 01 a 28; no depende del juego de
            datos.
            Usa una sede de prueba ("Estadio Prueba Negocio"), dos selecciones
            de prueba (XNA y XNB, con 23 jugadores cada una), cinco árbitros de
@@ -35,6 +35,7 @@
 */
 
 USE MundialFutbol;
+SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los índices filtrados y los métodos XML lo necesitan en ON
 GO
 
 SET NOCOUNT ON;
@@ -44,7 +45,7 @@ IF OBJECT_ID(N'Torneo.usp_RegistrarSede', N'P') IS NULL
    OR OBJECT_ID(N'Arbitraje.usp_DesignarTernaArbitral', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DesarrolloPartido.TIPO_GOL WHERE descripcion IN ('JUGADA', 'CABEZAZO', 'PENAL') HAVING COUNT(*) = 3)
 BEGIN
-    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 01 a 28.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

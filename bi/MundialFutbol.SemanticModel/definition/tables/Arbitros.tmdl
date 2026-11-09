@@ -30,3 +30,4 @@ table Arbitros
 				    Arbitros
 
 	annotation PBI_ResultType = Table
+

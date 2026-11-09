@@ -18,10 +18,10 @@
 ================================================================================
 
  Orden: después de 00_Ejecutar_PrepararBase.sql y de las importaciones (30 a
- 35). Ejecuta 41 a 45. Después van los tests 81 a 84 y 91 a 95, y 46. Se puede
+ 35). Ejecuta 41 a 45. Después van los tests 77 a 80 y 91 a 95, y 46. Se puede
  ejecutar más de una vez: lo que ya está cifrado no se vuelve a cifrar.
 
- Los tests de las entregas anteriores (53 a 80) se ejecutan ANTES que este
+ Los tests de las entregas anteriores (54 a 76) se ejecutan ANTES que este
  script: después del cifrado, los que buscan personas por nombre en las
  tablas no las encuentran y su limpieza deja datos de prueba.
 

@@ -93,7 +93,7 @@ class Repositorio:
         except pyodbc.Error as e:
             raise ErrorBD(_limpiar(e)) from e
 
-    # Todas las lecturas van por los SP de consulta (src/18_SP_Consultas.sql): la
+    # Todas las lecturas van por los SP de consulta (src/25_SP_Consultas.sql): la
     # aplicación no lee ninguna tabla, así funciona con un usuario de
     # rol_AdministradorOperativo, que tiene DENY SELECT sobre las tablas.
 

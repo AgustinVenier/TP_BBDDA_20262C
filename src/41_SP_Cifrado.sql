@@ -19,8 +19,8 @@
            Su script de testing es 91_Test_SP_Cifrado.sql.
 ================================================================================
 
- Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 29_Seguridad.sql (que
- crea el esquema Seguridad). Este script solo crea los objetos; 40 ejecuta
+ Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 27_SP_Roles.sql (el
+ esquema Seguridad lo crea 02_CrearEsquemas.sql). Este script solo crea los objetos; 40 ejecuta
  Seguridad.usp_ConfigurarCifrado con la contraseña de la clave maestra.
 
  Cómo funciona el cifrado:
@@ -55,7 +55,7 @@
          DENY de ALTER y TAKE OWNERSHIP, así el rol puede usarlo pero no
          quitarle la clave privada ni apropiárselo; borrarlo tampoco puede,
          porque protege a la clave.
-       * Seguridad.usp_ConfigurarRoles (29) da esos permisos solo a los roles
+       * Seguridad.usp_ConfigurarRoles (27) da esos permisos solo a los roles
          que trabajan con datos personales. Para los demás, los datos
          descifrados salen NULL.
      Las funciones de cifrado no usan EXECUTE AS a propósito: con EXECUTE AS

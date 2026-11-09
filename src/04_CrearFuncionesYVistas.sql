@@ -17,10 +17,10 @@
            cancha en cualquier minuto, marcador según los goles cargados,
            sanciones y suspensiones, selecciones en competencia, simulación
            de prime time y feriados por mercado, prioridad de piezas
-           publicitarias, historial de
+           publicitarias y recargos por fase y prime time, historial de
            titularidad, goleadores e historial de árbitros.
            Requiere haber ejecutado 01, 02 y 03. Su script de testing es
-           53_Test_FuncionesYVistas.sql.
+           54_Test_FuncionesYVistas.sql.
 ================================================================================
 
  Convenciones:
@@ -72,7 +72,10 @@ RETURN
         ('SELECCIONES_POR_GRUPO',             2,   8),
         ('PRIME_TIME_DESDE',                  0,  23),
         ('PRIME_TIME_HASTA',                  0,  23),
-        ('PBI_FRANJA_MILES_USD',              1, 255)
+        ('PBI_FRANJA_MILES_USD',              1, 255),
+        ('RECARGO_PRIME_TIME_PCT',            0, 100),
+        ('RECARGO_PRIME_TIME_MAX_PCT',        0, 255),
+        ('RECARGO_FASE_PCT',                  0, 100)
     ) AS p (codigo, valor_minimo, valor_maximo);
 GO
 
@@ -694,6 +697,65 @@ RETURN
     INNER JOIN Publicidad.CAMPANIA AS c ON c.id_campania = mc.id_campania
     INNER JOIN Publicidad.ANUNCIANTE AS an ON an.id_anunciante = c.id_anunciante
     WHERE mc.orden_en_campania = 1;
+GO
+
+
+/*
+  fn_RecargosPublicidad
+  Recargo, en porcentaje sobre la tarifa del espacio, que paga cada pieza
+  candidata de un partido (las de fn_PrioridadPiezas) si se exhibe en él. La
+  consigna pide registrar "el costo o tarifa asociado a cada franja": la
+  franja la dan la instancia del torneo y el horario del partido en los
+  mercados de la pieza. Criterio (documentado para el grupo):
+    - Por fase: RECARGO_FASE_PCT por cada ronda eliminatoria. Niveles: GRUPOS
+      0, DIECISEISAVOS 1, OCTAVOS 2, CUARTOS 3, SEMIFINAL y TERCER_PUESTO 4,
+      FINAL 5.
+    - Por prime time: RECARGO_PRIME_TIME_PCT por cada mercado de interés de la
+      pieza que ve el partido en prime time (fn_MercadosEnPrimeTime), con tope
+      RECARGO_PRIME_TIME_MAX_PCT.
+  Los dos recargos se suman (recargo_total_pct). Un parámetro que falte vale
+  0, y el costo queda igual a la tarifa. La usa usp_AsignarPublicidadPartido
+  para calcular el costo de cada exhibición.
+*/
+CREATE OR ALTER FUNCTION Publicidad.fn_RecargosPublicidad (@id_partido INT)
+RETURNS TABLE
+AS
+RETURN
+    WITH parametros AS (
+        SELECT ISNULL((SELECT valor FROM DatosGenerales.PARAMETRO_REGLAMENTO
+                       WHERE codigo = 'RECARGO_FASE_PCT'), 0)           AS fase_pct,
+               ISNULL((SELECT valor FROM DatosGenerales.PARAMETRO_REGLAMENTO
+                       WHERE codigo = 'RECARGO_PRIME_TIME_PCT'), 0)     AS prime_time_pct,
+               ISNULL((SELECT valor FROM DatosGenerales.PARAMETRO_REGLAMENTO
+                       WHERE codigo = 'RECARGO_PRIME_TIME_MAX_PCT'), 0) AS prime_time_max_pct
+    ),
+    partido AS (
+        SELECT p.fase,
+               CASE p.fase WHEN 'DIECISEISAVOS' THEN 1
+                           WHEN 'OCTAVOS'       THEN 2
+                           WHEN 'CUARTOS'       THEN 3
+                           WHEN 'SEMIFINAL'     THEN 4
+                           WHEN 'TERCER_PUESTO' THEN 4
+                           WHEN 'FINAL'         THEN 5
+                           ELSE 0 END AS nivel_fase
+        FROM Torneo.PARTIDO AS p
+        WHERE p.id_partido = @id_partido
+    )
+    SELECT pr.id_pieza,
+           pr.prioridad,
+           pt.fase,
+           pt.nivel_fase,
+           r.recargo_fase_pct,
+           pr.mercados_en_prime_time,
+           r.recargo_prime_time_pct,
+           r.recargo_fase_pct + r.recargo_prime_time_pct AS recargo_total_pct
+    FROM partido AS pt
+    CROSS JOIN parametros AS prm
+    CROSS APPLY Publicidad.fn_PrioridadPiezas(@id_partido) AS pr
+    CROSS APPLY (SELECT pt.nivel_fase * prm.fase_pct AS recargo_fase_pct,
+                        IIF(pr.mercados_en_prime_time * prm.prime_time_pct > prm.prime_time_max_pct,
+                            prm.prime_time_max_pct,
+                            pr.mercados_en_prime_time * prm.prime_time_pct) AS recargo_prime_time_pct) AS r;
 GO
 
 

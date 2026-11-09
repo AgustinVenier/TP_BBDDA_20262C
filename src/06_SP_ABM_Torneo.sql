@@ -17,7 +17,7 @@
            PERSONA_CUERPO_TECNICO y PARTIDO.
            Siguen las convenciones
            descriptas en 05_SP_ABM_DatosGenerales.sql. Requiere haber
-           ejecutado 01 a 05. Su script de testing es 55_Test_SP_ABM_Torneo.sql.
+           ejecutado 01 a 05. Su script de testing es 56_Test_SP_ABM_Torneo.sql.
 ================================================================================
 
  Particularidades de este esquema:

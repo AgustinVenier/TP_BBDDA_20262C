@@ -6,7 +6,7 @@ La fuente es la API [Nager.Date](https://date.nager.at/) v3.
 
 ## Consumo desde SQL Server
 
-`DatosGenerales.usp_ImportarFeriadosAPI` (`src/27_SP_Importar_Feriados.sql`) pide los feriados de un país y un año con `DatosGenerales.usp_ConsumirAPI` (`src/22_SP_ConsumirAPI.sql`), y procesa la respuesta con `DatosGenerales.usp_ProcesarFeriadosJSON`. La API no tiene un pedido para varios países, así que `src/31_Ejecutar_ImportarAPIs.sql` hace un pedido por cada código ISO de los países del sistema, para 2026.
+`DatosGenerales.usp_ImportarFeriadosAPI` (`src/23_SP_Importar_Feriados.sql`) pide los feriados de un país y un año con `DatosGenerales.usp_ConsumirAPI` (`src/17_SP_Utilidades_Importacion.sql`), y procesa la respuesta con `DatosGenerales.usp_ProcesarFeriadosJSON`. La API no tiene un pedido para varios países, así que `src/31_Importar_APIs.sql` hace un pedido por cada código ISO de los países del sistema, para 2026.
 
 Ejemplo de pedido, sin clave (año y código ISO alfa-2):
 
@@ -20,7 +20,7 @@ Para verlo desde una consola:
 curl "https://date.nager.at/api/v3/PublicHolidays/2026/AR"
 ```
 
-Cada respuesta se carga con el SP de la Entrega 5 `DatosGenerales.usp_ImportarFeriados` (`src/16_SP_Importacion.sql`). Lee la tabla de staging que arma el proceso, con un feriado por país y día, valida cada uno con las reglas de los feriados y hace el upsert de los válidos de una vez. Los registros rechazados quedan en `DatosGenerales.ERRORES_FERIADO`, con el número de la importación (`DatosGenerales.IMPORTACION`).
+Cada respuesta se carga con el SP de la Entrega 5 `DatosGenerales.usp_CargarFeriados` (`src/16_SP_CargaMasiva.sql`). Lee la tabla de staging que arma el proceso, con un feriado por país y día, valida cada uno con las reglas de los feriados y hace el upsert de los válidos de una vez. Los registros rechazados quedan en `DatosGenerales.ERRORES_FERIADO`, con el número de la importación (`DatosGenerales.IMPORTACION`).
 
 ## Formato
 
@@ -57,7 +57,7 @@ Se hacen todas en T-SQL, al importar:
 
 ## Países sin datos
 
-Nager.Date no tiene feriados de Irán, Arabia Saudita, Catar, Uzbekistán, Jordania, India ni Emiratos Árabes Unidos (responde 204). `src/31_Ejecutar_ImportarAPIs.sql` carga a mano los del período del torneo (11/06 al 19/07/2026):
+Nager.Date no tiene feriados de Irán, Arabia Saudita, Catar, Uzbekistán, Jordania, India ni Emiratos Árabes Unidos (responde 204). `src/31_Importar_APIs.sql` carga a mano los del período del torneo (11/06 al 19/07/2026):
 
 | País | Fecha | Feriado |
 |---|---|---|

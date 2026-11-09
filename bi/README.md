@@ -2,11 +2,11 @@
 
 `MundialFutbol.pbip` es el reporte de la Entrega 9 (sección J del enunciado), guardado como proyecto de Power BI (PBIP): el modelo en `MundialFutbol.SemanticModel` (formato TMDL) y el reporte en `MundialFutbol.Report` (formato PBIR). Son archivos de texto, así que los cambios se ven en git como cualquier script.
 
-Los datos salen directo de la base SQL: el modelo importa las vistas del esquema `Reportes` (`src/28_SP_Reportes.sql`), y **Actualizar** las vuelve a leer.
+Los datos salen directo de la base SQL: el modelo importa las vistas del esquema `Reportes` (`src/26_SP_Reportes.sql`), y **Actualizar** las vuelve a leer.
 
 ## Cómo abrirlo
 
-1. Tener la base con las vistas al día. Correr `src/28_SP_Reportes.sql` después de cada cambio en las vistas: el reporte usa columnas que agregó la última versión (`jugador`, `persona`, `partido` y la vista `vw_Sedes`).
+1. Tener la base con las vistas al día. Correr `src/26_SP_Reportes.sql` después de cada cambio en las vistas: el reporte usa columnas que agregó la última versión (`jugador`, `persona`, `partido` y la vista `vw_Sedes`).
 2. Abrir `MundialFutbol.pbip` con Power BI Desktop (doble clic).
 3. **Inicio → Actualizar**. La primera vez pide las credenciales de `localhost;MundialFutbol`: elegir **Windows → Usar mis credenciales actuales**. Si avisa que el certificado del servidor no es de confianza, aceptar la conexión sin cifrado (es una instancia local).
 
@@ -30,7 +30,7 @@ La página **Sedes** usa el objeto visual de mapa, que Power BI trae deshabilita
 | Publicidad | Ingresos en dólares, espacios ocupados y anunciantes; ocupación por sede (cuántos de sus espacios tuvo cada anunciante, apilado); ingresos por sede, por anunciante y por espacio. No se muestra un porcentaje de ocupación: el sistema asigna siempre las cuatro piezas de cada partido (sección H), así que daría 100 % | `vw_OcupacionPublicitaria` |
 | Publicidad por partido | Matriz sede → partido con el anunciante exhibido en cada uno de los cuatro espacios ("(libre)" si no tiene), los espacios ocupados y los ingresos en dólares, con subtotales por sede y total; segmentadores de fase y de sede. Las medidas `Espacio 1` a `Espacio 4` (tabla `Ocupacion`) arman las columnas, igual que `espacio_1` a `espacio_4` de `Reportes.usp_OcupacionPublicitaria` | `vw_OcupacionPublicitaria` |
 | Monedas | Ingresos convertidos a la moneda elegida, con la cotización del día del partido (API Frankfurter) | `vw_IngresosPublicitariosPorMoneda` |
-| Prime time | Matriz partido × mercado (prime time y feriados, API Nager.Date) e ingresos por partido frente a mercados en prime time | `vw_PrimeTimePorMercado` |
+| Prime time | Matriz partido × mercado (prime time y feriados, API Nager.Date) e ingresos por partido frente a mercados en prime time. Los ingresos llevan el recargo sobre la tarifa por ronda eliminatoria y por mercados de la pieza en prime time (`Publicidad.fn_RecargosPublicidad`), y las tarifas de cada sede son proporcionales a su capacidad (script 33), así que las columnas acompañan la línea | `vw_PrimeTimePorMercado` |
 | Resultados de grupos | Posiciones separadas por grupo y los partidos de la fase de grupos, con un segmentador de grupo que filtra las dos | `vw_TablaPosiciones`, `vw_Resultados` |
 | Resultados de eliminación | Podio (campeón, segundo y tercer puesto), el cuadro de eliminación directa y los partidos con sus goles | `vw_Resultados`, `vw_CuadroEliminacion` |
 | Sedes | Mapa de las sedes (tamaño: partidos) e ingresos por sede | `vw_Sedes` |

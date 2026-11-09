@@ -19,7 +19,7 @@
 
  Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 42_Cifrado_Tablas.sql.
 
- Cada objeto es el de 28_SP_Reportes.sql con un solo cambio: lee las personas
+ Cada objeto es el de 26_SP_Reportes.sql con un solo cambio: lee las personas
  de las vistas descifradas de 42 (Seguridad.vw_Jugador,
  Seguridad.vw_PersonaCuerpoTecnico, Seguridad.vw_Arbitro) en lugar de las
  tablas. Las vistas descifradas tienen las mismas columnas que las tablas, con
@@ -35,7 +35,7 @@ SET NOCOUNT ON;
 GO
 
 
--- Original en 28_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
+-- Original en 26_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
 /*
   vw_Goles
   Un gol por fila con su autor, su selección y el partido. Igual que
@@ -77,7 +77,7 @@ WHERE tg.es_en_contra = 0
 GO
 
 
--- Original en 28_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
+-- Original en 26_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
 /*
   vw_Tarjetas
   Una tarjeta por fila, a un jugador o a un integrante del cuerpo técnico
@@ -122,7 +122,7 @@ LEFT JOIN Seguridad.vw_Arbitro AS ar ON ar.id_arbitro = d.id_arbitro;
 GO
 
 
--- Original en 28_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
+-- Original en 26_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
 /*
   vw_SuspensionesActivas
   Las suspensiones activas (Reportes.fn_SuspensionesActivas) en cada momento
@@ -165,7 +165,7 @@ INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais;
 GO
 
 
--- Original en 28_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
+-- Original en 26_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
 /*
   vw_DesignacionesArbitrales
   Una designación por fila: árbitro, rol y partido. Las tarjetas las señala
@@ -201,12 +201,12 @@ OUTER APPLY (SELECT SUM(IIF(am.tipo_tarjeta = 'AMARILLA', 1, 0)) AS amarillas,
 GO
 
 
--- Original en 28_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
+-- Original en 26_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
 /*
   vw_Plantillas
   Un convocado por fila con su selección. activo = 0 son los dados de baja
   (reemplazados). No incluye la fecha de nacimiento: el reporte no la pide y
-  la vista la leen roles que no la necesitan (29_Seguridad.sql).
+  la vista la leen roles que no la necesitan (27_SP_Roles.sql).
 */
 CREATE OR ALTER VIEW Reportes.vw_Plantillas
 AS
@@ -231,7 +231,7 @@ INNER JOIN Seguridad.vw_Jugador AS j ON j.id_lista = l.id_lista;
 GO
 
 
--- Original en 28_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
+-- Original en 26_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
 /*
   vw_Resultados
   Un partido por fila con el resultado, el ganador (también por penales; en
@@ -308,7 +308,7 @@ OUTER APPLY (SELECT STRING_AGG(gs.detalle, N', ') WITHIN GROUP (ORDER BY gs.minu
 GO
 
 
--- Original en 28_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
+-- Original en 26_SP_Reportes.sql. Cambio: lee las personas de las vistas descifradas de Seguridad.
 /*
   usp_SeleccionesYPlantillasXML
   Selecciones con su director técnico y el vector anidado de convocados

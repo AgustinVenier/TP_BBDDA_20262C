@@ -2,8 +2,8 @@
 
 Una foto por sede (las 16 del Mundial 2026 y las 8 propias del juego de datos),
 para `Torneo.SEDE_IMAGEN`. Las carga `Torneo.usp_ImportarImagenesSedes`
-(`src/17_SP_Importar_ImagenesSedes.sql`), que ejecuta
-`src/35_Ejecutar_ImportarImagenesSedes.sql`; también se puede cargar o
+(`src/24_SP_Importar_ImagenesSedes.sql`), que ejecuta
+`src/35_Importar_ImagenesSedes.sql`; también se puede cargar o
 reemplazar cada una a mano desde `app_abm/abm_sedes.py`.
 
 Son la imagen principal del artículo de Wikipedia en inglés de cada estadio,

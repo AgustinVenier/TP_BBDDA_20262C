@@ -35,7 +35,7 @@ La contraseña de la clave maestra se pasa con `:setvar ClaveMaestra` en el runn
 ### Consecuencias en el diseño
 
 - `ENCRYPTBYKEY` da un resultado distinto cada vez, aun para el mismo texto. Por eso no se puede indexar ni comparar el dato cifrado, y se quitaron las restricciones `UNIQUE` que incluían esas columnas (en `JUGADOR` y `ARBITRO`). Los SP controlan los duplicados comparando sobre las vistas descifradas.
-- Los tests de entregas anteriores que buscan personas por nombre directamente en las tablas dejan de encontrarlas: 53, 54, 55, 57, 60, 61, 64 y 73. Como su limpieza también busca por nombre, dejan datos de prueba. Los tests 56, 62, 63, 66 y 80 muestran los datos cifrados en lugar de los nombres. Las consultas de evidencia de las secciones 9 y 10 de `33_Ejecutar_DatosComplementarios.sql` también leen las tablas y fallan sobre la base cifrada; la carga de datos de ese script funciona.
+- Los tests de entregas anteriores que buscan personas por nombre directamente en las tablas dejan de encontrarlas: 54, 55, 56, 58, 60, 61, 64 y 68. Como su limpieza también busca por nombre, dejan datos de prueba. Los tests 57, 62, 63, 66 y 76 muestran los datos cifrados en lugar de los nombres. Las consultas de evidencia de las secciones 9 y 10 de `33_Cargar_DatosComplementarios.sql` también leen las tablas y fallan sobre la base cifrada; la carga de datos de ese script funciona.
 
 ### Resguardo del certificado
 
@@ -61,9 +61,9 @@ La contraseña de la clave maestra se guarda con el mismo cuidado.
 | `rol_GestorPublicidad` | Ejecutar el ABM y la asignación de publicidad; consultar la ocupación y los ingresos publicitarios. | Consultar reportes deportivos o leer y modificar tablas directamente. | Ninguno: no puede descifrar. |
 | `rol_ConsultaReportes` | Leer las vistas y ejecutar los SP del esquema `Reportes`. | Ejecutar operaciones de negocio, importaciones o modificaciones. | Descifra (los reportes muestran nombres). |
 
-La fecha de nacimiento no la ve ningún rol: `Reportes.vw_Plantillas` no la devuelve, porque el reporte de plantillas no la pide (nombre, posición, club y dorsal) y esa vista la leen el cargador de resultados y el rol de consulta, que no la necesitan. Se guarda cifrada y solo la lee el DBA, con las vistas de `Seguridad`. Los tipos de gol que usa el cargador son un catálogo fijo (`20_Ejecutar_DatosIniciales.sql`), así que no tiene una vista para consultarlos.
+La fecha de nacimiento no la ve ningún rol: `Reportes.vw_Plantillas` no la devuelve, porque el reporte de plantillas no la pide (nombre, posición, club y dorsal) y esa vista la leen el cargador de resultados y el rol de consulta, que no la necesitan. Se guarda cifrada y solo la lee el DBA, con las vistas de `Seguridad`. Los tipos de gol que usa el cargador son un catálogo fijo (`28_Cargar_DatosIniciales.sql`), así que no tiene una vista para consultarlos.
 
-`29_Seguridad.sql` crea el esquema `Seguridad` y el SP `Seguridad.usp_ConfigurarRoles`. El SP crea los roles y los usuarios de prueba, y otorga los permisos por esquema o por procedimiento. Deniega `SELECT`, `INSERT`, `UPDATE` y `DELETE` directos en los cinco esquemas de datos, y `SELECT` y `EXECUTE` sobre `Seguridad`. Los objetos pertenecen a `dbo`, así que el encadenamiento de propiedad deja que los SP y las vistas usen las tablas sin dar esos permisos a quien los invoca. `40` vuelve a ejecutar el SP después de crear las claves, para dar los permisos sobre la clave.
+`27_SP_Roles.sql` crea el SP `Seguridad.usp_ConfigurarRoles` (el esquema `Seguridad` lo crea `02_CrearEsquemas.sql`). El SP crea los roles y los usuarios de prueba, y otorga los permisos por esquema o por procedimiento. Deniega `SELECT`, `INSERT`, `UPDATE` y `DELETE` directos en los cinco esquemas de datos, y `SELECT` y `EXECUTE` sobre `Seguridad`. Los objetos pertenecen a `dbo`, así que el encadenamiento de propiedad deja que los SP y las vistas usen las tablas sin dar esos permisos a quien los invoca. `40` vuelve a ejecutar el SP después de crear las claves, para dar los permisos sobre la clave.
 
 ### Permiso sobre la clave
 
@@ -101,14 +101,14 @@ La base usa recuperación `FULL`, así que los backups del log se ejecutan de fo
 
 ## Orden de ejecución y pruebas
 
-1. `00_Ejecutar_PrepararBase.sql`: recrea la base, crea los objetos y los roles (`29`).
+1. `00_Ejecutar_PrepararBase.sql`: recrea la base, crea los objetos y los roles (`27`) y carga los datos iniciales (`28`).
 2. Las importaciones: `30`, `31`, el scraping, `32`, `33`, `34` y `35` (fotos de las sedes).
-3. Los tests de las entregas anteriores (`53` a `80`). Van antes del cifrado: después, los que buscan personas por nombre en las tablas no las encuentran y su limpieza deja datos de prueba (ver "Consecuencias en el diseño").
+3. Los tests de las entregas anteriores (`54` a `76`). Van antes del cifrado: después, los que buscan personas por nombre en las tablas no las encuentran y su limpieza deja datos de prueba (ver "Consecuencias en el diseño").
 4. `40_Ejecutar_Cifrado.sql`: cifra los datos personales.
 5. Los tests de seguridad.
-6. `46_Ejecutar_Entrega9_ConsultasToBe.sql`, que lee las vistas descifradas que crea `40`.
+6. `46_Mostrar_ConsultasToBe.sql`, que lee las vistas descifradas que crea `40`.
 
-Hay un script de test por usuario: `81_Test_Rol_Administrador.sql`, `82_Test_Rol_CargadorResultados.sql`, `83_Test_Rol_GestorPublicidad.sql` y `84_Test_Rol_ConsultaReportes.sql`. Cada uno tiene dos partes:
+Hay un script de test por usuario: `77_Test_Rol_Administrador.sql`, `78_Test_Rol_CargadorResultados.sql`, `79_Test_Rol_GestorPublicidad.sql` y `80_Test_Rol_ConsultaReportes.sql`. Cada uno tiene dos partes:
 
 1. Los permisos declarados del usuario (`HAS_PERMS_BY_NAME`), incluidos los de la clave y el certificado.
 2. La ejecución real: cada operación se ejecuta como el usuario (`EXECUTE AS USER`) dentro de una transacción que se deshace, así que no queda nada. El resultado dice si la operación quedó permitida o denegada, y, cuando lee datos personales, si el usuario los ve descifrados o como `NULL`.

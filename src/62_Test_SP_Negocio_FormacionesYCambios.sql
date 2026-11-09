@@ -16,7 +16,7 @@
            del equipo en cancha con fn_EquipoEnCancha: casos exitosos con su
            evidencia y casos que no cumplen el reglamento (titulares, arquero,
            suspendidos, jugador en cancha, máximo de cambios y ventanas, cambio
-           extra del alargue). Requiere haber ejecutado 01 a 20; no depende del
+           extra del alargue). Requiere haber ejecutado 01 a 28; no depende del
            juego de datos.
            Usa sus propios datos de prueba: la sede "Estadio Prueba
            Formaciones", dos selecciones de prueba (XFA y XFB, con 23
@@ -35,6 +35,7 @@
 */
 
 USE MundialFutbol;
+SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los índices filtrados y los métodos XML lo necesitan en ON
 GO
 
 SET NOCOUNT ON;
@@ -43,7 +44,7 @@ GO
 IF OBJECT_ID(N'DesarrolloPartido.usp_RegistrarFormacion', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo IN ('MAX_CAMBIOS', 'MAX_VENTANAS') HAVING COUNT(*) = 2)
 BEGIN
-    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 01 a 28.', 16, 1);
     SET NOEXEC ON;
 END;
 GO

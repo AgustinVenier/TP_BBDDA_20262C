@@ -17,7 +17,7 @@
            prioridad de piezas (fn_PrioridadPiezas), incluido el caso
            obligatorio de un partido en prime time en más de cuatro mercados,
            en el que el sistema elige solo cuatro piezas.
-           Requiere haber ejecutado 01 a 20; no depende del juego de datos.
+           Requiere haber ejecutado 01 a 28; no depende del juego de datos.
            Usa sus propios datos de prueba: los países de prueba XPA y XPB
            (con selección, sin jugadores) y XPC a XPI (mercados, con su huso
            horario y su PBI per cápita 2024), el anunciante "Anunciante Prueba
@@ -39,7 +39,7 @@
    - Al final, la verificación tiene que mostrar 0 datos de prueba.
 
  Mercados de prueba (partido 250: 20/02/2027 a las 19:00 UTC; prime time de
- 19 a 23 hs y franjas de PBI de 10.000 USD, según 20_Ejecutar_DatosIniciales.sql):
+ 19 a 23 hs y franjas de PBI de 10.000 USD, según 28_Cargar_DatosIniciales.sql):
    Código  Huso                        Hora local  Prime time  PBI 2024  Franja
    XPA     UTC                         19:00       sí          20000     2
    XPB     UTC                         19:00       sí          -         -   (no es mercado de ninguna pieza)
@@ -55,6 +55,7 @@
 */
 
 USE MundialFutbol;
+SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los índices filtrados y los métodos XML lo necesitan en ON
 GO
 
 SET NOCOUNT ON;
@@ -63,9 +64,11 @@ GO
 IF OBJECT_ID(N'Publicidad.usp_AsignarPublicidadPartido', N'P') IS NULL
    OR OBJECT_ID(N'Torneo.usp_RegistrarSede', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO
-                  WHERE codigo IN ('PRIME_TIME_DESDE', 'PRIME_TIME_HASTA', 'PBI_FRANJA_MILES_USD') HAVING COUNT(*) = 3)
+                  WHERE codigo IN ('PRIME_TIME_DESDE', 'PRIME_TIME_HASTA', 'PBI_FRANJA_MILES_USD',
+                                   'RECARGO_PRIME_TIME_PCT', 'RECARGO_PRIME_TIME_MAX_PCT', 'RECARGO_FASE_PCT')
+                  HAVING COUNT(*) = 6)
 BEGIN
-    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 01 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de negocio o los datos iniciales: ejecutar los scripts 01 a 28.', 16, 1);
     SET NOEXEC ON;
 END;
 GO
@@ -423,16 +426,39 @@ FROM Publicidad.fn_PrioridadPiezas(@id_partido)
 ORDER BY prioridad;
 GO
 
+/* REC (OK) Recargos de las piezas candidatas del partido 250 (OCTAVOS).
+   Esperado: las mismas 5 piezas del PRI, con recargo por fase 20 % en todas
+   (nivel 2 × RECARGO_FASE_PCT 10) y por prime time RECARGO_PRIME_TIME_PCT
+   (5 %) por cada mercado de la pieza en prime time, con tope 50 %: 10 % para
+   "Pieza Prueba Negocio" (XPA y XPG), 15 % para "Europa" (XPC, XPD y XPE),
+   5 % para "Mixta" (XPF), 0 para "Asia" (XPH no está en prime time) y 10 %
+   para "Sur" (XPG y XPE). Total: 30, 35, 25, 20 y 30 %. */
+DECLARE @id_partido INT = (SELECT id_partido FROM Torneo.PARTIDO WHERE numero_partido = 250);
+SELECT 'REC' AS caso, re.prioridad, pr.titulo, re.fase, re.nivel_fase, re.recargo_fase_pct,
+       re.mercados_en_prime_time, re.recargo_prime_time_pct, re.recargo_total_pct
+FROM Publicidad.fn_RecargosPublicidad(@id_partido) AS re
+INNER JOIN Publicidad.fn_PrioridadPiezas(@id_partido) AS pr ON pr.id_pieza = re.id_pieza
+ORDER BY re.prioridad;
+GO
+
 /* AP1 (OK) Asignación de las cuatro piezas.
    Esperado: de las 5 candidatas se registran solo las 4 de mayor prioridad:
    la pieza de prioridad 1 en el espacio de mayor tarifa (espacio 1, 70000) y
    así sucesivamente; "Pieza Prueba Negocio Sur" queda afuera. El costo de
-   cada una es la tarifa de su espacio, en USD. */
+   cada una es la tarifa de su espacio más el recargo del REC, en USD
+   (costo_correcto = 1 en las 4 filas). */
 DECLARE @id_partido INT = (SELECT id_partido FROM Torneo.PARTIDO WHERE numero_partido = 250);
 SELECT 'AP1 antes' AS caso, COUNT(*) AS candidatas,
        (SELECT COUNT(*) FROM Publicidad.EXHIBICION WHERE id_partido = @id_partido) AS exhibiciones
 FROM Publicidad.fn_PrioridadPiezas(@id_partido);
 EXEC Publicidad.usp_AsignarPublicidadPartido @id_partido = @id_partido;
+SELECT 'AP1 costos' AS caso, ep.numero_espacio, ep.tarifa_usd, re.recargo_total_pct, ex.costo, ex.codigo_moneda,
+       IIF(ex.costo = ROUND(ep.tarifa_usd * (100 + re.recargo_total_pct) / 100.0, 2), 1, 0) AS costo_correcto
+FROM Publicidad.EXHIBICION AS ex
+INNER JOIN Publicidad.ESPACIO_PUBLICITARIO AS ep ON ep.id_espacio = ex.id_espacio
+INNER JOIN Publicidad.fn_RecargosPublicidad(@id_partido) AS re ON re.id_pieza = ex.id_pieza
+WHERE ex.id_partido = @id_partido
+ORDER BY ep.numero_espacio;
 GO
 
 /* AP2 (ERROR) Asignar otra vez sin pedir reasignación.
@@ -451,8 +477,8 @@ GO
 /* AP3 (OK) Reasignación después de cambiar la tarifa de un espacio.
    El espacio 4 de la sede de prueba pasa a ser el más caro.
    Esperado: se reemplazan las 4 exhibiciones en la misma transacción; la
-   pieza de prioridad 1 queda ahora en el espacio 4, con su tarifa nueva. Al
-   final la tarifa vuelve a su valor original. */
+   pieza de prioridad 1 queda ahora en el espacio 4, con su tarifa nueva más
+   su recargo. Al final la tarifa vuelve a su valor original. */
 DECLARE @id_partido INT = (SELECT id_partido FROM Torneo.PARTIDO WHERE numero_partido = 250);
 DECLARE @e4 INT = (SELECT e.id_espacio FROM Publicidad.ESPACIO_PUBLICITARIO AS e INNER JOIN Torneo.SEDE AS s ON s.id_sede = e.id_sede
                    WHERE s.nombre_estadio = 'Estadio Prueba Publicidad Negocio' AND e.numero_espacio = 4);

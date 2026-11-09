@@ -16,7 +16,7 @@
            ALINEACION, CAMBIO, GOL y AMONESTACION. Siguen las convenciones
            descriptas en 05_SP_ABM_DatosGenerales.sql. Requiere haber
            ejecutado 01 a 06. Su script de testing es
-           56_Test_SP_ABM_DesarrolloPartido.sql.
+           57_Test_SP_ABM_DesarrolloPartido.sql.
 ================================================================================
 
  Qué valida cada capa:

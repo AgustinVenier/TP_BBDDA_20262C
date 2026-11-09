@@ -966,10 +966,10 @@ END;
 GO
 
 
--- Original en 16_SP_Importacion.sql. Cambio: reconoce a los árbitros ya cargados sobre Seguridad.vw_Arbitro (país, apellido
+-- Original en 16_SP_CargaMasiva.sql. Cambio: reconoce a los árbitros ya cargados sobre Seguridad.vw_Arbitro (país, apellido
 -- y nombre) y compara su fecha de nacimiento descifrada; cifra lo que carga.
 /*
-  usp_ImportarArbitros
+  usp_CargarArbitros
   Upsert de árbitros por país (código FIFA), apellido y nombre, desde
   #staging_arbitros. Columnas que usa: id_registro (distinto en cada fila),
   codigo_fifa, nombre, apellido, categoria, fecha_nacimiento, idiomas,
@@ -985,7 +985,7 @@ GO
   veces. Con eso cubre las reglas de usp_ARBITRO_Alta y
   usp_ARBITRO_IDIOMA_Alta.
 */
-CREATE OR ALTER PROCEDURE Arbitraje.usp_ImportarArbitros
+CREATE OR ALTER PROCEDURE Arbitraje.usp_CargarArbitros
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1010,7 +1010,7 @@ BEGIN
     );
 
     IF OBJECT_ID(N'tempdb..#staging_arbitros') IS NULL
-        THROW 50001, N'Arbitraje.usp_ImportarArbitros: no se importó nada, falta la tabla #staging_arbitros con los árbitros.', 1;
+        THROW 50001, N'Arbitraje.usp_CargarArbitros: no se importó nada, falta la tabla #staging_arbitros con los árbitros.', 1;
 
     UPDATE #staging_arbitros
     SET codigo_fifa = UPPER(NULLIF(TRIM(codigo_fifa), '')),
@@ -1128,7 +1128,7 @@ END;
 GO
 
 
--- Original en 23_SP_Importar_Mundial2026.sql. Cambio: busca el árbitro de cada designación en Seguridad.vw_Arbitro.
+-- Original en 18_SP_Importar_Mundial2026.sql. Cambio: busca el árbitro de cada designación en Seguridad.vw_Arbitro.
 /*
   usp_ImportarDesignacionesCSV
   Importa el equipo arbitral de cada partido desde el CSV que genera el
@@ -1138,13 +1138,13 @@ GO
     fecha,local,visitante,rol,nombre,apellido,pais
   fecha es la del partido (AAAA-MM-DD, en la hora local de la sede), local y
   visitante los códigos FIFA de sus selecciones (en cualquier orden), rol el
-  que publica la FIFA en inglés (lo traduce usp_ImportarDesignaciones) y pais
+  que publica la FIFA en inglés (lo traduce usp_CargarDesignaciones) y pais
   el código FIFA del país del árbitro. Los partidos tienen que estar
   cargados antes (usp_ImportarPartidosJSON).
-  Primero carga los árbitros con usp_ImportarArbitros: uno por cada país,
+  Primero carga los árbitros con usp_CargarArbitros: uno por cada país,
   nombre y apellido distintos del archivo, con la categoría @categoria (el
   archivo no la trae; los árbitros del Mundial son de la lista de la FIFA).
-  Después, las designaciones con usp_ImportarDesignaciones.
+  Después, las designaciones con usp_CargarDesignaciones.
   Valida: ruta obligatoria y terminada en .csv; categoría FIFA o
   CONFEDERACION. Si el archivo no se puede leer, no tiene las columnas
   esperadas o alguna fila no es CSV válido, no se importa nada (THROW 50002).
@@ -1234,7 +1234,7 @@ BEGIN
         THROW 50002, @mensaje, 1;
     END CATCH;
 
-    -- usp_ImportarDesignaciones lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
+    -- usp_CargarDesignaciones lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
     CREATE TABLE #staging_designaciones (
         id_registro     INT PRIMARY KEY,   -- línea del archivo
         -- Tal como vienen en el archivo
@@ -1247,16 +1247,16 @@ BEGIN
         pais_txt        NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
         -- Para convertir
         fecha           DATE          NULL,
-        -- Lo que lee usp_ImportarDesignaciones, ya convertido
+        -- Lo que lee usp_CargarDesignaciones, ya convertido
         numero_partido  TINYINT       NULL,
         id_arbitro      INT           NULL,
         rol             VARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
-        -- Lo que le pasa a cada registro: lo completan este SP y usp_ImportarDesignaciones
+        -- Lo que le pasa a cada registro: lo completan este SP y usp_CargarDesignaciones
         errores         NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
         accion          VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
     );
 
-    -- usp_ImportarArbitros lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
+    -- usp_CargarArbitros lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
     CREATE TABLE #staging_arbitros (
         id_registro       INT PRIMARY KEY,   -- primera línea del archivo en la que aparece
         codigo_fifa       NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
@@ -1277,7 +1277,7 @@ BEGIN
     FROM #crudo
     WHERE CONCAT(fecha_txt, local_txt, visitante_txt, rol_txt, nombre, apellido, REPLACE(pais_txt, NCHAR(13), N'')) <> N'';
 
-    -- El rol pasa como viene ("Referee", "Fourth official"): lo traduce usp_ImportarDesignaciones.
+    -- El rol pasa como viene ("Referee", "Fourth official"): lo traduce usp_CargarDesignaciones.
     UPDATE #staging_designaciones
     SET fecha = TRY_CONVERT(DATE, fecha_txt, 23),
         rol   = LEFT(rol_txt, 100);
@@ -1303,7 +1303,7 @@ BEGIN
     GROUP BY pais_txt, nombre, apellido;
 
     /* 3. Lo que no se pudo convertir. Las reglas de los árbitros y de las designaciones las
-          aplican usp_ImportarArbitros y usp_ImportarDesignaciones. */
+          aplican usp_CargarArbitros y usp_CargarDesignaciones. */
     UPDATE #staging_designaciones
     SET errores = NULLIF(CONCAT(
             CASE WHEN fecha_txt IS NULL THEN @nl + N'- La fecha del partido es obligatoria.'
@@ -1321,7 +1321,7 @@ BEGIN
     BEGIN TRY
         IF @tran_propia = 1 BEGIN TRANSACTION;
 
-        EXEC Arbitraje.usp_ImportarArbitros;
+        EXEC Arbitraje.usp_CargarArbitros;
 
         -- Cada fila con su árbitro, o con los motivos por los que se rechazó.
         UPDATE st
@@ -1337,7 +1337,7 @@ BEGIN
 
         UPDATE #staging_designaciones SET accion = 'RECHAZADO' WHERE errores IS NOT NULL;
 
-        EXEC Arbitraje.usp_ImportarDesignaciones;
+        EXEC Arbitraje.usp_CargarDesignaciones;
 
         SELECT @leidos       = COUNT(*),
                @insertados   = ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),

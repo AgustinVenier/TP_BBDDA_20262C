@@ -40,7 +40,7 @@
  tabla; los que escriben, escriben la tabla y cifran con
  Seguridad.fn_CifrarTexto y Seguridad.fn_CifrarFecha. Descifran con los
  permisos del usuario que consulta: quien no tiene permiso sobre la clave
- (29_Seguridad.sql) ve NULL.
+ (27_SP_Roles.sql) ve NULL.
 */
 
 USE MundialFutbol;

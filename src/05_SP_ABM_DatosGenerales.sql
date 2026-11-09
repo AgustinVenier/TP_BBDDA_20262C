@@ -15,7 +15,7 @@
            tablas del esquema DatosGenerales: PAIS, IDIOMA, INDICADOR_ECONOMICO,
            COTIZACION, FERIADO y PARAMETRO_REGLAMENTO. Requiere haber
            ejecutado 01 a 04.
-           Su script de testing es 54_Test_SP_ABM_DatosGenerales.sql.
+           Su script de testing es 55_Test_SP_ABM_DatosGenerales.sql.
 ================================================================================
 
  Convenciones de los SP de ABM (las siguen los scripts 05 a 09):
@@ -946,7 +946,8 @@ BEGIN
                               + par.codigo_mayor + N' (' + CAST(v.valor_mayor AS NVARCHAR(10)) + N').', N'')
             FROM (VALUES ('MIN_CONVOCADOS',         'MAX_CONVOCADOS'),
                          ('MAX_VENTANAS',           'MAX_CAMBIOS'),
-                         ('VENTANAS_EXTRA_ALARGUE', 'CAMBIOS_EXTRA_ALARGUE')) AS par (codigo_menor, codigo_mayor)
+                         ('VENTANAS_EXTRA_ALARGUE', 'CAMBIOS_EXTRA_ALARGUE'),
+                         ('RECARGO_PRIME_TIME_PCT', 'RECARGO_PRIME_TIME_MAX_PCT')) AS par (codigo_menor, codigo_mayor)
             CROSS APPLY (
                 SELECT IIF(par.codigo_menor = @codigo, @valor,
                            (SELECT p.valor FROM DatosGenerales.PARAMETRO_REGLAMENTO AS p
@@ -1024,7 +1025,8 @@ BEGIN
                               + par.codigo_mayor + N' (' + CAST(v.valor_mayor AS NVARCHAR(10)) + N').', N'')
             FROM (VALUES ('MIN_CONVOCADOS',         'MAX_CONVOCADOS'),
                          ('MAX_VENTANAS',           'MAX_CAMBIOS'),
-                         ('VENTANAS_EXTRA_ALARGUE', 'CAMBIOS_EXTRA_ALARGUE')) AS par (codigo_menor, codigo_mayor)
+                         ('VENTANAS_EXTRA_ALARGUE', 'CAMBIOS_EXTRA_ALARGUE'),
+                         ('RECARGO_PRIME_TIME_PCT', 'RECARGO_PRIME_TIME_MAX_PCT')) AS par (codigo_menor, codigo_mayor)
             CROSS APPLY (
                 SELECT IIF(par.codigo_menor = @codigo, @valor,
                            (SELECT p.valor FROM DatosGenerales.PARAMETRO_REGLAMENTO AS p

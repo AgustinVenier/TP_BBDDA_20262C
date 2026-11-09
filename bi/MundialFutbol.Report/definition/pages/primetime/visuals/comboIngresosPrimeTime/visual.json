@@ -101,7 +101,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Ingresos por partido (columnas) y mercados en prime time (línea)'"
+                  "Value": "'Ingresos por partido con recargo por fase y prime time (columnas) y mercados en prime time (línea)'"
                 }
               }
             }

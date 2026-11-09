@@ -33,3 +33,4 @@ relationship 2afbed1a-4b8c-4a8b-ae73-47ae323ea74f
 relationship c7e80574-b5f6-47a2-8181-e9fb15f7a204
 	fromColumn: Tarjetas.id_arbitro_principal
 	toColumn: Arbitros.id_arbitro
+

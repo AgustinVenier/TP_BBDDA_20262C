@@ -7,9 +7,9 @@ Hay dos scripts, los dos sobre Wikipedia en inglés:
 
 | Script | Genera | Se importa con |
 |---|---|---|
-| `Scraping_Jugadores.py` | `datos/jugadores.csv`: los convocados de cada selección | `Torneo.usp_ImportarJugadoresCSV` (`src/24_SP_Importar_Jugadores.sql`) |
-| | `datos/cuerpo_tecnico.csv`: el director técnico de cada selección (ver 1.1) | `Torneo.usp_ImportarCuerpoTecnicoCSV` (`src/24_SP_Importar_Jugadores.sql`) |
-| `Scraping_Arbitros.py` | `datos/designaciones_arbitrales.csv`: el equipo arbitral de cada partido | `Arbitraje.usp_ImportarDesignacionesCSV` (`src/23_SP_Importar_Mundial2026.sql`) |
+| `Scraping_Jugadores.py` | `datos/jugadores.csv`: los convocados de cada selección | `Torneo.usp_ImportarJugadoresCSV` (`src/19_SP_Importar_Jugadores.sql`) |
+| | `datos/cuerpo_tecnico.csv`: el director técnico de cada selección (ver 1.1) | `Torneo.usp_ImportarCuerpoTecnicoCSV` (`src/19_SP_Importar_Jugadores.sql`) |
+| `Scraping_Arbitros.py` | `datos/designaciones_arbitrales.csv`: el equipo arbitral de cada partido | `Arbitraje.usp_ImportarDesignacionesCSV` (`src/18_SP_Importar_Mundial2026.sql`) |
 
 Las secciones 1 a 6 describen el de jugadores. La 7 describe el del equipo arbitral, que usa la misma técnica, los mismos límites de uso y las mismas funciones de descarga.
 
@@ -22,7 +22,7 @@ El script genera **`jugadores.csv`**: los 1248 convocados de las 48 selecciones 
 
 | Columna del CSV | Columna de `JUGADOR` | Observación |
 |---|---|---|
-| `codigo_fifa` | `id_lista` | `usp_ImportarJugadores` busca la lista de convocados de la selección de ese país |
+| `codigo_fifa` | `id_lista` | `usp_CargarJugadores` busca la lista de convocados de la selección de ese país |
 | `dorsal` | `dorsal` | |
 | `posicion` | `posicion_habitual` | Viene como GK / DF / MF / FW; el SP la traduce a ARQUERO / DEFENSOR / MEDIOCAMPISTA / DELANTERO |
 | `nombre`, `apellido` | `nombre`, `apellido` | Ver [separación de nombre y apellido](#44-separación-de-nombre-y-apellido) |
@@ -33,7 +33,7 @@ Las demás columnas de `JUGADOR` no vienen en el archivo:
 
 | Columna | Valor | Motivo |
 |---|---|---|
-| `fecha_alta`, `motivo_alta` | Fecha de presentación de la lista y "Importación" | Los pone `usp_ImportarJugadores` |
+| `fecha_alta`, `motivo_alta` | Fecha de presentación de la lista y "Importación" | Los pone `usp_CargarJugadores` |
 | `fecha_baja`, `motivo_baja` | NULL | No es un dato faltante: NULL significa que el jugador está activo en la lista |
 | `id_pais_nacimiento` | NULL | La fuente no lo publica. La consigna no lo pide y ninguna vista, función ni reporte lo usa |
 
@@ -41,7 +41,7 @@ Las demás columnas de `JUGADOR` no vienen en el archivo:
 
 ### 1.1 Director técnico
 
-De la misma página (no hace pedidos nuevos) sale **`cuerpo_tecnico.csv`**, con el director técnico de las 48 selecciones. Se carga en **`Torneo.PERSONA_CUERPO_TECNICO`**; el resto del cuerpo técnico (ayudante de campo, preparador físico, entrenador de arqueros) no lo publica la fuente y lo completa `src/33_Ejecutar_DatosComplementarios.sql`.
+De la misma página (no hace pedidos nuevos) sale **`cuerpo_tecnico.csv`**, con el director técnico de las 48 selecciones. Se carga en **`Torneo.PERSONA_CUERPO_TECNICO`**; el resto del cuerpo técnico (ayudante de campo, preparador físico, entrenador de arqueros) no lo publica la fuente y lo completa `src/33_Cargar_DatosComplementarios.sql`.
 
 | Columna del CSV | Columna de `PERSONA_CUERPO_TECNICO` | Observación |
 |---|---|---|
@@ -210,7 +210,7 @@ Aviso: TUN: hubo 2 directores técnicos; queda el último, Hervé Renard.
 |---|---|---|
 | `fecha` | Partido | Fecha del partido en la hora local de la sede (`AAAA-MM-DD`). Con las dos selecciones identifica al partido: el archivo no numera los partidos |
 | `local`, `visitante` | Partido | Código FIFA de cada selección |
-| `rol` | `DESIGNACION_ARBITRAL.rol` | Como lo publica la página. `Arbitraje.usp_ImportarDesignaciones` lo traduce (ver la tabla de abajo) |
+| `rol` | `DESIGNACION_ARBITRAL.rol` | Como lo publica la página. `Arbitraje.usp_CargarDesignaciones` lo traduce (ver la tabla de abajo) |
 | `nombre`, `apellido` | `ARBITRO.nombre`, `ARBITRO.apellido` | Ver [nombre y apellido](#74-nombre-y-apellido) |
 | `pais` | `ARBITRO.id_pais` | Código FIFA del país del árbitro |
 
