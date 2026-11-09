@@ -38,6 +38,11 @@ IF KEY_ID(N'ClaveDatosPersonales') IS NULL
     THROW 51012, N'Falta el cifrado de los datos personales. Ejecute primero 40_Ejecutar_Cifrado.sql.', 1;
 GO
 
+-- Por si una corrida anterior quedó a medias con la clave abierta.
+IF EXISTS (SELECT 1 FROM sys.openkeys WHERE database_id = DB_ID() AND key_name = N'ClaveDatosPersonales')
+    CLOSE SYMMETRIC KEY ClaveDatosPersonales;
+GO
+
 DECLARE @controles TABLE (n INT IDENTITY, control NVARCHAR(200), esperado NVARCHAR(200), obtenido NVARCHAR(400));
 DECLARE @reproceso TABLE (tabla NVARCHAR(300), estado NVARCHAR(30), filas_cifradas INT);
 

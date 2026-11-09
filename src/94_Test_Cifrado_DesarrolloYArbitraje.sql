@@ -48,7 +48,7 @@ DECLARE @id_pais SMALLINT, @id1 INT, @id2 INT, @id_partido INT, @id_seleccion IN
       descifrara, nombre y apellido serían NULL) y coinciden con las vistas de
       Seguridad. */
 INSERT INTO @controles (control, esperado, obtenido)
-SELECT N'DesarrolloPartido.vw_Goleadores: filas y filas sin nombre', N'con filas, 0 sin nombre',
+SELECT N'DesarrolloPartido.vw_Goleadores: tiene filas y ninguna sin nombre', N'con filas, 0 sin nombre',
        CONCAT(IIF(COUNT(*) > 0, N'con filas', N'sin filas'), N', ',
               SUM(IIF(apellido IS NULL OR nombre IS NULL, 1, 0)), N' sin nombre')
 FROM DesarrolloPartido.vw_Goleadores;
@@ -60,13 +60,13 @@ INNER JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = g.id_jugador
 WHERE g.apellido <> j.apellido OR g.nombre <> j.nombre;
 
 INSERT INTO @controles (control, esperado, obtenido)
-SELECT N'DesarrolloPartido.vw_HistorialTitularidad: filas y filas sin nombre', N'con filas, 0 sin nombre',
+SELECT N'DesarrolloPartido.vw_HistorialTitularidad: tiene filas y ninguna sin nombre', N'con filas, 0 sin nombre',
        CONCAT(IIF(COUNT(*) > 0, N'con filas', N'sin filas'), N', ',
               SUM(IIF(apellido IS NULL OR nombre IS NULL, 1, 0)), N' sin nombre')
 FROM DesarrolloPartido.vw_HistorialTitularidad;
 
 INSERT INTO @controles (control, esperado, obtenido)
-SELECT N'Arbitraje.vw_HistorialArbitro: filas y filas sin nombre', N'con filas, 0 sin nombre',
+SELECT N'Arbitraje.vw_HistorialArbitro: tiene filas y ninguna sin nombre', N'con filas, 0 sin nombre',
        CONCAT(IIF(COUNT(*) > 0, N'con filas', N'sin filas'), N', ',
               SUM(IIF(apellido IS NULL OR nombre IS NULL, 1, 0)), N' sin nombre')
 FROM Arbitraje.vw_HistorialArbitro;
@@ -80,7 +80,7 @@ WHERE h.apellido <> a.apellido OR h.nombre <> a.nombre;
 -- Un partido con formación, para la función.
 SELECT TOP (1) @id_partido = id_partido, @id_seleccion = id_seleccion FROM DesarrolloPartido.FORMACION ORDER BY id_partido;
 INSERT INTO @controles (control, esperado, obtenido)
-SELECT N'DesarrolloPartido.fn_EquipoEnCancha al minuto 1: filas y filas sin nombre', N'con filas, 0 sin nombre',
+SELECT N'DesarrolloPartido.fn_EquipoEnCancha al minuto 1: tiene filas y ninguna sin nombre', N'con filas, 0 sin nombre',
        CONCAT(IIF(COUNT(*) > 0, N'con filas', N'sin filas'), N', ',
               ISNULL(SUM(IIF(apellido IS NULL OR nombre IS NULL, 1, 0)), 0), N' sin nombre')
 FROM DesarrolloPartido.fn_EquipoEnCancha(@id_partido, @id_seleccion, 1, 0);

@@ -49,13 +49,13 @@ DECLARE @id_lista INT, @id_seleccion INT, @libre INT, @id INT, @texto NVARCHAR(M
 
 /* 1. Vistas: ninguna fila sin el nombre de su persona. */
 INSERT INTO @controles (control, esperado, obtenido)
-SELECT N'Reportes.vw_Goles: filas y filas sin autor', N'con filas, 0 sin autor',
+SELECT N'Reportes.vw_Goles: tiene filas y ninguna sin autor', N'con filas, 0 sin autor',
        CONCAT(IIF(COUNT(*) > 0, N'con filas', N'sin filas'), N', ',
               ISNULL(SUM(IIF(apellido IS NULL OR nombre IS NULL OR jugador = N', ', 1, 0)), 0), N' sin autor')
 FROM Reportes.vw_Goles;
 
 INSERT INTO @controles (control, esperado, obtenido)
-SELECT N'Reportes.vw_Tarjetas: filas, filas sin persona y filas sin árbitro', N'con filas, 0 sin persona, 0 sin árbitro',
+SELECT N'Reportes.vw_Tarjetas: tiene filas y todas con persona y árbitro', N'con filas, 0 sin persona, 0 sin árbitro',
        CONCAT(IIF(COUNT(*) > 0, N'con filas', N'sin filas'), N', ',
               ISNULL(SUM(IIF(apellido IS NULL OR nombre IS NULL OR persona = N', ', 1, 0)), 0), N' sin persona, ',
               ISNULL(SUM(IIF(arbitro_principal = N', ', 1, 0)), 0), N' sin árbitro')
@@ -68,13 +68,13 @@ FROM Reportes.vw_SuspensionesActivas
 WHERE jugador = N', ' OR jugador IS NULL;
 
 INSERT INTO @controles (control, esperado, obtenido)
-SELECT N'Reportes.vw_DesignacionesArbitrales: filas y filas sin árbitro', N'con filas, 0 sin árbitro',
+SELECT N'Reportes.vw_DesignacionesArbitrales: tiene filas y ninguna sin árbitro', N'con filas, 0 sin árbitro',
        CONCAT(IIF(COUNT(*) > 0, N'con filas', N'sin filas'), N', ',
               ISNULL(SUM(IIF(arbitro = N', ' OR arbitro IS NULL, 1, 0)), 0), N' sin árbitro')
 FROM Reportes.vw_DesignacionesArbitrales;
 
 INSERT INTO @controles (control, esperado, obtenido)
-SELECT N'Reportes.vw_Plantillas: filas y filas sin nombre', N'con filas, 0 sin nombre',
+SELECT N'Reportes.vw_Plantillas: tiene filas y ninguna sin nombre', N'con filas, 0 sin nombre',
        CONCAT(IIF(COUNT(*) > 0, N'con filas', N'sin filas'), N', ',
               ISNULL(SUM(IIF(apellido IS NULL OR nombre IS NULL, 1, 0)), 0), N' sin nombre')
 FROM Reportes.vw_Plantillas;

@@ -43,6 +43,8 @@ IF DATABASE_PRINCIPAL_ID(N'usr_test_administrador') IS NULL
     THROW 51010, N'Falta el usuario de prueba. Ejecute primero 27_SP_Roles.sql (lo incluye 00_Ejecutar_PrepararBase.sql).', 1;
 IF KEY_ID(N'ClaveDatosPersonales') IS NULL
     THROW 51012, N'Falta el cifrado de los datos personales. Ejecute primero 40_Ejecutar_Cifrado.sql.', 1;
+IF NOT EXISTS (SELECT 1 FROM Torneo.JUGADOR)
+    THROW 51013, N'No hay datos del torneo cargados. Ejecute primero las importaciones (30 a 35).', 1;
 GO
 
 /* 1. Permisos declarados. */

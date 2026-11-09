@@ -61,7 +61,7 @@
      Las funciones de cifrado no usan EXECUTE AS a propósito: con EXECUTE AS
      una función no se puede integrar en la consulta y cambia de contexto en
      cada fila.
-   - Nadie usa directamente estos objetos: 29 deniega el esquema Seguridad a
+   - Nadie usa directamente estos objetos: 27 deniega el esquema Seguridad a
      todos los roles; los SP y las vistas los usan por el encadenamiento de
      propiedad.
 

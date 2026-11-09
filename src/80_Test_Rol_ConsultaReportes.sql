@@ -43,6 +43,8 @@ IF DATABASE_PRINCIPAL_ID(N'usr_test_consulta') IS NULL
     THROW 51010, N'Falta el usuario de prueba. Ejecute primero 27_SP_Roles.sql (lo incluye 00_Ejecutar_PrepararBase.sql).', 1;
 IF KEY_ID(N'ClaveDatosPersonales') IS NULL
     THROW 51012, N'Falta el cifrado de los datos personales. Ejecute primero 40_Ejecutar_Cifrado.sql.', 1;
+IF NOT EXISTS (SELECT 1 FROM Torneo.JUGADOR)
+    THROW 51013, N'No hay datos del torneo cargados. Ejecute primero las importaciones (30 a 35).', 1;
 GO
 
 /* 1. Permisos declarados. */
@@ -91,9 +93,9 @@ INSERT INTO @casos (control, esperado, sentencia) VALUES
  (N'Leer Reportes.vw_Plantillas: nombre y apellido descifrados', 'DESCIFRA',
   N'SELECT TOP (1) @dato = nombre + N'' '' + apellido FROM Reportes.vw_Plantillas ORDER BY id_jugador;'),
  (N'Leer Reportes.vw_Tarjetas: persona amonestada descifrada', 'DESCIFRA',
-  N'SELECT TOP (1) @dato = persona FROM Reportes.vw_Tarjetas ORDER BY id_amonestacion;'),
+  N'SELECT TOP (1) @dato = apellido + N'', '' + nombre FROM Reportes.vw_Tarjetas ORDER BY id_amonestacion;'),
  (N'Leer Reportes.vw_DesignacionesArbitrales: árbitro descifrado', 'DESCIFRA',
-  N'SELECT TOP (1) @dato = arbitro FROM Reportes.vw_DesignacionesArbitrales ORDER BY id_partido, rol;'),
+  N'SELECT TOP (1) @dato = apellido + N'', '' + nombre FROM Reportes.vw_DesignacionesArbitrales ORDER BY id_partido, rol;'),
  (N'Reporte XML de selecciones y plantillas: nombres descifrados', 'DESCIFRA',
   N'DECLARE @x TABLE (r XML); INSERT INTO @x EXEC Reportes.usp_SeleccionesYPlantillasXML @id_seleccion = @p1;
     SELECT @dato = LEFT(CONVERT(NVARCHAR(MAX), r.query(''(//DirectorTecnico)[1]'')), 300) FROM @x;'),

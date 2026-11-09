@@ -65,7 +65,7 @@ USE MundialFutbol;
 EXEC Seguridad.usp_ConfigurarCifrado @contrasenia_clave_maestra = N'$(ClaveMaestra)';
 GO
 
--- Permisos de los roles sobre la clave recién creada (Seguridad.usp_ConfigurarRoles, de 29).
+-- Permisos de los roles sobre la clave recién creada (Seguridad.usp_ConfigurarRoles, de 27).
 EXEC Seguridad.usp_ConfigurarRoles;
 GO
 
