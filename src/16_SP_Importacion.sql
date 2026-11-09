@@ -697,11 +697,14 @@ BEGIN
         INNER JOIN #staging_sedes AS st ON st.nombre_estadio = s.nombre_estadio
         WHERE st.accion = 'ACTUALIZADO';
 
+        -- ORDER BY: los id_sede se asignan en el orden del archivo o de la lista
+        -- (con ORDER BY, SQL Server garantiza ese orden para la columna IDENTITY).
         INSERT INTO Torneo.SEDE (nombre_estadio, ciudad, id_pais, capacidad, huso_horario, latitud, longitud)
         SELECT st.nombre_estadio, st.ciudad, p.id_pais, st.capacidad, st.huso_horario, st.latitud, st.longitud
         FROM #staging_sedes AS st
         INNER JOIN DatosGenerales.PAIS AS p ON p.codigo_fifa = st.codigo_fifa
-        WHERE st.accion = 'INSERTADO';
+        WHERE st.accion = 'INSERTADO'
+        ORDER BY st.id_registro;
 
         INSERT INTO Publicidad.ESPACIO_PUBLICITARIO (id_sede, numero_espacio, descripcion, tarifa_usd)
         SELECT s.id_sede, e.numero, CONCAT('Panel perimetral ', e.numero), e.tarifa

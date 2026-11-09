@@ -12,7 +12,8 @@
  Fecha: 25/10/2026
  Archivo: 60_Test_SP_Negocio_SedesYPartidos.sql
  Objetivo: Probar los SP de 10_SP_Negocio_SedesYPartidos.sql
-           (usp_RegistrarSede, usp_IniciarPartido y usp_FinalizarPartido),
+           (usp_RegistrarSede, usp_ModificarSede, usp_EliminarSede,
+           usp_IniciarPartido y usp_FinalizarPartido),
            con casos exitosos y su evidencia y casos que no cumplen las
            validaciones. Requiere haber ejecutado 00 a 20; no depende del juego de
            datos.
@@ -308,6 +309,45 @@ GO
 
 
 /* ============================================================================
+   usp_ModificarSede
+   ============================================================================ */
+
+/* MS1 (OK) Cambio de la ciudad y de las tarifas de los espacios 2 y 4.
+   Esperado: la ciudad pasa a "Lima Metropolitana" y las tarifas a 70000,
+   65000, 50000 y 45000 (los espacios 1 y 3 no cambian). */
+DECLARE @id INT = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Prueba Negocio');
+EXEC Torneo.usp_ModificarSede @id_sede = @id, @ciudad = 'Lima Metropolitana',
+     @tarifa_espacio_2 = 65000, @tarifa_espacio_4 = 45000;
+GO
+
+/* MS2 (ERROR) Sede inexistente y tarifa negativa.
+   Esperado: error 50001 de Torneo.usp_ModificarSede con 2 condiciones. */
+BEGIN TRY
+    EXEC Torneo.usp_ModificarSede @id_sede = -1, @tarifa_espacio_1 = -1;
+    PRINT N'MS2: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'MS2';
+END CATCH;
+GO
+
+/* MS3 (ERROR) Huso inexistente junto con un cambio de tarifa válido.
+   Esperado: el error 50001 lo informa Torneo.usp_SEDE_Modificacion (el huso no
+   existe); la transacción se deshace y la tarifa del espacio 1 sigue en 70000. */
+DECLARE @id INT = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Prueba Negocio');
+BEGIN TRY
+    EXEC Torneo.usp_ModificarSede @id_sede = @id, @huso_horario = 'Hora de Marte', @tarifa_espacio_1 = 1;
+    PRINT N'MS3: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'MS3';
+END CATCH;
+SELECT 'MS3 después' AS caso, numero_espacio, tarifa_usd
+FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id ORDER BY numero_espacio;
+GO
+
+
+/* ============================================================================
    usp_IniciarPartido
    ============================================================================ */
 
@@ -506,6 +546,64 @@ END TRY
 BEGIN CATCH
     EXEC #usp_MostrarError @caso = 'IP2';
 END CATCH;
+GO
+
+
+/* ============================================================================
+   usp_EliminarSede
+   ============================================================================ */
+
+/* ES1 (ERROR) Eliminar una sede que ya se usó.
+   Esperado: error 50001 con 1 condición: "Estadio Prueba Negocio" tiene 1
+   partido asignado (el 225). La sede y sus 4 espacios siguen en la base. */
+DECLARE @id INT = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Prueba Negocio');
+BEGIN TRY
+    EXEC Torneo.usp_EliminarSede @id_sede = @id;
+    PRINT N'ES1: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'ES1';
+END CATCH;
+SELECT 'ES1 después' AS caso,
+       (SELECT COUNT(*) FROM Torneo.SEDE WHERE id_sede = @id)                       AS sedes,
+       (SELECT COUNT(*) FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id)   AS espacios;
+GO
+
+/* ES2 (ERROR) Sede obligatoria y sede inexistente.
+   Esperado: dos errores 50001, uno por caso. */
+BEGIN TRY
+    EXEC Torneo.usp_EliminarSede @id_sede = NULL;
+    PRINT N'ES2a: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'ES2a';
+END CATCH;
+BEGIN TRY
+    EXEC Torneo.usp_EliminarSede @id_sede = -1;
+    PRINT N'ES2b: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'ES2b';
+END CATCH;
+GO
+
+/* ES3 (OK) Eliminar una sede que nunca se usó.
+   Esperado: se registra "Estadio Prueba Negocio 3" con sus 4 espacios y el SP
+   la elimina con ellos en una sola transacción: la consulta del SP informa 4
+   espacios eliminados y después quedan 0 sedes y 0 espacios. */
+DECLARE @per SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'PER');
+DECLARE @id INT;
+EXEC Torneo.usp_RegistrarSede
+    @nombre_estadio = 'Estadio Prueba Negocio 3', @ciudad = 'Trujillo', @id_pais = @per, @capacidad = 25000,
+    @huso_horario = 'SA Pacific Standard Time', @tarifa_espacio_1 = 1000, @tarifa_espacio_2 = 1000,
+    @tarifa_espacio_3 = 1000, @tarifa_espacio_4 = 1000, @id_sede = @id OUTPUT, @mostrar = 0;
+SELECT 'ES3 antes' AS caso,
+       (SELECT COUNT(*) FROM Torneo.SEDE WHERE id_sede = @id)                       AS sedes,
+       (SELECT COUNT(*) FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id)   AS espacios;
+EXEC Torneo.usp_EliminarSede @id_sede = @id;
+SELECT 'ES3 después' AS caso,
+       (SELECT COUNT(*) FROM Torneo.SEDE WHERE id_sede = @id)                       AS sedes,
+       (SELECT COUNT(*) FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id)   AS espacios;
 GO
 
 

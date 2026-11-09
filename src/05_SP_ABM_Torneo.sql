@@ -12,8 +12,9 @@
  Fecha: 25/10/2026
  Archivo: 05_SP_ABM_Torneo.sql
  Objetivo: Crear los stored procedures de alta, baja y modificación de las
-           tablas del esquema Torneo: SEDE, SELECCION, LISTA_CONVOCADOS,
-           JUGADOR, NOMBRE_ALTERNATIVO, PERSONA_CUERPO_TECNICO y PARTIDO.
+           tablas del esquema Torneo: SEDE, SEDE_IMAGEN, SELECCION,
+           LISTA_CONVOCADOS, JUGADOR, NOMBRE_ALTERNATIVO,
+           PERSONA_CUERPO_TECNICO y PARTIDO.
            Siguen las convenciones
            descriptas en 04_SP_ABM_DatosGenerales.sql. Requiere haber
            ejecutado 00 a 04. Su script de testing es 55_Test_SP_ABM_Torneo.sql.
@@ -236,7 +237,8 @@ GO
 
 /*
   usp_SEDE_Baja
-  Valida: que la sede exista y que no tenga partidos ni espacios publicitarios.
+  Valida: que la sede exista y que no tenga partidos, espacios publicitarios
+  ni imagen.
 */
 CREATE OR ALTER PROCEDURE Torneo.usp_SEDE_Baja
     @id_sede INT
@@ -261,6 +263,9 @@ BEGIN
                 UNION ALL
                 SELECT N'Publicidad.ESPACIO_PUBLICITARIO', COUNT(*)
                 FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id_sede
+                UNION ALL
+                SELECT N'Torneo.SEDE_IMAGEN', COUNT(*)
+                FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id_sede
             ) AS r (tabla, cantidad)
             WHERE r.cantidad > 0), N'');
 
@@ -271,6 +276,140 @@ BEGIN
     END;
 
     DELETE FROM Torneo.SEDE WHERE id_sede = @id_sede;
+END;
+GO
+
+
+/* ============================================================================
+   SEDE_IMAGEN
+   ============================================================================ */
+
+/*
+  usp_SEDE_IMAGEN_Alta
+  Guarda la foto de una sede que todavía no tiene. Valida: sede obligatoria,
+  existente y sin imagen (para reemplazarla está la modificación); imagen
+  obligatoria, de hasta 2 MB y PNG o JPEG. El formato se deduce de los
+  primeros bytes del archivo (la "firma"), no de la extensión: PNG empieza con
+  89 50 4E 47 0D 0A 1A 0A y JPEG con FF D8 FF.
+*/
+CREATE OR ALTER PROCEDURE Torneo.usp_SEDE_IMAGEN_Alta
+    @id_sede INT,
+    @imagen  VARBINARY(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores NVARCHAR(2048) = N'';
+    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @formato VARCHAR(4)     = CASE
+                                          WHEN SUBSTRING(@imagen, 1, 8) = 0x89504E470D0A1A0A THEN 'PNG'
+                                          WHEN SUBSTRING(@imagen, 1, 3) = 0xFFD8FF THEN 'JPEG'
+                                      END;
+
+    IF @id_sede IS NULL
+        SET @errores += @nl + N'- La sede es obligatoria.';
+    ELSE IF NOT EXISTS (SELECT 1 FROM Torneo.SEDE WHERE id_sede = @id_sede)
+        SET @errores += @nl + N'- No existe una sede con id ' + CAST(@id_sede AS NVARCHAR(10)) + N'.';
+    ELSE IF EXISTS (SELECT 1 FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id_sede)
+        SET @errores += @nl + N'- La sede ya tiene imagen: para reemplazarla se usa usp_SEDE_IMAGEN_Modificacion.';
+
+    IF @imagen IS NULL OR DATALENGTH(@imagen) = 0
+        SET @errores += @nl + N'- La imagen es obligatoria.';
+    ELSE
+    BEGIN
+        IF DATALENGTH(@imagen) > 2097152
+            SET @errores += @nl + N'- La imagen pesa ' + CAST(CEILING(DATALENGTH(@imagen) / 1024.0) AS NVARCHAR(10))
+                          + N' KB y el máximo es 2048 KB (2 MB).';
+        IF @formato IS NULL
+            SET @errores += @nl + N'- La imagen tiene que ser PNG o JPEG.';
+    END;
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'Torneo.usp_SEDE_IMAGEN_Alta: no se pudo guardar la imagen de la sede.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    INSERT INTO Torneo.SEDE_IMAGEN (id_sede, imagen, formato)
+    VALUES (@id_sede, @imagen, @formato);
+END;
+GO
+
+
+/*
+  usp_SEDE_IMAGEN_Modificacion
+  Reemplaza la foto de una sede. Valida: que la sede tenga imagen; la imagen
+  nueva, con las mismas reglas del alta. Actualiza la fecha de carga.
+*/
+CREATE OR ALTER PROCEDURE Torneo.usp_SEDE_IMAGEN_Modificacion
+    @id_sede INT,
+    @imagen  VARBINARY(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores NVARCHAR(2048) = N'';
+    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @formato VARCHAR(4)     = CASE
+                                          WHEN SUBSTRING(@imagen, 1, 8) = 0x89504E470D0A1A0A THEN 'PNG'
+                                          WHEN SUBSTRING(@imagen, 1, 3) = 0xFFD8FF THEN 'JPEG'
+                                      END;
+
+    IF @id_sede IS NULL
+        SET @errores += @nl + N'- La sede es obligatoria.';
+    ELSE IF NOT EXISTS (SELECT 1 FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id_sede)
+        SET @errores += @nl + N'- La sede con id ' + CAST(@id_sede AS NVARCHAR(10))
+                      + N' no tiene imagen: para cargarla se usa usp_SEDE_IMAGEN_Alta.';
+
+    IF @imagen IS NULL OR DATALENGTH(@imagen) = 0
+        SET @errores += @nl + N'- La imagen es obligatoria.';
+    ELSE
+    BEGIN
+        IF DATALENGTH(@imagen) > 2097152
+            SET @errores += @nl + N'- La imagen pesa ' + CAST(CEILING(DATALENGTH(@imagen) / 1024.0) AS NVARCHAR(10))
+                          + N' KB y el máximo es 2048 KB (2 MB).';
+        IF @formato IS NULL
+            SET @errores += @nl + N'- La imagen tiene que ser PNG o JPEG.';
+    END;
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'Torneo.usp_SEDE_IMAGEN_Modificacion: no se pudo reemplazar la imagen de la sede.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    UPDATE Torneo.SEDE_IMAGEN
+    SET imagen = @imagen, formato = @formato, fecha_carga = SYSDATETIME()
+    WHERE id_sede = @id_sede;
+END;
+GO
+
+
+/*
+  usp_SEDE_IMAGEN_Baja
+  Quita la foto de una sede. Valida: que la sede tenga imagen.
+*/
+CREATE OR ALTER PROCEDURE Torneo.usp_SEDE_IMAGEN_Baja
+    @id_sede INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores NVARCHAR(2048) = N'';
+    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+
+    IF @id_sede IS NULL
+        SET @errores += @nl + N'- La sede es obligatoria.';
+    ELSE IF NOT EXISTS (SELECT 1 FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id_sede)
+        SET @errores += @nl + N'- La sede con id ' + CAST(@id_sede AS NVARCHAR(10)) + N' no tiene imagen.';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'Torneo.usp_SEDE_IMAGEN_Baja: no se pudo quitar la imagen de la sede.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    DELETE FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id_sede;
 END;
 GO
 

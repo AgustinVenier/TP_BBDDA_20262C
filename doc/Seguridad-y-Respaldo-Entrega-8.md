@@ -102,7 +102,7 @@ La base usa recuperación `FULL`, así que los backups del log se ejecutan de fo
 ## Orden de ejecución y pruebas
 
 1. `37_Ejecutar_PrepararBase.sql`: recrea la base, crea los objetos y los roles (`40`).
-2. Las importaciones: `26`, `29`, el scraping, `31`, `32` y `33`.
+2. Las importaciones: `26`, `29`, el scraping, `31`, `32`, `33` y `36` (fotos de las sedes).
 3. Los tests de las entregas anteriores (`53` a `80`). Van antes del cifrado: después, los que buscan personas por nombre en las tablas no las encuentran y su limpieza deja datos de prueba (ver "Consecuencias en el diseño").
 4. `38_Ejecutar_Cifrado.sql`: cifra los datos personales.
 5. Los tests de seguridad.

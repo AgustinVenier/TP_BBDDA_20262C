@@ -14,6 +14,8 @@
  Objetivo: Crear los SP de lógica de negocio para el registro de sedes,
            partidos y resultados:
              Torneo.usp_RegistrarSede      sede y sus 4 espacios publicitarios
+             Torneo.usp_EliminarSede       sede que no se usó, con sus espacios
+             Torneo.usp_ModificarSede      datos de la sede y tarifas de sus espacios
              Torneo.usp_IniciarPartido     controles previos y paso a EN_JUEGO
              Torneo.usp_FinalizarPartido   resultado, asistencia y paso a FINALIZADO
            El alta de un partido (con el cálculo de la hora local a partir de
@@ -102,6 +104,194 @@ BEGIN
             @tarifa_usd = @tarifa_espacio_3, @descripcion = 'Panel perimetral 3';
         EXEC Publicidad.usp_ESPACIO_PUBLICITARIO_Alta @id_sede = @id_sede, @numero_espacio = 4,
             @tarifa_usd = @tarifa_espacio_4, @descripcion = 'Panel perimetral 4';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+
+    IF @mostrar = 1
+        SELECT s.id_sede, s.nombre_estadio, s.ciudad, s.huso_horario, s.capacidad,
+               e.numero_espacio, e.descripcion, e.tarifa_usd
+        FROM Torneo.SEDE AS s
+        INNER JOIN Publicidad.ESPACIO_PUBLICITARIO AS e ON e.id_sede = s.id_sede
+        WHERE s.id_sede = @id_sede
+        ORDER BY e.numero_espacio;
+END;
+GO
+
+
+/*
+  usp_EliminarSede
+  Elimina una sede que nunca se usó, junto con sus espacios publicitarios y su
+  imagen, en una sola transacción: es la inversa de usp_RegistrarSede.
+  Torneo.usp_SEDE_Baja no alcanza por sí solo, porque rechaza la baja de una
+  sede con espacios o imagen, y toda sede registrada tiene cuatro espacios.
+  Valida: sede obligatoria y existente; que no tenga partidos (jugados o
+  programados); que ninguno de sus espacios tenga exhibiciones.
+  Los espacios se borran con un único DELETE sobre la sede, después de validar
+  para todos juntos lo mismo que Publicidad.usp_ESPACIO_PUBLICITARIO_Baja (que
+  no tengan exhibiciones), así no hace falta recorrerlos de a uno. La imagen,
+  si tiene, se borra con Torneo.usp_SEDE_IMAGEN_Baja y la sede con
+  Torneo.usp_SEDE_Baja.
+*/
+CREATE OR ALTER PROCEDURE Torneo.usp_EliminarSede
+    @id_sede INT,
+    @mostrar BIT = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @errores      NVARCHAR(2048) = N'';
+    DECLARE @nl           NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia  BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @estadio      VARCHAR(100);
+    DECLARE @partidos     INT;
+    DECLARE @exhibiciones INT;
+    DECLARE @espacios     INT;
+
+    SELECT @estadio = nombre_estadio FROM Torneo.SEDE WHERE id_sede = @id_sede;
+
+    IF @id_sede IS NULL
+        SET @errores += @nl + N'- La sede es obligatoria.';
+    ELSE IF @estadio IS NULL
+        SET @errores += @nl + N'- No existe una sede con id ' + CAST(@id_sede AS NVARCHAR(10)) + N'.';
+    ELSE
+    BEGIN
+        SELECT @partidos = COUNT(*) FROM Torneo.PARTIDO WHERE id_sede = @id_sede;
+
+        SELECT @exhibiciones = COUNT(*)
+        FROM Publicidad.EXHIBICION AS x
+        INNER JOIN Publicidad.ESPACIO_PUBLICITARIO AS e ON e.id_espacio = x.id_espacio
+        WHERE e.id_sede = @id_sede;
+
+        IF @partidos > 0
+            SET @errores += @nl + N'- La sede "' + @estadio + N'" tiene ' + CAST(@partidos AS NVARCHAR(10))
+                          + N' partido(s) asignado(s): solo se elimina una sede que no se usó.';
+
+        IF @exhibiciones > 0
+            SET @errores += @nl + N'- Los espacios publicitarios de la sede tienen ' + CAST(@exhibiciones AS NVARCHAR(10))
+                          + N' exhibición(es) registrada(s).';
+    END;
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'Torneo.usp_EliminarSede: no se pudo eliminar la sede.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        DELETE FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id_sede;
+        SET @espacios = @@ROWCOUNT;
+
+        IF EXISTS (SELECT 1 FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id_sede)
+            EXEC Torneo.usp_SEDE_IMAGEN_Baja @id_sede = @id_sede;
+
+        EXEC Torneo.usp_SEDE_Baja @id_sede = @id_sede;
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+
+    IF @mostrar = 1
+        SELECT @id_sede AS id_sede, @estadio AS nombre_estadio, @espacios AS espacios_eliminados;
+END;
+GO
+
+
+/*
+  usp_ModificarSede
+  Modifica los datos de una sede y las tarifas de sus 4 espacios publicitarios
+  en una sola transacción: es la modificación que acompaña a usp_RegistrarSede.
+  Los parámetros en NULL no cambian (la latitud y la longitud no se pueden
+  borrar, igual que en usp_SEDE_Modificacion).
+  Valida: sede obligatoria y existente; tarifas no negativas; que la sede
+  tenga el espacio de cada tarifa informada. Los datos de la sede los valida
+  Torneo.usp_SEDE_Modificacion y cada tarifa,
+  Publicidad.usp_ESPACIO_PUBLICITARIO_Modificacion.
+*/
+CREATE OR ALTER PROCEDURE Torneo.usp_ModificarSede
+    @id_sede           INT,
+    @nombre_estadio    VARCHAR(200) = NULL,
+    @ciudad            VARCHAR(200) = NULL,
+    @id_pais           SMALLINT     = NULL,
+    @capacidad         INT          = NULL,
+    @huso_horario      VARCHAR(100) = NULL,
+    @latitud           DECIMAL(9,6) = NULL,
+    @longitud          DECIMAL(9,6) = NULL,
+    @tarifa_espacio_1  DECIMAL(9,2) = NULL,
+    @tarifa_espacio_2  DECIMAL(9,2) = NULL,
+    @tarifa_espacio_3  DECIMAL(9,2) = NULL,
+    @tarifa_espacio_4  DECIMAL(9,2) = NULL,
+    @mostrar           BIT          = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @nl          NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @espacio_1   INT, @espacio_2 INT, @espacio_3 INT, @espacio_4 INT;
+    DECLARE @faltan      NVARCHAR(20);
+
+    SELECT @espacio_1 = (SELECT id_espacio FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id_sede AND numero_espacio = 1),
+           @espacio_2 = (SELECT id_espacio FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id_sede AND numero_espacio = 2),
+           @espacio_3 = (SELECT id_espacio FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id_sede AND numero_espacio = 3),
+           @espacio_4 = (SELECT id_espacio FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id_sede AND numero_espacio = 4);
+
+    IF @id_sede IS NULL
+        SET @errores += @nl + N'- La sede es obligatoria.';
+    ELSE IF NOT EXISTS (SELECT 1 FROM Torneo.SEDE WHERE id_sede = @id_sede)
+        SET @errores += @nl + N'- No existe una sede con id ' + CAST(@id_sede AS NVARCHAR(10)) + N'.';
+    ELSE
+    BEGIN
+        SELECT @faltan = STRING_AGG(CAST(t.numero AS NVARCHAR(1)), N', ')
+        FROM (VALUES (1, @tarifa_espacio_1, @espacio_1), (2, @tarifa_espacio_2, @espacio_2),
+                     (3, @tarifa_espacio_3, @espacio_3), (4, @tarifa_espacio_4, @espacio_4)) AS t (numero, tarifa, id_espacio)
+        WHERE t.tarifa IS NOT NULL AND t.id_espacio IS NULL;
+
+        IF @faltan IS NOT NULL
+            SET @errores += @nl + N'- La sede no tiene los espacios publicitarios ' + @faltan + N'.';
+    END;
+
+    IF @tarifa_espacio_1 < 0 OR @tarifa_espacio_2 < 0 OR @tarifa_espacio_3 < 0 OR @tarifa_espacio_4 < 0
+        SET @errores += @nl + N'- Las tarifas de los espacios no pueden ser negativas.';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'Torneo.usp_ModificarSede: no se pudo modificar la sede.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        -- usp_SEDE_Modificacion rechaza una llamada sin datos: solo se llama si cambia algo de la sede.
+        IF COALESCE(@nombre_estadio, @ciudad, @huso_horario) IS NOT NULL
+           OR COALESCE(@id_pais, @capacidad) IS NOT NULL
+           OR COALESCE(@latitud, @longitud) IS NOT NULL
+            EXEC Torneo.usp_SEDE_Modificacion
+                @id_sede = @id_sede, @nombre_estadio = @nombre_estadio, @ciudad = @ciudad,
+                @id_pais = @id_pais, @capacidad = @capacidad, @huso_horario = @huso_horario,
+                @latitud = @latitud, @longitud = @longitud;
+
+        IF @tarifa_espacio_1 IS NOT NULL
+            EXEC Publicidad.usp_ESPACIO_PUBLICITARIO_Modificacion @id_espacio = @espacio_1, @tarifa_usd = @tarifa_espacio_1;
+        IF @tarifa_espacio_2 IS NOT NULL
+            EXEC Publicidad.usp_ESPACIO_PUBLICITARIO_Modificacion @id_espacio = @espacio_2, @tarifa_usd = @tarifa_espacio_2;
+        IF @tarifa_espacio_3 IS NOT NULL
+            EXEC Publicidad.usp_ESPACIO_PUBLICITARIO_Modificacion @id_espacio = @espacio_3, @tarifa_usd = @tarifa_espacio_3;
+        IF @tarifa_espacio_4 IS NOT NULL
+            EXEC Publicidad.usp_ESPACIO_PUBLICITARIO_Modificacion @id_espacio = @espacio_4, @tarifa_usd = @tarifa_espacio_4;
 
         IF @tran_propia = 1 COMMIT TRANSACTION;
     END TRY

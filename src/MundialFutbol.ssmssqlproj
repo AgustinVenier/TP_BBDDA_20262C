@@ -160,6 +160,18 @@
           <AssociatedConnUserName />
           <FullPath>16_SP_Importacion.sql</FullPath>
         </FileNode>
+        <FileNode Name="17_SP_Importar_ImagenesSedes.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>17_SP_Importar_ImagenesSedes.sql</FullPath>
+        </FileNode>
+        <FileNode Name="18_SP_Consultas.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>18_SP_Consultas.sql</FullPath>
+        </FileNode>
         <FileNode Name="20_Ejecutar_DatosIniciales.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
@@ -256,11 +268,59 @@
           <AssociatedConnUserName />
           <FullPath>35_Ejecutar_Entrega9_ConsultasToBe.sql</FullPath>
         </FileNode>
+        <FileNode Name="36_Ejecutar_ImportarImagenesSedes.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>36_Ejecutar_ImportarImagenesSedes.sql</FullPath>
+        </FileNode>
         <FileNode Name="37_Ejecutar_PrepararBase.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
           <FullPath>37_Ejecutar_PrepararBase.sql</FullPath>
+        </FileNode>
+        <FileNode Name="38_Ejecutar_Cifrado.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>38_Ejecutar_Cifrado.sql</FullPath>
+        </FileNode>
+        <FileNode Name="40_Seguridad.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>40_Seguridad.sql</FullPath>
+        </FileNode>
+        <FileNode Name="41_SP_Cifrado.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>41_SP_Cifrado.sql</FullPath>
+        </FileNode>
+        <FileNode Name="42_Cifrado_Tablas.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>42_Cifrado_Tablas.sql</FullPath>
+        </FileNode>
+        <FileNode Name="43_Cifrado_Torneo.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>43_Cifrado_Torneo.sql</FullPath>
+        </FileNode>
+        <FileNode Name="44_Cifrado_DesarrolloYArbitraje.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>44_Cifrado_DesarrolloYArbitraje.sql</FullPath>
+        </FileNode>
+        <FileNode Name="45_Cifrado_Reportes.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>45_Cifrado_Reportes.sql</FullPath>
         </FileNode>
         <FileNode Name="53_Test_FuncionesYVistas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
@@ -340,6 +400,18 @@
           <AssociatedConnUserName />
           <FullPath>66_Test_SP_Importacion.sql</FullPath>
         </FileNode>
+        <FileNode Name="67_Test_SP_Importar_ImagenesSedes.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>67_Test_SP_Importar_ImagenesSedes.sql</FullPath>
+        </FileNode>
+        <FileNode Name="68_Test_SP_Consultas.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>68_Test_SP_Consultas.sql</FullPath>
+        </FileNode>
         <FileNode Name="71_Test_SP_Importar_Publicidad.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
@@ -381,48 +453,6 @@
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
           <FullPath>80_Test_SP_Reportes.sql</FullPath>
-        </FileNode>
-        <FileNode Name="40_Seguridad.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
-          <AssociatedConnUserName />
-          <FullPath>40_Seguridad.sql</FullPath>
-        </FileNode>
-        <FileNode Name="38_Ejecutar_Cifrado.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
-          <AssociatedConnUserName />
-          <FullPath>38_Ejecutar_Cifrado.sql</FullPath>
-        </FileNode>
-        <FileNode Name="41_SP_Cifrado.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
-          <AssociatedConnUserName />
-          <FullPath>41_SP_Cifrado.sql</FullPath>
-        </FileNode>
-        <FileNode Name="42_Cifrado_Tablas.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
-          <AssociatedConnUserName />
-          <FullPath>42_Cifrado_Tablas.sql</FullPath>
-        </FileNode>
-        <FileNode Name="43_Cifrado_Torneo.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
-          <AssociatedConnUserName />
-          <FullPath>43_Cifrado_Torneo.sql</FullPath>
-        </FileNode>
-        <FileNode Name="44_Cifrado_DesarrolloYArbitraje.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
-          <AssociatedConnUserName />
-          <FullPath>44_Cifrado_DesarrolloYArbitraje.sql</FullPath>
-        </FileNode>
-        <FileNode Name="45_Cifrado_Reportes.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
-          <AssociatedConnUserName />
-          <FullPath>45_Cifrado_Reportes.sql</FullPath>
         </FileNode>
         <FileNode Name="81_Test_Rol_Administrador.sql">
           <AssociatedConnectionMoniker />

@@ -11,7 +11,7 @@
 
  Fecha: 25/10/2026
  Archivo: 55_Test_SP_ABM_Torneo.sql
- Objetivo: Probar los SP de 05_SP_ABM_Torneo.sql (SEDE, SELECCION,
+ Objetivo: Probar los SP de 05_SP_ABM_Torneo.sql (SEDE, SEDE_IMAGEN, SELECCION,
            LISTA_CONVOCADOS, JUGADOR, PERSONA_CUERPO_TECNICO y PARTIDO), con
            casos exitosos y su evidencia y casos que no cumplen las
            validaciones. Requiere haber ejecutado 00 a 20 y no depende del
@@ -162,6 +162,8 @@ BEGIN
     WHILE EXISTS (SELECT 1 FROM Torneo.SEDE WHERE nombre_estadio LIKE 'Estadio Prueba ABM%')
     BEGIN
         SELECT TOP (1) @id = id_sede FROM Torneo.SEDE WHERE nombre_estadio LIKE 'Estadio Prueba ABM%';
+        IF EXISTS (SELECT 1 FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id)
+            EXEC Torneo.usp_SEDE_IMAGEN_Baja @id_sede = @id;
         EXEC Torneo.usp_SEDE_Baja @id_sede = @id;
     END;
 
@@ -266,6 +268,108 @@ SELECT 'S4 después' AS caso, id_sede, nombre_estadio, ciudad, capacidad, huso_h
 GO
 
 -- S5 necesita un partido jugado en la sede: se prueba en la sección PARTIDO, después de PA8.
+
+
+/* ============================================================================
+   SEDE_IMAGEN
+   Los SP validan el formato por los primeros bytes del archivo (la firma), así
+   que alcanza con datos que empiecen con la firma de PNG o de JPEG.
+   ============================================================================ */
+
+/* SI1 (OK) Alta de la imagen de una sede.
+   Esperado: 0 imágenes antes; después, 1 imagen PNG de 12 bytes. */
+DECLARE @id INT = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Prueba ABM');
+
+SELECT 'SI1 antes' AS caso, COUNT(*) AS imagenes FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id;
+
+EXEC Torneo.usp_SEDE_IMAGEN_Alta @id_sede = @id, @imagen = 0x89504E470D0A1A0A00000000;
+
+SELECT 'SI1 después' AS caso, id_sede, formato, DATALENGTH(imagen) AS bytes FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id;
+GO
+
+/* SI2 (ERROR) Segunda imagen para la misma sede, y que no es PNG ni JPEG (es GIF).
+   Esperado: error 50001 con 2 condiciones: la sede ya tiene imagen y la
+   imagen tiene que ser PNG o JPEG. */
+DECLARE @id INT = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Prueba ABM');
+BEGIN TRY
+    EXEC Torneo.usp_SEDE_IMAGEN_Alta @id_sede = @id, @imagen = 0x474946383961;
+    PRINT N'SI2: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'SI2';
+END CATCH;
+GO
+
+/* SI3 (ERROR) Imagen para una sede que no existe y de más de 2 MB.
+   Esperado: error 50001 con 2 condiciones: no existe la sede -1 y la imagen
+   supera los 2 MB. */
+DECLARE @grande VARBINARY(MAX) = 0x89504E470D0A1A0A
+        + CAST(REPLICATE(CAST('x' AS VARCHAR(MAX)), 2097152) AS VARBINARY(MAX));
+BEGIN TRY
+    EXEC Torneo.usp_SEDE_IMAGEN_Alta @id_sede = -1, @imagen = @grande;
+    PRINT N'SI3: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'SI3';
+END CATCH;
+GO
+
+/* SI4 (OK) Reemplazo de la imagen por una JPEG.
+   Esperado: el formato pasa de PNG a JPEG y cambian los bytes. */
+DECLARE @id INT = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Prueba ABM');
+
+SELECT 'SI4 antes' AS caso, formato, DATALENGTH(imagen) AS bytes FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id;
+
+EXEC Torneo.usp_SEDE_IMAGEN_Modificacion @id_sede = @id, @imagen = 0xFFD8FFE000104A464946;
+
+SELECT 'SI4 después' AS caso, formato, DATALENGTH(imagen) AS bytes FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id;
+GO
+
+/* SI5 (ERROR) Baja de una sede que tiene imagen.
+   Esperado: error 50001 de Torneo.usp_SEDE_Baja con 1 condición: la
+   referencia 1 registro de Torneo.SEDE_IMAGEN. */
+DECLARE @id INT = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Prueba ABM');
+BEGIN TRY
+    EXEC Torneo.usp_SEDE_Baja @id_sede = @id;
+    PRINT N'SI5: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'SI5';
+END CATCH;
+GO
+
+/* SI6 (OK) Baja de la imagen.
+   Esperado: 1 imagen antes y 0 después; la sede sigue en la base. */
+DECLARE @id INT = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Prueba ABM');
+
+SELECT 'SI6 antes' AS caso, COUNT(*) AS imagenes FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id;
+
+EXEC Torneo.usp_SEDE_IMAGEN_Baja @id_sede = @id;
+
+SELECT 'SI6 después' AS caso,
+       (SELECT COUNT(*) FROM Torneo.SEDE_IMAGEN WHERE id_sede = @id) AS imagenes,
+       (SELECT COUNT(*) FROM Torneo.SEDE WHERE id_sede = @id)        AS sedes;
+GO
+
+/* SI7 (ERROR) Quitar o reemplazar la imagen de una sede que no tiene.
+   Esperado: dos errores 50001, uno de la baja y otro de la modificación: la
+   sede no tiene imagen. */
+DECLARE @id INT = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Prueba ABM');
+BEGIN TRY
+    EXEC Torneo.usp_SEDE_IMAGEN_Baja @id_sede = @id;
+    PRINT N'SI7a: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'SI7a';
+END CATCH;
+BEGIN TRY
+    EXEC Torneo.usp_SEDE_IMAGEN_Modificacion @id_sede = @id, @imagen = 0xFFD8FFE000104A464946;
+    PRINT N'SI7b: FALLÓ, se esperaba un error de validación.';
+END TRY
+BEGIN CATCH
+    EXEC #usp_MostrarError @caso = 'SI7b';
+END CATCH;
+GO
 
 
 /* ============================================================================

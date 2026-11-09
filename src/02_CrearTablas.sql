@@ -118,6 +118,7 @@ DROP TABLE IF EXISTS Torneo.NOMBRE_ALTERNATIVO;
 DROP TABLE IF EXISTS Torneo.JUGADOR;
 DROP TABLE IF EXISTS Torneo.LISTA_CONVOCADOS;
 DROP TABLE IF EXISTS Torneo.SELECCION;
+DROP TABLE IF EXISTS Torneo.SEDE_IMAGEN;
 DROP TABLE IF EXISTS Torneo.SEDE;
 
 DROP TABLE IF EXISTS DatosGenerales.PARAMETRO_REGLAMENTO;
@@ -316,6 +317,30 @@ CREATE TABLE Torneo.SEDE (
     CONSTRAINT CK_SEDE_capacidad CHECK (capacidad > 0),
     CONSTRAINT CK_SEDE_latitud   CHECK (latitud  BETWEEN -90  AND 90),
     CONSTRAINT CK_SEDE_longitud  CHECK (longitud BETWEEN -180 AND 180)
+);
+GO
+
+
+/*
+  SEDE_IMAGEN
+  Foto de la sede para la aplicacion de escritorio. Relacion 1:0..1 con SEDE
+  (la PK es id_sede). Va en una tabla aparte para que las consultas sobre SEDE
+  (vistas, reportes, Power BI) no lean la imagen, y para que las sedes sin
+  foto no ocupen lugar. Solo PNG o JPEG, de hasta 2 MB: el formato lo deduce
+  Torneo.usp_SEDE_IMAGEN_Alta de los primeros bytes del archivo.
+*/
+CREATE TABLE Torneo.SEDE_IMAGEN (
+    id_sede      INT             NOT NULL,
+    imagen       VARBINARY(MAX)  NOT NULL,
+    formato      VARCHAR(4)      NOT NULL,
+    fecha_carga  DATETIME2(0)    NOT NULL
+        CONSTRAINT DF_SEDE_IMAGEN_fecha_carga DEFAULT SYSDATETIME(),
+
+    CONSTRAINT PK_SEDE_IMAGEN PRIMARY KEY (id_sede),
+    CONSTRAINT FK_SEDE_IMAGEN_SEDE
+        FOREIGN KEY (id_sede) REFERENCES Torneo.SEDE (id_sede),
+    CONSTRAINT CK_SEDE_IMAGEN_formato CHECK (formato IN ('PNG', 'JPEG')),
+    CONSTRAINT CK_SEDE_IMAGEN_tamanio CHECK (DATALENGTH(imagen) BETWEEN 1 AND 2097152)
 );
 GO
 
