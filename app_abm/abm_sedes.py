@@ -33,6 +33,7 @@ import io
 import os
 import re
 import tkinter as tk
+import unicodedata
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -50,12 +51,12 @@ DRIVER = os.environ.get("MUNDIAL_DRIVER", "ODBC Driver 18 for SQL Server")
 COLUMNAS = [
     # (clave, titulo, ancho, alineacion)
     ("id_sede", "ID", 50, "center"),
-    ("nombre_estadio", "Estadio", 290, "w"),
+    ("nombre_estadio", "Estadio", 250, "w"),
     ("ciudad", "Ciudad", 150, "w"),
     ("pais", "País", 130, "w"),
     ("capacidad", "Capacidad", 90, "e"),
-    ("huso", "Huso horario", 220, "w"),
-    ("espacios", "Espacios", 70, "center"),
+    ("huso", "Huso horario", 210, "w"),
+    ("espacios", "Espacios", 90, "center"),
 ]
 
 
@@ -226,6 +227,17 @@ def icono_en_barra_de_tareas(app_id):
         pass  # no es Windows
 
 
+def clave_de_orden(valor):
+    """Para ordenar la tabla: los números como números y el texto sin distinguir
+    mayúsculas ni tildes ("Ámsterdam" junto a "Amsterdam")."""
+    if valor is None:
+        return (1, "")  # los vacíos, al final
+    if isinstance(valor, (int, float, Decimal)):
+        return (0, valor)
+    sin_tildes = unicodedata.normalize("NFKD", str(valor))
+    return (0, "".join(c for c in sin_tildes if not unicodedata.combining(c)).casefold())
+
+
 def icono_lupa(lado=18):
     """Una lupa dibujada (se dibuja 4 veces más grande y se achica, para suavizar
     los bordes), gris oscuro para el tema claro y gris claro para el oscuro."""
@@ -280,6 +292,8 @@ class App(ctk.CTk):
         centrar_ventana(self, 1400, 900, minimo=(1150, 700))
         self.tiene_imagen = False
         self.id_edicion = None  # sede que se está editando en el formulario (None: alta)
+        self._orden = (None, False)  # (columna, descendente); None: el orden de la consulta
+        self._crudos = {}
 
         self.paises = {nombre: (id_pais, huso) for id_pais, nombre, huso in repo.paises()}
         # "(UTC-03:00) Argentina Standard Time" -> "Argentina Standard Time"
@@ -315,7 +329,7 @@ class App(ctk.CTk):
         self.tabla = ttk.Treeview(contenedor, columns=[c[0] for c in COLUMNAS],
                                   show="headings", style="Sedes.Treeview", selectmode="browse")
         for clave, titulo, ancho, alin in COLUMNAS:
-            self.tabla.heading(clave, text=titulo)
+            self.tabla.heading(clave, text=titulo, command=lambda c=clave: self.ordenar_por(c))
             self.tabla.column(clave, width=ancho, anchor=alin, stretch=clave == "nombre_estadio")
         self.tabla.grid(row=0, column=0, sticky="nsew")
         barra = ctk.CTkScrollbar(contenedor, command=self.tabla.yview)
@@ -537,6 +551,9 @@ class App(ctk.CTk):
     def _estilo_tabla(self):
         oscuro = ctk.get_appearance_mode() == "Dark"
         fondo, texto, cabecera = ("#2b2b2b", "#e6e6e6", "#3a3a3a") if oscuro else ("#ffffff", "#1f1f1f", "#e9edf3")
+        # Encabezado con el mouse encima y presionado: sin esto, el tema "clam" lo pinta de
+        # gris claro y el título (claro en modo oscuro) no se ve.
+        cabecera_hover, cabecera_presionada = ("#474b4f", "#1f6aa5") if oscuro else ("#d5dce6", "#c2ccda")
         estilo = ttk.Style(self)
         estilo.theme_use("clam")
         estilo.configure("Sedes.Treeview", background=fondo, fieldbackground=fondo,
@@ -545,6 +562,33 @@ class App(ctk.CTk):
                          relief="flat", font=("Segoe UI", 10, "bold"))
         estilo.map("Sedes.Treeview", background=[("selected", "#1f6aa5")],
                    foreground=[("selected", "#ffffff")])
+        estilo.map("Sedes.Treeview.Heading",
+                   background=[("pressed", cabecera_presionada), ("active", cabecera_hover)],
+                   foreground=[("pressed", "#ffffff" if oscuro else texto), ("active", texto)])
+
+    # --- Orden por columna -----------------------------------------------------
+    def ordenar_por(self, clave):
+        """Clic en un encabezado: ordena por esa columna; otro clic invierte el orden."""
+        actual, descendente = self._orden
+        self._orden = (clave, not descendente if clave == actual else False)
+        self._aplicar_orden()
+
+    def _aplicar_orden(self):
+        """Reordena las filas moviéndolas (no se borran ni se vuelven a cargar), así la
+        sede seleccionada sigue seleccionada y el formulario no se recarga."""
+        clave, descendente = self._orden
+        for c, titulo, _, _ in COLUMNAS:
+            flecha = (" ▼" if descendente else " ▲") if c == clave else ""
+            self.tabla.heading(c, text=titulo + flecha)
+        if clave is None:
+            return
+        indice = [c for c, *_ in COLUMNAS].index(clave)
+        filas = sorted(self.tabla.get_children(),
+                       key=lambda iid: clave_de_orden(self._crudos[iid][indice]), reverse=descendente)
+        for posicion, iid in enumerate(filas):
+            self.tabla.move(iid, "", posicion)
+        if self.tabla.selection():
+            self.tabla.see(self.tabla.selection()[0])
 
     def recargar(self, resaltar=None):
         try:
@@ -553,11 +597,14 @@ class App(ctk.CTk):
             messagebox.showerror("Error", str(e))
             return
         self.tabla.delete(*self.tabla.get_children())
+        self._crudos = {}  # valores sin formato de cada fila, para ordenar
         for f in filas:
             id_sede, estadio, ciudad, pais, capacidad, huso, espacios = f
+            self._crudos[str(id_sede)] = tuple(f)
             self.tabla.insert("", "end", iid=str(id_sede),
                               values=(id_sede, estadio, ciudad, pais, f"{capacidad:,}".replace(",", "."),
                                       huso, espacios))
+        self._aplicar_orden()
         self.lbl_total.configure(text=f"{len(filas)} sede(s)")
         if resaltar is not None and self.tabla.exists(str(resaltar)):
             self.tabla.selection_set(str(resaltar))
