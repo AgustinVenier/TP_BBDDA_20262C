@@ -111,17 +111,6 @@ table Plantillas
 
 		annotation SummarizationSetBy = Automatic
 
-	column fecha_nacimiento
-		dataType: dateTime
-		formatString: Short Date
-		lineageTag: db6083ee-acc5-42ab-b67b-830671d96ff5
-		summarizeBy: none
-		sourceColumn: fecha_nacimiento
-
-		annotation SummarizationSetBy = Automatic
-
-		annotation UnderlyingDateTimeDataType = Date
-
 	column activo
 		dataType: boolean
 		isHidden

@@ -63,6 +63,9 @@ VALUES
     (N'Asignar publicidad', HAS_PERMS_BY_NAME(N'Publicidad.usp_AsignarPublicidadPartido', N'OBJECT', N'EXECUTE'), 0),
     (N'Dar de alta jugadores', HAS_PERMS_BY_NAME(N'Torneo.usp_JUGADOR_Alta', N'OBJECT', N'EXECUTE'), 0),
     (N'Consultar reportes', HAS_PERMS_BY_NAME(N'Reportes.usp_Goleadores', N'OBJECT', N'EXECUTE'), 0),
+    (N'Leer los partidos (Reportes.vw_Resultados)', HAS_PERMS_BY_NAME(N'Reportes.vw_Resultados', N'OBJECT', N'SELECT'), 1),
+    (N'Leer las plantillas (Reportes.vw_Plantillas)', HAS_PERMS_BY_NAME(N'Reportes.vw_Plantillas', N'OBJECT', N'SELECT'), 1),
+    (N'Leer otro reporte (Reportes.vw_Tarjetas)', HAS_PERMS_BY_NAME(N'Reportes.vw_Tarjetas', N'OBJECT', N'SELECT'), 0),
     (N'Leer tabla de jugadores directamente', HAS_PERMS_BY_NAME(N'Torneo.JUGADOR', N'OBJECT', N'SELECT'), 0),
     (N'Insertar tarjetas directamente', HAS_PERMS_BY_NAME(N'DesarrolloPartido.AMONESTACION', N'OBJECT', N'INSERT'), 0),
     (N'Leer la vista descifrada de jugadores directamente', HAS_PERMS_BY_NAME(N'Seguridad.vw_Jugador', N'OBJECT', N'SELECT'), 0),
@@ -103,7 +106,7 @@ INSERT INTO @casos (control, esperado, sentencia) VALUES
                      suspension VARCHAR(100), partidos INT);
     INSERT INTO @x EXEC DesarrolloPartido.usp_RegistrarAmonestacion @id_partido = @p1, @tipo_tarjeta = ''AMARILLA'',
          @minuto = 10, @motivo = ''Prueba de rol'', @id_jugador = @p2;
-    SELECT @dato = CONCAT(dorsal, N''. '', apellido, N'', '', nombre, N'' - amarillas: '', amarillas) FROM @x;'),
+    SELECT @dato = CONCAT(dorsal, N''. '') + apellido + N'', '' + nombre + CONCAT(N'' - amarillas: '', amarillas) FROM @x;'),
  (N'Registrar una formación (tipo tabla DesarrolloPartido.TT_ALINEACION)', 'PERMITIDO',
   N'DECLARE @t DesarrolloPartido.TT_ALINEACION;
     EXEC DesarrolloPartido.usp_RegistrarFormacion @id_partido = @p1, @id_seleccion = NULL, @esquema_tactico = NULL,
@@ -119,8 +122,13 @@ INSERT INTO @casos (control, esperado, sentencia) VALUES
   N'EXEC Torneo.usp_JUGADOR_Alta @id_lista = NULL, @nombre = NULL, @apellido = NULL, @posicion_habitual = NULL, @dorsal = NULL;'),
  (N'Asignar la publicidad de un partido', 'DENEGADO',
   N'EXEC Publicidad.usp_AsignarPublicidadPartido @id_partido = @p1;'),
- (N'Leer Reportes.vw_Plantillas', 'DENEGADO',
-  N'SELECT TOP (1) @dato = apellido FROM Reportes.vw_Plantillas;'),
+ (N'Leer Reportes.vw_Resultados: los partidos para cargar', 'PERMITIDO',
+  N'SELECT TOP (1) @dato = CONCAT(N''Partido '', id_partido, N'': '', estado) FROM Reportes.vw_Resultados ORDER BY id_partido;'),
+ (N'Leer Reportes.vw_Plantillas: los jugadores para cargar, con el nombre descifrado', 'DESCIFRA',
+  N'SELECT TOP (1) @dato = CONCAT(id_jugador, N'' - '', dorsal, N''. '') + apellido + N'', '' + nombre
+    FROM Reportes.vw_Plantillas ORDER BY id_jugador;'),
+ (N'Leer otro reporte (Reportes.vw_Tarjetas)', 'DENEGADO',
+  N'SELECT TOP (1) @dato = persona FROM Reportes.vw_Tarjetas;'),
  (N'Leer la tabla Torneo.JUGADOR directamente', 'DENEGADO',
   N'SELECT TOP (1) @dato = CAST(id_jugador AS NVARCHAR(10)) FROM Torneo.JUGADOR;'),
  (N'Insertar una tarjeta directamente', 'DENEGADO',

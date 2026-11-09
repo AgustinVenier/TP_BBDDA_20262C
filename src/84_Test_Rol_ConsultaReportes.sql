@@ -87,8 +87,8 @@ SELECT TOP (1) @p1 = id_seleccion FROM Torneo.SELECCION ORDER BY id_seleccion;
 
 DECLARE @casos TABLE (n INT IDENTITY, control NVARCHAR(200), esperado VARCHAR(12), sentencia NVARCHAR(MAX));
 INSERT INTO @casos (control, esperado, sentencia) VALUES
- (N'Leer Reportes.vw_Plantillas: nombre, apellido y fecha de nacimiento descifrados', 'DESCIFRA',
-  N'SELECT TOP (1) @dato = CONCAT(nombre, N'' '', apellido, N'' '', fecha_nacimiento) FROM Reportes.vw_Plantillas ORDER BY id_jugador;'),
+ (N'Leer Reportes.vw_Plantillas: nombre y apellido descifrados', 'DESCIFRA',
+  N'SELECT TOP (1) @dato = nombre + N'' '' + apellido FROM Reportes.vw_Plantillas ORDER BY id_jugador;'),
  (N'Leer Reportes.vw_Tarjetas: persona amonestada descifrada', 'DESCIFRA',
   N'SELECT TOP (1) @dato = persona FROM Reportes.vw_Tarjetas ORDER BY id_amonestacion;'),
  (N'Leer Reportes.vw_DesignacionesArbitrales: árbitro descifrado', 'DESCIFRA',

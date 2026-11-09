@@ -96,7 +96,7 @@ INSERT INTO @casos (control, esperado, sentencia) VALUES
     EXEC Torneo.usp_JUGADOR_Baja @id_jugador = @p2, @motivo_baja = ''Prueba de rol'', @fecha_baja = ''2026-06-02'';
     EXEC Torneo.usp_JUGADOR_Alta @id_lista = @p1, @nombre = N''Prueba'', @apellido = N''Administrador'',
          @posicion_habitual = ''DEFENSOR'', @dorsal = 99, @fecha_nacimiento = ''2000-01-01'', @id_jugador = @id OUTPUT;
-    SELECT @dato = CONCAT(nombre, N'' '', apellido, N'' '', fecha_nacimiento) FROM Reportes.vw_Plantillas WHERE id_jugador = @id;'),
+    SELECT @dato = nombre + N'' '' + apellido FROM Reportes.vw_Plantillas WHERE id_jugador = @id;'),
  (N'Alta de una persona del cuerpo técnico', 'PERMITIDO',
   N'DECLARE @id INT;
     EXEC Torneo.usp_PERSONA_CUERPO_TECNICO_Alta @id_seleccion = @p3, @nombre = N''Prueba'', @apellido = N''Administrador'',
@@ -107,7 +107,7 @@ INSERT INTO @casos (control, esperado, sentencia) VALUES
  (N'Alta de un anunciante (Publicidad)', 'PERMITIDO',
   N'EXEC Publicidad.usp_ANUNCIANTE_Alta @razon_social = NULL, @id_pais = NULL;'),
  (N'Leer Reportes.vw_Plantillas: nombres descifrados', 'DESCIFRA',
-  N'SELECT TOP (1) @dato = CONCAT(nombre, N'' '', apellido) FROM Reportes.vw_Plantillas ORDER BY id_jugador;'),
+  N'SELECT TOP (1) @dato = nombre + N'' '' + apellido FROM Reportes.vw_Plantillas ORDER BY id_jugador;'),
  (N'Reporte XML de selecciones y plantillas: nombres descifrados', 'DESCIFRA',
   N'DECLARE @x TABLE (r XML); INSERT INTO @x EXEC Reportes.usp_SeleccionesYPlantillasXML @id_seleccion = @p3;
     SELECT @dato = LEFT(CONVERT(NVARCHAR(MAX), r.query(''(//Jugador)[1]'')), 300) FROM @x;'),

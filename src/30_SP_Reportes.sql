@@ -388,7 +388,8 @@ GO
 /*
   vw_Plantillas
   Un convocado por fila con su selección. activo = 0 son los dados de baja
-  (reemplazados).
+  (reemplazados). No incluye la fecha de nacimiento: el reporte no la pide y
+  la vista la leen roles que no la necesitan (40_Seguridad.sql).
 */
 CREATE OR ALTER VIEW Reportes.vw_Plantillas
 AS
@@ -403,7 +404,6 @@ SELECT s.id_seleccion,
        j.nombre,
        j.posicion_habitual,
        j.club_origen,
-       j.fecha_nacimiento,
        CAST(IIF(j.fecha_baja IS NULL, 1, 0) AS BIT) AS activo,
        j.fecha_baja,
        j.motivo_baja

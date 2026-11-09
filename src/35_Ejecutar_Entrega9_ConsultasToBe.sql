@@ -194,11 +194,14 @@ SELECT CONCAT(N'B3. Lista de convocados de ', pa.nombre, N': datos personales, c
 FROM Torneo.SELECCION AS s
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
 WHERE s.id_seleccion = @id_seleccion;
-SELECT dorsal, apellido, nombre, fecha_nacimiento, posicion_habitual, club_origen,
-       IIF(activo = 1, N'ACTIVO', N'BAJA') AS situacion
-FROM Reportes.vw_Plantillas
-WHERE id_seleccion = @id_seleccion
-ORDER BY CHARINDEX(LEFT(posicion_habitual, 3), 'ARQ DEF MED DEL'), dorsal;
+-- La fecha de nacimiento no está en Reportes.vw_Plantillas (la leen roles que no la
+-- necesitan): se lee de Seguridad.vw_Jugador.
+SELECT p.dorsal, p.apellido, p.nombre, j.fecha_nacimiento, p.posicion_habitual, p.club_origen,
+       IIF(p.activo = 1, N'ACTIVO', N'BAJA') AS situacion
+FROM Reportes.vw_Plantillas AS p
+INNER JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = p.id_jugador
+WHERE p.id_seleccion = @id_seleccion
+ORDER BY CHARINDEX(LEFT(p.posicion_habitual, 3), 'ARQ DEF MED DEL'), p.dorsal;
 GO
 
 -- El reemplazante hereda el dorsal salvo que se informe otro (usp_ReemplazarJugador): se

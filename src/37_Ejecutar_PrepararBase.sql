@@ -38,8 +38,13 @@
    4. 31_Ejecutar_ImportarMundial2026.sql   el torneo, con errores parciales
    5. 32_Ejecutar_DatosComplementarios.sql  lo que las fuentes no traen
    6. 33_Ejecutar_SedesAdicionales.sql      sedes propias del juego de datos
-   7. 38_Ejecutar_Cifrado.sql               cifrado de los datos personales
-   8. 81 a 85_Test_*.sql                    permisos por rol y cifrado
+   7. 53 a 80_Test_*.sql                    tests de las entregas 5 a 7, antes de cifrar
+   8. 38_Ejecutar_Cifrado.sql               cifrado de los datos personales
+   9. 81 a 85_Test_*.sql                    permisos por rol y cifrado
+  10. 35_Ejecutar_Entrega9_ConsultasToBe.sql  lee las vistas descifradas que crea 38
+
+ Los tests 53 a 80 van antes del cifrado: después, los que buscan personas por
+ nombre en las tablas no las encuentran y su limpieza deja datos de prueba.
 */
 
 -- CAMBIAR: ruta de la carpeta src\ del repositorio en tu máquina, terminada en \ (ver "Antes de ejecutar").

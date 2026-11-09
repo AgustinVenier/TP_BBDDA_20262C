@@ -125,8 +125,12 @@ BEGIN TRY
     INSERT INTO @controles (control, esperado, obtenido)
     SELECT N'Alta con usp_JUGADOR_Alta: dato guardado', N'varbinary', IIF(@guardado IS NULL, N'NULL', N'varbinary');
     INSERT INTO @controles (control, esperado, obtenido)
-    SELECT N'Alta con usp_JUGADOR_Alta: leído en Reportes.vw_Plantillas', N'Ñandú Pérez Cifrado 2001-02-03',
+    SELECT N'Alta con usp_JUGADOR_Alta: leído en Seguridad.vw_Jugador', N'Ñandú Pérez Cifrado 2001-02-03',
            CONCAT(nombre, N' ', apellido, N' ', fecha_nacimiento)
+    FROM Seguridad.vw_Jugador WHERE id_jugador = @id;
+    INSERT INTO @controles (control, esperado, obtenido)
+    SELECT N'Alta con usp_JUGADOR_Alta: leído en Reportes.vw_Plantillas', N'Ñandú Pérez Cifrado',
+           CONCAT(nombre, N' ', apellido)
     FROM Reportes.vw_Plantillas WHERE id_jugador = @id;
     EXEC Torneo.usp_JUGADOR_Alta @id_lista = @id_lista, @nombre = N'Ñandú', @apellido = N'Pérez Cifrado',
          @posicion_habitual = 'DEFENSOR', @dorsal = 98;

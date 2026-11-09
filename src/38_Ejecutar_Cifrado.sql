@@ -21,6 +21,10 @@
  31, 32 y 33). Ejecuta 41 a 45. Después van los tests 81 a 85. Se puede
  ejecutar más de una vez: lo que ya está cifrado no se vuelve a cifrar.
 
+ Los tests de las entregas anteriores (53 a 80) se ejecutan ANTES que este
+ script: después del cifrado, los que buscan personas por nombre en las
+ tablas no las encuentran y su limpieza deja datos de prueba.
+
  Antes de ejecutar:
    - En SSMS, activar el modo SQLCMD: menú Query > SQLCMD Mode.
    - CAMBIAR la ruta de :setvar src por la carpeta src\ del repositorio en tu

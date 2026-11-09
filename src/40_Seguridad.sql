@@ -31,6 +31,8 @@
    rol_AdministradorOperativo  ABM y SP de negocio de todos los módulos, y reportes.
    rol_CargadorResultados      Iniciar y finalizar partidos, y registrar
                                formaciones, cambios, goles y amonestaciones.
+                               Lee los partidos y las plantillas, para saber
+                               qué cargar; el resto de los reportes, no.
    rol_GestorPublicidad        ABM y asignación de publicidad, y sus reportes.
    rol_ConsultaReportes        Solo las vistas y los SP de Reportes.
 
@@ -40,7 +42,7 @@
  través de un SP o una vista. Por eso, cuando las claves ya existen, el SP da
  permiso para usarlas a los roles que trabajan con datos personales:
    rol_AdministradorOperativo  cifrar y descifrar (da de alta y modifica personas).
-   rol_CargadorResultados      descifrar (los nombres en formaciones, tarjetas y avisos).
+   rol_CargadorResultados      descifrar (los nombres en formaciones, tarjetas, avisos y plantillas).
    rol_ConsultaReportes        descifrar (los nombres en los reportes).
    rol_GestorPublicidad        ninguno: no trabaja con datos personales.
  38_Ejecutar_Cifrado.sql vuelve a ejecutar el SP después de crear las claves.
@@ -123,6 +125,13 @@ BEGIN
     GRANT EXECUTE ON OBJECT::DesarrolloPartido.usp_RegistrarGol TO rol_CargadorResultados;
     GRANT EXECUTE ON OBJECT::DesarrolloPartido.usp_RegistrarAmonestacion TO rol_CargadorResultados;
     GRANT EXECUTE ON TYPE::DesarrolloPartido.TT_ALINEACION TO rol_CargadorResultados;
+
+    /* Para saber qué cargar, el cargador lee dos vistas de Reportes: los
+       partidos (id, selecciones y estado) y las plantillas (id, dorsal, nombre
+       y posición de cada jugador; sin la fecha de nacimiento). El resto de los
+       reportes no. Los tipos de gol son un catálogo fijo (20_Ejecutar_DatosIniciales.sql). */
+    GRANT SELECT ON OBJECT::Reportes.vw_Resultados TO rol_CargadorResultados;
+    GRANT SELECT ON OBJECT::Reportes.vw_Plantillas TO rol_CargadorResultados;
 
     /* Gestor de publicidad: ABM, asignación y reportes de su módulo. */
     GRANT EXECUTE ON SCHEMA::Publicidad TO rol_GestorPublicidad;
