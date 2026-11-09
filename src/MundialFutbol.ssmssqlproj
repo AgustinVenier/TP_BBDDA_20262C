@@ -388,11 +388,41 @@
           <AssociatedConnUserName />
           <FullPath>40_Seguridad.sql</FullPath>
         </FileNode>
-        <FileNode Name="41_Activar_CifradoTDE.sql">
+        <FileNode Name="38_Ejecutar_Cifrado.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>41_Activar_CifradoTDE.sql</FullPath>
+          <FullPath>38_Ejecutar_Cifrado.sql</FullPath>
+        </FileNode>
+        <FileNode Name="41_SP_Cifrado.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>41_SP_Cifrado.sql</FullPath>
+        </FileNode>
+        <FileNode Name="42_Cifrado_Tablas.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>42_Cifrado_Tablas.sql</FullPath>
+        </FileNode>
+        <FileNode Name="43_Cifrado_Torneo.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>43_Cifrado_Torneo.sql</FullPath>
+        </FileNode>
+        <FileNode Name="44_Cifrado_DesarrolloYArbitraje.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>44_Cifrado_DesarrolloYArbitraje.sql</FullPath>
+        </FileNode>
+        <FileNode Name="45_Cifrado_Reportes.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>45_Cifrado_Reportes.sql</FullPath>
         </FileNode>
         <FileNode Name="81_Test_Rol_Administrador.sql">
           <AssociatedConnectionMoniker />
@@ -418,11 +448,11 @@
           <AssociatedConnUserName />
           <FullPath>84_Test_Rol_ConsultaReportes.sql</FullPath>
         </FileNode>
-        <FileNode Name="85_Test_CifradoTDE.sql">
+        <FileNode Name="85_Test_Cifrado.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>85_Test_CifradoTDE.sql</FullPath>
+          <FullPath>85_Test_Cifrado.sql</FullPath>
         </FileNode>
       </Items>
     </LogicalFolder>

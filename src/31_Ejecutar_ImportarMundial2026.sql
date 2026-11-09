@@ -144,11 +144,12 @@ BEGIN
     INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
     WHERE pa.codigo_fifa = @codigo_fifa;
 
-    SELECT @id_jugador = j.id_jugador
-    FROM Torneo.JUGADOR AS j
-    INNER JOIN Torneo.LISTA_CONVOCADOS AS lc ON lc.id_lista = j.id_lista
-    WHERE lc.id_seleccion = @id_seleccion
-      AND j.nombre = @nombre COLLATE DATABASE_DEFAULT AND j.apellido = @apellido COLLATE DATABASE_DEFAULT;
+    -- El jugador se busca en Reportes.vw_Plantillas, que devuelve el nombre y el apellido
+    -- legibles también con los datos personales cifrados (Entrega 8).
+    SELECT @id_jugador = p.id_jugador
+    FROM Reportes.vw_Plantillas AS p
+    WHERE p.id_seleccion = @id_seleccion
+      AND p.nombre = @nombre COLLATE DATABASE_DEFAULT AND p.apellido = @apellido COLLATE DATABASE_DEFAULT;
 
     IF @nombre IS NOT NULL AND @id_jugador IS NULL
     BEGIN

@@ -81,12 +81,14 @@ class Repositorio:
                ORDER BY p.nombre""")
         return cur.fetchall()
 
-    def jugadores(self, id_lista):
+    def jugadores(self, id_seleccion):
+        # Lee la vista Reportes.vw_Plantillas (una lista por seleccion): con los datos
+        # personales cifrados (Entrega 8), la vista los devuelve descifrados.
         cur = self._ejecutar(
             """SELECT id_jugador, dorsal, nombre, apellido, posicion_habitual,
                       club_origen, fecha_baja
-               FROM Torneo.JUGADOR WHERE id_lista = ?
-               ORDER BY dorsal""", (id_lista,))
+               FROM Reportes.vw_Plantillas WHERE id_seleccion = ?
+               ORDER BY dorsal""", (id_seleccion,))
         return cur.fetchall()
 
     def max_convocados(self):
@@ -445,7 +447,7 @@ class App(ctk.CTk):
 
     def _recargar(self, resaltar=None):
         try:
-            self.jugadores = self.repo.jugadores(self.sel.id_lista)
+            self.jugadores = self.repo.jugadores(self.sel.id_seleccion)
         except ErrorBD as e:
             messagebox.showerror("Error", str(e))
             return

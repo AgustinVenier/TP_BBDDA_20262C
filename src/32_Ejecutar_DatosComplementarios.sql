@@ -209,11 +209,16 @@ VALUES ('ALG', 'ar,fr'), ('ANG', 'pt'), ('ARG', 'es'), ('AUT', 'de'), ('BEL', 'f
        ('QAT', 'ar'), ('ROU', 'ro'), ('SEN', 'fr'), ('SLV', 'es'), ('SUI', 'de,fr'), ('SVN', 'sl'),
        ('SWE', 'sv'), ('TUN', 'ar,fr'), ('UAE', 'ar'), ('URU', 'es'), ('UZB', 'uz'), ('VEN', 'es');
 
--- Solo los árbitros que todavía no tienen idiomas; la categoría es la que ya tienen.
+-- Solo los árbitros que todavía no tienen idiomas; la categoría es la que ya tienen. El nombre y
+-- el apellido salen de Arbitraje.vw_HistorialArbitro, que los devuelve legibles también con los
+-- datos personales cifrados (Entrega 8); todos los árbitros tienen designaciones, porque se
+-- cargan desde el archivo de designaciones (31).
 INSERT INTO #staging_arbitros (id_registro, codigo_fifa, nombre, apellido, categoria, idiomas)
-SELECT ROW_NUMBER() OVER (ORDER BY a.id_arbitro), pa.codigo_fifa, a.nombre, a.apellido, a.categoria,
+SELECT ROW_NUMBER() OVER (ORDER BY a.id_arbitro), pa.codigo_fifa, h.nombre, h.apellido, a.categoria,
        CONCAT(ip.idiomas + ',', 'en')
 FROM Arbitraje.ARBITRO AS a
+INNER JOIN (SELECT DISTINCT id_arbitro, nombre, apellido FROM Arbitraje.vw_HistorialArbitro) AS h
+        ON h.id_arbitro = a.id_arbitro
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = a.id_pais
 LEFT JOIN @idiomas_pais AS ip ON ip.codigo_fifa = pa.codigo_fifa
 WHERE NOT EXISTS (SELECT 1 FROM Arbitraje.ARBITRO_IDIOMA AS ai WHERE ai.id_arbitro = a.id_arbitro);
