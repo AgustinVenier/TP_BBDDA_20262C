@@ -29,6 +29,9 @@
         DENEGADO     SQL Server lo rechazó por permisos.
         DESCIFRA     lee los datos personales legibles.
         NO DESCIFRA  los lee como NULL (sin permiso sobre la clave).
+        ERROR        falló con un error del motor que no es de permisos
+                     ni una validación de SP (número menor que 50000):
+                     la sentencia del caso está mal, no el permiso.
  Si algún caso no da lo esperado, el script termina con error.
 */
 
@@ -160,6 +163,7 @@ BEGIN
     INSERT INTO @res (n, control, esperado, obtenido, detalle)
     SELECT n, control, esperado,
            CASE WHEN @err IN (229, 230, 262, 297, 300, 15151, 15247) THEN 'DENEGADO'
+                WHEN @err <> 0 AND @err < 50000 THEN 'ERROR'   -- falla del test, no un permiso ni una validación
                 WHEN esperado IN ('DESCIFRA', 'NO DESCIFRA') AND @err = 0 THEN IIF(@dato IS NULL, 'NO DESCIFRA', 'DESCIFRA')
                 ELSE 'PERMITIDO' END,
            REPLACE(REPLACE(ISNULL(@dato, @msg), CHAR(13), N' '), CHAR(10), N'')
