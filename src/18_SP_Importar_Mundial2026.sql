@@ -251,6 +251,14 @@ BEGIN
               huso NVARCHAR(50) '$.timezone', capacidad NVARCHAR(50) '$.capacity',
               coordenadas NVARCHAR(100) '$.coords') AS d;
 
+    -- El archivo no trae tarifas: las de lista son solo para las sedes nuevas. A una sede que ya
+    -- existe no se le tocan (usp_CargarSedes deja igual las tarifas que vienen en NULL), así
+    -- reimportar el archivo no pisa las tarifas cargadas después (33_Cargar_DatosComplementarios.sql).
+    UPDATE st
+    SET tarifa_1 = NULL, tarifa_2 = NULL, tarifa_3 = NULL, tarifa_4 = NULL
+    FROM #staging_sedes AS st
+    INNER JOIN Torneo.SEDE AS s ON s.nombre_estadio = st.nombre_estadio;
+
     -- País: el único con ese código ISO alfa-2.
     UPDATE st
     SET codigo_fifa = (SELECT MAX(p.codigo_fifa) FROM DatosGenerales.PAIS AS p
