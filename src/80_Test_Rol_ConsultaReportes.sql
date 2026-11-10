@@ -95,7 +95,7 @@ INSERT INTO @casos (control, esperado, sentencia) VALUES
  (N'Leer Reportes.vw_Tarjetas: persona amonestada descifrada', 'DESCIFRA',
   N'SELECT TOP (1) @dato = apellido + N'', '' + nombre FROM Reportes.vw_Tarjetas ORDER BY id_amonestacion;'),
  (N'Leer Reportes.vw_DesignacionesArbitrales: árbitro descifrado', 'DESCIFRA',
-  N'SELECT TOP (1) @dato = apellido + N'', '' + nombre FROM Reportes.vw_DesignacionesArbitrales ORDER BY id_partido, rol;'),
+  N'SELECT TOP (1) @dato = arbitro FROM Reportes.vw_DesignacionesArbitrales ORDER BY id_partido, rol;'),
  (N'Reporte XML de selecciones y plantillas: nombres descifrados', 'DESCIFRA',
   N'DECLARE @x TABLE (r XML); INSERT INTO @x EXEC Reportes.usp_SeleccionesYPlantillasXML @id_seleccion = @p1;
     SELECT @dato = LEFT(CONVERT(NVARCHAR(MAX), r.query(''(//DirectorTecnico)[1]'')), 300) FROM @x;'),

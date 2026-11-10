@@ -60,6 +60,16 @@ BEGIN
     SET NOEXEC ON;
 END;
 GO
+-- Las personas se leen de las vistas descifradas que crea el cifrado (40 a 45): sin ellas,
+-- cada consulta fallaría con "Invalid object name".
+IF OBJECT_ID(N'Seguridad.vw_Jugador', N'V') IS NULL
+   OR OBJECT_ID(N'Seguridad.vw_PersonaCuerpoTecnico', N'V') IS NULL
+   OR OBJECT_ID(N'Seguridad.vw_Arbitro', N'V') IS NULL
+BEGIN
+    RAISERROR(N'Falta el cifrado de los datos personales: ejecutar 40_Ejecutar_Cifrado.sql antes de este script.', 16, 1);
+    SET NOEXEC ON;
+END;
+GO
 
 
 /* ============================================================================
