@@ -85,21 +85,9 @@ Las importaciones que leen archivos del servidor (`BULK INSERT`, `OPENROWSET(BUL
 
 ## Política de respaldos
 
-El objetivo de punto de recuperación (RPO) se ajusta al volumen de escrituras, que es mucho mayor los días de partido:
+La política de respaldo (RPO, plan de backups, retención, ubicación de las copias y verificación) está en [`Politica-de-Respaldo-Entrega-8.md`](Politica-de-Respaldo-Entrega-8.md). Acá queda solo lo que el cifrado le agrega a una restauración:
 
-| Situación | Completo | Diferencial | Log de transacciones | RPO máximo |
-|---|---|---|---|---|
-| Días con partidos | Diario, 01:00 | Cada 6 horas | Cada 5 minutos | 5 minutos |
-| Días sin partidos | Diario, 01:00 | Cada 12 horas | Cada 15 minutos | 15 minutos |
-
-La base usa recuperación `FULL`, así que los backups del log se ejecutan de forma regular. Si se interrumpe esa cadena, no se mantiene el RPO hasta hacer un nuevo backup completo y restablecer la secuencia.
-
-- Guardar los backups en un volumen distinto del de los archivos `.mdf` y `.ldf`. Copiar cada backup a un segundo medio y a una ubicación fuera del servidor (regla 3-2-1), y restringir el acceso a los operadores de backup.
-- Usar `CHECKSUM` en cada backup, y `COMPRESSION` en la plataforma del TP4 (SQL Server 2022 Standard); Express no comprime backups. `RESTORE VERIFYONLY` comprueba que el backup se pueda leer. Además, ejecutar `DBCC CHECKDB` cada semana y restaurar una copia en un servidor aislado al menos una vez por mes.
-- Retener los completos, diferenciales y logs durante 35 días. Borrar una cadena solo cuando ya no haga falta para llegar a un punto de restauración dentro de ese plazo.
-- Para recuperar a un instante: restaurar el último completo con `NORECOVERY`, el diferencial más reciente posterior a ese completo con `NORECOVERY` y los backups de log en orden. Usar `STOPAT` si se necesita un instante puntual, y terminar con `RECOVERY`.
 - Las columnas cifradas siguen cifradas en los backups, y la clave maestra, el certificado y la clave simétrica viajan con la base. Al restaurar en otra instancia, la clave maestra no se abre sola: hay que abrirla con su contraseña (`OPEN MASTER KEY DECRYPTION BY PASSWORD`) y volver a protegerla con la clave maestra del servicio de esa instancia (`ALTER MASTER KEY ADD ENCRYPTION BY SERVICE MASTER KEY`). Por eso la contraseña de la clave maestra se guarda junto con el backup del certificado.
-- Registrar el resultado, la duración, el tamaño y la ubicación de cada backup. La restauración mensual de prueba sirve para medir el RTO real y para detectar fallas que un backup que nunca se restauró no muestra.
 
 ## Orden de ejecución y pruebas
 

@@ -995,7 +995,7 @@ GO
   IMPORTACION
   Una fila por cada vez que un proceso importa un archivo o una respuesta de
   una API: el SP que importo (o el script, en una carga a mano como la de
-  29), el origen (ruta del archivo o URL), cuando y el resumen. Los totales cuentan los registros del origen (en
+  31_Importar_APIs.sql), el origen (ruta del archivo o URL), cuando y el resumen. Los totales cuentan los registros del origen (en
   usp_ImportarPartidosJSON, los partidos y lo que paso en cada uno; en un
   reproceso, solo los partidos que se reprocesan; en
   usp_ImportarDesignacionesCSV, las designaciones, sin los arbitros), salvo
