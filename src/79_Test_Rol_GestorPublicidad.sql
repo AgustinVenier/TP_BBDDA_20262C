@@ -9,35 +9,45 @@
    Tavella, Tomás - TomasTavella
    Venier, Agustin - AgustinVenier
 
- Fecha: 08/11/2026
+ Fecha: 10/11/2026
  Archivo: 79_Test_Rol_GestorPublicidad.sql
- Objetivo: Demostrar los permisos que tiene y que no tiene el usuario
+ Objetivo: Probar lo que puede y lo que no puede hacer el usuario
            usr_test_gestor_publicidad (rol_GestorPublicidad).
 ================================================================================
 
  Requiere haber ejecutado 00_Ejecutar_PrepararBase.sql (roles), las
- importaciones y 40_Ejecutar_Cifrado.sql. Los usuarios usr_test_* son
- principals SIN LOGIN; solo sirven para impersonación de prueba.
+ importaciones y 40_Ejecutar_Cifrado.sql.
 
- Dos partes:
-   1. Permisos declarados (HAS_PERMS_BY_NAME), incluidos los de la clave de
-      cifrado.
-   2. Ejecución real: cada caso se ejecuta como el usuario (EXECUTE AS USER)
-      dentro de una transacción que se deshace, así no queda nada. Resultados:
-        PERMITIDO    se ejecutó, o pasó el control de permisos y lo rechazó la
-                     validación del SP (se ve el mensaje).
-        DENEGADO     SQL Server lo rechazó por permisos.
-        DESCIFRA     lee los datos personales legibles.
-        NO DESCIFRA  los lee como NULL (sin permiso sobre la clave).
- Este rol no trabaja con datos personales: aunque tuviera los bytes cifrados
- de un nombre, no puede descifrarlos.
- Si algún caso no da lo esperado, el script termina con error.
+ usr_test_gestor_publicidad es un usuario SIN LOGIN: nadie puede iniciar
+ sesión con él. Cada caso se ejecuta "como" ese usuario con EXECUTE AS USER y
+ vuelve a dbo con REVERT.
+
+ Cada caso imprime una línea en la pestaña Mensajes:
+   OK     el usuario pudo hacer lo que debe poder, o fue rechazado en lo
+          que no debe poder (se muestra el mensaje de SQL Server).
+   ERROR  pasó lo contrario de lo esperado.
+ El test está bien si ninguna línea empieza con ERROR.
+
+ Lo que PUEDE hacer: los ABM y la asignación de publicidad, y sus reportes
+ (ocupación publicitaria e ingresos por moneda); y consultar los países
+ (DatosGenerales.usp_ConsultarPaises).
+ Lo que NO PUEDE hacer: los reportes deportivos, los ABM de otros módulos,
+ leer o modificar las tablas, ni descifrar los datos personales: no trabaja
+ con ellos.
+
+ Los SP que puede ejecutar se prueban de dos formas:
+   - El alta de un anunciante se hace de verdad, dentro de una transacción
+     que se deshace al final del caso: no queda guardada.
+   - La asignación recibe un partido que no existe (id -1): pasa el control
+     de permisos y la rechaza la validación del SP (error 50000 o mayor),
+     sin guardar nada. Si el rechazo fuera por permisos (error 229), el caso
+     da ERROR.
+ Los casos que no debe poder hacer tampoco cambian nada aunque el permiso
+ estuviera mal dado: datos vacíos o un UPDATE sin filas (WHERE 1 = 0).
 */
 
 USE MundialFutbol;
-SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los índices filtrados y los métodos XML lo necesitan en ON
-GO
-
+SET QUOTED_IDENTIFIER ON;
 SET NOCOUNT ON;
 GO
 
@@ -49,104 +59,204 @@ IF NOT EXISTS (SELECT 1 FROM Torneo.JUGADOR)
     THROW 51013, N'No hay datos del torneo cargados. Ejecute primero las importaciones (30 a 35).', 1;
 GO
 
-/* 1. Permisos declarados. */
-DECLARE @permisos TABLE (
-    control     NVARCHAR(180) NOT NULL,
-    permitido   BIT           NULL,
-    esperado    BIT           NOT NULL
-);
-
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
-INSERT INTO @permisos (control, permitido, esperado)
-VALUES
-    (N'Administrar piezas publicitarias', HAS_PERMS_BY_NAME(N'Publicidad.usp_RegistrarPiezaPublicitaria', N'OBJECT', N'EXECUTE'), 1),
-    (N'Asignar publicidad a partidos', HAS_PERMS_BY_NAME(N'Publicidad.usp_AsignarPublicidadPartido', N'OBJECT', N'EXECUTE'), 1),
-    (N'Consultar ocupación publicitaria', HAS_PERMS_BY_NAME(N'Reportes.usp_OcupacionPublicitaria', N'OBJECT', N'EXECUTE'), 1),
-    (N'Leer la vista de ingresos por moneda', HAS_PERMS_BY_NAME(N'Reportes.vw_IngresosPublicitariosPorMoneda', N'OBJECT', N'SELECT'), 1),
-    (N'Consultar reportes deportivos', HAS_PERMS_BY_NAME(N'Reportes.usp_Goleadores', N'OBJECT', N'EXECUTE'), 0),
-    (N'Leer las plantillas', HAS_PERMS_BY_NAME(N'Reportes.vw_Plantillas', N'OBJECT', N'SELECT'), 0),
-    (N'Leer anunciantes directamente', HAS_PERMS_BY_NAME(N'Publicidad.ANUNCIANTE', N'OBJECT', N'SELECT'), 0),
-    (N'Modificar exhibiciones directamente', HAS_PERMS_BY_NAME(N'Publicidad.EXHIBICION', N'OBJECT', N'UPDATE'), 0),
-    (N'Ver la clave de cifrado', HAS_PERMS_BY_NAME(N'ClaveDatosPersonales', N'SYMMETRIC KEY', N'VIEW DEFINITION'), 0),
-    (N'Usar el certificado (para descifrar)', HAS_PERMS_BY_NAME(N'CertDatosPersonales', N'CERTIFICATE', N'CONTROL'), 0);
-REVERT;
-
-SELECT control,
-       permitido AS permiso_efectivo,
-       esperado AS permiso_esperado,
-       CASE WHEN ISNULL(permitido, 0) = esperado THEN N'OK' ELSE N'FALLÓ' END AS resultado
-FROM @permisos
-ORDER BY control;
-
-IF EXISTS (SELECT 1 FROM @permisos WHERE ISNULL(permitido, 0) <> esperado)
-    THROW 51011, N'La matriz de permisos no coincide con lo esperado para este rol.', 1;
+PRINT N'=== Lo que PUEDE hacer usr_test_gestor_publicidad ===';
 GO
 
-/* 2. Ejecución real. Los datos de prueba los busca dbo: el rol no puede leer las tablas. */
-DECLARE @usuario SYSNAME = N'usr_test_gestor_publicidad';
-DECLARE @p1 INT, @p2 INT, @p3 INT, @cifrado VARBINARY(256);
 
-SELECT TOP (1) @p1 = id_partido FROM Torneo.PARTIDO ORDER BY id_partido;
-SELECT TOP (1) @cifrado = apellido FROM Torneo.JUGADOR ORDER BY id_jugador;   -- el apellido guardado (cifrado) de un jugador
+/* Caso 1: PUEDE leer la ocupación publicitaria. */
+EXECUTE AS USER = N'usr_test_gestor_publicidad';
+BEGIN TRY
+    SELECT TOP (5) * FROM Reportes.vw_OcupacionPublicitaria;
+    PRINT N'OK     1. Puede leer Reportes.vw_OcupacionPublicitaria.';
+END TRY
+BEGIN CATCH
+    PRINT N'ERROR  1. No pudo leer Reportes.vw_OcupacionPublicitaria: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
 
-DECLARE @casos TABLE (n INT IDENTITY, control NVARCHAR(200), esperado VARCHAR(12), sentencia NVARCHAR(MAX));
-INSERT INTO @casos (control, esperado, sentencia) VALUES
- (N'Alta de un anunciante', 'PERMITIDO',
-  N'EXEC Publicidad.usp_ANUNCIANTE_Alta @razon_social = NULL, @id_pais = NULL;'),
- (N'Asignar la publicidad de un partido', 'PERMITIDO',
-  N'EXEC Publicidad.usp_AsignarPublicidadPartido @id_partido = @p1, @mostrar = 0;'),
- (N'Leer la ocupación publicitaria', 'PERMITIDO',
-  N'SELECT @dato = CONCAT(COUNT(*), N'' filas'') FROM Reportes.vw_OcupacionPublicitaria;'),
- (N'Leer los ingresos por moneda', 'PERMITIDO',
-  N'SELECT @dato = CONCAT(COUNT(*), N'' filas'') FROM Reportes.vw_IngresosPublicitariosPorMoneda;'),
- (N'Leer Reportes.vw_Plantillas (datos personales)', 'DENEGADO',
-  N'SELECT TOP (1) @dato = apellido FROM Reportes.vw_Plantillas;'),
- (N'Leer Reportes.vw_Goles', 'DENEGADO',
-  N'SELECT TOP (1) @dato = jugador FROM Reportes.vw_Goles;'),
- (N'Dar de alta un jugador', 'DENEGADO',
-  N'EXEC Torneo.usp_JUGADOR_Alta @id_lista = NULL, @nombre = NULL, @apellido = NULL, @posicion_habitual = NULL, @dorsal = NULL;'),
- (N'Leer la tabla Publicidad.ANUNCIANTE directamente', 'DENEGADO',
-  N'SELECT TOP (1) @dato = razon_social FROM Publicidad.ANUNCIANTE;'),
- (N'Descifrar el apellido cifrado de un jugador (con los bytes en mano)', 'NO DESCIFRA',
-  N'SELECT @dato = CONVERT(NVARCHAR(60), DECRYPTBYKEYAUTOCERT(CERT_ID(N''CertDatosPersonales''), NULL, @cifrado));'),
- (N'Abrir la clave de cifrado', 'DENEGADO',
-  N'OPEN SYMMETRIC KEY ClaveDatosPersonales DECRYPTION BY CERTIFICATE CertDatosPersonales;');
 
-DECLARE @res TABLE (n INT, control NVARCHAR(200), esperado VARCHAR(12), obtenido VARCHAR(12), detalle NVARCHAR(400));
-DECLARE @i INT = 1, @sql NVARCHAR(MAX), @dato NVARCHAR(400), @err INT, @msg NVARCHAR(400);
-WHILE @i <= (SELECT MAX(n) FROM @casos)
-BEGIN
-    SELECT @sql = sentencia FROM @casos WHERE n = @i;
-    SELECT @dato = NULL, @err = 0, @msg = NULL;
-    BEGIN TRANSACTION;
-    EXECUTE AS USER = @usuario;
-    BEGIN TRY
-        EXEC sys.sp_executesql @sql,
-             N'@dato NVARCHAR(400) OUTPUT, @p1 INT, @p2 INT, @p3 INT, @cifrado VARBINARY(256)',
-             @dato = @dato OUTPUT, @p1 = @p1, @p2 = @p2, @p3 = @p3, @cifrado = @cifrado;
-    END TRY
-    BEGIN CATCH
-        SELECT @err = ERROR_NUMBER(), @msg = LEFT(ERROR_MESSAGE(), 400);
-    END CATCH;
-    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;   -- antes de REVERT: deshace lo que hizo el caso
-    REVERT;
-    INSERT INTO @res (n, control, esperado, obtenido, detalle)
-    SELECT n, control, esperado,
-           CASE WHEN @err IN (229, 230, 262, 297, 300, 15151, 15247) THEN 'DENEGADO'
-                WHEN esperado IN ('DESCIFRA', 'NO DESCIFRA') AND @err = 0 THEN IIF(@dato IS NULL, 'NO DESCIFRA', 'DESCIFRA')
-                ELSE 'PERMITIDO' END,
-           REPLACE(REPLACE(ISNULL(@dato, @msg), CHAR(13), N' '), CHAR(10), N'')
-    FROM @casos WHERE n = @i;
-    SET @i += 1;
-END;
-IF EXISTS (SELECT 1 FROM sys.openkeys) CLOSE ALL SYMMETRIC KEYS;
+/* Caso 2: PUEDE leer los ingresos publicitarios por moneda. */
+EXECUTE AS USER = N'usr_test_gestor_publicidad';
+BEGIN TRY
+    SELECT TOP (5) partido, sede, ingresos_usd, codigo_moneda, ingresos_en_moneda
+    FROM Reportes.vw_IngresosPublicitariosPorMoneda;
+    PRINT N'OK     2. Puede leer Reportes.vw_IngresosPublicitariosPorMoneda.';
+END TRY
+BEGIN CATCH
+    PRINT N'ERROR  2. No pudo leer Reportes.vw_IngresosPublicitariosPorMoneda: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
 
-SELECT n, control, esperado, obtenido,
-       IIF(esperado = obtenido, N'OK', N'FALLÓ') AS resultado,
-       detalle
-FROM @res
-ORDER BY n;
 
-IF EXISTS (SELECT 1 FROM @res WHERE esperado <> obtenido)
-    THROW 51013, N'La ejecución real no coincide con lo esperado para este rol.', 1;
+/* Caso 3: PUEDE ejecutar el reporte de ocupación publicitaria. */
+EXECUTE AS USER = N'usr_test_gestor_publicidad';
+BEGIN TRY
+    EXEC Reportes.usp_OcupacionPublicitaria;
+    PRINT N'OK     3. Puede ejecutar Reportes.usp_OcupacionPublicitaria.';
+END TRY
+BEGIN CATCH
+    PRINT N'ERROR  3. No pudo ejecutar Reportes.usp_OcupacionPublicitaria: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 4: PUEDE consultar los países (DatosGenerales.usp_ConsultarPaises)
+   para elegir el del anunciante, y dar de alta un anunciante. Se da de alta de verdad y se deshace al
+   final. */
+EXECUTE AS USER = N'usr_test_gestor_publicidad';
+BEGIN TRANSACTION;
+BEGIN TRY
+    DECLARE @id_pais SMALLINT, @id_anunciante INT;
+    DECLARE @paises TABLE (id_pais SMALLINT, nombre VARCHAR(60), codigo_fifa CHAR(3), huso_horario VARCHAR(50));
+
+    INSERT INTO @paises EXEC DatosGenerales.usp_ConsultarPaises;
+    SELECT TOP (5) id_pais, nombre, codigo_fifa FROM @paises ORDER BY nombre;
+    SELECT TOP (1) @id_pais = id_pais FROM @paises ORDER BY nombre;
+
+    EXEC Publicidad.usp_ANUNCIANTE_Alta @razon_social = N'Anunciante de prueba de rol', @id_pais = @id_pais,
+                                        @id_anunciante = @id_anunciante OUTPUT;
+    PRINT CONCAT(N'OK     4. Puede consultar los países y dar de alta un anunciante con Publicidad.usp_ANUNCIANTE_Alta (id ', @id_anunciante, N'; se deshace).');
+END TRY
+BEGIN CATCH
+    PRINT N'ERROR  4. No pudo consultar los países o dar de alta el anunciante: ' + ERROR_MESSAGE();
+END CATCH;
+IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;   -- deshace el anunciante de prueba
+REVERT;
+GO
+
+
+/* Caso 5: PUEDE asignar la publicidad de un partido. Se pasa un partido que
+   no existe, para que falle por la validacion del SP y no inserte nada */
+
+EXECUTE AS USER = N'usr_test_gestor_publicidad';
+BEGIN TRY
+    EXEC Publicidad.usp_AsignarPublicidadPartido @id_partido = -1;
+    PRINT N'OK     5. Puede ejecutar Publicidad.usp_AsignarPublicidadPartido.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() >= 50000   -- lo rechazó la validación del SP: el permiso está
+        PRINT N'OK     5. Puede ejecutar Publicidad.usp_AsignarPublicidadPartido (con un partido que no existe lo rechaza la validación del SP).';
+    ELSE
+        PRINT N'ERROR  5. No pudo ejecutar Publicidad.usp_AsignarPublicidadPartido: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+PRINT N'';
+PRINT N'=== Lo que NO PUEDE hacer usr_test_gestor_publicidad ===';
+GO
+
+
+/* Caso 6: NO PUEDE leer las plantillas: tienen datos personales. */
+EXECUTE AS USER = N'usr_test_gestor_publicidad';
+BEGIN TRY
+    SELECT TOP (5) seleccion, dorsal, apellido, nombre FROM Reportes.vw_Plantillas;
+    PRINT N'ERROR  6. Pudo leer Reportes.vw_Plantillas y no debería.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 229   -- 229: permiso denegado
+        PRINT N'OK     6. No puede leer Reportes.vw_Plantillas: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR  6. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 7: NO PUEDE ejecutar los reportes deportivos. */
+EXECUTE AS USER = N'usr_test_gestor_publicidad';
+BEGIN TRY
+    EXEC Reportes.usp_Goleadores;
+    PRINT N'ERROR  7. Pudo ejecutar Reportes.usp_Goleadores y no debería.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 229
+        PRINT N'OK     7. No puede ejecutar Reportes.usp_Goleadores: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR  7. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 8: NO PUEDE dar de alta un jugador. */
+EXECUTE AS USER = N'usr_test_gestor_publicidad';
+BEGIN TRY
+    EXEC Torneo.usp_JUGADOR_Alta @id_lista = 25, @nombre = 'Leopoldo', @apellido = 'Messi',
+                                 @posicion_habitual = 'Arquero', @dorsal = 19;
+    PRINT N'ERROR  8. Pudo ejecutar Torneo.usp_JUGADOR_Alta y no debería.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 229
+        PRINT N'OK     8. No puede ejecutar Torneo.usp_JUGADOR_Alta: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR  8. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 9: NO PUEDE leer las tablas de su propio módulo directamente: los
+   anunciantes los maneja con los SP. */
+EXECUTE AS USER = N'usr_test_gestor_publicidad';
+BEGIN TRY
+    SELECT TOP (5) * FROM Publicidad.ANUNCIANTE;
+    PRINT N'ERROR  9. Pudo leer la tabla Publicidad.ANUNCIANTE y no debería.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 229
+        PRINT N'OK     9. No puede leer Publicidad.ANUNCIANTE: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR  9. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 10: NO PUEDE modificar las exhibiciones directamente. */
+EXECUTE AS USER = N'usr_test_gestor_publicidad';
+BEGIN TRY
+    UPDATE Publicidad.EXHIBICION SET costo = 0;
+    PRINT N'ERROR 10. Pudo modificar Publicidad.EXHIBICION y no debería.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 229
+        PRINT N'OK    10. No puede modificar Publicidad.EXHIBICION: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR 10. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 11: NO PUEDE abrir la clave de cifrado. SQL Server responde como si
+   la clave no existiera (error 15151). */
+EXECUTE AS USER = N'usr_test_gestor_publicidad';
+BEGIN TRY
+    OPEN SYMMETRIC KEY ClaveDatosPersonales DECRYPTION BY CERTIFICATE CertDatosPersonales;
+    PRINT N'ERROR 11. Pudo abrir la clave ClaveDatosPersonales y no debería.';
+    CLOSE SYMMETRIC KEY ClaveDatosPersonales;
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 15151   -- 15151: no existe o no tiene permiso
+        PRINT N'OK    11. No puede abrir la clave ClaveDatosPersonales: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR 11. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+/* Caso 12: NO PUEDE descifrar los datos personales: no tiene permiso sobre
+   el certificado que abre la clave. El usuario pregunta por su propio
+   permiso (descifrar necesita CONTROL sobre el certificado). */
+EXECUTE AS USER = N'usr_test_gestor_publicidad';
+IF HAS_PERMS_BY_NAME(N'CertDatosPersonales', N'CERTIFICATE', N'CONTROL') = 1
+    PRINT N'ERROR 12. Tiene permiso sobre el certificado CertDatosPersonales y no debería: podría descifrar.';
+ELSE
+    PRINT N'OK    12. No tiene permiso sobre el certificado CertDatosPersonales: no puede descifrar.';
+REVERT;
 GO

@@ -16,7 +16,7 @@
            Ejecuta, en orden, los scripts 01 a 28: estructura (01 a 04),
            objetos (05 a 27, el 27 crea los roles) y datos iniciales (28).
            Las importaciones y cargas (30 a 35), los reportes (36), el cifrado
-           (40 a 45), las consultas de la Entrega 9 (46) y los tests (54 a 95)
+           (40 a 47), las consultas de la Entrega 9 (48) y los tests (54 a 97)
            se ejecutan aparte.
 ================================================================================
 
@@ -42,14 +42,14 @@
    34_Cargar_SedesAdicionales.sql       sedes propias del juego de datos
    35_Importar_ImagenesSedes.sql        la foto de cada sede (datos\fuentes\sedes)
    36_Mostrar_Reportes.sql              los reportes de la Entrega 7
-   40_Ejecutar_Cifrado.sql              cifrado de los datos personales (ejecuta 41 a 45)
-   46_Mostrar_ConsultasToBe.sql         lee las vistas descifradas que crea 40
+   40_Ejecutar_Cifrado.sql              cifrado de los datos personales (ejecuta 41 a 47)
+   48_Mostrar_ConsultasToBe.sql         lee las vistas descifradas que crea 40
 
  Los tests no siguen ese orden. Cada uno lleva el número de su script más 50
  (el de roles, 27, tiene uno por usuario: 77 a 80). Los 54 a 76 van antes del
  cifrado (40), porque después los que buscan personas por nombre en las
  tablas no las encuentran y su limpieza deja datos de prueba; los 77 a 80
- (permisos por rol) y 91 a 95 (cifrado), después.
+ (permisos por rol) y 91 a 97 (cifrado), después.
 */
 
 -- CAMBIAR: ruta de la carpeta src\ del repositorio en tu máquina, terminada en \ (ver "Antes de ejecutar").

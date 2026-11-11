@@ -15,7 +15,8 @@
            crea 02_CrearEsquemas.sql), que crea los roles de aplicación con privilegios mínimos, los usuarios sin
            login para probarlos y sus permisos sobre los SP y las vistas. Se
            deniega el acceso directo a las tablas: los cambios se hacen con los
-           SP existentes y las consultas, con las vistas de Reportes.
+           SP existentes y las consultas, con las vistas de Reportes y los
+           SP de consulta.
 ================================================================================
 
  Orden: ejecutar después de 26_SP_Reportes.sql. Se incluye en
@@ -35,6 +36,15 @@
                                qué cargar; el resto de los reportes, no.
    rol_GestorPublicidad        ABM y asignación de publicidad, y sus reportes.
    rol_ConsultaReportes        Solo las vistas y los SP de Reportes.
+
+ Catálogos: ningún rol lee las tablas, tampoco las de datos de referencia.
+ Los datos que hacen falta para elegir los valores que piden los SP (el país
+ de un árbitro o de un anunciante, el tipo de un gol) se consultan con los SP
+ de 25_SP_Consultas.sql:
+   rol_AdministradorOperativo  todos (tiene EXECUTE sobre los esquemas).
+   rol_CargadorResultados      usp_ConsultarTiposGol.
+   rol_GestorPublicidad        usp_ConsultarPaises.
+   rol_ConsultaReportes        usp_ConsultarPaises.
 
  Datos personales cifrados (41_SP_Cifrado.sql): ningún rol usa directamente
  las funciones de cifrado (se deniega el esquema Seguridad), pero SQL Server
@@ -131,6 +141,13 @@ BEGIN
 
     /* Consulta: solo vistas y SP del esquema de reportes. */
     GRANT SELECT, EXECUTE ON SCHEMA::Reportes TO rol_ConsultaReportes;
+
+    /* Catálogos: los datos de referencia se consultan con los SP de
+       25_SP_Consultas.sql, no leyendo las tablas. El administrador ya los
+       tiene por su EXECUTE sobre los esquemas; a los demás se les da el que
+       necesitan. */
+    GRANT EXECUTE ON OBJECT::DesarrolloPartido.usp_ConsultarTiposGol TO rol_CargadorResultados;
+    GRANT EXECUTE ON OBJECT::DatosGenerales.usp_ConsultarPaises TO rol_GestorPublicidad, rol_ConsultaReportes;
 
     /* Las cargas que leen rutas del servidor requieren ADMINISTER BULK OPERATIONS.
        Se reservan para una sesión controlada de DBA; ningún rol de aplicación puede

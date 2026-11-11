@@ -27,9 +27,11 @@
       de campo, preparador físico y entrenador de arqueros (el director
       técnico real lo importa el 32; si alguna selección no lo tuviera, se
       inventa también). Los nombres se arman combinando dos listas y no son
-      personas reales.
-   2. Los idiomas de cada árbitro que no los tiene: el del país del árbitro
-      y el inglés, que es el idioma de trabajo de los árbitros FIFA.
+      personas reales. También completa la fecha de nacimiento que le faltaba
+      a los directores técnicos reales.
+   2. Los idiomas y fechas de nacimiento de cada árbitro que no los tiene: el
+      del país del árbitro y el inglés (idioma FIFA), y una fecha de
+      nacimiento determinística entre 32 y 47 años.
    3. Anunciantes de 8 países (Argentina ya la cubre el Dossier), con 8
       campañas del torneo y una de 2025, como historial. Sus piezas apuntan
       a mercados de América, Europa, África, Asia y Oceanía, que no cubren
@@ -164,6 +166,23 @@ INNER JOIN @apellidos AS ap ON ap.idx = (s.n * 5 + r.desp_apellido) % 26
 WHERE NOT EXISTS (SELECT 1 FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
                   WHERE ct.id_seleccion = s.id_seleccion AND ct.rol = r.rol);
 
+-- Los directores técnicos ya importados pero que no traían fecha de nacimiento en el archivo:
+INSERT INTO #staging_cuerpo_tecnico (id_registro, codigo_fifa, nombre, apellido, rol, fecha_nacimiento,
+                                     codigo_fifa_nacimiento)
+SELECT (SELECT ISNULL(MAX(id_registro), 0) FROM #staging_cuerpo_tecnico) + ROW_NUMBER() OVER (ORDER BY ct.id_persona_ct),
+       pa.codigo_fifa,
+       ct.nombre,
+       ct.apellido,
+       ct.rol,
+       DATEADD(DAY, (ct.id_persona_ct * 43) % 365,
+               DATEADD(YEAR, -(45 + (ct.id_persona_ct * 11) % 24), CAST('2025-01-01' AS DATE))),
+       ISNULL(pa_nac.codigo_fifa, pa.codigo_fifa)
+FROM Torneo.PERSONA_CUERPO_TECNICO AS ct
+INNER JOIN Torneo.SELECCION AS se ON se.id_seleccion = ct.id_seleccion
+INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = se.id_pais
+LEFT JOIN DatosGenerales.PAIS AS pa_nac ON pa_nac.id_pais = ct.id_pais_nacimiento
+WHERE ct.fecha_nacimiento IS NULL;
+
 BEGIN TRY
     BEGIN TRANSACTION;
     EXEC Torneo.usp_CargarCuerpoTecnico;
@@ -179,7 +198,7 @@ BEGIN TRY
     ELSE
     BEGIN
         COMMIT TRANSACTION;
-        DECLARE @personas INT = (SELECT COUNT(*) FROM #staging_cuerpo_tecnico WHERE accion = 'INSERTADO');
+        DECLARE @personas INT = (SELECT COUNT(*) FROM #staging_cuerpo_tecnico WHERE accion IN ('INSERTADO', 'ACTUALIZADO'));
         DECLARE @selecciones INT = (SELECT COUNT(DISTINCT codigo_fifa) FROM #staging_cuerpo_tecnico);
         PRINT CONCAT(N'Cuerpos técnicos: ', @personas, N' personas cargadas en ', @selecciones, N' selecciones.');
     END;
@@ -193,9 +212,11 @@ GO
 
 
 /* ============================================================================
-   2. IDIOMAS DE LOS ÁRBITROS
+   2. IDIOMAS Y FECHAS DE NACIMIENTO DE LOS ÁRBITROS
    El idioma del país de cada árbitro (los de los países que no figuran
    acá, como Inglaterra o Estados Unidos, solo hablan inglés) y el inglés.
+   También asigna una fecha de nacimiento realista y determinística
+   (entre 32 y 47 años) si no la tienen, completando los datos personales.
    ============================================================================ */
 CREATE TABLE #staging_arbitros (
     id_registro       INT           PRIMARY KEY,
@@ -221,19 +242,22 @@ VALUES ('ALG', 'ar,fr'), ('ANG', 'pt'), ('ARG', 'es'), ('AUT', 'de'), ('BEL', 'f
        ('QAT', 'ar'), ('ROU', 'ro'), ('SEN', 'fr'), ('SLV', 'es'), ('SUI', 'de,fr'), ('SVN', 'sl'),
        ('SWE', 'sv'), ('TUN', 'ar,fr'), ('UAE', 'ar'), ('URU', 'es'), ('UZB', 'uz'), ('VEN', 'es');
 
--- Solo los árbitros que todavía no tienen idiomas; la categoría es la que ya tienen. El nombre y
--- el apellido salen de Arbitraje.vw_HistorialArbitro, que los devuelve legibles también con los
--- datos personales cifrados (Entrega 8); todos los árbitros tienen designaciones, porque se
--- cargan desde el archivo de designaciones (32).
-INSERT INTO #staging_arbitros (id_registro, codigo_fifa, nombre, apellido, categoria, idiomas)
+-- Los árbitros que todavía no tienen idiomas o no tienen fecha de nacimiento; la categoría es la que
+-- ya tienen. El nombre y el apellido salen de Arbitraje.vw_HistorialArbitro, que los devuelve legibles
+-- también con los datos personales cifrados (Entrega 8); todos los árbitros tienen designaciones,
+-- porque se cargan desde el archivo de designaciones (32).
+INSERT INTO #staging_arbitros (id_registro, codigo_fifa, nombre, apellido, categoria, fecha_nacimiento, idiomas)
 SELECT ROW_NUMBER() OVER (ORDER BY a.id_arbitro), pa.codigo_fifa, h.nombre, h.apellido, a.categoria,
+       DATEADD(DAY, (a.id_arbitro * 37) % 365,
+               DATEADD(YEAR, -(32 + (a.id_arbitro * 7) % 16), CAST('2026-01-01' AS DATE))),
        CONCAT(ip.idiomas + ',', 'en')
 FROM Arbitraje.ARBITRO AS a
 INNER JOIN (SELECT DISTINCT id_arbitro, nombre, apellido FROM Arbitraje.vw_HistorialArbitro) AS h
         ON h.id_arbitro = a.id_arbitro
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = a.id_pais
 LEFT JOIN @idiomas_pais AS ip ON ip.codigo_fifa = pa.codigo_fifa
-WHERE NOT EXISTS (SELECT 1 FROM Arbitraje.ARBITRO_IDIOMA AS ai WHERE ai.id_arbitro = a.id_arbitro);
+WHERE NOT EXISTS (SELECT 1 FROM Arbitraje.ARBITRO_IDIOMA AS ai WHERE ai.id_arbitro = a.id_arbitro)
+   OR a.fecha_nacimiento IS NULL;
 
 BEGIN TRY
     BEGIN TRANSACTION;
@@ -250,8 +274,8 @@ BEGIN TRY
     ELSE
     BEGIN
         COMMIT TRANSACTION;
-        DECLARE @arbitros INT = (SELECT COUNT(*) FROM #staging_arbitros);
-        PRINT CONCAT(N'Idiomas de los árbitros: cargados para ', @arbitros, N' árbitros.');
+        DECLARE @arbitros INT = (SELECT COUNT(*) FROM #staging_arbitros WHERE accion IN ('INSERTADO', 'ACTUALIZADO'));
+        PRINT CONCAT(N'Idiomas y fechas de los árbitros: cargados para ', @arbitros, N' árbitros.');
     END;
 END TRY
 BEGIN CATCH

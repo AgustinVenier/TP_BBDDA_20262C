@@ -43,10 +43,10 @@ Cada script empieza con dos dígitos que indican su orden de ejecución. Despué
 | `SP_` | Crea stored procedures, sin tocar datos: ABM, negocio, carga masiva, utilidades, importación, consultas, reportes, roles y cifrado. | 05–27, 41 |
 | `Cargar_` | Carga datos propios del grupo, que no vienen de ninguna fuente externa. | 28, 33, 34 |
 | `Importar_` | Importa desde archivos o APIs externas. | 30–32, 35 |
-| `Mostrar_` | Solo muestra resultados (reportes y consultas); no modifica nada. | 36, 46 |
+| `Mostrar_` | Solo muestra resultados (reportes y consultas); no modifica nada. | 36, 48 |
 | `Ejecutar_` | Corre otros scripts en orden (modo SQLCMD). | 00, 40 |
-| `Cifrado_` | Aplica el cifrado a las tablas y adapta los SP y las vistas existentes. | 42–45 |
-| `Test_` | Prueba un script. | 54–95 |
+| `Cifrado_` | Aplica el cifrado a las tablas (un script por tabla, 42–44) y adapta los SP y las vistas existentes (45–47). | 42–47 |
+| `Test_` | Prueba un script. | 54–97 |
 
 Dentro de la base, los SP `usp_Importar<X>` leen una fuente externa (JSON, CSV, API) y arman una tabla de staging; los `usp_Cargar<X>` (`16_SP_CargaMasiva.sql`) hacen el upsert desde esa tabla con las mismas validaciones que los SP de ABM. La norma de nomenclatura completa (tablas, restricciones, SP, funciones, vistas, parámetros y variables) está en el encabezado de [`03_CrearTablas.sql`](src/03_CrearTablas.sql).
 
@@ -63,7 +63,7 @@ Dentro de la base, los SP `usp_Importar<X>` leen una fuente externa (JSON, CSV, 
 | `34_Cargar_SedesAdicionales.sql` | Las 8 sedes propias del juego de datos. |
 | `35_Importar_ImagenesSedes.sql` | La foto de cada sede. |
 | `36_Mostrar_Reportes.sql` | Los reportes de la Entrega 7. |
-| `40_Ejecutar_Cifrado.sql` | Entrega 8: ejecuta 41 a 45 y cifra los datos personales. |
-| `46_Mostrar_ConsultasToBe.sql` | Entrega 9: consultas del alcance, sobre las vistas descifradas. |
+| `40_Ejecutar_Cifrado.sql` | Entrega 8: ejecuta 41 a 47 y cifra los datos personales. |
+| `48_Mostrar_ConsultasToBe.sql` | Entrega 9: consultas del alcance, sobre las vistas descifradas. |
 
-Los tests (54 a 95) no siguen ese orden. Cada uno lleva el número de su script más 50; el de roles (27) tiene uno por usuario, del 77 al 80. Los 54 a 76 se ejecutan antes del cifrado (40), porque después los que buscan personas por nombre no las encuentran; los 77 a 80 (permisos por rol) y 91 a 95 (cifrado), después.
+Los tests (54 a 97) no siguen ese orden. Cada uno lleva el número de su script más 50; el de roles (27) tiene uno por usuario, del 77 al 80. Los 54 a 76 se ejecutan antes del cifrado (40), porque después los que buscan personas por nombre no las encuentran; los 77 a 80 (permisos por rol) y 91 a 97 (cifrado), después.

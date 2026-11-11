@@ -1,4 +1,4 @@
-/*
+﻿/*
 ================================================================================
  Universidad Nacional de La Matanza
  Materia: 3641 - Bases de Datos Aplicada
@@ -15,12 +15,14 @@
            ninguna tabla directamente (app_abm\abm_sedes.py usa los de países,
            husos y sedes):
              DatosGenerales.usp_ConsultarPaises               países, para elegir uno
+             DatosGenerales.usp_ConsultarIdiomas              idiomas, para elegir uno
              DatosGenerales.usp_ConsultarHusosHorarios        husos de sys.time_zone_info
              DatosGenerales.usp_ConsultarParametroReglamento  un parámetro del reglamento
              Torneo.usp_ConsultarSedes                        sedes, con búsqueda
              Torneo.usp_ConsultarSede                         una sede, con sus 4 tarifas
              Torneo.usp_ConsultarImagenSede                   la foto de una sede
              Torneo.usp_ConsultarSelecciones                  selecciones y su lista
+             DesarrolloPartido.usp_ConsultarTiposGol          tipos de gol, para elegir uno
            Requiere haber ejecutado 01 a 06. Su script de testing es
            75_Test_SP_Consultas.sql.
 ================================================================================
@@ -30,7 +32,9 @@
  esquemas de datos. rol_AdministradorOperativo tiene EXECUTE sobre esos
  esquemas, y como los SP y las tablas son de dbo, el encadenamiento de
  propiedad deja que el SP lea las tablas sin dar SELECT a quien lo ejecuta:
- la aplicación funciona con un usuario del rol.
+ la aplicación funciona con un usuario del rol. Los demás roles reciben
+ EXECUTE sobre el SP del catálogo que necesitan (los países, los tipos de
+ gol): son datos que no hay por qué ocultar, pero tampoco se leen de la tabla.
 
  Los SP de consulta no fallan si no encuentran nada: devuelven la consulta
  vacía (o NULL en el OUTPUT), porque buscar algo que no existe no es un error.
@@ -55,6 +59,22 @@ BEGIN
 
     SELECT id_pais, nombre, codigo_fifa, huso_horario
     FROM DatosGenerales.PAIS
+    ORDER BY nombre;
+END;
+GO
+
+
+/*
+  usp_ConsultarIdiomas
+  Todos los idiomas, ordenados por nombre (para elegir los de un árbitro).
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_ConsultarIdiomas
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT id_idioma, nombre, codigo_iso
+    FROM DatosGenerales.IDIOMA
     ORDER BY nombre;
 END;
 GO
@@ -191,4 +211,21 @@ FROM sys.procedures AS p
 INNER JOIN sys.schemas AS s ON s.schema_id = p.schema_id
 WHERE p.name LIKE N'usp[_]Consultar%'
 ORDER BY s.name, p.name;
+GO
+
+
+/*
+  usp_ConsultarTiposGol
+  Todos los tipos de gol (para elegir el de un gol al registrarlo), con la
+  marca de los que son en contra.
+*/
+CREATE OR ALTER PROCEDURE DesarrolloPartido.usp_ConsultarTiposGol
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT id_tipo_gol, descripcion, es_en_contra
+    FROM DesarrolloPartido.TIPO_GOL
+    ORDER BY id_tipo_gol;
+END;
 GO

@@ -10,17 +10,17 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 08/11/2026
- Archivo: 45_Cifrado_Reportes.sql
+ Archivo: 47_Cifrado_Reportes.sql
  Objetivo: Modificar las vistas y los SP de Reportes que leen el nombre, el
            apellido o la fecha de nacimiento de jugadores, cuerpos técnicos y
            árbitros, para que los lean descifrados.
-           Su script de testing es 95_Test_Cifrado_Reportes.sql.
+           Su script de testing es 97_Test_Cifrado_Reportes.sql.
 ================================================================================
 
- Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 42_Cifrado_Tablas.sql.
+ Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 42 a 44 (Cifrado_Tabla_).
 
  Cada objeto es el de 26_SP_Reportes.sql con un solo cambio: lee las personas
- de las vistas descifradas de 42 (Seguridad.vw_Jugador,
+ de las vistas descifradas de 42 a 44 (Seguridad.vw_Jugador,
  Seguridad.vw_PersonaCuerpoTecnico, Seguridad.vw_Arbitro) en lugar de las
  tablas. Las vistas descifradas tienen las mismas columnas que las tablas, con
  el mismo nombre y tipo, así que el resto del código y el resultado no cambian,

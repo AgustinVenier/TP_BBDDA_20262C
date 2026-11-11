@@ -10,20 +10,20 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 08/11/2026
- Archivo: 44_Cifrado_DesarrolloYArbitraje.sql
+ Archivo: 46_Cifrado_DesarrolloYArbitraje.sql
  Objetivo: Modificar las funciones, vistas y SP de DesarrolloPartido y
            Arbitraje que leen o escriben el nombre, el apellido o la fecha de
            nacimiento de jugadores y árbitros, para que los lean descifrados y
            los guarden cifrados.
-           Su script de testing es 94_Test_Cifrado_DesarrolloYArbitraje.sql.
+           Su script de testing es 96_Test_Cifrado_DesarrolloYArbitraje.sql.
 ================================================================================
 
- Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 42_Cifrado_Tablas.sql.
+ Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 42 a 44 (Cifrado_Tabla_).
 
  Cada objeto es el de su script original (indicado arriba de cada uno), con
  estos cambios:
    - Lectura: las consultas que usan esos datos leen las vistas descifradas de
-     42 (Seguridad.vw_Jugador, Seguridad.vw_Arbitro) en lugar de las tablas.
+     42 y 44 (Seguridad.vw_Jugador, Seguridad.vw_Arbitro) en lugar de las tablas.
      Tienen las mismas columnas, así que el resto de la consulta no cambia.
    - Búsquedas y controles de duplicados: comparan sobre las vistas
      descifradas. El control de árbitro repetido reemplaza a

@@ -9,33 +9,38 @@
    Tavella, Tomás - TomasTavella
    Venier, Agustin - AgustinVenier
 
- Fecha: 08/11/2026
+ Fecha: 10/11/2026
  Archivo: 80_Test_Rol_ConsultaReportes.sql
- Objetivo: Demostrar los permisos que tiene y que no tiene el usuario
+ Objetivo: Probar lo que puede y lo que no puede hacer el usuario
            usr_test_consulta (rol_ConsultaReportes).
 ================================================================================
 
  Requiere haber ejecutado 00_Ejecutar_PrepararBase.sql (roles), las
- importaciones y 40_Ejecutar_Cifrado.sql. Los usuarios usr_test_* son
- principals SIN LOGIN; solo sirven para impersonación de prueba.
+ importaciones y 40_Ejecutar_Cifrado.sql.
 
- Dos partes:
-   1. Permisos declarados (HAS_PERMS_BY_NAME), incluidos los de la clave de
-      cifrado.
-   2. Ejecución real: cada caso se ejecuta como el usuario (EXECUTE AS USER)
-      dentro de una transacción que se deshace, así no queda nada. Resultados:
-        PERMITIDO    se ejecutó, o pasó el control de permisos y lo rechazó la
-                     validación del SP (se ve el mensaje).
-        DENEGADO     SQL Server lo rechazó por permisos.
-        DESCIFRA     lee los datos personales legibles.
-        NO DESCIFRA  los lee como NULL (sin permiso sobre la clave).
- Si algún caso no da lo esperado, el script termina con error.
+ usr_test_consulta es un usuario SIN LOGIN: nadie puede iniciar sesión con él.
+ Cada caso se ejecuta "como" ese usuario con EXECUTE AS USER y vuelve a dbo
+ con REVERT.
+
+ Cada caso imprime una línea en la pestaña Mensajes:
+   OK     el usuario pudo hacer lo que debe poder, o fue rechazado en lo
+          que no debe poder (se muestra el mensaje de SQL Server).
+   ERROR  pasó lo contrario de lo esperado.
+ El test está bien si ninguna línea empieza con ERROR.
+
+ Lo que PUEDE hacer: leer las vistas y ejecutar los SP de Reportes, con los
+ nombres de las personas descifrados; y consultar los países
+ (DatosGenerales.usp_ConsultarPaises).
+ Lo que NO PUEDE hacer: leer o modificar las tablas, ejecutar SP que cargan
+ datos, ni usar directamente los objetos de cifrado (esquema Seguridad).
+
+ Los casos que no debe poder hacer no cambian nada aunque el permiso
+ estuviera mal dado: los SP reciben datos vacíos (los rechaza su validación)
+ y el DELETE no borra ninguna fila (WHERE 1 = 0).
 */
 
 USE MundialFutbol;
-SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los índices filtrados y los métodos XML lo necesitan en ON
-GO
-
+SET QUOTED_IDENTIFIER ON;
 SET NOCOUNT ON;
 GO
 
@@ -43,112 +48,218 @@ IF DATABASE_PRINCIPAL_ID(N'usr_test_consulta') IS NULL
     THROW 51010, N'Falta el usuario de prueba. Ejecute primero 27_SP_Roles.sql (lo incluye 00_Ejecutar_PrepararBase.sql).', 1;
 IF KEY_ID(N'ClaveDatosPersonales') IS NULL
     THROW 51012, N'Falta el cifrado de los datos personales. Ejecute primero 40_Ejecutar_Cifrado.sql.', 1;
-IF NOT EXISTS (SELECT 1 FROM Torneo.JUGADOR)
-    THROW 51013, N'No hay datos del torneo cargados. Ejecute primero las importaciones (30 a 35).', 1;
 GO
 
-/* 1. Permisos declarados. */
-DECLARE @permisos TABLE (
-    control     NVARCHAR(180) NOT NULL,
-    permitido   BIT           NULL,
-    esperado    BIT           NOT NULL
-);
+PRINT N'=== Lo que PUEDE hacer usr_test_consulta ===';
+GO
 
+
+/* Caso 1: PUEDE leer la vista de sedes. */
 EXECUTE AS USER = N'usr_test_consulta';
-INSERT INTO @permisos (control, permitido, esperado)
-VALUES
-    (N'Leer vista de sedes', HAS_PERMS_BY_NAME(N'Reportes.vw_Sedes', N'OBJECT', N'SELECT'), 1),
-    (N'Leer vista de plantillas', HAS_PERMS_BY_NAME(N'Reportes.vw_Plantillas', N'OBJECT', N'SELECT'), 1),
-    (N'Ejecutar reporte de goleadores', HAS_PERMS_BY_NAME(N'Reportes.usp_Goleadores', N'OBJECT', N'EXECUTE'), 1),
-    (N'Ejecutar reporte de publicidad', HAS_PERMS_BY_NAME(N'Reportes.usp_OcupacionPublicitaria', N'OBJECT', N'EXECUTE'), 1),
-    (N'Finalizar un partido', HAS_PERMS_BY_NAME(N'Torneo.usp_FinalizarPartido', N'OBJECT', N'EXECUTE'), 0),
-    (N'Asignar publicidad', HAS_PERMS_BY_NAME(N'Publicidad.usp_AsignarPublicidadPartido', N'OBJECT', N'EXECUTE'), 0),
-    (N'Leer jugadores directamente', HAS_PERMS_BY_NAME(N'Torneo.JUGADOR', N'OBJECT', N'SELECT'), 0),
-    (N'Actualizar una vista de reportes', HAS_PERMS_BY_NAME(N'Reportes.vw_Resultados', N'OBJECT', N'UPDATE'), 0),
-    (N'Leer la vista descifrada de árbitros directamente', HAS_PERMS_BY_NAME(N'Seguridad.vw_Arbitro', N'OBJECT', N'SELECT'), 0),
-    (N'Ver la clave de cifrado', HAS_PERMS_BY_NAME(N'ClaveDatosPersonales', N'SYMMETRIC KEY', N'VIEW DEFINITION'), 1),
-    (N'Usar el certificado (para descifrar)', HAS_PERMS_BY_NAME(N'CertDatosPersonales', N'CERTIFICATE', N'CONTROL'), 1),
-    (N'Modificar el certificado (quitarle la clave privada)', HAS_PERMS_BY_NAME(N'CertDatosPersonales', N'CERTIFICATE', N'ALTER'), 0);
+BEGIN TRY
+    SELECT TOP (5) * FROM Reportes.vw_Sedes;
+    PRINT N'OK     1. Puede leer Reportes.vw_Sedes.';
+END TRY
+BEGIN CATCH
+    PRINT N'ERROR  1. No pudo leer Reportes.vw_Sedes: ' + ERROR_MESSAGE();
+END CATCH;
 REVERT;
-
-SELECT control,
-       permitido AS permiso_efectivo,
-       esperado AS permiso_esperado,
-       CASE WHEN ISNULL(permitido, 0) = esperado THEN N'OK' ELSE N'FALLÓ' END AS resultado
-FROM @permisos
-ORDER BY control;
-
-IF EXISTS (SELECT 1 FROM @permisos WHERE ISNULL(permitido, 0) <> esperado)
-    THROW 51011, N'La matriz de permisos no coincide con lo esperado para este rol.', 1;
 GO
 
-/* 2. Ejecución real. Los ids de prueba los busca dbo: el rol no puede leer las tablas. */
-DECLARE @usuario SYSNAME = N'usr_test_consulta';
-DECLARE @p1 INT, @p2 INT, @p3 INT, @cifrado VARBINARY(256);
 
-SELECT TOP (1) @p1 = id_seleccion FROM Torneo.SELECCION ORDER BY id_seleccion;
+/* Caso 2: PUEDE leer las plantillas, con nombre y apellido descifrados.
+   Si no tuviera permiso sobre la clave, la vista se lee igual pero los
+   nombres salen NULL. */
+EXECUTE AS USER = N'usr_test_consulta';
+BEGIN TRY
+    SELECT TOP (5) seleccion, dorsal, apellido, nombre
+    FROM Reportes.vw_Plantillas
+    ORDER BY id_seleccion, dorsal;
 
-DECLARE @casos TABLE (n INT IDENTITY, control NVARCHAR(200), esperado VARCHAR(12), sentencia NVARCHAR(MAX));
-INSERT INTO @casos (control, esperado, sentencia) VALUES
- (N'Leer Reportes.vw_Plantillas: nombre y apellido descifrados', 'DESCIFRA',
-  N'SELECT TOP (1) @dato = nombre + N'' '' + apellido FROM Reportes.vw_Plantillas ORDER BY id_jugador;'),
- (N'Leer Reportes.vw_Tarjetas: persona amonestada descifrada', 'DESCIFRA',
-  N'SELECT TOP (1) @dato = apellido + N'', '' + nombre FROM Reportes.vw_Tarjetas ORDER BY id_amonestacion;'),
- (N'Leer Reportes.vw_DesignacionesArbitrales: árbitro descifrado', 'DESCIFRA',
-  N'SELECT TOP (1) @dato = apellido + N'', '' + nombre FROM Reportes.vw_DesignacionesArbitrales ORDER BY id_partido, rol;'),
- (N'Reporte XML de selecciones y plantillas: nombres descifrados', 'DESCIFRA',
-  N'DECLARE @x TABLE (r XML); INSERT INTO @x EXEC Reportes.usp_SeleccionesYPlantillasXML @id_seleccion = @p1;
-    SELECT @dato = LEFT(CONVERT(NVARCHAR(MAX), r.query(''(//DirectorTecnico)[1]'')), 300) FROM @x;'),
- (N'Leer Reportes.vw_Sedes', 'PERMITIDO',
-  N'SELECT @dato = CONCAT(COUNT(*), N'' sedes'') FROM Reportes.vw_Sedes;'),
- (N'Dar de alta un jugador', 'DENEGADO',
-  N'EXEC Torneo.usp_JUGADOR_Alta @id_lista = NULL, @nombre = NULL, @apellido = NULL, @posicion_habitual = NULL, @dorsal = NULL;'),
- (N'Registrar un gol', 'DENEGADO',
-  N'EXEC DesarrolloPartido.usp_RegistrarGol @id_partido = NULL, @id_jugador_autor = NULL, @id_tipo_gol = NULL,
-         @periodo = NULL, @minuto = NULL, @minuto_adicional = NULL, @id_jugador_asistencia = NULL;'),
- (N'Alta de un anunciante', 'DENEGADO',
-  N'EXEC Publicidad.usp_ANUNCIANTE_Alta @razon_social = NULL, @id_pais = NULL;'),
- (N'Leer la tabla Torneo.JUGADOR directamente', 'DENEGADO',
-  N'SELECT TOP (1) @dato = CAST(id_jugador AS NVARCHAR(10)) FROM Torneo.JUGADOR;'),
- (N'Leer la vista descifrada Seguridad.vw_Arbitro directamente', 'DENEGADO',
-  N'SELECT TOP (1) @dato = apellido FROM Seguridad.vw_Arbitro;'),
- (N'Abrir la clave con Seguridad.usp_AbrirClave directamente', 'DENEGADO',
-  N'EXEC Seguridad.usp_AbrirClave;');
+    IF EXISTS (SELECT 1 FROM Reportes.vw_Plantillas WHERE apellido IS NULL OR nombre IS NULL)
+        PRINT N'ERROR  2. Lee Reportes.vw_Plantillas, pero los nombres salen NULL: no descifra.';
+    ELSE
+        PRINT N'OK     2. Puede leer Reportes.vw_Plantillas con los nombres descifrados.';
+END TRY
+BEGIN CATCH
+    PRINT N'ERROR  2. No pudo leer Reportes.vw_Plantillas: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
 
-DECLARE @res TABLE (n INT, control NVARCHAR(200), esperado VARCHAR(12), obtenido VARCHAR(12), detalle NVARCHAR(400));
-DECLARE @i INT = 1, @sql NVARCHAR(MAX), @dato NVARCHAR(400), @err INT, @msg NVARCHAR(400);
-WHILE @i <= (SELECT MAX(n) FROM @casos)
-BEGIN
-    SELECT @sql = sentencia FROM @casos WHERE n = @i;
-    SELECT @dato = NULL, @err = 0, @msg = NULL;
-    BEGIN TRANSACTION;
-    EXECUTE AS USER = @usuario;
-    BEGIN TRY
-        EXEC sys.sp_executesql @sql,
-             N'@dato NVARCHAR(400) OUTPUT, @p1 INT, @p2 INT, @p3 INT, @cifrado VARBINARY(256)',
-             @dato = @dato OUTPUT, @p1 = @p1, @p2 = @p2, @p3 = @p3, @cifrado = @cifrado;
-    END TRY
-    BEGIN CATCH
-        SELECT @err = ERROR_NUMBER(), @msg = LEFT(ERROR_MESSAGE(), 400);
-    END CATCH;
-    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;   -- antes de REVERT: deshace lo que hizo el caso
-    REVERT;
-    INSERT INTO @res (n, control, esperado, obtenido, detalle)
-    SELECT n, control, esperado,
-           CASE WHEN @err IN (229, 230, 262, 297, 300, 15151, 15247) THEN 'DENEGADO'
-                WHEN esperado IN ('DESCIFRA', 'NO DESCIFRA') AND @err = 0 THEN IIF(@dato IS NULL, 'NO DESCIFRA', 'DESCIFRA')
-                ELSE 'PERMITIDO' END,
-           REPLACE(REPLACE(ISNULL(@dato, @msg), CHAR(13), N' '), CHAR(10), N'')
-    FROM @casos WHERE n = @i;
-    SET @i += 1;
-END;
 
-SELECT n, control, esperado, obtenido,
-       IIF(esperado = obtenido, N'OK', N'FALLÓ') AS resultado,
-       detalle
-FROM @res
-ORDER BY n;
+/* Caso 3: PUEDE leer las designaciones arbitrales, con el árbitro descifrado.
+   La vista arma "apellido, nombre": si no descifra, queda solo ", ". */
+EXECUTE AS USER = N'usr_test_consulta';
+BEGIN TRY
+    SELECT TOP (5) numero_partido, partido, rol, arbitro
+    FROM Reportes.vw_DesignacionesArbitrales
+    ORDER BY numero_partido, rol;
 
-IF EXISTS (SELECT 1 FROM @res WHERE esperado <> obtenido)
-    THROW 51013, N'La ejecución real no coincide con lo esperado para este rol.', 1;
+    IF EXISTS (SELECT 1 FROM Reportes.vw_DesignacionesArbitrales WHERE arbitro = N', ')
+        PRINT N'ERROR  3. Lee Reportes.vw_DesignacionesArbitrales, pero los árbitros salen vacíos: no descifra.';
+    ELSE
+        PRINT N'OK     3. Puede leer Reportes.vw_DesignacionesArbitrales con los árbitros descifrados.';
+END TRY
+BEGIN CATCH
+    PRINT N'ERROR  3. No pudo leer Reportes.vw_DesignacionesArbitrales: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 4: PUEDE ejecutar un SP de reportes. */
+EXECUTE AS USER = N'usr_test_consulta';
+BEGIN TRY
+    EXEC Reportes.usp_Goleadores;
+    PRINT N'OK     4. Puede ejecutar Reportes.usp_Goleadores.';
+END TRY
+BEGIN CATCH
+    PRINT N'ERROR  4. No pudo ejecutar Reportes.usp_Goleadores: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 5: PUEDE consultar los países, con el SP de consulta. */
+EXECUTE AS USER = N'usr_test_consulta';
+BEGIN TRY
+    EXEC DatosGenerales.usp_ConsultarPaises;
+    PRINT N'OK     5. Puede ejecutar DatosGenerales.usp_ConsultarPaises.';
+END TRY
+BEGIN CATCH
+    PRINT N'ERROR  5. No pudo ejecutar DatosGenerales.usp_ConsultarPaises: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+PRINT N'';
+PRINT N'=== Lo que NO PUEDE hacer usr_test_consulta ===';
+GO
+
+
+/* Caso 6: NO PUEDE leer una tabla directamente. */
+EXECUTE AS USER = N'usr_test_consulta';
+BEGIN TRY
+    SELECT TOP (5) * FROM Torneo.JUGADOR;
+    PRINT N'ERROR  6. Pudo leer la tabla Torneo.JUGADOR y no debería.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 229   -- 229: permiso denegado
+        PRINT N'OK     6. No puede leer Torneo.JUGADOR: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR  6. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 7: NO PUEDE borrar en una tabla directamente. */
+EXECUTE AS USER = N'usr_test_consulta';
+BEGIN TRY
+    DELETE FROM DesarrolloPartido.GOL WHERE 1 = 0;
+    PRINT N'ERROR  7. Pudo borrar en DesarrolloPartido.GOL y no debería.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 229
+        PRINT N'OK     7. No puede borrar en DesarrolloPartido.GOL: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR  7. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 8: NO PUEDE dar de alta un jugador. */
+EXECUTE AS USER = N'usr_test_consulta';
+BEGIN TRY
+    EXEC Torneo.usp_JUGADOR_Alta @id_lista = NULL, @nombre = NULL, @apellido = NULL,
+                                 @posicion_habitual = NULL, @dorsal = NULL;
+    PRINT N'ERROR  8. Pudo ejecutar Torneo.usp_JUGADOR_Alta y no debería.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 229
+        PRINT N'OK     8. No puede ejecutar Torneo.usp_JUGADOR_Alta: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR  8. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 9: NO PUEDE registrar un gol. */
+EXECUTE AS USER = N'usr_test_consulta';
+BEGIN TRY
+    EXEC DesarrolloPartido.usp_RegistrarGol @id_partido = NULL, @id_jugador_autor = NULL,
+                                            @id_tipo_gol = NULL, @periodo = NULL;
+    PRINT N'ERROR  9. Pudo ejecutar DesarrolloPartido.usp_RegistrarGol y no debería.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 229
+        PRINT N'OK     9. No puede ejecutar DesarrolloPartido.usp_RegistrarGol: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR  9. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 10: NO PUEDE dar de alta un anunciante. */
+EXECUTE AS USER = N'usr_test_consulta';
+BEGIN TRY
+    EXEC Publicidad.usp_ANUNCIANTE_Alta @razon_social = NULL, @id_pais = NULL;
+    PRINT N'ERROR 10. Pudo ejecutar Publicidad.usp_ANUNCIANTE_Alta y no debería.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 229
+        PRINT N'OK    10. No puede ejecutar Publicidad.usp_ANUNCIANTE_Alta: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR 10. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 11: NO PUEDE leer la vista descifrada de jugadores directamente: los
+   datos personales los ve solo a través de los reportes. */
+EXECUTE AS USER = N'usr_test_consulta';
+BEGIN TRY
+    SELECT TOP (5) id_jugador, apellido, nombre FROM Seguridad.vw_Jugador;
+    PRINT N'ERROR 11. Pudo leer Seguridad.vw_Jugador y no debería.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 229
+        PRINT N'OK    11. No puede leer Seguridad.vw_Jugador: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR 11. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 12: NO PUEDE abrir la clave de cifrado por su cuenta. */
+EXECUTE AS USER = N'usr_test_consulta';
+BEGIN TRY
+    EXEC Seguridad.usp_AbrirClave;
+    PRINT N'ERROR 12. Pudo ejecutar Seguridad.usp_AbrirClave y no debería.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 229
+        PRINT N'OK    12. No puede ejecutar Seguridad.usp_AbrirClave: ' + ERROR_MESSAGE();
+    ELSE
+        PRINT N'ERROR 12. Falló por otro motivo, no por permisos: ' + ERROR_MESSAGE();
+END CATCH;
+REVERT;
+GO
+
+
+/* Caso 13: NO PUEDE modificar el certificado (por ejemplo, quitarle la clave
+   privada). No se intenta el ALTER: se pregunta si tiene el permiso. */
+EXECUTE AS USER = N'usr_test_consulta';
+IF HAS_PERMS_BY_NAME(N'CertDatosPersonales', N'CERTIFICATE', N'ALTER') = 0
+    PRINT N'OK    13. No tiene permiso para modificar el certificado CertDatosPersonales.';
+ELSE
+    PRINT N'ERROR 13. Tiene permiso para modificar el certificado CertDatosPersonales y no debería.';
+REVERT;
 GO

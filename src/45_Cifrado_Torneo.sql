@@ -10,20 +10,20 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 08/11/2026
- Archivo: 43_Cifrado_Torneo.sql
+ Archivo: 45_Cifrado_Torneo.sql
  Objetivo: Modificar los SP de Torneo que leen o escriben el nombre, el
            apellido o la fecha de nacimiento de jugadores y cuerpos técnicos
            (ABM, convocatoria, inicio de partido e importación), para que los
            lean descifrados y los guarden cifrados.
-           Su script de testing es 93_Test_Cifrado_Torneo.sql.
+           Su script de testing es 95_Test_Cifrado_Torneo.sql.
 ================================================================================
 
- Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 42_Cifrado_Tablas.sql.
+ Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 42 a 44 (Cifrado_Tabla_).
 
  Cada objeto es el de su script original (indicado arriba de cada uno), con
  estos cambios:
    - Lectura: las consultas que usan esos datos leen las vistas descifradas de
-     42 (Seguridad.vw_Jugador, Seguridad.vw_PersonaCuerpoTecnico) en lugar de
+     42 y 43 (Seguridad.vw_Jugador, Seguridad.vw_PersonaCuerpoTecnico) en lugar de
      las tablas. Tienen las mismas columnas, así que el resto de la consulta no
      cambia.
    - Búsquedas y controles de duplicados: comparan sobre las vistas

@@ -1,4 +1,4 @@
-/*
+﻿/*
 ================================================================================
  Universidad Nacional de La Matanza
  Materia: 3641 - Bases de Datos Aplicada
@@ -117,13 +117,35 @@ DROP TABLE #selecciones;
 GO
 
 
-/* CO6 Permisos.
+/* CO6 Idiomas y tipos de gol.
+   Esperado: los idiomas ordenados por nombre y los tipos de gol por id, los
+   mismos que tienen sus tablas. */
+DROP TABLE IF EXISTS #idiomas;
+CREATE TABLE #idiomas (id_idioma SMALLINT, nombre VARCHAR(40), codigo_iso CHAR(2));
+INSERT INTO #idiomas EXEC DatosGenerales.usp_ConsultarIdiomas;
+SELECT 'CO6 idiomas' AS caso, COUNT(*) AS idiomas,
+       (SELECT COUNT(*) FROM DatosGenerales.IDIOMA) AS idiomas_en_la_tabla
+FROM #idiomas;
+DROP TABLE #idiomas;
+
+DROP TABLE IF EXISTS #tipos_gol;
+CREATE TABLE #tipos_gol (id_tipo_gol TINYINT, descripcion VARCHAR(40), es_en_contra BIT);
+INSERT INTO #tipos_gol EXEC DesarrolloPartido.usp_ConsultarTiposGol;
+SELECT 'CO6 tipos de gol' AS caso, COUNT(*) AS tipos_de_gol,
+       (SELECT COUNT(*) FROM DesarrolloPartido.TIPO_GOL) AS tipos_en_la_tabla
+FROM #tipos_gol;
+DROP TABLE #tipos_gol;
+GO
+
+
+/* CO7 Permisos.
    Esperado:
      usr_test_administrador (rol_AdministradorOperativo): SELECT directo sobre
        Torneo.SEDE denegado; usp_ConsultarSedes y usp_ConsultarSede permitidos
        (encadenamiento de propiedad).
-     usr_test_consulta (rol_ConsultaReportes): usp_ConsultarSedes denegado (solo
-       tiene el esquema Reportes). */
+     usr_test_consulta (rol_ConsultaReportes): usp_ConsultarSedes denegado (las
+       sedes las lee en Reportes.vw_Sedes); usp_ConsultarPaises permitido, y
+       SELECT directo sobre DatosGenerales.PAIS denegado. */
 DECLARE @id INT = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Prueba Consultas');
 DECLARE @filas INT;
 DROP TABLE IF EXISTS #sedes;
@@ -133,29 +155,43 @@ CREATE TABLE #sedes (id_sede INT, nombre_estadio VARCHAR(100), ciudad VARCHAR(80
 EXECUTE AS USER = 'usr_test_administrador';
 BEGIN TRY
     SELECT @filas = COUNT(*) FROM Torneo.SEDE;
-    PRINT N'CO6a: FALLÓ, el administrador leyó la tabla Torneo.SEDE directamente.';
+    PRINT N'CO7a: FALLÓ, el administrador leyó la tabla Torneo.SEDE directamente.';
 END TRY
 BEGIN CATCH
-    PRINT N'CO6a: OK, SELECT directo denegado al administrador: ' + ERROR_MESSAGE();
+    PRINT N'CO7a: OK, SELECT directo denegado al administrador: ' + ERROR_MESSAGE();
 END CATCH;
 BEGIN TRY
     INSERT INTO #sedes EXEC Torneo.usp_ConsultarSedes @buscar = N'Prueba Consultas';
     EXEC Torneo.usp_ConsultarSede @id_sede = @id;
     SELECT @filas = COUNT(*) FROM #sedes;
-    PRINT CONCAT(N'CO6b: OK, el administrador consulta las sedes con los SP (', @filas, N' sede).');
+    PRINT CONCAT(N'CO7b: OK, el administrador consulta las sedes con los SP (', @filas, N' sede).');
 END TRY
 BEGIN CATCH
-    PRINT N'CO6b: FALLÓ, ' + ERROR_MESSAGE();
+    PRINT N'CO7b: FALLÓ, ' + ERROR_MESSAGE();
 END CATCH;
 REVERT;
 
 EXECUTE AS USER = 'usr_test_consulta';
 BEGIN TRY
     EXEC Torneo.usp_ConsultarSedes;
-    PRINT N'CO6c: FALLÓ, el usuario de consulta ejecutó usp_ConsultarSedes.';
+    PRINT N'CO7c: FALLÓ, el usuario de consulta ejecutó usp_ConsultarSedes.';
 END TRY
 BEGIN CATCH
-    PRINT N'CO6c: OK, usp_ConsultarSedes denegado al usuario de consulta: ' + ERROR_MESSAGE();
+    PRINT N'CO7c: OK, usp_ConsultarSedes denegado al usuario de consulta: ' + ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC DatosGenerales.usp_ConsultarPaises;
+    PRINT N'CO7d: OK, el usuario de consulta consulta los países con el SP.';
+END TRY
+BEGIN CATCH
+    PRINT N'CO7d: FALLÓ, ' + ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    SELECT @filas = COUNT(*) FROM DatosGenerales.PAIS;
+    PRINT N'CO7e: FALLÓ, el usuario de consulta leyó la tabla DatosGenerales.PAIS directamente.';
+END TRY
+BEGIN CATCH
+    PRINT N'CO7e: OK, SELECT directo sobre DatosGenerales.PAIS denegado al usuario de consulta: ' + ERROR_MESSAGE();
 END CATCH;
 REVERT;
 DROP TABLE #sedes;

@@ -19,10 +19,10 @@ El cifrado es un script de modificación sobre la base ya cargada. `40_Ejecutar_
 | Script | Qué hace |
 |---|---|
 | `41_SP_Cifrado.sql` | `Seguridad.usp_ConfigurarCifrado` crea la clave maestra, el certificado y la clave simétrica si no existen. También crea los SP que abren y cierran la clave y las funciones que cifran. |
-| `42_Cifrado_Tablas.sql` | `Seguridad.usp_CifrarDatosPersonales` cambia las nueve columnas a `VARBINARY`, cifra los datos existentes y verifica cada fila antes de borrar la columna original, todo en una transacción. Después crea las vistas descifradas. |
-| `43_Cifrado_Torneo.sql` | Actualiza los SP de `Torneo` que guardan o buscan personas (ABM, convocatorias, reemplazos, importaciones). |
-| `44_Cifrado_DesarrolloYArbitraje.sql` | Lo mismo para `DesarrolloPartido` y `Arbitraje`. |
-| `45_Cifrado_Reportes.sql` | Actualiza las vistas y los SP de `Reportes` que muestran nombres. |
+| `42_Cifrado_Tabla_Jugador.sql`, `43_Cifrado_Tabla_PersonaCuerpoTecnico.sql`, `44_Cifrado_Tabla_Arbitro.sql` | Un script por tabla. Cada uno crea el SP que cifra su tabla (`Seguridad.usp_CifrarJugador`, `usp_CifrarPersonaCuerpoTecnico`, `usp_CifrarArbitro`), lo ejecuta y crea su vista descifrada. El SP cambia las tres columnas a `VARBINARY` y cifra los datos existentes, en una transacción: si algo falla, la tabla queda como estaba. |
+| `45_Cifrado_Torneo.sql` | Actualiza los SP de `Torneo` que guardan o buscan personas (ABM, convocatorias, reemplazos, importaciones). |
+| `46_Cifrado_DesarrolloYArbitraje.sql` | Lo mismo para `DesarrolloPartido` y `Arbitraje`. |
+| `47_Cifrado_Reportes.sql` | Actualiza las vistas y los SP de `Reportes` que muestran nombres. |
 
 La contraseña de la clave maestra se pasa con `:setvar ClaveMaestra` en el runner. El valor del repositorio es de ejemplo y hay que cambiarlo antes de ejecutar. `40` se puede ejecutar más de una vez: lo que ya está cifrado no se vuelve a cifrar, y las claves no se recrean, porque recrearlas dejaría ilegibles los datos cifrados. Después de cifrar se puede seguir importando: los SP de importación cifran lo que guardan.
 
@@ -60,6 +60,8 @@ La contraseña de la clave maestra se guarda con el mismo cuidado.
 | `rol_CargadorResultados` | Iniciar y finalizar partidos; registrar formaciones, cambios, goles y amonestaciones mediante SP; leer los partidos (`Reportes.vw_Resultados`) y las plantillas (`Reportes.vw_Plantillas`) para saber qué cargar. | Gestionar publicidad, leer o ejecutar los demás reportes, o leer y modificar tablas directamente. | Descifra (los SP buscan a los jugadores de la formación y de las tarjetas, y las plantillas muestran nombres). |
 | `rol_GestorPublicidad` | Ejecutar el ABM y la asignación de publicidad; consultar la ocupación y los ingresos publicitarios. | Consultar reportes deportivos o leer y modificar tablas directamente. | Ninguno: no puede descifrar. |
 | `rol_ConsultaReportes` | Leer las vistas y ejecutar los SP del esquema `Reportes`. | Ejecutar operaciones de negocio, importaciones o modificaciones. | Descifra (los reportes muestran nombres). |
+
+Los datos de referencia (países, idiomas, tipos de gol) no se ocultan, pero tampoco se leen de las tablas: se consultan con los SP de `25_SP_Consultas.sql`. El administrador los tiene todos por su `EXECUTE` sobre los esquemas; el cargador de resultados recibe `DesarrolloPartido.usp_ConsultarTiposGol`, y el gestor de publicidad y el rol de consulta, `DatosGenerales.usp_ConsultarPaises`. Así la regla no tiene excepciones: ningún rol tiene `SELECT` sobre una tabla.
 
 La fecha de nacimiento no la ve ningún rol: `Reportes.vw_Plantillas` no la devuelve, porque el reporte de plantillas no la pide (nombre, posición, club y dorsal) y esa vista la leen el cargador de resultados y el rol de consulta, que no la necesitan. Se guarda cifrada y solo la lee el DBA, con las vistas de `Seguridad`. Los tipos de gol que usa el cargador son un catálogo fijo (`28_Cargar_DatosIniciales.sql`), así que no tiene una vista para consultarlos.
 
@@ -106,21 +108,21 @@ La base usa recuperación `FULL`, así que los backups del log se ejecutan de fo
 3. Los tests de las entregas anteriores (`54` a `76`). Van antes del cifrado: después, los que buscan personas por nombre en las tablas no las encuentran y su limpieza deja datos de prueba (ver "Consecuencias en el diseño").
 4. `40_Ejecutar_Cifrado.sql`: cifra los datos personales.
 5. Los tests de seguridad.
-6. `46_Mostrar_ConsultasToBe.sql`, que lee las vistas descifradas que crea `40`.
+6. `48_Mostrar_ConsultasToBe.sql`, que lee las vistas descifradas que crea `40`.
 
 Hay un script de test por usuario: `77_Test_Rol_Administrador.sql`, `78_Test_Rol_CargadorResultados.sql`, `79_Test_Rol_GestorPublicidad.sql` y `80_Test_Rol_ConsultaReportes.sql`. Cada uno tiene dos partes:
 
 1. Los permisos declarados del usuario (`HAS_PERMS_BY_NAME`), incluidos los de la clave y el certificado.
 2. La ejecución real: cada operación se ejecuta como el usuario (`EXECUTE AS USER`) dentro de una transacción que se deshace, así que no queda nada. El resultado dice si la operación quedó permitida o denegada, y, cuando lee datos personales, si el usuario los ve descifrados o como `NULL`.
 
-El cifrado tiene un script de test por cada script del 41 al 45:
+El cifrado tiene un script de test por cada script del 41 al 47:
 
 - `91_Test_SP_Cifrado.sql` (41): que existan las claves; que `usp_AbrirClave` y `usp_CerrarClave` abran y cierren la clave, sin cerrarla cuando un SP llama a otro; que las funciones den `NULL` con la clave cerrada; que el mismo texto cifrado dos veces dé resultados distintos y se descifre igual.
-- `92_Test_Cifrado_Tablas.sql` (42): que las nueve columnas estén cifradas y no queden restricciones `UNIQUE` sobre ellas; que las vistas de `Seguridad` tengan las columnas de su tabla; que todas las filas se puedan descifrar y lo guardado no sea el texto original; que sin abrir la clave no se pueda guardar una persona; que `usp_CifrarDatosPersonales` no vuelva a cifrar lo que ya está cifrado.
-- `93_Test_Cifrado_Torneo.sql` (43): que el alta y la modificación de jugadores y cuerpos técnicos guarden cifrado, se lean descifrados y rechacen los duplicados.
-- `94_Test_Cifrado_DesarrolloYArbitraje.sql` (44): lo mismo para los árbitros, y que las vistas y la función de partidos y árbitros devuelvan los nombres descifrados.
-- `95_Test_Cifrado_Reportes.sql` (45): que las vistas de `Reportes` y el reporte XML devuelvan los nombres descifrados, también para un jugador recién dado de alta.
+- `92_Test_Cifrado_Tabla_Jugador.sql` (42), `93_Test_Cifrado_Tabla_PersonaCuerpoTecnico.sql` (43) y `94_Test_Cifrado_Tabla_Arbitro.sql` (44): que las tres columnas de la tabla estén cifradas; que la vista de `Seguridad` descifre todas las filas; que sin abrir la clave no se pueda guardar un apellido; que el SP de cifrado no vuelva a cifrar lo que ya está cifrado.
+- `95_Test_Cifrado_Torneo.sql` (45): que el alta y la modificación de jugadores y cuerpos técnicos guarden cifrado, se lean descifrados y rechacen los duplicados.
+- `96_Test_Cifrado_DesarrolloYArbitraje.sql` (46): lo mismo para los árbitros, y que las vistas y la función de partidos y árbitros devuelvan los nombres descifrados.
+- `97_Test_Cifrado_Reportes.sql` (47): que las vistas de `Reportes` y el reporte XML devuelvan los nombres descifrados, también para un jugador recién dado de alta.
 
-Todos comprueban, además, que no queden claves abiertas.
+Los que abren la clave o ejecutan SP que cifran (91, 95 y 96) comprueban, además, que no quede abierta.
 
-Todos los tests terminan con error si algún control no da lo esperado.
+Todos los tests están armados por casos independientes, que se pueden ejecutar de a uno. Cada caso muestra lo que probó en la grilla e imprime una línea en la pestaña Mensajes que empieza con `OK` o con `ERROR`; el test está bien si ninguna empieza con `ERROR`.

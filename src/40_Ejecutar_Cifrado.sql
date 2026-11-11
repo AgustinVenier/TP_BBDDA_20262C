@@ -18,7 +18,7 @@
 ================================================================================
 
  Orden: después de 00_Ejecutar_PrepararBase.sql y de las importaciones (30 a
- 35). Ejecuta 41 a 45. Después van los tests 77 a 80 y 91 a 95, y 46. Se puede
+ 35). Ejecuta 41 a 47. Después van los tests 77 a 80 y 91 a 97, y 48. Se puede
  ejecutar más de una vez: lo que ya está cifrado no se vuelve a cifrar.
 
  Los tests de las entregas anteriores (54 a 76) se ejecutan ANTES que este
@@ -69,16 +69,20 @@ GO
 EXEC Seguridad.usp_ConfigurarRoles;
 GO
 
--- Tablas: columnas cifradas y datos existentes.
-:r $(src)42_Cifrado_Tablas.sql
+-- Tablas: columnas cifradas, datos existentes y vista descifrada de cada una.
+:r $(src)42_Cifrado_Tabla_Jugador.sql
+GO
+:r $(src)43_Cifrado_Tabla_PersonaCuerpoTecnico.sql
+GO
+:r $(src)44_Cifrado_Tabla_Arbitro.sql
 GO
 
 -- SP, funciones y vistas que usan las columnas cifradas.
-:r $(src)43_Cifrado_Torneo.sql
+:r $(src)45_Cifrado_Torneo.sql
 GO
-:r $(src)44_Cifrado_DesarrolloYArbitraje.sql
+:r $(src)46_Cifrado_DesarrolloYArbitraje.sql
 GO
-:r $(src)45_Cifrado_Reportes.sql
+:r $(src)47_Cifrado_Reportes.sql
 GO
 
 -- Evidencia: los datos guardados están cifrados y las vistas los muestran descifrados.

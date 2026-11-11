@@ -15,7 +15,7 @@
            apellido y fecha de nacimiento de jugadores, cuerpos técnicos y
            árbitros): el SP que crea las claves, los SP que abren y cierran la
            clave, y las funciones que cifran. Para leer los datos descifrados,
-           42_Cifrado_Tablas.sql crea una vista por tabla.
+           los scripts 42 a 44 (Cifrado_Tabla_) crean una vista por tabla.
            Su script de testing es 91_Test_SP_Cifrado.sql.
 ================================================================================
 
@@ -33,7 +33,7 @@
      abrir la clave (SQL Server no permite OPEN SYMMETRIC KEY en funciones).
    - Para leer, DECRYPTBYKEYAUTOCERT descifra abriendo la clave con el
      certificado en el momento. Se usa en las vistas Seguridad.vw_Jugador,
-     vw_PersonaCuerpoTecnico y vw_Arbitro (42), que tienen las mismas columnas
+     vw_PersonaCuerpoTecnico y vw_Arbitro (42 a 44), que tienen las mismas columnas
      que su tabla con los datos personales descifrados: los SP y las vistas que
      leen esos datos leen la vista en lugar de la tabla. No se usa una función
      de descifrado: en una consulta, SQL Server abre la clave una sola vez para

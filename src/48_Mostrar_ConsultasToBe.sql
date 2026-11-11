@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 03/11/2026
- Archivo: 46_Mostrar_ConsultasToBe.sql
+ Archivo: 48_Mostrar_ConsultasToBe.sql
  Objetivo: Entrega 9. Recorrer los puntos del alcance (sección 2, "To Be") con
            las consultas que muestran que el sistema los cumple, sobre el
            torneo real cargado. Usa las vistas y funciones de

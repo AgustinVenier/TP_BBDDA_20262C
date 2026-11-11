@@ -60,13 +60,27 @@
           <ConnectionProtocol>NotSpecified</ConnectionProtocol>
           <ApplicationName>Microsoft SQL Server Management Studio - Query</ApplicationName>
         </ConnectionNode>
+        <ConnectionNode Name="WIN11-DESK:WIN11-DESK\Rodrigo">
+          <Created>2026-11-10T18:26:57.3636379-03:00</Created>
+          <Type>SQL</Type>
+          <Server>WIN11-DESK</Server>
+          <UserName />
+          <Authentication>Windows Authentication</Authentication>
+          <InitialDB />
+          <LoginTimeout>15</LoginTimeout>
+          <TrustServerCertificate>True</TrustServerCertificate>
+          <EncryptionOption>True</EncryptionOption>
+          <ExecutionTimeout>0</ExecutionTimeout>
+          <ConnectionProtocol>NotSpecified</ConnectionProtocol>
+          <ApplicationName>Microsoft SQL Server Management Studio - Query</ApplicationName>
+        </ConnectionNode>
       </Items>
     </LogicalFolder>
     <LogicalFolder Name="Queries" Type="0" Sorted="true">
       <Items>
         <FileNode Name="00_Ejecutar_PrepararBase.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>00_Ejecutar_PrepararBase.sql</FullPath>
         </FileNode>
@@ -167,14 +181,14 @@
           <FullPath>16_SP_CargaMasiva.sql</FullPath>
         </FileNode>
         <FileNode Name="17_SP_Utilidades_Importacion.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>17_SP_Utilidades_Importacion.sql</FullPath>
         </FileNode>
         <FileNode Name="18_SP_Importar_Mundial2026.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>18_SP_Importar_Mundial2026.sql</FullPath>
         </FileNode>
@@ -227,8 +241,8 @@
           <FullPath>26_SP_Reportes.sql</FullPath>
         </FileNode>
         <FileNode Name="27_SP_Roles.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>27_SP_Roles.sql</FullPath>
         </FileNode>
@@ -239,20 +253,20 @@
           <FullPath>28_Cargar_DatosIniciales.sql</FullPath>
         </FileNode>
         <FileNode Name="30_Importar_Indicadores.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>30_Importar_Indicadores.sql</FullPath>
         </FileNode>
         <FileNode Name="31_Importar_APIs.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>31_Importar_APIs.sql</FullPath>
         </FileNode>
         <FileNode Name="32_Importar_Mundial2026.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>32_Importar_Mundial2026.sql</FullPath>
         </FileNode>
@@ -263,8 +277,8 @@
           <FullPath>33_Cargar_DatosComplementarios.sql</FullPath>
         </FileNode>
         <FileNode Name="34_Cargar_SedesAdicionales.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>34_Cargar_SedesAdicionales.sql</FullPath>
         </FileNode>
@@ -281,46 +295,58 @@
           <FullPath>36_Mostrar_Reportes.sql</FullPath>
         </FileNode>
         <FileNode Name="40_Ejecutar_Cifrado.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>40_Ejecutar_Cifrado.sql</FullPath>
         </FileNode>
         <FileNode Name="41_SP_Cifrado.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>41_SP_Cifrado.sql</FullPath>
         </FileNode>
-        <FileNode Name="42_Cifrado_Tablas.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+        <FileNode Name="42_Cifrado_Tabla_Jugador.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>42_Cifrado_Tablas.sql</FullPath>
+          <FullPath>42_Cifrado_Tabla_Jugador.sql</FullPath>
         </FileNode>
-        <FileNode Name="43_Cifrado_Torneo.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+        <FileNode Name="43_Cifrado_Tabla_PersonaCuerpoTecnico.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>43_Cifrado_Torneo.sql</FullPath>
+          <FullPath>43_Cifrado_Tabla_PersonaCuerpoTecnico.sql</FullPath>
         </FileNode>
-        <FileNode Name="44_Cifrado_DesarrolloYArbitraje.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+        <FileNode Name="44_Cifrado_Tabla_Arbitro.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>44_Cifrado_DesarrolloYArbitraje.sql</FullPath>
+          <FullPath>44_Cifrado_Tabla_Arbitro.sql</FullPath>
         </FileNode>
-        <FileNode Name="45_Cifrado_Reportes.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+        <FileNode Name="45_Cifrado_Torneo.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>45_Cifrado_Reportes.sql</FullPath>
+          <FullPath>45_Cifrado_Torneo.sql</FullPath>
         </FileNode>
-        <FileNode Name="46_Mostrar_ConsultasToBe.sql">
+        <FileNode Name="46_Cifrado_DesarrolloYArbitraje.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>46_Cifrado_DesarrolloYArbitraje.sql</FullPath>
+        </FileNode>
+        <FileNode Name="47_Cifrado_Reportes.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>46_Mostrar_ConsultasToBe.sql</FullPath>
+          <FullPath>47_Cifrado_Reportes.sql</FullPath>
+        </FileNode>
+        <FileNode Name="48_Mostrar_ConsultasToBe.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>48_Mostrar_ConsultasToBe.sql</FullPath>
         </FileNode>
         <FileNode Name="54_Test_FuncionesYVistas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
@@ -461,58 +487,70 @@
           <FullPath>76_Test_SP_Reportes.sql</FullPath>
         </FileNode>
         <FileNode Name="77_Test_Rol_Administrador.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>77_Test_Rol_Administrador.sql</FullPath>
         </FileNode>
         <FileNode Name="78_Test_Rol_CargadorResultados.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>78_Test_Rol_CargadorResultados.sql</FullPath>
         </FileNode>
         <FileNode Name="79_Test_Rol_GestorPublicidad.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>79_Test_Rol_GestorPublicidad.sql</FullPath>
         </FileNode>
         <FileNode Name="80_Test_Rol_ConsultaReportes.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>80_Test_Rol_ConsultaReportes.sql</FullPath>
         </FileNode>
         <FileNode Name="91_Test_SP_Cifrado.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>91_Test_SP_Cifrado.sql</FullPath>
         </FileNode>
-        <FileNode Name="92_Test_Cifrado_Tablas.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+        <FileNode Name="92_Test_Cifrado_Tabla_Jugador.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>92_Test_Cifrado_Tablas.sql</FullPath>
+          <FullPath>92_Test_Cifrado_Tabla_Jugador.sql</FullPath>
         </FileNode>
-        <FileNode Name="93_Test_Cifrado_Torneo.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+        <FileNode Name="93_Test_Cifrado_Tabla_PersonaCuerpoTecnico.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>93_Test_Cifrado_Torneo.sql</FullPath>
+          <FullPath>93_Test_Cifrado_Tabla_PersonaCuerpoTecnico.sql</FullPath>
         </FileNode>
-        <FileNode Name="94_Test_Cifrado_DesarrolloYArbitraje.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+        <FileNode Name="94_Test_Cifrado_Tabla_Arbitro.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>94_Test_Cifrado_DesarrolloYArbitraje.sql</FullPath>
+          <FullPath>94_Test_Cifrado_Tabla_Arbitro.sql</FullPath>
         </FileNode>
-        <FileNode Name="95_Test_Cifrado_Reportes.sql">
+        <FileNode Name="95_Test_Cifrado_Torneo.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>95_Test_Cifrado_Reportes.sql</FullPath>
+          <FullPath>95_Test_Cifrado_Torneo.sql</FullPath>
+        </FileNode>
+        <FileNode Name="96_Test_Cifrado_DesarrolloYArbitraje.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>96_Test_Cifrado_DesarrolloYArbitraje.sql</FullPath>
+        </FileNode>
+        <FileNode Name="97_Test_Cifrado_Reportes.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>97_Test_Cifrado_Reportes.sql</FullPath>
         </FileNode>
       </Items>
     </LogicalFolder>
