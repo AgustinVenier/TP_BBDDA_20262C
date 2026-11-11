@@ -25,7 +25,7 @@ Un día se considera "con partidos" hasta las 06:00 del día siguiente, para cub
 
 - El backup del log es el que fija el RPO: lo que se puede perder es lo escrito desde el último [1].
 - El diferencial acorta la recuperación, porque evita aplicar todos los logs desde las 01:00. El del final de la jornada deja todos los resultados del día en un solo archivo.
-- Los backups se hacen en el servidor que esté activo en ese momento [2], así que siguen funcionando aunque uno de los dos se caiga.
+- Los backups se hacen en la réplica primaria, porque la secundaria de un grupo de disponibilidad básico no admite backups [2]. Si la primaria se cae, la secundaria pasa a ser primaria y los backups siguen haciéndose en ella.
 
 ## Dónde se guardan y por cuánto tiempo
 
@@ -56,5 +56,5 @@ Antes del inicio del torneo se hace además una prueba completa de recuperación
 Referencias:
 
 1. Microsoft. (s.f.). Recovery models (SQL Server). Microsoft Learn. https://learn.microsoft.com/sql/relational-databases/backup-restore/recovery-models-sql-server
-2. Microsoft. (s.f.). Offload supported backups to secondary replicas of an availability group. https://learn.microsoft.com/en-us/sql/database-engine/availability-groups/windows/active-secondaries-backup-on-secondary-replicas-always-on-availability-groups
+2. Microsoft. (s.f.). Basic availability groups for a single database. https://learn.microsoft.com/en-us/sql/database-engine/availability-groups/windows/basic-availability-groups-always-on-availability-groups
 3. Cybersecurity and Infrastructure Security Agency. (s.f.). Back up business data. https://www.cisa.gov/back-business-data

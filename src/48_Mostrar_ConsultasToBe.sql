@@ -60,7 +60,7 @@ BEGIN
     SET NOEXEC ON;
 END;
 GO
--- Las personas se leen de las vistas descifradas que crea el cifrado (40 a 45): sin ellas,
+-- Las personas se leen de las vistas descifradas que crea el cifrado (42 a 44): sin ellas,
 -- cada consulta fallaría con "Invalid object name".
 IF OBJECT_ID(N'Seguridad.vw_Jugador', N'V') IS NULL
    OR OBJECT_ID(N'Seguridad.vw_PersonaCuerpoTecnico', N'V') IS NULL
