@@ -43,6 +43,7 @@ import customtkinter as ctk
 import pyodbc
 from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
 
+from pestana_arbitros import ImportarArbitros
 from pestanas_xml import ReportesXML
 
 CARPETA_FOTOS = Path(__file__).resolve().parent.parent / "datos" / "fuentes" / "sedes"
@@ -187,6 +188,16 @@ class Repositorio:
                              (id_seleccion, int(incluir_bajas)))
         return cur.fetchone()[0]
 
+    def importar_arbitros(self, ruta):
+        """Importa un CSV con Arbitraje.usp_ImportarArbitrosCSV. Devuelve (resumen, filas):
+        el resumen (id_importacion, leidos, insertados, actualizados, sin_cambios, rechazados)
+        y cada fila del archivo (linea, pais, nombre, apellido, categoria, fecha_nacimiento,
+        idiomas, accion, motivos)."""
+        cur = self._ejecutar("EXEC Arbitraje.usp_ImportarArbitrosCSV @ruta_archivo = ?;", (ruta,))
+        resumen = cur.fetchone()
+        cur.nextset()
+        return resumen, cur.fetchall()
+
 
 # ---------------------------------------------------------------------------
 # Conversion de los campos (las reglas de negocio las valida la base)
@@ -307,7 +318,7 @@ class App(ctk.CTk):
         self.repo = repo
         ctk.set_appearance_mode("system")
         ctk.set_default_color_theme("blue")
-        self.title("Mundial 2026 - Sedes")
+        self.title("App Mundial")
         centrar_ventana(self, 1400, 900, minimo=(1150, 700))
         self.tiene_imagen = False
         self.id_edicion = None  # sede que se está editando en el formulario (None: alta)
@@ -325,6 +336,7 @@ class App(ctk.CTk):
         pestanas.grid(row=0, column=0, sticky="nsew", padx=6, pady=(0, 6))
         self.pest_sedes = pestanas.add("Sedes")
         pest_reportes = pestanas.add("Reportes XML")
+        pest_arbitros = pestanas.add("Importar árbitros")
         self.pest_sedes.grid_columnconfigure(0, weight=1)
         self.pest_sedes.grid_columnconfigure(1, weight=0)
         self.pest_sedes.grid_rowconfigure(0, weight=1)
@@ -336,6 +348,10 @@ class App(ctk.CTk):
         pest_reportes.grid_columnconfigure(0, weight=1)
         pest_reportes.grid_rowconfigure(0, weight=1)
         ReportesXML(pest_reportes, repo, "Sedes.Treeview").grid(row=0, column=0, sticky="nsew")
+
+        pest_arbitros.grid_columnconfigure(0, weight=1)
+        pest_arbitros.grid_rowconfigure(0, weight=1)
+        ImportarArbitros(pest_arbitros, repo, "Sedes.Treeview").grid(row=0, column=0, sticky="nsew")
 
     # --- Lista de sedes -----------------------------------------------------
     def _panel_lista(self):

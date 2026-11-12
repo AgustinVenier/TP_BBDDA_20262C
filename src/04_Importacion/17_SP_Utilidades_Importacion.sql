@@ -176,8 +176,9 @@ GO
   usp_BorrarImportacion
   Borra del registro la importación @id_importacion, o todas las del origen
   @origen (la ruta del archivo o la URL, exacta), con sus registros
-  rechazados. No toca los datos importados. Sirve para depurar el registro y
-  para que los tests no dejen rastro. Si no hay ninguna, no hace nada.
+  rechazados. No toca los datos importados. Es la baja del registro de
+  importaciones: sirve para depurarlo sin borrar a mano en las tablas. Si no
+  hay ninguna, no hace nada.
   Valida: uno de los dos parámetros, y no los dos.
 */
 CREATE OR ALTER PROCEDURE DatosGenerales.usp_BorrarImportacion
@@ -228,6 +229,8 @@ BEGIN
         DELETE e FROM DesarrolloPartido.ERRORES_EVENTO AS e
         INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;
         DELETE e FROM Arbitraje.ERRORES_DESIGNACION AS e
+        INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;
+        DELETE e FROM Arbitraje.ERRORES_ARBITRO AS e
         INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;
         DELETE e FROM Publicidad.ERRORES_CAMPANIA AS e
         INNER JOIN @importaciones AS i ON i.id_importacion = e.id_importacion;

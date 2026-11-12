@@ -253,6 +253,26 @@ SELECT i.id_importacion, i.proceso, i.origen, i.fecha_hora, i.leidos, i.insertad
 FROM DatosGenerales.IMPORTACION AS i
 WHERE i.id_importacion > CAST(SESSION_CONTEXT(N'importacion_desde') AS INT)
 ORDER BY i.id_importacion;
+
+-- Partidos que caen en feriado en algún mercado, con la fecha local de cada mercado (feriados del 31).
+SELECT p.numero_partido, p.fecha_hora_utc, m.mercado, m.hora_local, m.feriado, m.en_prime_time
+FROM Torneo.PARTIDO AS p
+CROSS APPLY Publicidad.fn_MercadosEnPrimeTime(p.id_partido) AS m
+WHERE m.es_feriado = 1
+ORDER BY p.numero_partido, m.mercado;
+
+-- Tarifa del espacio 1 de la primera sede en la moneda de cada mercado (los 20 primeros por nombre), con la
+-- cotización del día del primer partido (cotizaciones del 31).
+DECLARE @fecha DATE = (SELECT CAST(MIN(fecha_hora_local) AS DATE) FROM Torneo.PARTIDO);
+
+SELECT TOP (20) s.nombre_estadio, ep.numero_espacio, ep.tarifa_usd, pa.nombre AS mercado, c.codigo_moneda,
+       c.fecha_cotizacion, CAST(ep.tarifa_usd * c.unidades_por_usd AS DECIMAL(19,2)) AS tarifa_en_moneda
+FROM Publicidad.ESPACIO_PUBLICITARIO AS ep
+INNER JOIN Torneo.SEDE AS s ON s.id_sede = ep.id_sede
+CROSS JOIN DatosGenerales.PAIS AS pa
+CROSS APPLY DatosGenerales.fn_CotizacionVigente(pa.codigo_moneda, @fecha) AS c
+WHERE s.id_sede = (SELECT MIN(id_sede) FROM Torneo.SEDE) AND ep.numero_espacio = 1
+ORDER BY pa.nombre;
 GO
 
 SET NOEXEC OFF;

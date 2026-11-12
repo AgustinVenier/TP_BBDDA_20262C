@@ -152,6 +152,7 @@ BEGIN
     DENY EXECUTE ON OBJECT::Torneo.usp_ImportarJugadoresCSV TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::Torneo.usp_ImportarCuerpoTecnicoCSV TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::Arbitraje.usp_ImportarDesignacionesCSV TO rol_AdministradorOperativo;
+    DENY EXECUTE ON OBJECT::Arbitraje.usp_ImportarArbitrosCSV TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::Torneo.usp_ImportarImagenSede TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::Torneo.usp_ImportarImagenesSedes TO rol_AdministradorOperativo;
 

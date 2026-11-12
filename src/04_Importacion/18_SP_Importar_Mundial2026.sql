@@ -30,6 +30,7 @@
              Arbitraje.usp_CargarArbitros                    carga masiva de árbitros
              Arbitraje.usp_CargarDesignaciones               carga masiva de designaciones
              Arbitraje.usp_ImportarDesignacionesCSV          designaciones_arbitrales.csv (scraping)
+             Arbitraje.usp_ImportarArbitrosCSV               CSV de árbitros sueltos (lo usa la aplicación)
            La forma de trabajo común y las utilidades que usan
            (usp_LeerArchivoUTF8, usp_IdentificarJugadores) están en
            17_SP_Utilidades_Importacion.sql. Requiere haber ejecutado 01 a 17.
@@ -2869,6 +2870,177 @@ END;
 GO
 
 
+/*
+  usp_ImportarArbitrosCSV
+  Importa árbitros sueltos (sin partidos) desde un CSV con una fila por
+  árbitro y esta primera fila con los nombres de las columnas:
+    pais,nombre,apellido,categoria,fecha_nacimiento,idiomas
+  pais es el código FIFA del país del árbitro; categoria, FIFA o
+  CONFEDERACION (o CONFEDERATION, en inglés); fecha_nacimiento, AAAA-MM-DD
+  (puede venir vacía), e idiomas, los códigos ISO 639-1 separados por comas,
+  entre comillas si son más de uno ("es,en"). Solo carga árbitros: no toca
+  partidos ni designaciones (esas las importa usp_ImportarDesignacionesCSV).
+  Lo usa la aplicación (app_abm), en la pestaña "Importar árbitros".
+  Valida: ruta obligatoria y terminada en .csv. Si el archivo no se puede
+  leer, no tiene las columnas esperadas o alguna fila no es CSV válido, no
+  se importa nada (THROW 50002). Rechaza las filas con una fecha de
+  nacimiento que no es fecha; las reglas de los árbitros las aplica
+  usp_CargarArbitros. Registra la importación (su número queda en
+  @id_importacion) y las filas rechazadas en Arbitraje.ERRORES_ARBITRO.
+  Devuelve el resumen y cada fila del archivo con lo que le pasó y, si se
+  rechazó, sus motivos.
+*/
+CREATE OR ALTER PROCEDURE Arbitraje.usp_ImportarArbitrosCSV
+    @ruta_archivo    NVARCHAR(400),
+    @id_importacion  INT = NULL OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @errores      NVARCHAR(2048) = N'';
+    DECLARE @salto_linea  NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @contenido    NVARCHAR(MAX);
+    DECLARE @encabezado   NVARCHAR(400);
+    DECLARE @mensaje      NVARCHAR(2048);
+    DECLARE @sql          NVARCHAR(MAX);
+    DECLARE @tran_propia  BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @proceso      VARCHAR(100)   = 'Arbitraje.usp_ImportarArbitrosCSV';
+    DECLARE @leidos       INT;
+    DECLARE @insertados   INT;
+    DECLARE @actualizados INT;
+    DECLARE @sin_cambios  INT;
+    DECLARE @rechazados   INT;
+
+    SET @ruta_archivo = NULLIF(TRIM(@ruta_archivo), N'');
+    SET @id_importacion = NULL;
+
+    IF @ruta_archivo IS NULL
+        SET @errores += @salto_linea + N'- La ruta del archivo es obligatoria.';
+    ELSE IF @ruta_archivo NOT LIKE N'%.csv'
+        SET @errores += @salto_linea + N'- El archivo tiene que ser un .csv.';
+
+    IF @errores <> N''
+    BEGIN
+        SET @errores = N'Arbitraje.usp_ImportarArbitrosCSV: no se pudo importar el archivo.' + @errores;
+        THROW 50001, @errores, 1;
+    END;
+
+    /* 1. El archivo: la primera fila tiene que tener las columnas esperadas. */
+    EXEC DatosGenerales.usp_LeerArchivoUTF8 @ruta_archivo = @ruta_archivo, @contenido = @contenido OUTPUT;
+
+    SET @encabezado = REPLACE(REPLACE(LEFT(@contenido, CHARINDEX(NCHAR(10), @contenido + NCHAR(10)) - 1),
+                                      NCHAR(13), N''), N' ', N'');
+    IF @encabezado <> N'pais,nombre,apellido,categoria,fecha_nacimiento,idiomas'
+    BEGIN
+        SET @mensaje = N'Arbitraje.usp_ImportarArbitrosCSV: no se importó nada, la primera fila del archivo tiene que ser '
+                     + N'"pais,nombre,apellido,categoria,fecha_nacimiento,idiomas" y es "' + LEFT(@encabezado, 200) + N'".';
+        THROW 50002, @mensaje, 1;
+    END;
+
+    /* 2. Las filas, como vienen. FORMAT = 'CSV' respeta las comillas. El fin de
+          línea es el del archivo: CRLF (Windows) o LF. */
+    CREATE TABLE #crudo (
+        pais_txt       NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        nombre         NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        apellido       NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        categoria      NVARCHAR(100) COLLATE DATABASE_DEFAULT NULL,
+        fecha_txt      NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        idiomas        NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL
+    );
+
+    BEGIN TRY
+        SET @sql = N'BULK INSERT #crudo FROM N''' + REPLACE(@ruta_archivo, N'''', N'''''')
+                 + N''' WITH (FORMAT = ''CSV'', FIRSTROW = 2, CODEPAGE = ''65001'', FIELDTERMINATOR = '','', '
+                 + N'ROWTERMINATOR = ''' + IIF(CHARINDEX(NCHAR(13) + NCHAR(10), @contenido) > 0, N'0x0d0a', N'0x0a')
+                 + N''', FIELDQUOTE = ''"'', MAXERRORS = 0);';
+        EXEC sp_executesql @sql;
+    END TRY
+    BEGIN CATCH
+        SET @mensaje = N'Arbitraje.usp_ImportarArbitrosCSV: no se importó nada, hay filas que no son CSV válido '
+                     + N'(tienen que tener 6 columnas): ' + ERROR_MESSAGE();
+        THROW 50002, @mensaje, 1;
+    END CATCH;
+
+    -- usp_CargarArbitros lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
+    CREATE TABLE #staging_arbitros (
+        id_registro       INT PRIMARY KEY,   -- línea del archivo
+        -- Tal como viene en el archivo
+        fecha_txt         NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        -- Lo que lee usp_CargarArbitros, ya convertido
+        codigo_fifa       NVARCHAR(50)  COLLATE DATABASE_DEFAULT NULL,
+        nombre            NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        apellido          NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        categoria         NVARCHAR(100) COLLATE DATABASE_DEFAULT NULL,
+        fecha_nacimiento  DATE          NULL,
+        idiomas           NVARCHAR(400) COLLATE DATABASE_DEFAULT NULL,
+        -- Lo que le pasa a cada registro: lo completan este SP y usp_CargarArbitros
+        errores           NVARCHAR(MAX) COLLATE DATABASE_DEFAULT NULL,
+        accion            VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
+    );
+
+    INSERT INTO #staging_arbitros (id_registro, codigo_fifa, nombre, apellido, categoria, fecha_txt, idiomas)
+    SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + 1,
+           UPPER(NULLIF(TRIM(pais_txt), N'')), NULLIF(TRIM(nombre), N''), NULLIF(TRIM(apellido), N''),
+           NULLIF(TRIM(categoria), N''), NULLIF(TRIM(fecha_txt), N''),
+           NULLIF(TRIM(REPLACE(idiomas, NCHAR(13), N'')), N'')
+    FROM #crudo
+    WHERE CONCAT(pais_txt, nombre, apellido, categoria, fecha_txt, REPLACE(idiomas, NCHAR(13), N'')) <> N'';
+
+    UPDATE #staging_arbitros
+    SET fecha_nacimiento = TRY_CONVERT(DATE, fecha_txt, 23);
+
+    /* 3. Lo que no se pudo convertir. Las reglas de los árbitros las aplica usp_CargarArbitros. */
+    UPDATE #staging_arbitros
+    SET errores = @salto_linea + N'- La fecha de nacimiento "' + fecha_txt + N'" no es una fecha AAAA-MM-DD.',
+        accion  = 'RECHAZADO'
+    WHERE fecha_txt IS NOT NULL AND fecha_nacimiento IS NULL;
+
+    /* 4. El SP de carga carga los árbitros; después se registran la importación y sus
+          rechazados. Todo en una transacción. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        EXEC Arbitraje.usp_CargarArbitros;
+
+        SELECT @leidos       = COUNT(*),
+               @insertados   = ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
+               @actualizados = ISNULL(SUM(IIF(accion = 'ACTUALIZADO', 1, 0)), 0),
+               @sin_cambios  = ISNULL(SUM(IIF(accion = 'SIN CAMBIOS', 1, 0)), 0),
+               @rechazados   = ISNULL(SUM(IIF(accion = 'RECHAZADO', 1, 0)), 0)
+        FROM #staging_arbitros;
+
+        EXEC DatosGenerales.usp_RegistrarImportacion
+            @proceso = @proceso, @origen = @ruta_archivo, @leidos = @leidos, @insertados = @insertados,
+            @actualizados = @actualizados, @sin_cambios = @sin_cambios, @rechazados = @rechazados,
+            @id_importacion = @id_importacion OUTPUT;
+
+        INSERT INTO Arbitraje.ERRORES_ARBITRO (id_importacion, registro, pais, nombre, apellido, categoria,
+                                               fecha_nacimiento, idiomas, motivos)
+        SELECT @id_importacion, id_registro, codigo_fifa, nombre, apellido, categoria, fecha_txt, idiomas,
+               STUFF(errores, 1, 2, N'')
+        FROM #staging_arbitros
+        WHERE accion = 'RECHAZADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+
+    /* 5. Resultado: el resumen y cada fila del archivo (los motivos de las rechazadas
+          son los que quedaron en Arbitraje.ERRORES_ARBITRO). */
+    SELECT @id_importacion AS id_importacion, @leidos AS leidos, @insertados AS insertados,
+           @actualizados AS actualizados, @sin_cambios AS sin_cambios, @rechazados AS rechazados;
+
+    SELECT id_registro AS linea, codigo_fifa AS pais, nombre, apellido, categoria,
+           fecha_txt AS fecha_nacimiento, idiomas, accion, STUFF(errores, 1, 2, N'') AS motivos
+    FROM #staging_arbitros
+    ORDER BY id_registro;
+END;
+GO
+
+
 -- Evidencia: objetos de la importación del Mundial 2026 creados.
 SELECT s.name AS esquema, o.name AS objeto, o.type_desc AS tipo
 FROM sys.objects AS o
@@ -2876,6 +3048,7 @@ INNER JOIN sys.schemas AS s ON s.schema_id = o.schema_id
 WHERE o.name IN (N'usp_LeerArchivoUTF8', N'fn_NormalizarNombre', N'fn_CoordenadaDecimal', N'usp_IdentificarJugadores',
                  N'usp_ImportarSedesJSON', N'usp_ImportarSeleccionesJSON', N'usp_ImportarPartidosJSON',
                  N'usp_ImportarDesignacionesCSV', N'usp_CargarSedes', N'usp_CargarSelecciones', N'usp_CargarPartidos',
-                 N'usp_CargarDesarrolloPartidos', N'usp_CargarArbitros', N'usp_CargarDesignaciones')
+                 N'usp_CargarDesarrolloPartidos', N'usp_CargarArbitros', N'usp_CargarDesignaciones',
+                 N'usp_ImportarArbitrosCSV')
 ORDER BY o.type_desc, o.name;
 GO

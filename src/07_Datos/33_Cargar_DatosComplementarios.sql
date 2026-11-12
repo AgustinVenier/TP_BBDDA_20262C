@@ -125,8 +125,7 @@ GO
    período. Son del calendario lunar islámico y su fecha se confirma con la
    observación de la luna: son las fechas previstas, a verificar con el
    calendario oficial de cada país. Solo se cargan para los países que no
-   tienen ningún feriado de 2026 cargado. Va antes de la publicidad (parte
-   5), que cobra un recargo según los mercados en feriado.
+   tienen ningún feriado de 2026 cargado.
    ============================================================================ */
 CREATE TABLE #staging_feriados (
     id_pais  SMALLINT       NULL,
@@ -777,10 +776,9 @@ GO
    los de penal, en contra y de la definición no tienen. Qué goles y quién
    asiste salen de un hash del partido, el minuto y los dorsales, no del
    azar: cada ejecución elige lo mismo. El que asiste es un compañero del
-   autor que estaba en cancha en ese minuto: titular que todavía no había
-   salido o suplente que ya había entrado (en el entretiempo, si el gol es
-   en ese mismo minuto), sin roja antes del gol. Un mediocampista o un
-   delantero tiene más chance que un defensor, y el arquero nunca asiste.
+   autor que estaba en cancha en ese minuto, según
+   DesarrolloPartido.fn_EquipoEnCancha. Un mediocampista o un delantero
+   tiene más chance que un defensor, y el arquero nunca asiste.
    Se cargan con DesarrolloPartido.usp_CargarDesarrolloPartidos, que a un
    gol ya cargado le agrega la asistencia. Solo se completan los goles que no tienen asistencia.
    ============================================================================ */
@@ -806,49 +804,31 @@ CREATE TABLE #staging_eventos (
     accion              VARCHAR(15)   COLLATE DATABASE_DEFAULT NULL
 );
 
--- El momento de cada evento como un número que se puede comparar: el 45+2 (4502) va antes que el 46 (4600).
 WITH goles AS (
-    SELECT g.id_gol, p.id_partido, p.numero_partido, g.id_jugador_autor, ja.dorsal AS dorsal_autor, f.id_formacion,
-           tg.descripcion AS tipo_gol, g.periodo, g.minuto, g.minuto_adicional,
-           g.minuto * 100 + g.minuto_adicional AS momento
+    SELECT g.id_gol, p.id_partido, p.numero_partido, g.id_jugador_autor, l.id_seleccion,
+           tg.descripcion AS tipo_gol, g.periodo, g.minuto, g.minuto_adicional
     FROM DesarrolloPartido.GOL AS g
     INNER JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.id_tipo_gol = g.id_tipo_gol
     INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = g.id_partido
     INNER JOIN Torneo.JUGADOR AS ja ON ja.id_jugador = g.id_jugador_autor
     INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = ja.id_lista
-    INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_partido = g.id_partido AND f.id_seleccion = l.id_seleccion
     WHERE tg.descripcion = 'JUGADA' AND g.periodo <> 'PENALES' AND g.id_jugador_asistencia IS NULL
       AND ABS(CHECKSUM(p.numero_partido, g.minuto, g.minuto_adicional, ja.dorsal)) % 3 <> 0
 ),
 candidatos AS (
     SELECT go.id_gol, go.numero_partido, go.id_jugador_autor, go.tipo_gol, go.periodo, go.minuto, go.minuto_adicional,
-           a.id_jugador AS id_jugador_asistencia,
+           ec.id_jugador AS id_jugador_asistencia,
            ROW_NUMBER() OVER (PARTITION BY go.id_gol
                               -- Un puntaje del 0 al 99 por jugador; el de un defensor se duplica (menos chance).
                               ORDER BY ABS(CHECKSUM(go.numero_partido, go.minuto, go.minuto_adicional, j.dorsal)) % 100
                                        * IIF(j.posicion_habitual = 'DEFENSOR', 2, 1),
                                        j.dorsal) AS orden
     FROM goles AS go
-    INNER JOIN DesarrolloPartido.ALINEACION AS a ON a.id_formacion = go.id_formacion
-    INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = a.id_jugador
-    WHERE a.id_jugador <> go.id_jugador_autor
+    -- Los compañeros del autor que estaban en cancha en el minuto del gol.
+    CROSS APPLY DesarrolloPartido.fn_EquipoEnCancha(go.id_partido, go.id_seleccion, go.minuto, go.minuto_adicional) AS ec
+    INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = ec.id_jugador
+    WHERE ec.id_jugador <> go.id_jugador_autor
       AND j.posicion_habitual <> 'ARQUERO'
-      -- En cancha: titular que no salió antes del gol, o suplente que entró antes (o en el entretiempo de ese minuto).
-      AND ((a.es_titular = 1
-            AND NOT EXISTS (SELECT 1 FROM DesarrolloPartido.CAMBIO AS c
-                            WHERE c.id_partido = go.id_partido AND c.id_jugador_sale = a.id_jugador
-                              AND c.minuto * 100 + c.minuto_adicional <= go.momento))
-           OR (a.es_titular = 0
-               AND EXISTS (SELECT 1 FROM DesarrolloPartido.CAMBIO AS c
-                           WHERE c.id_partido = go.id_partido AND c.id_jugador_entra = a.id_jugador
-                             AND (c.minuto * 100 + c.minuto_adicional < go.momento
-                                  OR (c.en_entretiempo = 1 AND c.minuto * 100 + c.minuto_adicional = go.momento)))
-               AND NOT EXISTS (SELECT 1 FROM DesarrolloPartido.CAMBIO AS c
-                               WHERE c.id_partido = go.id_partido AND c.id_jugador_sale = a.id_jugador
-                                 AND c.minuto * 100 + c.minuto_adicional <= go.momento)))
-      AND NOT EXISTS (SELECT 1 FROM DesarrolloPartido.AMONESTACION AS am
-                      WHERE am.id_partido = go.id_partido AND am.id_jugador = a.id_jugador AND am.tipo_tarjeta = 'ROJA'
-                        AND am.minuto * 100 + am.minuto_adicional <= go.momento)
 )
 INSERT INTO #staging_eventos (id_evento, tipo, numero_partido, id_jugador, id_jugador_asistencia, periodo, tipo_gol, minuto,
                               minuto_adicional)

@@ -13,7 +13,7 @@
  Archivo: 68_Test_SP_Importar_Mundial2026.sql
  Objetivo: Probar la importación del Mundial 2026 de
            18_SP_Importar_Mundial2026.sql (sedes, selecciones y partidos en
-           JSON, y el equipo arbitral en CSV) y el ABM de
+           JSON, el equipo arbitral en CSV y los árbitros sueltos en CSV) y el ABM de
            Torneo.NOMBRE_ALTERNATIVO de 06_SP_ABM_Torneo.sql, con los
            archivos chicos de datos/pruebas/mundial_prueba_*: alta,
            reimportación sin duplicados, actualización, importación con
@@ -442,6 +442,59 @@ GO
 
 
 /* ============================================================================
+   ÁRBITROS SUELTOS (CSV de árbitros, sin partidos)
+   ============================================================================ */
+
+/* MI14 (OK) Importación de mundial_prueba_arbitros.csv, dos veces.
+   Esperado, la primera: 8 leídos, 3 insertados y 5 rechazados. Se cargan
+   "Prueba Rosario" (ARG, idiomas es y en), "Prueba Montevideo" (URU, con la
+   categoría CONFEDERATION, que queda CONFEDERACION) y "Prueba Santos" (BRA,
+   sin fecha de nacimiento). Se rechazan: el país QQQ, que no existe; la
+   categoría NACIONAL; la fecha 15/05/1982, que no es AAAA-MM-DD; el idioma
+   xx, que no existe, y la fila sin nombre. Las 5 quedan en
+   Arbitraje.ERRORES_ARBITRO con el texto que traían.
+   La segunda: los 3 SIN CAMBIOS y los mismos 5 rechazados (no se duplica nada). */
+DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_arbitros.csv';
+DECLARE @id_importacion INT;
+
+EXEC Arbitraje.usp_ImportarArbitrosCSV @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
+
+SELECT 'MI14 registro' AS caso, i.proceso, i.leidos, i.insertados, i.rechazados,
+       (SELECT COUNT(*) FROM Arbitraje.ERRORES_ARBITRO AS e WHERE e.id_importacion = i.id_importacion) AS errores_arbitro
+FROM DatosGenerales.IMPORTACION AS i
+WHERE i.id_importacion = @id_importacion;
+
+EXEC Arbitraje.usp_ImportarArbitrosCSV @ruta_archivo = @archivo;
+
+SELECT 'MI14 árbitros' AS caso, pa.codigo_fifa AS pais, a.nombre, a.apellido, a.categoria, a.fecha_nacimiento,
+       (SELECT STRING_AGG(i.codigo_iso, ',') FROM Arbitraje.ARBITRO_IDIOMA AS ai
+        INNER JOIN DatosGenerales.IDIOMA AS i ON i.id_idioma = ai.id_idioma
+        WHERE ai.id_arbitro = a.id_arbitro) AS idiomas
+FROM Arbitraje.ARBITRO AS a
+INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = a.id_pais
+WHERE a.nombre = N'Árbitro' AND a.apellido IN (N'Prueba Rosario', N'Prueba Montevideo', N'Prueba Santos')
+ORDER BY a.apellido;
+GO
+
+
+/* MI15 (OK) Importación de mundial_prueba_arbitros_cambios.csv (upsert).
+   Esperado: 3 leídos, 1 insertado ("Prueba Santiago", CHI), 1 actualizado
+   ("Prueba Rosario": pasa a CONFEDERACION y suma el idioma pt; es y en no se
+   borran) y 1 sin cambios ("Prueba Montevideo"). */
+DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400)) + N'mundial_prueba_arbitros_cambios.csv';
+
+EXEC Arbitraje.usp_ImportarArbitrosCSV @ruta_archivo = @archivo;
+
+SELECT 'MI15 Prueba Rosario' AS caso, a.categoria,
+       (SELECT STRING_AGG(i.codigo_iso, ',') WITHIN GROUP (ORDER BY i.codigo_iso) FROM Arbitraje.ARBITRO_IDIOMA AS ai
+        INNER JOIN DatosGenerales.IDIOMA AS i ON i.id_idioma = ai.id_idioma
+        WHERE ai.id_arbitro = a.id_arbitro) AS idiomas
+FROM Arbitraje.ARBITRO AS a
+WHERE a.nombre = N'Árbitro' AND a.apellido = N'Prueba Rosario';
+GO
+
+
+/* ============================================================================
    ARCHIVOS QUE NO SE PUEDEN IMPORTAR Y VALIDACIONES DE PARÁMETROS
    ============================================================================ */
 
@@ -454,8 +507,10 @@ GO
      f) el reproceso de MI7 numerando desde el 1 (sus eventos rechazados
         eran del partido 201);
      g) mundial_prueba_jugadores.csv como archivo del equipo arbitral (otras
+        columnas);
+     h) mundial_prueba_designaciones.csv como archivo de árbitros (otras
         columnas).
-   Esperado: siete errores 50002, cada uno con su motivo, sin nada importado. */
+   Esperado: ocho errores 50002, cada uno con su motivo, sin nada importado. */
 DECLARE @carpeta NVARCHAR(400) = CAST(SESSION_CONTEXT(N'carpeta_pruebas') AS NVARCHAR(400));
 DECLARE @archivo NVARCHAR(400);
 
@@ -550,6 +605,19 @@ BEGIN CATCH
         PRINT CONCAT(N'MI9g: FALLÓ, error inesperado ', ERROR_NUMBER(), N'.');
     PRINT ERROR_MESSAGE();
 END CATCH;
+
+BEGIN TRY
+    SET @archivo = @carpeta + N'mundial_prueba_designaciones.csv';
+    EXEC Arbitraje.usp_ImportarArbitrosCSV @ruta_archivo = @archivo;
+    PRINT N'MI9h: FALLÓ, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50002
+        PRINT N'MI9h: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'MI9h: FALLÓ, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
 GO
 
 
@@ -558,8 +626,9 @@ GO
      b) tarifas negativas para las sedes nuevas;
      c) reprocesar la importación de MI7 (de mundial_prueba_partidos.json)
         con otro archivo (mundial_prueba_otro_formato.json);
-     d) el equipo arbitral con la categoría NACIONAL.
-   Esperado: cuatro errores 50001, sin leer el archivo. */
+     d) el equipo arbitral con la categoría NACIONAL;
+     e) el archivo de árbitros con una ruta que no es .csv.
+   Esperado: cinco errores 50001, sin leer el archivo. */
 BEGIN TRY
     EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = N' ', @primer_numero = 0;
     PRINT N'MI10a: FALLÓ, se esperaba un error.';
@@ -607,6 +676,18 @@ BEGIN CATCH
         PRINT N'MI10d: OK, falló como se esperaba.';
     ELSE
         PRINT CONCAT(N'MI10d: FALLÓ, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+
+BEGIN TRY
+    EXEC Arbitraje.usp_ImportarArbitrosCSV @ruta_archivo = N'C:\arbitros.txt';
+    PRINT N'MI10e: FALLÓ, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'MI10e: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'MI10e: FALLÓ, error inesperado ', ERROR_NUMBER(), N'.');
     PRINT ERROR_MESSAGE();
 END CATCH;
 GO

@@ -77,6 +77,7 @@ GO
    ============================================================================ */
 
 DROP TABLE IF EXISTS Publicidad.ERRORES_CAMPANIA;
+DROP TABLE IF EXISTS Arbitraje.ERRORES_ARBITRO;
 DROP TABLE IF EXISTS Arbitraje.ERRORES_DESIGNACION;
 DROP TABLE IF EXISTS DesarrolloPartido.ERRORES_EVENTO;
 DROP TABLE IF EXISTS Torneo.ERRORES_PARTIDO;
@@ -1186,6 +1187,29 @@ CREATE TABLE Arbitraje.ERRORES_DESIGNACION (
 
     CONSTRAINT PK_ERRORES_DESIGNACION PRIMARY KEY (id_importacion, registro),
     CONSTRAINT FK_ERRORES_DESIGNACION_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+
+/*
+  ERRORES_ARBITRO
+  Arbitros rechazados del CSV de arbitros (usp_ImportarArbitrosCSV):
+  registro es la linea del archivo; los demas datos, el texto que traia.
+*/
+CREATE TABLE Arbitraje.ERRORES_ARBITRO (
+    id_importacion    INT            NOT NULL,
+    registro          INT            NOT NULL,
+    pais              NVARCHAR(50)   NULL,
+    nombre            NVARCHAR(400)  NULL,
+    apellido          NVARCHAR(400)  NULL,
+    categoria         NVARCHAR(100)  NULL,
+    fecha_nacimiento  NVARCHAR(50)   NULL,
+    idiomas           NVARCHAR(400)  NULL,
+    motivos           NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_ARBITRO PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_ARBITRO_IMPORTACION
         FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
 );
 GO

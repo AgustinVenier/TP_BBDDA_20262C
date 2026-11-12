@@ -180,13 +180,6 @@ LEFT JOIN DatosGenerales.INDICADOR_ECONOMICO AS ie
        ON ie.id_pais = p.id_pais AND ie.codigo_indicador = 'NY.GDP.PCAP.CD' AND ie.anio = u.ultimo_anio
 ORDER BY ie.valor DESC;
 
--- Evidencia: partidos del torneo que caen en feriado en algún mercado (fecha local de cada mercado).
-SELECT p.numero_partido, p.fecha_hora_utc, m.mercado, m.hora_local, m.feriado, m.en_prime_time
-FROM Torneo.PARTIDO AS p
-CROSS APPLY Publicidad.fn_MercadosEnPrimeTime(p.id_partido) AS m
-WHERE m.es_feriado = 1
-ORDER BY p.numero_partido, m.mercado;
-
 -- Evidencia: anunciantes, campañas y piezas por país del anunciante (las del Dossier son de Argentina).
 SELECT pa.nombre AS pais, COUNT(DISTINCT an.id_anunciante) AS anunciantes, COUNT(DISTINCT c.id_campania) AS campanias,
        COUNT(pz.id_pieza) AS piezas
@@ -196,16 +189,4 @@ LEFT JOIN Publicidad.CAMPANIA AS c ON c.id_anunciante = an.id_anunciante
 LEFT JOIN Publicidad.PIEZA_PUBLICITARIA AS pz ON pz.id_campania = c.id_campania
 GROUP BY pa.nombre
 ORDER BY anunciantes DESC;
-
--- Evidencia: tarifa de cada espacio de la primera sede en la moneda de cada mercado, el día del primer partido.
-DECLARE @fecha DATE = (SELECT CAST(MIN(fecha_hora_local) AS DATE) FROM Torneo.PARTIDO);
-
-SELECT TOP (20) s.nombre_estadio, ep.numero_espacio, ep.tarifa_usd, pa.nombre AS mercado, c.codigo_moneda,
-       c.fecha_cotizacion, CAST(ep.tarifa_usd * c.unidades_por_usd AS DECIMAL(19,2)) AS tarifa_en_moneda
-FROM Publicidad.ESPACIO_PUBLICITARIO AS ep
-INNER JOIN Torneo.SEDE AS s ON s.id_sede = ep.id_sede
-CROSS JOIN DatosGenerales.PAIS AS pa
-CROSS APPLY DatosGenerales.fn_CotizacionVigente(pa.codigo_moneda, @fecha) AS c
-WHERE s.id_sede = (SELECT MIN(id_sede) FROM Torneo.SEDE) AND ep.numero_espacio = 1
-ORDER BY pa.nombre;
 GO

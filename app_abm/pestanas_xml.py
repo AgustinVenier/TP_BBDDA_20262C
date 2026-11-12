@@ -1,9 +1,23 @@
 """
-Pestaña de la aplicación para los reportes XML: ejecuta
-Reportes.usp_TarjetasXML o Reportes.usp_SeleccionesYPlantillasXML, muestra el XML en
-paralelo (a la izquierda el texto tal cual y a la derecha un árbol con los atributos
-de cada elemento) y lo guarda en un archivo .xml. La aplicación no arma el XML: lo
-genera el SP y acá solo se muestra y se guarda.
+================================================================================
+ Universidad Nacional de La Matanza
+ Materia: 3641 - Bases de Datos Aplicada
+ Comisión: 01    Grupo: 2
+ Integrantes:
+   Caruso Dellisanti, Carolina Belen - CarolinaCaruso
+   D'Ambrosio, Rodrigo - rodrigoDambrosio
+   Tavella, Tomás - TomasTavella
+   Venier, Agustin - AgustinVenier
+
+ Fecha: 12/11/2026
+ Archivo: pestanas_xml.py
+ Objetivo: Pestaña de la aplicación para los reportes XML: ejecuta
+           Reportes.usp_TarjetasXML o Reportes.usp_SeleccionesYPlantillasXML,
+           muestra el XML en paralelo (a la izquierda el texto tal cual y a la
+           derecha un árbol con los atributos de cada elemento) y lo guarda en
+           un archivo .xml. La aplicación no arma el XML: lo genera el SP y acá
+           solo se muestra y se guarda.
+================================================================================
 """
 
 import xml.etree.ElementTree as ET
