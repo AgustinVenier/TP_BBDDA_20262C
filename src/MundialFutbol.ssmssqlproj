@@ -88,211 +88,199 @@
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>01_CrearBaseDeDatos.sql</FullPath>
+          <FullPath>01_Estructura\01_CrearBaseDeDatos.sql</FullPath>
         </FileNode>
         <FileNode Name="02_CrearEsquemas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>02_CrearEsquemas.sql</FullPath>
+          <FullPath>01_Estructura\02_CrearEsquemas.sql</FullPath>
         </FileNode>
         <FileNode Name="03_CrearTablas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>03_CrearTablas.sql</FullPath>
+          <FullPath>01_Estructura\03_CrearTablas.sql</FullPath>
         </FileNode>
         <FileNode Name="04_CrearFuncionesYVistas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>04_CrearFuncionesYVistas.sql</FullPath>
+          <FullPath>01_Estructura\04_CrearFuncionesYVistas.sql</FullPath>
         </FileNode>
         <FileNode Name="05_SP_ABM_DatosGenerales.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>05_SP_ABM_DatosGenerales.sql</FullPath>
+          <FullPath>02_ABM\05_SP_ABM_DatosGenerales.sql</FullPath>
         </FileNode>
         <FileNode Name="06_SP_ABM_Torneo.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>06_SP_ABM_Torneo.sql</FullPath>
+          <FullPath>02_ABM\06_SP_ABM_Torneo.sql</FullPath>
         </FileNode>
         <FileNode Name="07_SP_ABM_DesarrolloPartido.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>07_SP_ABM_DesarrolloPartido.sql</FullPath>
+          <FullPath>02_ABM\07_SP_ABM_DesarrolloPartido.sql</FullPath>
         </FileNode>
         <FileNode Name="08_SP_ABM_Arbitraje.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>08_SP_ABM_Arbitraje.sql</FullPath>
+          <FullPath>02_ABM\08_SP_ABM_Arbitraje.sql</FullPath>
         </FileNode>
         <FileNode Name="09_SP_ABM_Publicidad.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>09_SP_ABM_Publicidad.sql</FullPath>
+          <FullPath>02_ABM\09_SP_ABM_Publicidad.sql</FullPath>
         </FileNode>
         <FileNode Name="10_SP_Negocio_SedesYPartidos.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>10_SP_Negocio_SedesYPartidos.sql</FullPath>
+          <FullPath>03_Negocio\10_SP_Negocio_SedesYPartidos.sql</FullPath>
         </FileNode>
         <FileNode Name="11_SP_Negocio_Convocatoria.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>11_SP_Negocio_Convocatoria.sql</FullPath>
+          <FullPath>03_Negocio\11_SP_Negocio_Convocatoria.sql</FullPath>
         </FileNode>
         <FileNode Name="12_SP_Negocio_FormacionesYCambios.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>12_SP_Negocio_FormacionesYCambios.sql</FullPath>
+          <FullPath>03_Negocio\12_SP_Negocio_FormacionesYCambios.sql</FullPath>
         </FileNode>
         <FileNode Name="13_SP_Negocio_GolesYTarjetas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>13_SP_Negocio_GolesYTarjetas.sql</FullPath>
+          <FullPath>03_Negocio\13_SP_Negocio_GolesYTarjetas.sql</FullPath>
         </FileNode>
         <FileNode Name="14_SP_Negocio_Arbitraje.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>14_SP_Negocio_Arbitraje.sql</FullPath>
+          <FullPath>03_Negocio\14_SP_Negocio_Arbitraje.sql</FullPath>
         </FileNode>
         <FileNode Name="15_SP_Negocio_Publicidad.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>15_SP_Negocio_Publicidad.sql</FullPath>
-        </FileNode>
-        <FileNode Name="16_SP_CargaMasiva.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
-          <AssociatedConnUserName />
-          <FullPath>16_SP_CargaMasiva.sql</FullPath>
+          <FullPath>03_Negocio\15_SP_Negocio_Publicidad.sql</FullPath>
         </FileNode>
         <FileNode Name="17_SP_Utilidades_Importacion.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>17_SP_Utilidades_Importacion.sql</FullPath>
+          <FullPath>04_Importacion\17_SP_Utilidades_Importacion.sql</FullPath>
         </FileNode>
         <FileNode Name="18_SP_Importar_Mundial2026.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>18_SP_Importar_Mundial2026.sql</FullPath>
+          <FullPath>04_Importacion\18_SP_Importar_Mundial2026.sql</FullPath>
         </FileNode>
         <FileNode Name="19_SP_Importar_Jugadores.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>19_SP_Importar_Jugadores.sql</FullPath>
+          <FullPath>04_Importacion\19_SP_Importar_Jugadores.sql</FullPath>
         </FileNode>
         <FileNode Name="20_SP_Importar_Publicidad.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>20_SP_Importar_Publicidad.sql</FullPath>
+          <FullPath>04_Importacion\20_SP_Importar_Publicidad.sql</FullPath>
         </FileNode>
         <FileNode Name="21_SP_Importar_Indicadores.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>21_SP_Importar_Indicadores.sql</FullPath>
+          <FullPath>04_Importacion\21_SP_Importar_Indicadores.sql</FullPath>
         </FileNode>
         <FileNode Name="22_SP_Importar_Cotizaciones.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>22_SP_Importar_Cotizaciones.sql</FullPath>
+          <FullPath>04_Importacion\22_SP_Importar_Cotizaciones.sql</FullPath>
         </FileNode>
         <FileNode Name="23_SP_Importar_Feriados.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>23_SP_Importar_Feriados.sql</FullPath>
+          <FullPath>04_Importacion\23_SP_Importar_Feriados.sql</FullPath>
         </FileNode>
         <FileNode Name="24_SP_Importar_ImagenesSedes.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>24_SP_Importar_ImagenesSedes.sql</FullPath>
+          <FullPath>04_Importacion\24_SP_Importar_ImagenesSedes.sql</FullPath>
         </FileNode>
         <FileNode Name="25_SP_Consultas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>25_SP_Consultas.sql</FullPath>
+          <FullPath>05_Consultas_Reportes\25_SP_Consultas.sql</FullPath>
         </FileNode>
         <FileNode Name="26_SP_Reportes.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>26_SP_Reportes.sql</FullPath>
+          <FullPath>05_Consultas_Reportes\26_SP_Reportes.sql</FullPath>
         </FileNode>
         <FileNode Name="27_SP_Roles.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>27_SP_Roles.sql</FullPath>
+          <FullPath>06_Seguridad_Roles\27_SP_Roles.sql</FullPath>
         </FileNode>
         <FileNode Name="28_Cargar_DatosIniciales.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>28_Cargar_DatosIniciales.sql</FullPath>
-        </FileNode>
-        <FileNode Name="30_Importar_Indicadores.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
-          <AssociatedConnUserName />
-          <FullPath>30_Importar_Indicadores.sql</FullPath>
+          <FullPath>07_Datos\28_Cargar_DatosIniciales.sql</FullPath>
         </FileNode>
         <FileNode Name="31_Importar_APIs.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>31_Importar_APIs.sql</FullPath>
+          <FullPath>07_Datos\31_Importar_APIs.sql</FullPath>
         </FileNode>
         <FileNode Name="32_Importar_Mundial2026.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>32_Importar_Mundial2026.sql</FullPath>
+          <FullPath>07_Datos\32_Importar_Mundial2026.sql</FullPath>
         </FileNode>
         <FileNode Name="33_Cargar_DatosComplementarios.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>33_Cargar_DatosComplementarios.sql</FullPath>
+          <FullPath>07_Datos\33_Cargar_DatosComplementarios.sql</FullPath>
         </FileNode>
         <FileNode Name="34_Cargar_SedesAdicionales.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>34_Cargar_SedesAdicionales.sql</FullPath>
+          <FullPath>07_Datos\34_Cargar_SedesAdicionales.sql</FullPath>
         </FileNode>
         <FileNode Name="35_Importar_ImagenesSedes.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>35_Importar_ImagenesSedes.sql</FullPath>
+          <FullPath>07_Datos\35_Importar_ImagenesSedes.sql</FullPath>
         </FileNode>
         <FileNode Name="36_Mostrar_Reportes.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>36_Mostrar_Reportes.sql</FullPath>
+          <FullPath>05_Consultas_Reportes\36_Mostrar_Reportes.sql</FullPath>
         </FileNode>
         <FileNode Name="40_Ejecutar_Cifrado.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
@@ -304,253 +292,253 @@
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>41_SP_Cifrado.sql</FullPath>
+          <FullPath>08_Cifrado\41_SP_Cifrado.sql</FullPath>
         </FileNode>
         <FileNode Name="42_Cifrado_Tabla_Jugador.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>42_Cifrado_Tabla_Jugador.sql</FullPath>
+          <FullPath>08_Cifrado\42_Cifrado_Tabla_Jugador.sql</FullPath>
         </FileNode>
         <FileNode Name="43_Cifrado_Tabla_PersonaCuerpoTecnico.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>43_Cifrado_Tabla_PersonaCuerpoTecnico.sql</FullPath>
+          <FullPath>08_Cifrado\43_Cifrado_Tabla_PersonaCuerpoTecnico.sql</FullPath>
         </FileNode>
         <FileNode Name="44_Cifrado_Tabla_Arbitro.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>44_Cifrado_Tabla_Arbitro.sql</FullPath>
+          <FullPath>08_Cifrado\44_Cifrado_Tabla_Arbitro.sql</FullPath>
         </FileNode>
         <FileNode Name="45_Cifrado_Torneo.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>45_Cifrado_Torneo.sql</FullPath>
+          <FullPath>08_Cifrado\45_Cifrado_Torneo.sql</FullPath>
         </FileNode>
         <FileNode Name="46_Cifrado_DesarrolloYArbitraje.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>46_Cifrado_DesarrolloYArbitraje.sql</FullPath>
+          <FullPath>08_Cifrado\46_Cifrado_DesarrolloYArbitraje.sql</FullPath>
         </FileNode>
         <FileNode Name="47_Cifrado_Reportes.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>47_Cifrado_Reportes.sql</FullPath>
+          <FullPath>08_Cifrado\47_Cifrado_Reportes.sql</FullPath>
         </FileNode>
         <FileNode Name="48_Mostrar_ConsultasToBe.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>48_Mostrar_ConsultasToBe.sql</FullPath>
+          <FullPath>05_Consultas_Reportes\48_Mostrar_ConsultasToBe.sql</FullPath>
         </FileNode>
         <FileNode Name="54_Test_FuncionesYVistas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>54_Test_FuncionesYVistas.sql</FullPath>
+          <FullPath>tests\01_Estructura_y_ABM\54_Test_FuncionesYVistas.sql</FullPath>
         </FileNode>
         <FileNode Name="55_Test_SP_ABM_DatosGenerales.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>55_Test_SP_ABM_DatosGenerales.sql</FullPath>
+          <FullPath>tests\01_Estructura_y_ABM\55_Test_SP_ABM_DatosGenerales.sql</FullPath>
         </FileNode>
         <FileNode Name="56_Test_SP_ABM_Torneo.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>56_Test_SP_ABM_Torneo.sql</FullPath>
+          <FullPath>tests\01_Estructura_y_ABM\56_Test_SP_ABM_Torneo.sql</FullPath>
         </FileNode>
         <FileNode Name="57_Test_SP_ABM_DesarrolloPartido.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>57_Test_SP_ABM_DesarrolloPartido.sql</FullPath>
+          <FullPath>tests\01_Estructura_y_ABM\57_Test_SP_ABM_DesarrolloPartido.sql</FullPath>
         </FileNode>
         <FileNode Name="58_Test_SP_ABM_Arbitraje.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>58_Test_SP_ABM_Arbitraje.sql</FullPath>
+          <FullPath>tests\01_Estructura_y_ABM\58_Test_SP_ABM_Arbitraje.sql</FullPath>
         </FileNode>
         <FileNode Name="59_Test_SP_ABM_Publicidad.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>59_Test_SP_ABM_Publicidad.sql</FullPath>
+          <FullPath>tests\01_Estructura_y_ABM\59_Test_SP_ABM_Publicidad.sql</FullPath>
         </FileNode>
         <FileNode Name="60_Test_SP_Negocio_SedesYPartidos.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>60_Test_SP_Negocio_SedesYPartidos.sql</FullPath>
+          <FullPath>tests\02_Negocio\60_Test_SP_Negocio_SedesYPartidos.sql</FullPath>
         </FileNode>
         <FileNode Name="61_Test_SP_Negocio_Convocatoria.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>61_Test_SP_Negocio_Convocatoria.sql</FullPath>
+          <FullPath>tests\02_Negocio\61_Test_SP_Negocio_Convocatoria.sql</FullPath>
         </FileNode>
         <FileNode Name="62_Test_SP_Negocio_FormacionesYCambios.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>62_Test_SP_Negocio_FormacionesYCambios.sql</FullPath>
+          <FullPath>tests\02_Negocio\62_Test_SP_Negocio_FormacionesYCambios.sql</FullPath>
         </FileNode>
         <FileNode Name="63_Test_SP_Negocio_GolesYTarjetas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>63_Test_SP_Negocio_GolesYTarjetas.sql</FullPath>
+          <FullPath>tests\02_Negocio\63_Test_SP_Negocio_GolesYTarjetas.sql</FullPath>
         </FileNode>
         <FileNode Name="64_Test_SP_Negocio_Arbitraje.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>64_Test_SP_Negocio_Arbitraje.sql</FullPath>
+          <FullPath>tests\02_Negocio\64_Test_SP_Negocio_Arbitraje.sql</FullPath>
         </FileNode>
         <FileNode Name="65_Test_SP_Negocio_Publicidad.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>65_Test_SP_Negocio_Publicidad.sql</FullPath>
+          <FullPath>tests\02_Negocio\65_Test_SP_Negocio_Publicidad.sql</FullPath>
         </FileNode>
         <FileNode Name="66_Test_SP_CargaMasiva.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>66_Test_SP_CargaMasiva.sql</FullPath>
+          <FullPath>tests\03_Importacion\66_Test_SP_CargaMasiva.sql</FullPath>
         </FileNode>
         <FileNode Name="67_Test_SP_Utilidades_Importacion.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>67_Test_SP_Utilidades_Importacion.sql</FullPath>
+          <FullPath>tests\03_Importacion\67_Test_SP_Utilidades_Importacion.sql</FullPath>
         </FileNode>
         <FileNode Name="68_Test_SP_Importar_Mundial2026.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>68_Test_SP_Importar_Mundial2026.sql</FullPath>
+          <FullPath>tests\03_Importacion\68_Test_SP_Importar_Mundial2026.sql</FullPath>
         </FileNode>
         <FileNode Name="69_Test_SP_Importar_Jugadores.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>69_Test_SP_Importar_Jugadores.sql</FullPath>
+          <FullPath>tests\03_Importacion\69_Test_SP_Importar_Jugadores.sql</FullPath>
         </FileNode>
         <FileNode Name="70_Test_SP_Importar_Publicidad.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>70_Test_SP_Importar_Publicidad.sql</FullPath>
+          <FullPath>tests\03_Importacion\70_Test_SP_Importar_Publicidad.sql</FullPath>
         </FileNode>
         <FileNode Name="71_Test_SP_Importar_Indicadores.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>71_Test_SP_Importar_Indicadores.sql</FullPath>
+          <FullPath>tests\03_Importacion\71_Test_SP_Importar_Indicadores.sql</FullPath>
         </FileNode>
         <FileNode Name="72_Test_SP_Importar_Cotizaciones.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>72_Test_SP_Importar_Cotizaciones.sql</FullPath>
+          <FullPath>tests\03_Importacion\72_Test_SP_Importar_Cotizaciones.sql</FullPath>
         </FileNode>
         <FileNode Name="73_Test_SP_Importar_Feriados.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>73_Test_SP_Importar_Feriados.sql</FullPath>
+          <FullPath>tests\03_Importacion\73_Test_SP_Importar_Feriados.sql</FullPath>
         </FileNode>
         <FileNode Name="74_Test_SP_Importar_ImagenesSedes.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>74_Test_SP_Importar_ImagenesSedes.sql</FullPath>
+          <FullPath>tests\03_Importacion\74_Test_SP_Importar_ImagenesSedes.sql</FullPath>
         </FileNode>
         <FileNode Name="75_Test_SP_Consultas.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:localhost:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>localhost</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>75_Test_SP_Consultas.sql</FullPath>
+          <FullPath>tests\04_Consultas_Reportes\75_Test_SP_Consultas.sql</FullPath>
         </FileNode>
         <FileNode Name="76_Test_SP_Reportes.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>76_Test_SP_Reportes.sql</FullPath>
+          <FullPath>tests\04_Consultas_Reportes\76_Test_SP_Reportes.sql</FullPath>
         </FileNode>
         <FileNode Name="77_Test_Rol_Administrador.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>77_Test_Rol_Administrador.sql</FullPath>
+          <FullPath>tests\05_Roles\77_Test_Rol_Administrador.sql</FullPath>
         </FileNode>
         <FileNode Name="78_Test_Rol_CargadorResultados.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>78_Test_Rol_CargadorResultados.sql</FullPath>
+          <FullPath>tests\05_Roles\78_Test_Rol_CargadorResultados.sql</FullPath>
         </FileNode>
         <FileNode Name="79_Test_Rol_GestorPublicidad.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>79_Test_Rol_GestorPublicidad.sql</FullPath>
+          <FullPath>tests\05_Roles\79_Test_Rol_GestorPublicidad.sql</FullPath>
         </FileNode>
         <FileNode Name="80_Test_Rol_ConsultaReportes.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>80_Test_Rol_ConsultaReportes.sql</FullPath>
+          <FullPath>tests\05_Roles\80_Test_Rol_ConsultaReportes.sql</FullPath>
         </FileNode>
         <FileNode Name="91_Test_SP_Cifrado.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>91_Test_SP_Cifrado.sql</FullPath>
+          <FullPath>tests\06_Cifrado\91_Test_SP_Cifrado.sql</FullPath>
         </FileNode>
         <FileNode Name="92_Test_Cifrado_Tabla_Jugador.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>92_Test_Cifrado_Tabla_Jugador.sql</FullPath>
+          <FullPath>tests\06_Cifrado\92_Test_Cifrado_Tabla_Jugador.sql</FullPath>
         </FileNode>
         <FileNode Name="93_Test_Cifrado_Tabla_PersonaCuerpoTecnico.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>93_Test_Cifrado_Tabla_PersonaCuerpoTecnico.sql</FullPath>
+          <FullPath>tests\06_Cifrado\93_Test_Cifrado_Tabla_PersonaCuerpoTecnico.sql</FullPath>
         </FileNode>
         <FileNode Name="94_Test_Cifrado_Tabla_Arbitro.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>94_Test_Cifrado_Tabla_Arbitro.sql</FullPath>
+          <FullPath>tests\06_Cifrado\94_Test_Cifrado_Tabla_Arbitro.sql</FullPath>
         </FileNode>
         <FileNode Name="95_Test_Cifrado_Torneo.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>95_Test_Cifrado_Torneo.sql</FullPath>
+          <FullPath>tests\06_Cifrado\95_Test_Cifrado_Torneo.sql</FullPath>
         </FileNode>
         <FileNode Name="96_Test_Cifrado_DesarrolloYArbitraje.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
-          <FullPath>96_Test_Cifrado_DesarrolloYArbitraje.sql</FullPath>
+          <FullPath>tests\06_Cifrado\96_Test_Cifrado_DesarrolloYArbitraje.sql</FullPath>
         </FileNode>
         <FileNode Name="97_Test_Cifrado_Reportes.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:WIN11-DESK:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>WIN11-DESK</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>97_Test_Cifrado_Reportes.sql</FullPath>
+          <FullPath>tests\06_Cifrado\97_Test_Cifrado_Reportes.sql</FullPath>
         </FileNode>
       </Items>
     </LogicalFolder>

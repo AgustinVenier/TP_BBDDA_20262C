@@ -15,8 +15,8 @@
            todos los objetos y carga los datos iniciales, sin importar nada.
            Ejecuta, en orden, los scripts 01 a 28: estructura (01 a 04),
            objetos (05 a 27, el 27 crea los roles) y datos iniciales (28).
-           Las importaciones y cargas (30 a 35), los reportes (36), el cifrado
-           (40 a 47), las consultas de la Entrega 9 (48) y los tests (54 a 97)
+           Las importaciones y cargas (31 a 35), los reportes (36), el cifrado
+           (40 a 47), las consultas del alcance (48) y los tests (54 a 97)
            se ejecutan aparte.
 ================================================================================
 
@@ -32,8 +32,7 @@
    Si un script falla, se detiene ahí (:on error exit).
 
  Después de este script, en el orden de su número:
-   30_Importar_Indicadores.sql          PBI per cápita (API)
-   31_Importar_APIs.sql                 campañas, cotizaciones y feriados (APIs)
+   31_Importar_APIs.sql                 PBI per cápita, campañas, cotizaciones y feriados (APIs)
    el scraping, en una terminal, desde la carpeta del repositorio:
         python scraping/Scraping_Jugadores.py
         python scraping/Scraping_Arbitros.py
@@ -41,7 +40,7 @@
    33_Cargar_DatosComplementarios.sql   lo que las fuentes no traen
    34_Cargar_SedesAdicionales.sql       sedes propias del juego de datos
    35_Importar_ImagenesSedes.sql        la foto de cada sede (datos\fuentes\sedes)
-   36_Mostrar_Reportes.sql              los reportes de la Entrega 7
+   36_Mostrar_Reportes.sql              los reportes (R1 a R7)
    40_Ejecutar_Cifrado.sql              cifrado de los datos personales (ejecuta 41 a 47)
    48_Mostrar_ConsultasToBe.sql         lee las vistas descifradas que crea 40
 
@@ -62,71 +61,69 @@ SET QUOTED_IDENTIFIER ON;
 GO
 
 -- Base, esquemas, tablas, funciones y vistas.
-:r $(src)01_CrearBaseDeDatos.sql
+:r $(src)01_Estructura\01_CrearBaseDeDatos.sql
 GO
-:r $(src)02_CrearEsquemas.sql
+:r $(src)01_Estructura\02_CrearEsquemas.sql
 GO
-:r $(src)03_CrearTablas.sql
+:r $(src)01_Estructura\03_CrearTablas.sql
 GO
-:r $(src)04_CrearFuncionesYVistas.sql
+:r $(src)01_Estructura\04_CrearFuncionesYVistas.sql
 GO
 
 -- SP de ABM.
-:r $(src)05_SP_ABM_DatosGenerales.sql
+:r $(src)02_ABM\05_SP_ABM_DatosGenerales.sql
 GO
-:r $(src)06_SP_ABM_Torneo.sql
+:r $(src)02_ABM\06_SP_ABM_Torneo.sql
 GO
-:r $(src)07_SP_ABM_DesarrolloPartido.sql
+:r $(src)02_ABM\07_SP_ABM_DesarrolloPartido.sql
 GO
-:r $(src)08_SP_ABM_Arbitraje.sql
+:r $(src)02_ABM\08_SP_ABM_Arbitraje.sql
 GO
-:r $(src)09_SP_ABM_Publicidad.sql
-GO
-
--- SP de negocio y de carga masiva.
-:r $(src)10_SP_Negocio_SedesYPartidos.sql
-GO
-:r $(src)11_SP_Negocio_Convocatoria.sql
-GO
-:r $(src)12_SP_Negocio_FormacionesYCambios.sql
-GO
-:r $(src)13_SP_Negocio_GolesYTarjetas.sql
-GO
-:r $(src)14_SP_Negocio_Arbitraje.sql
-GO
-:r $(src)15_SP_Negocio_Publicidad.sql
-GO
-:r $(src)16_SP_CargaMasiva.sql
+:r $(src)02_ABM\09_SP_ABM_Publicidad.sql
 GO
 
--- SP que leen los archivos y consultan las APIs.
-:r $(src)17_SP_Utilidades_Importacion.sql
+-- SP de negocio.
+:r $(src)03_Negocio\10_SP_Negocio_SedesYPartidos.sql
 GO
-:r $(src)18_SP_Importar_Mundial2026.sql
+:r $(src)03_Negocio\11_SP_Negocio_Convocatoria.sql
 GO
-:r $(src)19_SP_Importar_Jugadores.sql
+:r $(src)03_Negocio\12_SP_Negocio_FormacionesYCambios.sql
 GO
-:r $(src)20_SP_Importar_Publicidad.sql
+:r $(src)03_Negocio\13_SP_Negocio_GolesYTarjetas.sql
 GO
-:r $(src)21_SP_Importar_Indicadores.sql
+:r $(src)03_Negocio\14_SP_Negocio_Arbitraje.sql
 GO
-:r $(src)22_SP_Importar_Cotizaciones.sql
+:r $(src)03_Negocio\15_SP_Negocio_Publicidad.sql
 GO
-:r $(src)23_SP_Importar_Feriados.sql
+
+-- SP de importación: utilidades, carga masiva y lectura de archivos y APIs.
+:r $(src)04_Importacion\17_SP_Utilidades_Importacion.sql
 GO
-:r $(src)24_SP_Importar_ImagenesSedes.sql
+:r $(src)04_Importacion\18_SP_Importar_Mundial2026.sql
+GO
+:r $(src)04_Importacion\19_SP_Importar_Jugadores.sql
+GO
+:r $(src)04_Importacion\20_SP_Importar_Publicidad.sql
+GO
+:r $(src)04_Importacion\21_SP_Importar_Indicadores.sql
+GO
+:r $(src)04_Importacion\22_SP_Importar_Cotizaciones.sql
+GO
+:r $(src)04_Importacion\23_SP_Importar_Feriados.sql
+GO
+:r $(src)04_Importacion\24_SP_Importar_ImagenesSedes.sql
 GO
 
 -- SP de consulta (aplicación ABM), reportes y roles de aplicación.
-:r $(src)25_SP_Consultas.sql
+:r $(src)05_Consultas_Reportes\25_SP_Consultas.sql
 GO
-:r $(src)26_SP_Reportes.sql
+:r $(src)05_Consultas_Reportes\26_SP_Reportes.sql
 GO
-:r $(src)27_SP_Roles.sql
+:r $(src)06_Seguridad_Roles\27_SP_Roles.sql
 GO
 
 -- Datos iniciales (países, idiomas, parámetros del reglamento).
-:r $(src)28_Cargar_DatosIniciales.sql
+:r $(src)07_Datos\28_Cargar_DatosIniciales.sql
 GO
 
 -- Evidencia: los objetos creados, los datos iniciales y nada importado.
@@ -141,9 +138,3 @@ SELECT N'Base lista para importar' AS estado,
        (SELECT COUNT(*) FROM Torneo.JUGADOR)                   AS jugadores,
        (SELECT COUNT(*) FROM Torneo.PARTIDO)                   AS partidos;
 GO
-
-
-
-
-
-

@@ -1,0 +1,154 @@
+﻿/*
+================================================================================
+ Universidad Nacional de La Matanza
+ Materia: 3641 - Bases de Datos Aplicada
+ Comisión: 01    Grupo: 2
+ Integrantes:
+   Caruso Dellisanti, Carolina Belen - CarolinaCaruso
+   D'Ambrosio, Rodrigo - rodrigoDambrosio
+   Tavella, Tomás - TomasTavella
+   Venier, Agustin - AgustinVenier
+
+ Fecha: 10/11/2026
+ Archivo: 43_Cifrado_Tabla_PersonaCuerpoTecnico.sql
+ Objetivo: Modificar Torneo.PERSONA_CUERPO_TECNICO para que guarde cifrados
+           el nombre, el apellido y la fecha de nacimiento de las personas de
+           los cuerpos técnicos, cifrar los datos que ya tiene y crear la vista
+           Seguridad.vw_PersonaCuerpoTecnico, que los devuelve descifrados.
+           Su script de testing es 93_Test_Cifrado_Tabla_PersonaCuerpoTecnico.sql.
+================================================================================
+
+ Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 41_SP_Cifrado.sql y de
+ configurar las claves. Los scripts 42, 43 y 44 hacen lo mismo, cada uno sobre
+ su tabla. Después van 45, 46 y 47, que modifican los SP, las funciones y las
+ vistas que usan estas columnas: hasta que se ejecutan, los objetos que leen
+ las columnas cifradas devuelven bytes.
+
+ Cambios en la tabla:
+   - nombre y apellido pasan de NVARCHAR(60) NOT NULL a VARBINARY(256) NOT NULL.
+   - fecha_nacimiento pasa de DATE NULL a VARBINARY(256) NULL.
+   - Las columnas conservan su nombre, pero quedan al final de la tabla.
+
+ Vista descifrada: Seguridad.vw_PersonaCuerpoTecnico tiene las mismas
+ columnas que la tabla, con el nombre, el apellido y la fecha de nacimiento
+ descifrados y con su tipo original. Los SP y las vistas que leen esos datos
+ (45_Cifrado_Torneo.sql y 47_Cifrado_Reportes.sql) leen la vista en lugar de
+ la tabla; los que escriben, escriben la tabla y cifran con
+ Seguridad.fn_CifrarTexto y Seguridad.fn_CifrarFecha. La vista descifra con los permisos del usuario que
+ consulta: quien no tiene permiso sobre la clave (27_SP_Roles.sql) ve NULL.
+*/
+
+USE MundialFutbol;
+GO
+
+SET NOCOUNT ON;
+GO
+
+
+/*
+  usp_CifrarPersonaCuerpoTecnico
+    1. Guarda los datos cifrados en una tabla temporal.
+    2. Elimina las columnas originales y las vuelve a crear como VARBINARY.
+    3. Copia los datos cifrados a las columnas nuevas.
+  La fecha se cifra como texto aaaa-mm-dd, igual que en fn_CifrarFecha; no se
+  usa esa función porque, con la tabla ya cifrada, el SP no se podría volver a
+  crear (la columna ya no es DATE).
+  - Si algo falla, la transacción se deshace sola (XACT_ABORT) y la tabla queda
+    como estaba.
+  - Si la clave no está abierta, el cifrado da NULL: el NOT NULL de nombre y
+    apellido falla y se deshace todo.
+  - Si la tabla ya está cifrada (nombre ya es VARBINARY) no hace nada, así que
+    se puede ejecutar más de una vez.
+  Devuelve una fila con la tabla, el estado y la cantidad de filas.
+*/
+CREATE OR ALTER PROCEDURE Seguridad.usp_CifrarPersonaCuerpoTecnico
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @estado NVARCHAR(30) = N'YA ESTABA CIFRADA';
+
+    IF EXISTS (SELECT 1 FROM sys.columns
+               WHERE object_id = OBJECT_ID(N'Torneo.PERSONA_CUERPO_TECNICO') AND name = N'nombre'
+                 AND TYPE_NAME(system_type_id) <> N'varbinary')
+    BEGIN
+        BEGIN TRANSACTION;
+        EXEC Seguridad.usp_AbrirClave;
+
+        -- 1. Los datos cifrados, en una tabla temporal.
+        SELECT id_persona_ct,
+               Seguridad.fn_CifrarTexto(nombre)           AS nombre,
+               Seguridad.fn_CifrarTexto(apellido)         AS apellido,
+               Seguridad.fn_CifrarTexto(CONVERT(NVARCHAR(10), fecha_nacimiento, 23)) AS fecha_nacimiento  -- como fn_CifrarFecha
+        INTO #cifrado
+        FROM Torneo.PERSONA_CUERPO_TECNICO;
+
+        -- 2. Las columnas originales se reemplazan por columnas VARBINARY con el mismo nombre.
+        ALTER TABLE Torneo.PERSONA_CUERPO_TECNICO DROP COLUMN nombre, apellido, fecha_nacimiento;
+        ALTER TABLE Torneo.PERSONA_CUERPO_TECNICO
+            ADD nombre           VARBINARY(256) NULL,
+                apellido         VARBINARY(256) NULL,
+                fecha_nacimiento VARBINARY(256) NULL;
+
+        -- 3. Los datos cifrados vuelven a la tabla; nombre y apellido vuelven a ser obligatorios.
+        UPDATE t
+        SET nombre           = c.nombre,
+            apellido         = c.apellido,
+            fecha_nacimiento = c.fecha_nacimiento
+        FROM Torneo.PERSONA_CUERPO_TECNICO AS t
+        INNER JOIN #cifrado AS c ON c.id_persona_ct = t.id_persona_ct;
+
+        ALTER TABLE Torneo.PERSONA_CUERPO_TECNICO ALTER COLUMN nombre   VARBINARY(256) NOT NULL;
+        ALTER TABLE Torneo.PERSONA_CUERPO_TECNICO ALTER COLUMN apellido VARBINARY(256) NOT NULL;
+
+        EXEC Seguridad.usp_CerrarClave;
+        COMMIT TRANSACTION;
+        SET @estado = N'CIFRADA';
+    END;
+
+    SELECT N'Torneo.PERSONA_CUERPO_TECNICO' AS tabla, @estado AS estado, COUNT(*) AS filas_cifradas
+    FROM Torneo.PERSONA_CUERPO_TECNICO;
+END;
+GO
+
+EXEC Seguridad.usp_CifrarPersonaCuerpoTecnico;
+GO
+
+
+/*
+  vw_PersonaCuerpoTecnico
+  La tabla con los datos personales descifrados. DECRYPTBYKEYAUTOCERT abre la
+  clave con el certificado en el momento (una vez por consulta), así que no
+  hace falta usp_AbrirClave. El resultado se convierte al mismo tipo con que se
+  cifró (NVARCHAR): convertirlo a VARCHAR daría otro texto. La fecha está
+  guardada como texto aaaa-mm-dd (estilo 23).
+*/
+CREATE OR ALTER VIEW Seguridad.vw_PersonaCuerpoTecnico
+AS
+SELECT ct.id_persona_ct,
+       ct.id_seleccion,
+       ct.id_pais_nacimiento,
+       CONVERT(NVARCHAR(60), DECRYPTBYKEYAUTOCERT(CERT_ID(N'CertDatosPersonales'), NULL, ct.nombre))   AS nombre,
+       CONVERT(NVARCHAR(60), DECRYPTBYKEYAUTOCERT(CERT_ID(N'CertDatosPersonales'), NULL, ct.apellido)) AS apellido,
+       CONVERT(DATE, CONVERT(NVARCHAR(10),
+           DECRYPTBYKEYAUTOCERT(CERT_ID(N'CertDatosPersonales'), NULL, ct.fecha_nacimiento)), 23)     AS fecha_nacimiento,
+       ct.rol
+FROM Torneo.PERSONA_CUERPO_TECNICO AS ct;
+GO
+
+/* Evidencia: las columnas como quedaron y cómo se ve un dato guardado. */
+SELECT c.name                               AS columna,
+       TYPE_NAME(c.system_type_id)          AS tipo,
+       c.max_length                         AS largo,
+       IIF(c.is_nullable = 1, N'SÍ', N'NO') AS admite_null
+FROM sys.columns AS c
+WHERE c.object_id = OBJECT_ID(N'Torneo.PERSONA_CUERPO_TECNICO')
+  AND c.name IN (N'nombre', N'apellido', N'fecha_nacimiento')
+ORDER BY c.column_id;
+
+SELECT TOP (3) t.id_persona_ct, t.apellido AS apellido_guardado, v.apellido AS apellido_en_Seguridad_vw_PersonaCuerpoTecnico
+FROM Torneo.PERSONA_CUERPO_TECNICO AS t
+INNER JOIN Seguridad.vw_PersonaCuerpoTecnico AS v ON v.id_persona_ct = t.id_persona_ct
+ORDER BY t.id_persona_ct;
+GO
