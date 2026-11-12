@@ -20,13 +20,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Ocupacion"
+                      "Entity": "Reportes.vw_OcupacionPublicitaria"
                     }
                   },
                   "Property": "Ingresos USD"
                 }
               },
-              "queryRef": "Ocupacion.Ingresos USD",
+              "queryRef": "Reportes.vw_OcupacionPublicitaria.Ingresos USD",
               "nativeQueryRef": "Ingresos USD"
             },
             {
@@ -34,13 +34,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Ocupacion"
+                      "Entity": "Reportes.vw_OcupacionPublicitaria"
                     }
                   },
                   "Property": "Anunciantes"
                 }
               },
-              "queryRef": "Ocupacion.Anunciantes",
+              "queryRef": "Reportes.vw_OcupacionPublicitaria.Anunciantes",
               "nativeQueryRef": "Anunciantes"
             },
             {
@@ -48,13 +48,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Ocupacion"
+                      "Entity": "Reportes.vw_OcupacionPublicitaria"
                     }
                   },
                   "Property": "Espacios ocupados"
                 }
               },
-              "queryRef": "Ocupacion.Espacios ocupados",
+              "queryRef": "Reportes.vw_OcupacionPublicitaria.Espacios ocupados",
               "nativeQueryRef": "Espacios ocupados"
             }
           ]

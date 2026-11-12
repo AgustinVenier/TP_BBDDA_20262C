@@ -1,21 +1,21 @@
-table Plantillas
+table 'Reportes.vw_Plantillas'
 	lineageTag: e11624a6-f68d-4756-9234-48d32a53d128
 
-	measure Convocados = COUNTROWS(Plantillas)
+	measure Convocados = COUNTROWS('Reportes.vw_Plantillas')
 		formatString: 0
 		lineageTag: 9a0dc03a-b15a-4e7c-a347-2a559b7f90fd
 
-	measure 'Dorsal del convocado' = IF(ISINSCOPE(Plantillas[jugador]), MIN(Plantillas[dorsal]))
+	measure 'Dorsal del convocado' = IF(ISINSCOPE('Reportes.vw_Plantillas'[jugador]), MIN('Reportes.vw_Plantillas'[dorsal]))
 		formatString: 0
 		lineageTag: ace7eb9f-240a-486e-93ae-af3f51b12a16
 
-	measure Posición = IF(ISINSCOPE(Plantillas[jugador]), MIN(Plantillas[posicion_habitual]))
+	measure Posición = IF(ISINSCOPE('Reportes.vw_Plantillas'[jugador]), MIN('Reportes.vw_Plantillas'[posicion_habitual]))
 		lineageTag: 0ce45b61-14d8-48fa-b22b-f9ec62e80516
 
-	measure Club = IF(ISINSCOPE(Plantillas[jugador]), MIN(Plantillas[club_origen]))
+	measure Club = IF(ISINSCOPE('Reportes.vw_Plantillas'[jugador]), MIN('Reportes.vw_Plantillas'[club_origen]))
 		lineageTag: f0dcb8b4-340a-4ccb-a920-4f89ed893e88
 
-	measure Baja = IF(ISINSCOPE(Plantillas[jugador]), MIN(Plantillas[motivo_baja]))
+	measure Baja = IF(ISINSCOPE('Reportes.vw_Plantillas'[jugador]), MIN('Reportes.vw_Plantillas'[motivo_baja]))
 		lineageTag: da953e8b-c31f-401c-ac53-ad1bfc23d1d6
 
 	column id_seleccion
@@ -166,13 +166,13 @@ table Plantillas
 
 		annotation SummarizationSetBy = Automatic
 
-	partition Plantillas = m
+	partition 'Reportes.vw_Plantillas' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_Plantillas"]}[Data],
-				    ConJugador = Table.AddColumn(Vista, "jugador", each [nombre] & " " & [apellido], type text),
+				    Reportes_vw_Plantillas = Origen{[Schema="Reportes",Item="vw_Plantillas"]}[Data],
+				    ConJugador = Table.AddColumn(Reportes_vw_Plantillas, "jugador", each [nombre] & " " & [apellido], type text),
 				    ConEstado = Table.AddColumn(ConJugador, "estado", each if [activo] then "Convocado" else "Dado de baja", type text),
 				    // jugador se ordena por puesto y dorsal, como el XML. Cada nombre lleva un solo
 				    // orden_jugador (el menor), porque sortByColumn no admite dos órdenes para el

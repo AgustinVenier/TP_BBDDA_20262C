@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Designaciones"
+                      "Entity": "Reportes.vw_DesignacionesArbitrales"
                     }
                   },
                   "Property": "rol"
                 }
               },
-              "queryRef": "Designaciones.rol",
+              "queryRef": "Reportes.vw_DesignacionesArbitrales.rol",
               "nativeQueryRef": "rol",
               "displayName": "Rol",
               "active": true
@@ -41,7 +41,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Designaciones"
+                    "Entity": "Reportes.vw_DesignacionesArbitrales"
                   }
                 },
                 "Property": "rol"

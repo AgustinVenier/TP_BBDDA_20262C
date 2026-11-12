@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Tarjetas"
+                      "Entity": "Reportes.vw_Tarjetas"
                     }
                   },
                   "Property": "seleccion"
                 }
               },
-              "queryRef": "Tarjetas.seleccion",
+              "queryRef": "Reportes.vw_Tarjetas.seleccion",
               "nativeQueryRef": "seleccion",
               "active": true
             }
@@ -39,13 +39,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Tarjetas"
+                      "Entity": "Reportes.vw_Tarjetas"
                     }
                   },
                   "Property": "Amarillas"
                 }
               },
-              "queryRef": "Tarjetas.Amarillas",
+              "queryRef": "Reportes.vw_Tarjetas.Amarillas",
               "nativeQueryRef": "Amarillas"
             },
             {
@@ -53,13 +53,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Tarjetas"
+                      "Entity": "Reportes.vw_Tarjetas"
                     }
                   },
                   "Property": "Rojas"
                 }
               },
-              "queryRef": "Tarjetas.Rojas",
+              "queryRef": "Reportes.vw_Tarjetas.Rojas",
               "nativeQueryRef": "Rojas"
             }
           ]
@@ -72,7 +72,7 @@
               "Measure": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Tarjetas"
+                    "Entity": "Reportes.vw_Tarjetas"
                   }
                 },
                 "Property": "Amarillas"

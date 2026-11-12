@@ -8,23 +8,23 @@ model Model
 
 annotation __PBI_TimeIntelligenceEnabled = 0
 
-annotation PBI_QueryOrder = ["Servidor", "BaseDeDatos", "Partidos", "Sedes", "Goles", "Tarjetas", "Suspensiones", "Designaciones", "Ocupacion", "IngresosPorMoneda", "PrimeTime", "Posiciones", "Cuadro", "Plantillas", "Arbitros"]
+annotation PBI_QueryOrder = ["Servidor", "BaseDeDatos", "Reportes.vw_Resultados", "Reportes.vw_Sedes", "Reportes.vw_Goles", "Reportes.vw_Tarjetas", "Reportes.vw_SuspensionesActivas", "Reportes.vw_DesignacionesArbitrales", "Reportes.vw_OcupacionPublicitaria", "Reportes.vw_IngresosPublicitariosPorMoneda", "Reportes.vw_PrimeTimePorMercado", "Reportes.vw_TablaPosiciones", "Reportes.vw_CuadroEliminacion", "Reportes.vw_Plantillas", "Reportes.vw_Arbitros"]
 
 annotation PBI_ProTooling = ["DevMode"]
 
-ref table Partidos
-ref table Sedes
-ref table Goles
-ref table Tarjetas
-ref table Ocupacion
-ref table IngresosPorMoneda
-ref table PrimeTime
-ref table Posiciones
-ref table Cuadro
-ref table Suspensiones
-ref table Designaciones
-ref table Plantillas
-ref table Arbitros
+ref table 'Reportes.vw_Resultados'
+ref table 'Reportes.vw_Sedes'
+ref table 'Reportes.vw_Goles'
+ref table 'Reportes.vw_Tarjetas'
+ref table 'Reportes.vw_OcupacionPublicitaria'
+ref table 'Reportes.vw_IngresosPublicitariosPorMoneda'
+ref table 'Reportes.vw_PrimeTimePorMercado'
+ref table 'Reportes.vw_TablaPosiciones'
+ref table 'Reportes.vw_CuadroEliminacion'
+ref table 'Reportes.vw_SuspensionesActivas'
+ref table 'Reportes.vw_DesignacionesArbitrales'
+ref table 'Reportes.vw_Plantillas'
+ref table 'Reportes.vw_Arbitros'
 
 ref cultureInfo es-AR
 

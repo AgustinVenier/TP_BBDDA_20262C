@@ -1,15 +1,15 @@
-table Tarjetas
+table 'Reportes.vw_Tarjetas'
 	lineageTag: e3b1a4db-6fa9-5564-8c3e-ddfe56025d43
 
-	measure 'Total tarjetas' = COUNTROWS(Tarjetas)
+	measure 'Total tarjetas' = COUNTROWS('Reportes.vw_Tarjetas')
 		formatString: 0
 		lineageTag: 955d1181-1015-5798-9c44-9bba8acd1f13
 
-	measure Amarillas = CALCULATE(COUNTROWS(Tarjetas), Tarjetas[tipo_tarjeta] = "AMARILLA")
+	measure Amarillas = CALCULATE(COUNTROWS('Reportes.vw_Tarjetas'), 'Reportes.vw_Tarjetas'[tipo_tarjeta] = "AMARILLA")
 		formatString: 0
 		lineageTag: d8011d74-b306-51f4-997c-12234bb3d323
 
-	measure Rojas = CALCULATE(COUNTROWS(Tarjetas), Tarjetas[tipo_tarjeta] = "ROJA")
+	measure Rojas = CALCULATE(COUNTROWS('Reportes.vw_Tarjetas'), 'Reportes.vw_Tarjetas'[tipo_tarjeta] = "ROJA")
 		formatString: 0
 		lineageTag: aff2210f-1198-5694-9912-7f28b9e2aabf
 
@@ -222,14 +222,14 @@ table Tarjetas
 
 		annotation SummarizationSetBy = Automatic
 
-	partition Tarjetas = m
+	partition 'Reportes.vw_Tarjetas' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_Tarjetas"]}[Data]
+				    Reportes_vw_Tarjetas = Origen{[Schema="Reportes",Item="vw_Tarjetas"]}[Data]
 				in
-				    Vista
+				    Reportes_vw_Tarjetas
 
 	annotation PBI_ResultType = Table
 

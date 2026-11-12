@@ -1,8 +1,8 @@
-table Cuadro
+table 'Reportes.vw_CuadroEliminacion'
 	lineageTag: e28b9322-f6e5-5eb6-a1c8-942380b61692
 
 	measure 'Cuadro de eliminación' =
-			VAR Rondas = MAX(Cuadro[rondas])
+			VAR Rondas = MAX('Reportes.vw_CuadroEliminacion'[rondas])
 			-- Cuadro en espejo: la mitad de cada ronda a la izquierda, la otra mitad a la derecha y la
 			-- final (con el tercer puesto debajo) en la columna del centro.
 			VAR Columnas = 2 * Rondas - 1
@@ -34,36 +34,36 @@ table Cuadro
 			VAR Fondo = "<rect x='0' y='0' width='" & Ancho & "' height='" & Alto & "' rx='14' fill='rgb(246,248,252)'/>"
 			VAR Titulos =
 			    CONCATENATEX(
-			        SUMMARIZE(Cuadro, Cuadro[ronda], Cuadro[es_tercer_puesto], Cuadro[etiqueta]),
-			        VAR EsTercero = Cuadro[es_tercer_puesto]
-			        VAR EsFinal = NOT EsTercero && Cuadro[ronda] = Rondas - 1
+			        SUMMARIZE('Reportes.vw_CuadroEliminacion', 'Reportes.vw_CuadroEliminacion'[ronda], 'Reportes.vw_CuadroEliminacion'[es_tercer_puesto], 'Reportes.vw_CuadroEliminacion'[etiqueta]),
+			        VAR EsTercero = 'Reportes.vw_CuadroEliminacion'[es_tercer_puesto]
+			        VAR EsFinal = NOT EsTercero && 'Reportes.vw_CuadroEliminacion'[ronda] = Rondas - 1
 			        VAR Color = IF(EsFinal, Dorado, IF(EsTercero, Bronce, AzulOscuro))
 			        VAR Y = IF(EsTercero, CYTercero - MedioAlto - 34, 14)
-			        VAR X1 = Margen + IF(EsFinal || EsTercero, Centro, Cuadro[ronda]) * (AnchoCaja + Separacion)
-			        VAR X2 = Margen + (Columnas - 1 - Cuadro[ronda]) * (AnchoCaja + Separacion)
+			        VAR X1 = Margen + IF(EsFinal || EsTercero, Centro, 'Reportes.vw_CuadroEliminacion'[ronda]) * (AnchoCaja + Separacion)
+			        VAR X2 = Margen + (Columnas - 1 - 'Reportes.vw_CuadroEliminacion'[ronda]) * (AnchoCaja + Separacion)
 			        VAR Pastilla1 =
 			            "<rect x='" & X1 + 10 & "' y='" & Y & "' width='" & AnchoCaja - 20 & "' height='28' rx='14' fill='" & Color & "'/>"
-			                & "<text x='" & X1 + MedioAncho & "' y='" & Y + 19 & "' text-anchor='middle' " & Fuente & "font-size='14' font-weight='600' fill='white'>" & Cuadro[etiqueta] & "</text>"
+			                & "<text x='" & X1 + MedioAncho & "' y='" & Y + 19 & "' text-anchor='middle' " & Fuente & "font-size='14' font-weight='600' fill='white'>" & 'Reportes.vw_CuadroEliminacion'[etiqueta] & "</text>"
 			        VAR Pastilla2 =
 			            "<rect x='" & X2 + 10 & "' y='" & Y & "' width='" & AnchoCaja - 20 & "' height='28' rx='14' fill='" & Color & "'/>"
-			                & "<text x='" & X2 + MedioAncho & "' y='" & Y + 19 & "' text-anchor='middle' " & Fuente & "font-size='14' font-weight='600' fill='white'>" & Cuadro[etiqueta] & "</text>"
+			                & "<text x='" & X2 + MedioAncho & "' y='" & Y + 19 & "' text-anchor='middle' " & Fuente & "font-size='14' font-weight='600' fill='white'>" & 'Reportes.vw_CuadroEliminacion'[etiqueta] & "</text>"
 			        RETURN Pastilla1 & IF(NOT EsFinal && NOT EsTercero, Pastilla2),
 			        ""
 			    )
 			VAR Partidos =
 			    CONCATENATEX(
-			        Cuadro,
-			        VAR EsTercero = Cuadro[es_tercer_puesto]
-			        VAR EsFinal = NOT EsTercero && Cuadro[ronda] = Rondas - 1
-			        VAR Lugares = POWER(2, Rondas - 2 - Cuadro[ronda])
-			        VAR Derecha = NOT EsFinal && NOT EsTercero && Cuadro[posicion] >= Lugares
-			        VAR Fila = IF(Derecha, Cuadro[posicion] - Lugares, Cuadro[posicion])
-			        VAR Columna = IF(EsFinal || EsTercero, Centro, IF(Derecha, Columnas - 1 - Cuadro[ronda], Cuadro[ronda]))
+			        'Reportes.vw_CuadroEliminacion',
+			        VAR EsTercero = 'Reportes.vw_CuadroEliminacion'[es_tercer_puesto]
+			        VAR EsFinal = NOT EsTercero && 'Reportes.vw_CuadroEliminacion'[ronda] = Rondas - 1
+			        VAR Lugares = POWER(2, Rondas - 2 - 'Reportes.vw_CuadroEliminacion'[ronda])
+			        VAR Derecha = NOT EsFinal && NOT EsTercero && 'Reportes.vw_CuadroEliminacion'[posicion] >= Lugares
+			        VAR Fila = IF(Derecha, 'Reportes.vw_CuadroEliminacion'[posicion] - Lugares, 'Reportes.vw_CuadroEliminacion'[posicion])
+			        VAR Columna = IF(EsFinal || EsTercero, Centro, IF(Derecha, Columnas - 1 - 'Reportes.vw_CuadroEliminacion'[ronda], 'Reportes.vw_CuadroEliminacion'[ronda]))
 			        VAR X = Margen + Columna * (AnchoCaja + Separacion)
 			        VAR XM = X + AnchoCaja - AnchoMarcador
 			        VAR CY = SWITCH(TRUE(), EsFinal, CYFinal, EsTercero, CYTercero, INT(Arriba + (Fila + 0.5) * AltoCuadro / Lugares))
 			        VAR Y = CY - MedioAlto
-			        VAR GanaLocal = Cuadro[gana_local]
+			        VAR GanaLocal = 'Reportes.vw_CuadroEliminacion'[gana_local]
 			        VAR Definido = NOT ISBLANK(GanaLocal)
 			        VAR GanoLocal = Definido && GanaLocal = 1
 			        VAR GanoVisitante = Definido && GanaLocal = 0
@@ -102,14 +102,14 @@ table Cuadro
 			                        & "<rect x='" & XM & "' y='" & YInterior & "' width='" & AnchoMarcador & "' height='8' fill='" & ColorGanador & "'/>"
 			                )
 			        -- Nombres: hasta 22 letras; desde 18 se angostan para que entren al lado del marcador.
-			        VAR NombreLocal = IF(LEN(Cuadro[seleccion_local]) > 22, LEFT(Cuadro[seleccion_local], 21) & "…", Cuadro[seleccion_local])
-			        VAR NombreVisitante = IF(LEN(Cuadro[seleccion_visitante]) > 22, LEFT(Cuadro[seleccion_visitante], 21) & "…", Cuadro[seleccion_visitante])
+			        VAR NombreLocal = IF(LEN('Reportes.vw_CuadroEliminacion'[seleccion_local]) > 22, LEFT('Reportes.vw_CuadroEliminacion'[seleccion_local], 21) & "…", 'Reportes.vw_CuadroEliminacion'[seleccion_local])
+			        VAR NombreVisitante = IF(LEN('Reportes.vw_CuadroEliminacion'[seleccion_visitante]) > 22, LEFT('Reportes.vw_CuadroEliminacion'[seleccion_visitante], 21) & "…", 'Reportes.vw_CuadroEliminacion'[seleccion_visitante])
 			        VAR Local = SUBSTITUTE(SUBSTITUTE(NombreLocal, "&", "&amp;"), "<", "&lt;")
 			        VAR Visitante = SUBSTITUTE(SUBSTITUTE(NombreVisitante, "&", "&amp;"), "<", "&lt;")
 			        VAR AjusteLocal = IF(LEN(NombreLocal) > 17, "textLength='" & AnchoNombre & "' lengthAdjust='spacingAndGlyphs' ")
 			        VAR AjusteVisitante = IF(LEN(NombreVisitante) > 17, "textLength='" & AnchoNombre & "' lengthAdjust='spacingAndGlyphs' ")
-			        VAR PenalesLocal = IF(NOT ISBLANK(Cuadro[penales_local]), "<tspan font-size='11' font-weight='600' dx='2'>(" & Cuadro[penales_local] & ")</tspan>")
-			        VAR PenalesVisitante = IF(NOT ISBLANK(Cuadro[penales_visitante]), "<tspan font-size='11' font-weight='600' dx='2'>(" & Cuadro[penales_visitante] & ")</tspan>")
+			        VAR PenalesLocal = IF(NOT ISBLANK('Reportes.vw_CuadroEliminacion'[penales_local]), "<tspan font-size='11' font-weight='600' dx='2'>(" & 'Reportes.vw_CuadroEliminacion'[penales_local] & ")</tspan>")
+			        VAR PenalesVisitante = IF(NOT ISBLANK('Reportes.vw_CuadroEliminacion'[penales_visitante]), "<tspan font-size='11' font-weight='600' dx='2'>(" & 'Reportes.vw_CuadroEliminacion'[penales_visitante] & ")</tspan>")
 			        VAR ColorLocal = IF(GanoVisitante, "rgb(115,115,115)", "rgb(20,20,20)")
 			        VAR ColorVisitante = IF(GanoLocal, "rgb(115,115,115)", "rgb(20,20,20)")
 			        VAR PesoLocal = IF(GanoLocal, "700", "400")
@@ -122,17 +122,17 @@ table Cuadro
 			                & "<line x1='" & X & "' y1='" & CY & "' x2='" & X + AnchoCaja & "' y2='" & CY & "' stroke='rgb(225,230,237)'/>"
 			                & "<rect x='" & X & "' y='" & Y & "' width='" & AnchoCaja & "' height='" & AltoCaja & "' rx='8' fill='none' stroke='" & Borde & "' stroke-width='" & GrosorBorde & "'/>"
 			                & "<text x='" & X + 12 & "' y='" & Y + 20 & "' " & Fuente & AjusteLocal & "font-size='16' font-weight='" & PesoLocal & "' fill='" & ColorLocal & "'>" & Local & "</text>"
-			                & "<text x='" & XM + MedioMarcador & "' y='" & Y + 20 & "' text-anchor='middle' " & Fuente & "font-size='16' font-weight='700' fill='" & IF(GanoLocal, "white", "rgb(105,105,105)") & "'>" & Cuadro[goles_local] & PenalesLocal & "</text>"
+			                & "<text x='" & XM + MedioMarcador & "' y='" & Y + 20 & "' text-anchor='middle' " & Fuente & "font-size='16' font-weight='700' fill='" & IF(GanoLocal, "white", "rgb(105,105,105)") & "'>" & 'Reportes.vw_CuadroEliminacion'[goles_local] & PenalesLocal & "</text>"
 			                & "<text x='" & X + 12 & "' y='" & CY + 20 & "' " & Fuente & AjusteVisitante & "font-size='16' font-weight='" & PesoVisitante & "' fill='" & ColorVisitante & "'>" & Visitante & "</text>"
-			                & "<text x='" & XM + MedioMarcador & "' y='" & CY + 20 & "' text-anchor='middle' " & Fuente & "font-size='16' font-weight='700' fill='" & IF(GanoVisitante, "white", "rgb(105,105,105)") & "'>" & Cuadro[goles_visitante] & PenalesVisitante & "</text>",
+			                & "<text x='" & XM + MedioMarcador & "' y='" & CY + 20 & "' text-anchor='middle' " & Fuente & "font-size='16' font-weight='700' fill='" & IF(GanoVisitante, "white", "rgb(105,105,105)") & "'>" & 'Reportes.vw_CuadroEliminacion'[goles_visitante] & PenalesVisitante & "</text>",
 			        "",
-			        Cuadro[ronda], ASC
+			        'Reportes.vw_CuadroEliminacion'[ronda], ASC
 			    )
 			-- El campeón, sobre la final.
 			VAR NombreCampeon =
 			    CONCATENATEX(
-			        FILTER(Cuadro, NOT Cuadro[es_tercer_puesto] && Cuadro[ronda] = Rondas - 1 && NOT ISBLANK(Cuadro[gana_local])),
-			        SUBSTITUTE(SUBSTITUTE(IF(Cuadro[gana_local] = 1, Cuadro[seleccion_local], Cuadro[seleccion_visitante]), "&", "&amp;"), "<", "&lt;"),
+			        FILTER('Reportes.vw_CuadroEliminacion', NOT 'Reportes.vw_CuadroEliminacion'[es_tercer_puesto] && 'Reportes.vw_CuadroEliminacion'[ronda] = Rondas - 1 && NOT ISBLANK('Reportes.vw_CuadroEliminacion'[gana_local])),
+			        SUBSTITUTE(SUBSTITUTE(IF('Reportes.vw_CuadroEliminacion'[gana_local] = 1, 'Reportes.vw_CuadroEliminacion'[seleccion_local], 'Reportes.vw_CuadroEliminacion'[seleccion_visitante]), "&", "&amp;"), "<", "&lt;"),
 			        ""
 			    )
 			VAR XCentro = Margen + Centro * (AnchoCaja + Separacion) + MedioAncho
@@ -144,7 +144,7 @@ table Cuadro
 			    )
 			RETURN
 			    IF(
-			        NOT ISEMPTY(Cuadro),
+			        NOT ISEMPTY('Reportes.vw_CuadroEliminacion'),
 			        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='" & Ancho & "' height='" & Alto & "' viewBox='0 0 " & Ancho & " " & Alto & "'>"
 			            & Fondo & Titulos & Partidos & Campeon & "</svg>"
 			    )
@@ -282,14 +282,14 @@ table Cuadro
 
 		annotation SummarizationSetBy = Automatic
 
-	partition Cuadro = m
+	partition 'Reportes.vw_CuadroEliminacion' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_CuadroEliminacion"]}[Data]
+				    Reportes_vw_CuadroEliminacion = Origen{[Schema="Reportes",Item="vw_CuadroEliminacion"]}[Data]
 				in
-				    Vista
+				    Reportes_vw_CuadroEliminacion
 
 	annotation PBI_ResultType = Table
 

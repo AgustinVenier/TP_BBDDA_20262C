@@ -1,4 +1,4 @@
-table Posiciones
+table 'Reportes.vw_TablaPosiciones'
 	lineageTag: a88fac27-23bf-558f-86d7-d40da6dfbf6a
 
 	column grupo
@@ -109,14 +109,14 @@ table Posiciones
 
 		annotation SummarizationSetBy = Automatic
 
-	partition Posiciones = m
+	partition 'Reportes.vw_TablaPosiciones' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_TablaPosiciones"]}[Data]
+				    Reportes_vw_TablaPosiciones = Origen{[Schema="Reportes",Item="vw_TablaPosiciones"]}[Data]
 				in
-				    Vista
+				    Reportes_vw_TablaPosiciones
 
 	annotation PBI_ResultType = Table
 

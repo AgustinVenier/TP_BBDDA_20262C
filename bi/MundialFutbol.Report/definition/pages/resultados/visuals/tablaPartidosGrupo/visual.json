@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "partido"
                 }
               },
-              "queryRef": "Partidos.partido",
+              "queryRef": "Reportes.vw_Resultados.partido",
               "nativeQueryRef": "partido",
               "displayName": "Partido"
             },
@@ -35,13 +35,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "Resultado de grupo"
                 }
               },
-              "queryRef": "Partidos.Resultado de grupo",
+              "queryRef": "Reportes.vw_Resultados.Resultado de grupo",
               "nativeQueryRef": "Resultado de grupo",
               "displayName": "Resultado"
             },
@@ -50,13 +50,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "ganador"
                 }
               },
-              "queryRef": "Partidos.ganador",
+              "queryRef": "Reportes.vw_Resultados.ganador",
               "nativeQueryRef": "ganador",
               "displayName": "Ganador"
             },
@@ -65,13 +65,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "goles_del_local"
                 }
               },
-              "queryRef": "Partidos.goles_del_local",
+              "queryRef": "Reportes.vw_Resultados.goles_del_local",
               "nativeQueryRef": "goles_del_local",
               "displayName": "Goles local"
             },
@@ -80,13 +80,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "goles_del_visitante"
                 }
               },
-              "queryRef": "Partidos.goles_del_visitante",
+              "queryRef": "Reportes.vw_Resultados.goles_del_visitante",
               "nativeQueryRef": "goles_del_visitante",
               "displayName": "Goles visitante"
             }
@@ -100,7 +100,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Partidos"
+                    "Entity": "Reportes.vw_Resultados"
                   }
                 },
                 "Property": "partido"

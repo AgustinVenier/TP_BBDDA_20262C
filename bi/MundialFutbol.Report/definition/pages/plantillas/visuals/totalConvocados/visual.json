@@ -20,13 +20,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Plantillas"
+                      "Entity": "Reportes.vw_Plantillas"
                     }
                   },
                   "Property": "Convocados"
                 }
               },
-              "queryRef": "Plantillas.Convocados",
+              "queryRef": "Reportes.vw_Plantillas.Convocados",
               "nativeQueryRef": "Convocados"
             }
           ]

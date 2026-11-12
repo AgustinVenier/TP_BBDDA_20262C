@@ -20,13 +20,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "IngresosPorMoneda"
+                      "Entity": "Reportes.vw_IngresosPublicitariosPorMoneda"
                     }
                   },
                   "Property": "Moneda mostrada"
                 }
               },
-              "queryRef": "IngresosPorMoneda.Moneda mostrada",
+              "queryRef": "Reportes.vw_IngresosPublicitariosPorMoneda.Moneda mostrada",
               "nativeQueryRef": "Moneda mostrada"
             },
             {
@@ -34,13 +34,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "IngresosPorMoneda"
+                      "Entity": "Reportes.vw_IngresosPublicitariosPorMoneda"
                     }
                   },
                   "Property": "Ingresos en moneda"
                 }
               },
-              "queryRef": "IngresosPorMoneda.Ingresos en moneda",
+              "queryRef": "Reportes.vw_IngresosPublicitariosPorMoneda.Ingresos en moneda",
               "nativeQueryRef": "Ingresos en moneda"
             }
           ]

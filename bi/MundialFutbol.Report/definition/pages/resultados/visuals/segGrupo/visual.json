@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Posiciones"
+                      "Entity": "Reportes.vw_TablaPosiciones"
                     }
                   },
                   "Property": "grupo"
                 }
               },
-              "queryRef": "Posiciones.grupo",
+              "queryRef": "Reportes.vw_TablaPosiciones.grupo",
               "nativeQueryRef": "grupo",
               "active": true
             }
@@ -40,7 +40,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Posiciones"
+                    "Entity": "Reportes.vw_TablaPosiciones"
                   }
                 },
                 "Property": "grupo"

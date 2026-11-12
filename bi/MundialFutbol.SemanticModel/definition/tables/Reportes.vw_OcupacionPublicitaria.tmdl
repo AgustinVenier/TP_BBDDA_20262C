@@ -1,15 +1,15 @@
-table Ocupacion
+table 'Reportes.vw_OcupacionPublicitaria'
 	lineageTag: 0553726b-31f6-5d34-9c6a-7c5dfa6e7cbe
 
-	measure 'Ingresos USD' = SUM(Ocupacion[costo_usd])
+	measure 'Ingresos USD' = SUM('Reportes.vw_OcupacionPublicitaria'[costo_usd])
 		formatString: $ #,0
 		lineageTag: 281859fc-560e-559b-abf7-91e3ba149b76
 
-	measure Espacios = COUNTROWS(Ocupacion)
+	measure Espacios = COUNTROWS('Reportes.vw_OcupacionPublicitaria')
 		formatString: 0
 		lineageTag: 97cf28d4-aea3-5a59-a436-ba336cb65cfe
 
-	measure 'Espacios ocupados' = CALCULATE(COUNTROWS(Ocupacion), Ocupacion[ocupado] = TRUE())
+	measure 'Espacios ocupados' = CALCULATE(COUNTROWS('Reportes.vw_OcupacionPublicitaria'), 'Reportes.vw_OcupacionPublicitaria'[ocupado] = TRUE())
 		formatString: 0
 		lineageTag: dcef5e9e-86d4-51ca-b41b-9dbde83aa4e1
 
@@ -17,19 +17,19 @@ table Ocupacion
 		formatString: 0.0%
 		lineageTag: 25fc1376-4f48-53c2-ab5f-36c75e125cba
 
-	measure 'Espacio 1' = IF(HASONEVALUE(Partidos[id_partido]), CALCULATE(IF(NOT ISEMPTY(Ocupacion), COALESCE(MAX(Ocupacion[anunciante]), "(libre)")), Ocupacion[numero_espacio] = 1))
+	measure 'Espacio 1' = IF(HASONEVALUE('Reportes.vw_Resultados'[id_partido]), CALCULATE(IF(NOT ISEMPTY('Reportes.vw_OcupacionPublicitaria'), COALESCE(MAX('Reportes.vw_OcupacionPublicitaria'[anunciante]), "(libre)")), 'Reportes.vw_OcupacionPublicitaria'[numero_espacio] = 1))
 		lineageTag: ea3318b0-1031-44d2-b370-3ffd70506b20
 
-	measure 'Espacio 2' = IF(HASONEVALUE(Partidos[id_partido]), CALCULATE(IF(NOT ISEMPTY(Ocupacion), COALESCE(MAX(Ocupacion[anunciante]), "(libre)")), Ocupacion[numero_espacio] = 2))
+	measure 'Espacio 2' = IF(HASONEVALUE('Reportes.vw_Resultados'[id_partido]), CALCULATE(IF(NOT ISEMPTY('Reportes.vw_OcupacionPublicitaria'), COALESCE(MAX('Reportes.vw_OcupacionPublicitaria'[anunciante]), "(libre)")), 'Reportes.vw_OcupacionPublicitaria'[numero_espacio] = 2))
 		lineageTag: 275e7ec6-20bd-403d-996b-e785a9735c84
 
-	measure 'Espacio 3' = IF(HASONEVALUE(Partidos[id_partido]), CALCULATE(IF(NOT ISEMPTY(Ocupacion), COALESCE(MAX(Ocupacion[anunciante]), "(libre)")), Ocupacion[numero_espacio] = 3))
+	measure 'Espacio 3' = IF(HASONEVALUE('Reportes.vw_Resultados'[id_partido]), CALCULATE(IF(NOT ISEMPTY('Reportes.vw_OcupacionPublicitaria'), COALESCE(MAX('Reportes.vw_OcupacionPublicitaria'[anunciante]), "(libre)")), 'Reportes.vw_OcupacionPublicitaria'[numero_espacio] = 3))
 		lineageTag: 9650d37a-69f5-4ef7-bc35-65ffebfcf2db
 
-	measure 'Espacio 4' = IF(HASONEVALUE(Partidos[id_partido]), CALCULATE(IF(NOT ISEMPTY(Ocupacion), COALESCE(MAX(Ocupacion[anunciante]), "(libre)")), Ocupacion[numero_espacio] = 4))
+	measure 'Espacio 4' = IF(HASONEVALUE('Reportes.vw_Resultados'[id_partido]), CALCULATE(IF(NOT ISEMPTY('Reportes.vw_OcupacionPublicitaria'), COALESCE(MAX('Reportes.vw_OcupacionPublicitaria'[anunciante]), "(libre)")), 'Reportes.vw_OcupacionPublicitaria'[numero_espacio] = 4))
 		lineageTag: a4089865-0f34-46c2-9168-824ac7caf5da
 
-	measure Anunciantes = DISTINCTCOUNTNOBLANK(Ocupacion[id_anunciante])
+	measure Anunciantes = DISTINCTCOUNTNOBLANK('Reportes.vw_OcupacionPublicitaria'[id_anunciante])
 		formatString: 0
 		lineageTag: 3c1f6b2e-8d4a-4f0e-9b57-6e2a1d9c4f80
 
@@ -199,14 +199,14 @@ table Ocupacion
 
 		annotation SummarizationSetBy = Automatic
 
-	partition Ocupacion = m
+	partition 'Reportes.vw_OcupacionPublicitaria' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_OcupacionPublicitaria"]}[Data]
+				    Reportes_vw_OcupacionPublicitaria = Origen{[Schema="Reportes",Item="vw_OcupacionPublicitaria"]}[Data]
 				in
-				    Vista
+				    Reportes_vw_OcupacionPublicitaria
 
 	annotation PBI_ResultType = Table
 

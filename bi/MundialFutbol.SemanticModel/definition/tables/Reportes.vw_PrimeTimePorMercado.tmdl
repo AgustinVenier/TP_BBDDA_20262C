@@ -1,11 +1,11 @@
-table PrimeTime
+table 'Reportes.vw_PrimeTimePorMercado'
 	lineageTag: ed84a590-4894-5193-b0f5-1e0572f33a0f
 
-	measure 'Mercados en prime time' = CALCULATE(COUNTROWS(PrimeTime), PrimeTime[en_prime_time] = TRUE(), PrimeTime[es_mercado_publicitario] = TRUE()) + 0
+	measure 'Mercados en prime time' = CALCULATE(COUNTROWS('Reportes.vw_PrimeTimePorMercado'), 'Reportes.vw_PrimeTimePorMercado'[en_prime_time] = TRUE(), 'Reportes.vw_PrimeTimePorMercado'[es_mercado_publicitario] = TRUE()) + 0
 		formatString: 0
 		lineageTag: 53ee09c2-399d-52fc-a0e4-9cf085edaa10
 
-	measure 'Prime time' = VAR filas = CALCULATETABLE(PrimeTime, PrimeTime[es_mercado_publicitario] = TRUE()) VAR en_prime = COUNTROWS(FILTER(filas, PrimeTime[en_prime_time] = TRUE())) VAR feriado = COUNTROWS(FILTER(filas, PrimeTime[es_feriado] = TRUE())) RETURN IF(ISEMPTY(filas), BLANK(), IF(en_prime > 0, "SI", "NO") & IF(feriado > 0, " + FERIADO", ""))
+	measure 'Prime time' = VAR filas = CALCULATETABLE('Reportes.vw_PrimeTimePorMercado', 'Reportes.vw_PrimeTimePorMercado'[es_mercado_publicitario] = TRUE()) VAR en_prime = COUNTROWS(FILTER(filas, 'Reportes.vw_PrimeTimePorMercado'[en_prime_time] = TRUE())) VAR feriado = COUNTROWS(FILTER(filas, 'Reportes.vw_PrimeTimePorMercado'[es_feriado] = TRUE())) RETURN IF(ISEMPTY(filas), BLANK(), IF(en_prime > 0, "SI", "NO") & IF(feriado > 0, " + FERIADO", ""))
 		lineageTag: ca39fb6a-adcb-5709-b8c5-8660cf451e83
 
 	column id_partido
@@ -127,14 +127,14 @@ table PrimeTime
 
 		annotation SummarizationSetBy = Automatic
 
-	partition PrimeTime = m
+	partition 'Reportes.vw_PrimeTimePorMercado' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_PrimeTimePorMercado"]}[Data]
+				    Reportes_vw_PrimeTimePorMercado = Origen{[Schema="Reportes",Item="vw_PrimeTimePorMercado"]}[Data]
 				in
-				    Vista
+				    Reportes_vw_PrimeTimePorMercado
 
 	annotation PBI_ResultType = Table
 

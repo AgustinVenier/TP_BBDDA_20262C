@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Plantillas"
+                      "Entity": "Reportes.vw_Plantillas"
                     }
                   },
                   "Property": "estado"
                 }
               },
-              "queryRef": "Plantillas.estado",
+              "queryRef": "Reportes.vw_Plantillas.estado",
               "nativeQueryRef": "estado",
               "active": true,
               "displayName": "Estado"
@@ -41,7 +41,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Plantillas"
+                    "Entity": "Reportes.vw_Plantillas"
                   }
                 },
                 "Property": "estado"

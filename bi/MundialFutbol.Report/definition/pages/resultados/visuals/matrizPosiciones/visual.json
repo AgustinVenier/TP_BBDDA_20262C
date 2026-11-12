@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Posiciones"
+                      "Entity": "Reportes.vw_TablaPosiciones"
                     }
                   },
                   "Property": "grupo"
                 }
               },
-              "queryRef": "Posiciones.grupo",
+              "queryRef": "Reportes.vw_TablaPosiciones.grupo",
               "nativeQueryRef": "grupo",
               "displayName": "Grupo",
               "active": true
@@ -36,13 +36,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Posiciones"
+                      "Entity": "Reportes.vw_TablaPosiciones"
                     }
                   },
                   "Property": "seleccion"
                 }
               },
-              "queryRef": "Posiciones.seleccion",
+              "queryRef": "Reportes.vw_TablaPosiciones.seleccion",
               "nativeQueryRef": "seleccion",
               "displayName": "Selección",
               "active": true
@@ -58,7 +58,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "posicion"
@@ -67,7 +67,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.posicion)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.posicion)",
               "nativeQueryRef": "Pos",
               "displayName": "Pos"
             },
@@ -78,7 +78,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "pj"
@@ -87,7 +87,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.pj)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.pj)",
               "nativeQueryRef": "PJ",
               "displayName": "PJ"
             },
@@ -98,7 +98,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "pg"
@@ -107,7 +107,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.pg)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.pg)",
               "nativeQueryRef": "PG",
               "displayName": "PG"
             },
@@ -118,7 +118,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "pe"
@@ -127,7 +127,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.pe)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.pe)",
               "nativeQueryRef": "PE",
               "displayName": "PE"
             },
@@ -138,7 +138,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "pp"
@@ -147,7 +147,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.pp)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.pp)",
               "nativeQueryRef": "PP",
               "displayName": "PP"
             },
@@ -158,7 +158,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "gf"
@@ -167,7 +167,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.gf)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.gf)",
               "nativeQueryRef": "GF",
               "displayName": "GF"
             },
@@ -178,7 +178,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "gc"
@@ -187,7 +187,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.gc)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.gc)",
               "nativeQueryRef": "GC",
               "displayName": "GC"
             },
@@ -198,7 +198,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "dg"
@@ -207,7 +207,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.dg)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.dg)",
               "nativeQueryRef": "DG",
               "displayName": "DG"
             },
@@ -218,7 +218,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "pts"
@@ -227,7 +227,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.pts)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.pts)",
               "nativeQueryRef": "Pts",
               "displayName": "Pts"
             }
@@ -241,7 +241,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Posiciones"
+                    "Entity": "Reportes.vw_TablaPosiciones"
                   }
                 },
                 "Property": "grupo"

@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Ocupacion"
+                      "Entity": "Reportes.vw_OcupacionPublicitaria"
                     }
                   },
                   "Property": "sede"
                 }
               },
-              "queryRef": "Ocupacion.sede",
+              "queryRef": "Reportes.vw_OcupacionPublicitaria.sede",
               "nativeQueryRef": "sede",
               "active": true
             }
@@ -40,7 +40,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Ocupacion"
+                    "Entity": "Reportes.vw_OcupacionPublicitaria"
                   }
                 },
                 "Property": "sede"

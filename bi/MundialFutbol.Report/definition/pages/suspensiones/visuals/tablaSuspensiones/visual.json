@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Suspensiones"
+                      "Entity": "Reportes.vw_SuspensionesActivas"
                     }
                   },
                   "Property": "momento"
                 }
               },
-              "queryRef": "Suspensiones.momento",
+              "queryRef": "Reportes.vw_SuspensionesActivas.momento",
               "nativeQueryRef": "momento",
               "displayName": "Momento"
             },
@@ -35,13 +35,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Suspensiones"
+                      "Entity": "Reportes.vw_SuspensionesActivas"
                     }
                   },
                   "Property": "seleccion"
                 }
               },
-              "queryRef": "Suspensiones.seleccion",
+              "queryRef": "Reportes.vw_SuspensionesActivas.seleccion",
               "nativeQueryRef": "seleccion",
               "displayName": "Selección"
             },
@@ -50,13 +50,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Suspensiones"
+                      "Entity": "Reportes.vw_SuspensionesActivas"
                     }
                   },
                   "Property": "dorsal"
                 }
               },
-              "queryRef": "Suspensiones.dorsal",
+              "queryRef": "Reportes.vw_SuspensionesActivas.dorsal",
               "nativeQueryRef": "dorsal",
               "displayName": "N.º"
             },
@@ -65,13 +65,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Suspensiones"
+                      "Entity": "Reportes.vw_SuspensionesActivas"
                     }
                   },
                   "Property": "jugador"
                 }
               },
-              "queryRef": "Suspensiones.jugador",
+              "queryRef": "Reportes.vw_SuspensionesActivas.jugador",
               "nativeQueryRef": "jugador",
               "displayName": "Jugador"
             },
@@ -80,13 +80,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Suspensiones"
+                      "Entity": "Reportes.vw_SuspensionesActivas"
                     }
                   },
                   "Property": "motivo"
                 }
               },
-              "queryRef": "Suspensiones.motivo",
+              "queryRef": "Reportes.vw_SuspensionesActivas.motivo",
               "nativeQueryRef": "motivo",
               "displayName": "Motivo"
             },
@@ -95,13 +95,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Suspensiones"
+                      "Entity": "Reportes.vw_SuspensionesActivas"
                     }
                   },
                   "Property": "numero_partido_origen"
                 }
               },
-              "queryRef": "Suspensiones.numero_partido_origen",
+              "queryRef": "Reportes.vw_SuspensionesActivas.numero_partido_origen",
               "nativeQueryRef": "numero_partido_origen",
               "displayName": "Sanción en"
             },
@@ -110,13 +110,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Suspensiones"
+                      "Entity": "Reportes.vw_SuspensionesActivas"
                     }
                   },
                   "Property": "partidos_de_suspension"
                 }
               },
-              "queryRef": "Suspensiones.partidos_de_suspension",
+              "queryRef": "Reportes.vw_SuspensionesActivas.partidos_de_suspension",
               "nativeQueryRef": "partidos_de_suspension",
               "displayName": "Fechas"
             },
@@ -125,13 +125,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Suspensiones"
+                      "Entity": "Reportes.vw_SuspensionesActivas"
                     }
                   },
                   "Property": "partidos_cumplidos"
                 }
               },
-              "queryRef": "Suspensiones.partidos_cumplidos",
+              "queryRef": "Reportes.vw_SuspensionesActivas.partidos_cumplidos",
               "nativeQueryRef": "partidos_cumplidos",
               "displayName": "Cumplidas"
             },
@@ -140,13 +140,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Suspensiones"
+                      "Entity": "Reportes.vw_SuspensionesActivas"
                     }
                   },
                   "Property": "partidos_pendientes"
                 }
               },
-              "queryRef": "Suspensiones.partidos_pendientes",
+              "queryRef": "Reportes.vw_SuspensionesActivas.partidos_pendientes",
               "nativeQueryRef": "partidos_pendientes",
               "displayName": "Pendientes"
             },
@@ -155,13 +155,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Suspensiones"
+                      "Entity": "Reportes.vw_SuspensionesActivas"
                     }
                   },
                   "Property": "proximo_partido"
                 }
               },
-              "queryRef": "Suspensiones.proximo_partido",
+              "queryRef": "Reportes.vw_SuspensionesActivas.proximo_partido",
               "nativeQueryRef": "proximo_partido",
               "displayName": "No juega el"
             }
@@ -175,7 +175,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Suspensiones"
+                    "Entity": "Reportes.vw_SuspensionesActivas"
                   }
                 },
                 "Property": "momento"
@@ -188,7 +188,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Suspensiones"
+                    "Entity": "Reportes.vw_SuspensionesActivas"
                   }
                 },
                 "Property": "seleccion"
@@ -231,7 +231,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Suspensiones"
+                "Entity": "Reportes.vw_SuspensionesActivas"
               }
             },
             "Property": "momento"
@@ -245,7 +245,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Suspensiones"
+                "Entity": "Reportes.vw_SuspensionesActivas"
               }
             },
             "Property": "seleccion"
@@ -259,7 +259,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Suspensiones"
+                "Entity": "Reportes.vw_SuspensionesActivas"
               }
             },
             "Property": "dorsal"
@@ -273,7 +273,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Suspensiones"
+                "Entity": "Reportes.vw_SuspensionesActivas"
               }
             },
             "Property": "jugador"
@@ -287,7 +287,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Suspensiones"
+                "Entity": "Reportes.vw_SuspensionesActivas"
               }
             },
             "Property": "motivo"
@@ -301,7 +301,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Suspensiones"
+                "Entity": "Reportes.vw_SuspensionesActivas"
               }
             },
             "Property": "numero_partido_origen"
@@ -315,7 +315,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Suspensiones"
+                "Entity": "Reportes.vw_SuspensionesActivas"
               }
             },
             "Property": "partidos_de_suspension"
@@ -329,7 +329,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Suspensiones"
+                "Entity": "Reportes.vw_SuspensionesActivas"
               }
             },
             "Property": "partidos_cumplidos"
@@ -343,7 +343,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Suspensiones"
+                "Entity": "Reportes.vw_SuspensionesActivas"
               }
             },
             "Property": "partidos_pendientes"
@@ -357,7 +357,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Suspensiones"
+                "Entity": "Reportes.vw_SuspensionesActivas"
               }
             },
             "Property": "proximo_partido"

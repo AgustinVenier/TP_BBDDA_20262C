@@ -1,4 +1,4 @@
-table Arbitros
+table 'Reportes.vw_Arbitros'
 	lineageTag: 14fc6cf4-3fc2-4b5e-92e1-dc11e4a773f1
 
 	column id_arbitro
@@ -19,15 +19,14 @@ table Arbitros
 
 		annotation SummarizationSetBy = Automatic
 
-	partition Arbitros = m
+	partition 'Reportes.vw_Arbitros' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_DesignacionesArbitrales"]}[Data],
-				    Arbitros = Table.Distinct(Table.SelectColumns(Vista, {"id_arbitro", "arbitro"}))
+				    Reportes_vw_Arbitros = Origen{[Schema="Reportes",Item="vw_Arbitros"]}[Data]
 				in
-				    Arbitros
+				    Reportes_vw_Arbitros
 
 	annotation PBI_ResultType = Table
 

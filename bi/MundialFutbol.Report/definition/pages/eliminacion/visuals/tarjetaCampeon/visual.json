@@ -20,13 +20,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "Campeón"
                 }
               },
-              "queryRef": "Partidos.Campeón",
+              "queryRef": "Reportes.vw_Resultados.Campeón",
               "nativeQueryRef": "Campeón",
               "displayName": "🥇 Campeón"
             },
@@ -35,13 +35,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "Segundo puesto"
                 }
               },
-              "queryRef": "Partidos.Segundo puesto",
+              "queryRef": "Reportes.vw_Resultados.Segundo puesto",
               "nativeQueryRef": "Segundo puesto",
               "displayName": "🥈 Segundo puesto"
             },
@@ -50,13 +50,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "Tercer puesto"
                 }
               },
-              "queryRef": "Partidos.Tercer puesto",
+              "queryRef": "Reportes.vw_Resultados.Tercer puesto",
               "nativeQueryRef": "Tercer puesto",
               "displayName": "🥉 Tercer puesto"
             }

@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "PrimeTime"
+                      "Entity": "Reportes.vw_PrimeTimePorMercado"
                     }
                   },
                   "Property": "mercado"
                 }
               },
-              "queryRef": "PrimeTime.mercado",
+              "queryRef": "Reportes.vw_PrimeTimePorMercado.mercado",
               "nativeQueryRef": "mercado",
               "active": true
             }
@@ -39,13 +39,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "partido"
                 }
               },
-              "queryRef": "Partidos.partido",
+              "queryRef": "Reportes.vw_Resultados.partido",
               "nativeQueryRef": "partido",
               "active": true
             }
@@ -58,13 +58,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "PrimeTime"
+                      "Entity": "Reportes.vw_PrimeTimePorMercado"
                     }
                   },
                   "Property": "Prime time"
                 }
               },
-              "queryRef": "PrimeTime.Prime time",
+              "queryRef": "Reportes.vw_PrimeTimePorMercado.Prime time",
               "nativeQueryRef": "Prime time"
             }
           ]
@@ -77,7 +77,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Partidos"
+                    "Entity": "Reportes.vw_Resultados"
                   }
                 },
                 "Property": "partido"

@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Arbitros"
+                      "Entity": "Reportes.vw_Arbitros"
                     }
                   },
                   "Property": "arbitro"
                 }
               },
-              "queryRef": "Arbitros.arbitro",
+              "queryRef": "Reportes.vw_Arbitros.arbitro",
               "nativeQueryRef": "arbitro",
               "active": true,
               "displayName": "Árbitro"
@@ -41,7 +41,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Arbitros"
+                    "Entity": "Reportes.vw_Arbitros"
                   }
                 },
                 "Property": "arbitro"

@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Tarjetas"
+                      "Entity": "Reportes.vw_Tarjetas"
                     }
                   },
                   "Property": "arbitro_principal"
                 }
               },
-              "queryRef": "Tarjetas.arbitro_principal",
+              "queryRef": "Reportes.vw_Tarjetas.arbitro_principal",
               "nativeQueryRef": "arbitro_principal",
               "displayName": "Árbitro"
             },
@@ -35,13 +35,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Tarjetas"
+                      "Entity": "Reportes.vw_Tarjetas"
                     }
                   },
                   "Property": "numero_partido"
                 }
               },
-              "queryRef": "Tarjetas.numero_partido",
+              "queryRef": "Reportes.vw_Tarjetas.numero_partido",
               "nativeQueryRef": "numero_partido",
               "displayName": "Partido"
             },
@@ -50,13 +50,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Tarjetas"
+                      "Entity": "Reportes.vw_Tarjetas"
                     }
                   },
                   "Property": "minuto"
                 }
               },
-              "queryRef": "Tarjetas.minuto",
+              "queryRef": "Reportes.vw_Tarjetas.minuto",
               "nativeQueryRef": "minuto",
               "displayName": "Minuto"
             },
@@ -65,13 +65,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Tarjetas"
+                      "Entity": "Reportes.vw_Tarjetas"
                     }
                   },
                   "Property": "tipo_tarjeta"
                 }
               },
-              "queryRef": "Tarjetas.tipo_tarjeta",
+              "queryRef": "Reportes.vw_Tarjetas.tipo_tarjeta",
               "nativeQueryRef": "tipo_tarjeta",
               "displayName": "Tarjeta"
             },
@@ -80,13 +80,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Tarjetas"
+                      "Entity": "Reportes.vw_Tarjetas"
                     }
                   },
                   "Property": "persona"
                 }
               },
-              "queryRef": "Tarjetas.persona",
+              "queryRef": "Reportes.vw_Tarjetas.persona",
               "nativeQueryRef": "persona",
               "displayName": "A quién"
             },
@@ -95,13 +95,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Tarjetas"
+                      "Entity": "Reportes.vw_Tarjetas"
                     }
                   },
                   "Property": "seleccion"
                 }
               },
-              "queryRef": "Tarjetas.seleccion",
+              "queryRef": "Reportes.vw_Tarjetas.seleccion",
               "nativeQueryRef": "seleccion",
               "displayName": "Selección"
             },
@@ -110,13 +110,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Tarjetas"
+                      "Entity": "Reportes.vw_Tarjetas"
                     }
                   },
                   "Property": "motivo"
                 }
               },
-              "queryRef": "Tarjetas.motivo",
+              "queryRef": "Reportes.vw_Tarjetas.motivo",
               "nativeQueryRef": "motivo",
               "displayName": "Motivo"
             }
@@ -130,7 +130,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Tarjetas"
+                    "Entity": "Reportes.vw_Tarjetas"
                   }
                 },
                 "Property": "numero_partido"
@@ -143,7 +143,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Tarjetas"
+                    "Entity": "Reportes.vw_Tarjetas"
                   }
                 },
                 "Property": "minuto"
@@ -186,7 +186,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Tarjetas"
+                "Entity": "Reportes.vw_Tarjetas"
               }
             },
             "Property": "arbitro_principal"
@@ -200,7 +200,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Tarjetas"
+                "Entity": "Reportes.vw_Tarjetas"
               }
             },
             "Property": "numero_partido"
@@ -214,7 +214,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Tarjetas"
+                "Entity": "Reportes.vw_Tarjetas"
               }
             },
             "Property": "minuto"
@@ -228,7 +228,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Tarjetas"
+                "Entity": "Reportes.vw_Tarjetas"
               }
             },
             "Property": "tipo_tarjeta"
@@ -242,7 +242,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Tarjetas"
+                "Entity": "Reportes.vw_Tarjetas"
               }
             },
             "Property": "persona"
@@ -256,7 +256,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Tarjetas"
+                "Entity": "Reportes.vw_Tarjetas"
               }
             },
             "Property": "seleccion"
@@ -270,7 +270,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Tarjetas"
+                "Entity": "Reportes.vw_Tarjetas"
               }
             },
             "Property": "motivo"

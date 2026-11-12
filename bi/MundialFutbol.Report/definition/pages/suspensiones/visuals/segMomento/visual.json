@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Suspensiones"
+                      "Entity": "Reportes.vw_SuspensionesActivas"
                     }
                   },
                   "Property": "momento"
                 }
               },
-              "queryRef": "Suspensiones.momento",
+              "queryRef": "Reportes.vw_SuspensionesActivas.momento",
               "nativeQueryRef": "momento",
               "active": true,
               "displayName": "Momento"
@@ -41,7 +41,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Suspensiones"
+                    "Entity": "Reportes.vw_SuspensionesActivas"
                   }
                 },
                 "Property": "momento"
@@ -88,7 +88,7 @@
                 "From": [
                   {
                     "Name": "s",
-                    "Entity": "Suspensiones",
+                    "Entity": "Reportes.vw_SuspensionesActivas",
                     "Type": 0
                   }
                 ],

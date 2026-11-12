@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Goles"
+                      "Entity": "Reportes.vw_Goles"
                     }
                   },
                   "Property": "seleccion"
                 }
               },
-              "queryRef": "Goles.seleccion",
+              "queryRef": "Reportes.vw_Goles.seleccion",
               "nativeQueryRef": "seleccion",
               "active": true
             }
@@ -40,7 +40,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Goles"
+                    "Entity": "Reportes.vw_Goles"
                   }
                 },
                 "Property": "seleccion"

@@ -20,7 +20,7 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Cuadro"
+                      "Entity": "Reportes.vw_CuadroEliminacion"
                     }
                   },
                   "Property": "Cuadro de eliminación"

@@ -20,13 +20,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Designaciones"
+                      "Entity": "Reportes.vw_DesignacionesArbitrales"
                     }
                   },
                   "Property": "Partidos dirigidos"
                 }
               },
-              "queryRef": "Designaciones.Partidos dirigidos",
+              "queryRef": "Reportes.vw_DesignacionesArbitrales.Partidos dirigidos",
               "nativeQueryRef": "Partidos dirigidos",
               "displayName": "Dirigidos"
             },
@@ -35,13 +35,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Designaciones"
+                      "Entity": "Reportes.vw_DesignacionesArbitrales"
                     }
                   },
                   "Property": "Designaciones"
                 }
               },
-              "queryRef": "Designaciones.Designaciones",
+              "queryRef": "Reportes.vw_DesignacionesArbitrales.Designaciones",
               "nativeQueryRef": "Designaciones",
               "displayName": "Designaciones"
             },
@@ -50,13 +50,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Designaciones"
+                      "Entity": "Reportes.vw_DesignacionesArbitrales"
                     }
                   },
                   "Property": "Amarillas señaladas"
                 }
               },
-              "queryRef": "Designaciones.Amarillas señaladas",
+              "queryRef": "Reportes.vw_DesignacionesArbitrales.Amarillas señaladas",
               "nativeQueryRef": "Amarillas señaladas",
               "displayName": "Amarillas"
             },
@@ -65,13 +65,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Designaciones"
+                      "Entity": "Reportes.vw_DesignacionesArbitrales"
                     }
                   },
                   "Property": "Rojas señaladas"
                 }
               },
-              "queryRef": "Designaciones.Rojas señaladas",
+              "queryRef": "Reportes.vw_DesignacionesArbitrales.Rojas señaladas",
               "nativeQueryRef": "Rojas señaladas",
               "displayName": "Rojas"
             }
