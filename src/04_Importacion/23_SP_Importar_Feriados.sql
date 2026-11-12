@@ -14,7 +14,7 @@
  Objetivo: Crear el proceso de importación de feriados nacionales desde la
            API Nager.Date, para saber si un partido cae en día feriado en un
            mercado de la publicidad (Publicidad.fn_MercadosEnPrimeTime). Los
-           SP, en el orden en que se crean (primero el que usa el otro):
+           SP, en el orden en que se crean:
              DatosGenerales.usp_CargarFeriados        carga masiva de feriados
              DatosGenerales.usp_ProcesarFeriadosJSON  valida la respuesta de la API y carga sus registros
              DatosGenerales.usp_ImportarFeriadosAPI   consulta la API por un país y año, y procesa la respuesta
@@ -39,8 +39,7 @@
    1. Se controla el documento: que sea JSON, que no sea un mensaje de error
       de la API y que sea un arreglo. Si no, no se importa nada.
    2. OPENJSON pasa los registros, tal como vienen, a #respuesta_feriados, y
-      ahí se convierten (TRY_CONVERT). Todas las transformaciones se hacen
-      acá, en T-SQL.
+      ahí se convierten (TRY_CONVERT), en T-SQL.
    3. Antes de cargar, cada registro puede quedar:
         OMITIDO      si es de un país que el sistema no tiene, si no es un
                      feriado público (los bancarios, escolares u optativos no
@@ -54,21 +53,17 @@
       (GB-ENG, GB-SCT). Si un país tiene dos feriados el mismo día, se
       registran juntos, con los nombres separados por " / " (hasta 200
       caracteres). Así queda #staging_feriados, con un feriado por país y día.
-   5. DatosGenerales.usp_CargarFeriados (en este archivo) lee #staging_feriados, valida cada feriado con
-      las reglas de la tabla y hace el upsert, todos juntos. Se registra la
-      importación (DatosGenerales.IMPORTACION, su número queda en
-      @id_importacion) y los registros rechazados en el paso 3, en
-      DatosGenerales.ERRORES_FERIADO, en la misma transacción que la carga.
+   5. DatosGenerales.usp_CargarFeriados valida cada feriado con las reglas
+      de la tabla y hace el upsert, todos juntos. En la misma transacción se
+      registra la importación (su número queda en @id_importacion) y los
+      rechazados en el paso 3, en DatosGenerales.ERRORES_FERIADO.
    6. Se devuelve el resumen, los omitidos por motivo y los rechazados con
       sus motivos.
-   La importación puede correr dentro de una transacción del que la llama
-   (los tests la deshacen con ROLLBACK).
 
  Criterios del upsert (los de usp_CargarFeriados):
    - Clave natural: país y fecha.
    - Si la fuente cambia el nombre de un feriado, se actualiza con su
-     fecha_actualizacion. Importar dos veces lo mismo no cambia nada. Un
-     feriado que deja de venir no se borra: se conserva lo ya registrado.
+     fecha_actualizacion. Un feriado que deja de venir no se borra.
    - Se guarda el nombre en el idioma del país; si no viene, el nombre en
      inglés.
 */

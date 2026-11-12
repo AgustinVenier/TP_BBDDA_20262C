@@ -11,13 +11,11 @@
 
  Fecha: 25/10/2026
  Archivo: 04_CrearFuncionesYVistas.sql
- Objetivo: Crear las funciones y vistas que usan los SP y las consultas del
-           sistema: parámetros del sistema, cotización vigente de una
-           moneda, fixture filtrable, equipo en
-           cancha en cualquier minuto, marcador según los goles cargados,
-           sanciones y suspensiones, selecciones en competencia, simulación
-           de prime time y feriados por mercado, prioridad de piezas
-           publicitarias y recargos por fase y prime time, historial de
+ Objetivo: Crear las funciones y vistas que usan los SP y las consultas:
+           parámetros del sistema, cotización vigente, fixture filtrable,
+           equipo en cancha en cualquier minuto, marcador, sanciones y
+           suspensiones, selecciones en competencia, prime time y feriados
+           por mercado, prioridad y recargos de la publicidad, historial de
            titularidad, goleadores e historial de árbitros.
            Requiere haber ejecutado 01, 02 y 03. Su script de testing es
            54_Test_FuncionesYVistas.sql.

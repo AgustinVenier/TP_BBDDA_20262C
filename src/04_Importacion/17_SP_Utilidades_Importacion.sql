@@ -19,10 +19,6 @@
              DatosGenerales.usp_LeerArchivoUTF8       lee un archivo de texto UTF-8
              Torneo.fn_NormalizarNombre               nombre sin separadores, para compararlo
              Torneo.usp_IdentificarJugadores          reconoce a un jugador por cómo lo escribe la fuente
-           usp_ConsumirAPI lo usan las importaciones que consultan una API
-           (Dossier, Banco Mundial, Frankfurter y Nager.Date); las tres
-           últimas, las que leen los archivos de openfootball y los CSV del
-           scraping.
            Requiere haber ejecutado 01 a 15. Su script de testing es
            67_Test_SP_Utilidades_Importacion.sql.
 ================================================================================
@@ -94,15 +90,13 @@
    - La carga es una transacción. Si el que llama ya tiene una abierta, se
      hace dentro de esa.
 
- SQL Server 2022 no tiene un procedimiento propio
- para llamar a una API REST (sp_invoke_external_rest_endpoint recién está en
- SQL Server 2025). Por eso se usa OLE Automation con MSXML2.ServerXMLHTTP,
- que corre dentro del motor y no necesita CLR.
-
- OLE Automation: requiere la opción de instancia 'Ole Automation Procedures',
- que viene deshabilitada. Quien consulta una API la habilita solo mientras
- llama a este SP y después la deja como estaba, como hace
- 31_Importar_APIs.sql. Hace falta ser sysadmin.
+ usp_ConsumirAPI: SQL Server 2022 no tiene un procedimiento propio para
+ llamar a una API REST (sp_invoke_external_rest_endpoint recién está en SQL
+ Server 2025), así que usa OLE Automation con MSXML2.ServerXMLHTTP, que corre
+ dentro del motor y no necesita CLR. La opción de instancia 'Ole Automation
+ Procedures' viene deshabilitada: quien consulta una API la habilita solo
+ mientras llama a este SP y después la deja como estaba (como hace
+ 31_Importar_APIs.sql). Hace falta ser sysadmin.
 
  usp_LeerArchivoUTF8 usa SQL dinámico porque OPENROWSET(BULK) no acepta la
  ruta del archivo en una variable.

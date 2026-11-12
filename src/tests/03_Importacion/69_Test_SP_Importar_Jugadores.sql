@@ -24,7 +24,7 @@
            Requiere haber ejecutado 01 a 28. No depende del juego de datos
            (sirve con o sin el torneo real del 32 cargado): crea sus propios
            países (códigos ZZA, ZZB y ZZC) y sus selecciones (con
-           Torneo.usp_ImportarSeleccionesJSON de 23, que se prueba en
+           Torneo.usp_ImportarSeleccionesJSON de 18, que se prueba en
            68_Test_SP_Importar_Mundial2026.sql). Los países se cargan con
            INSERT directos. Todo corre dentro de una transacción que se
            deshace al final, junto con el registro de sus importaciones, así

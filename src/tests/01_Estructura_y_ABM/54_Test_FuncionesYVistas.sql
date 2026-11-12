@@ -37,9 +37,8 @@
                  229 XVA - XVD (cuartos): sin el dorsal 8 de XVA, suspendido;
                      1 - 1 en los 90, 2 - 2 en el alargue y 4 - 3 por penales.
              - Cinco árbitros de Gambia1 y el anunciante "Puma1" con dos campañas.
-           Las consultas se filtran a los datos de prueba, así que dan lo
-           mismo con o sin el juego de datos cargado. Los cambios de
-           parámetros (FV8 y FV10) se deshacen al final de su caso. Si el
+           Los cambios de parámetros (FV8 y FV10) se deshacen al final de su
+           caso. Si el
            grupo I no tiene lugar para las cuatro selecciones de prueba (por
            ejemplo, con las 48 del Mundial cargadas), la preparación amplía
            SELECCIONES_POR_GRUPO dentro de la transacción.

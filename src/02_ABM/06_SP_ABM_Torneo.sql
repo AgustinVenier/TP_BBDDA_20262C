@@ -14,10 +14,9 @@
  Objetivo: Crear los stored procedures de alta, baja y modificación de las
            tablas del esquema Torneo: SEDE, SEDE_IMAGEN, SELECCION,
            LISTA_CONVOCADOS, JUGADOR, NOMBRE_ALTERNATIVO,
-           PERSONA_CUERPO_TECNICO y PARTIDO.
-           Siguen las convenciones
-           descriptas en 05_SP_ABM_DatosGenerales.sql. Requiere haber
-           ejecutado 01 a 05. Su script de testing es 56_Test_SP_ABM_Torneo.sql.
+           PERSONA_CUERPO_TECNICO y PARTIDO. Siguen las convenciones de
+           05_SP_ABM_DatosGenerales.sql. Requiere haber ejecutado 01 a 05.
+           Su script de testing es 56_Test_SP_ABM_Torneo.sql.
 ================================================================================
 
  Particularidades de este esquema:

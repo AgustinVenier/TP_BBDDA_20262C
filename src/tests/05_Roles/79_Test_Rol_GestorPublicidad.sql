@@ -12,13 +12,13 @@
  Fecha: 10/11/2026
  Archivo: 79_Test_Rol_GestorPublicidad.sql
  Objetivo: Probar lo que puede y lo que no puede hacer el usuario
-           usr_test_gestor_publicidad (rol_GestorPublicidad).
+           usr_gestor_publicidad (rol_GestorPublicidad).
 ================================================================================
 
  Requiere haber ejecutado 00_Ejecutar_PrepararBase.sql (roles), las
  importaciones y 40_Ejecutar_Cifrado.sql.
 
- usr_test_gestor_publicidad es un usuario SIN LOGIN: nadie puede iniciar
+ usr_gestor_publicidad es un usuario SIN LOGIN: nadie puede iniciar
  sesión con él. Cada caso se ejecuta "como" ese usuario con EXECUTE AS USER y
  vuelve a dbo con REVERT.
 
@@ -51,20 +51,20 @@ SET QUOTED_IDENTIFIER ON;
 SET NOCOUNT ON;
 GO
 
-IF DATABASE_PRINCIPAL_ID(N'usr_test_gestor_publicidad') IS NULL
-    THROW 51010, N'Falta el usuario de prueba. Ejecute primero 27_SP_Roles.sql (lo incluye 00_Ejecutar_PrepararBase.sql).', 1;
+IF DATABASE_PRINCIPAL_ID(N'usr_gestor_publicidad') IS NULL
+    THROW 51010, N'Falta el usuario del rol. Ejecute primero 27_SP_Roles.sql (lo incluye 00_Ejecutar_PrepararBase.sql).', 1;
 IF KEY_ID(N'ClaveDatosPersonales') IS NULL
     THROW 51012, N'Falta el cifrado de los datos personales. Ejecute primero 40_Ejecutar_Cifrado.sql.', 1;
 IF NOT EXISTS (SELECT 1 FROM Torneo.JUGADOR)
     THROW 51013, N'No hay datos del torneo cargados. Ejecute primero las importaciones (31 a 35).', 1;
 GO
 
-PRINT N'=== Lo que PUEDE hacer usr_test_gestor_publicidad ===';
+PRINT N'=== Lo que PUEDE hacer usr_gestor_publicidad ===';
 GO
 
 
 /* Caso 1: PUEDE leer la ocupación publicitaria. */
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
+EXECUTE AS USER = N'usr_gestor_publicidad';
 BEGIN TRY
     SELECT TOP (5) * FROM Reportes.vw_OcupacionPublicitaria;
     PRINT N'OK     1. Puede leer Reportes.vw_OcupacionPublicitaria.';
@@ -77,7 +77,7 @@ GO
 
 
 /* Caso 2: PUEDE leer los ingresos publicitarios por moneda. */
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
+EXECUTE AS USER = N'usr_gestor_publicidad';
 BEGIN TRY
     SELECT TOP (5) partido, sede, ingresos_usd, codigo_moneda, ingresos_en_moneda
     FROM Reportes.vw_IngresosPublicitariosPorMoneda;
@@ -91,7 +91,7 @@ GO
 
 
 /* Caso 3: PUEDE ejecutar el reporte de ocupación publicitaria. */
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
+EXECUTE AS USER = N'usr_gestor_publicidad';
 BEGIN TRY
     EXEC Reportes.usp_OcupacionPublicitaria;
     PRINT N'OK     3. Puede ejecutar Reportes.usp_OcupacionPublicitaria.';
@@ -106,7 +106,7 @@ GO
 /* Caso 4: PUEDE consultar los países (DatosGenerales.usp_ConsultarPaises)
    para elegir el del anunciante, y dar de alta un anunciante. Se da de alta de verdad y se deshace al
    final. */
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
+EXECUTE AS USER = N'usr_gestor_publicidad';
 BEGIN TRANSACTION;
 BEGIN TRY
     DECLARE @id_pais SMALLINT, @id_anunciante INT;
@@ -131,7 +131,7 @@ GO
 /* Caso 5: PUEDE asignar la publicidad de un partido. Se pasa un partido que
    no existe, para que falle por la validacion del SP y no inserte nada */
 
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
+EXECUTE AS USER = N'usr_gestor_publicidad';
 BEGIN TRY
     EXEC Publicidad.usp_AsignarPublicidadPartido @id_partido = -1;
     PRINT N'OK     5. Puede ejecutar Publicidad.usp_AsignarPublicidadPartido.';
@@ -147,12 +147,12 @@ GO
 
 
 PRINT N'';
-PRINT N'=== Lo que NO PUEDE hacer usr_test_gestor_publicidad ===';
+PRINT N'=== Lo que NO PUEDE hacer usr_gestor_publicidad ===';
 GO
 
 
 /* Caso 6: NO PUEDE leer las plantillas: tienen datos personales. */
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
+EXECUTE AS USER = N'usr_gestor_publicidad';
 BEGIN TRY
     SELECT TOP (5) seleccion, dorsal, apellido, nombre FROM Reportes.vw_Plantillas;
     PRINT N'ERROR  6. Pudo leer Reportes.vw_Plantillas y no debería.';
@@ -168,7 +168,7 @@ GO
 
 
 /* Caso 7: NO PUEDE ejecutar los reportes deportivos. */
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
+EXECUTE AS USER = N'usr_gestor_publicidad';
 BEGIN TRY
     EXEC Reportes.usp_Goleadores;
     PRINT N'ERROR  7. Pudo ejecutar Reportes.usp_Goleadores y no debería.';
@@ -184,7 +184,7 @@ GO
 
 
 /* Caso 8: NO PUEDE dar de alta un jugador. */
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
+EXECUTE AS USER = N'usr_gestor_publicidad';
 BEGIN TRY
     EXEC Torneo.usp_JUGADOR_Alta @id_lista = 25, @nombre = 'Leopoldo', @apellido = 'Messi',
                                  @posicion_habitual = 'Arquero', @dorsal = 19;
@@ -202,7 +202,7 @@ GO
 
 /* Caso 9: NO PUEDE leer las tablas de su propio módulo directamente: los
    anunciantes los maneja con los SP. */
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
+EXECUTE AS USER = N'usr_gestor_publicidad';
 BEGIN TRY
     SELECT TOP (5) * FROM Publicidad.ANUNCIANTE;
     PRINT N'ERROR  9. Pudo leer la tabla Publicidad.ANUNCIANTE y no debería.';
@@ -218,7 +218,7 @@ GO
 
 
 /* Caso 10: NO PUEDE modificar las exhibiciones directamente. */
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
+EXECUTE AS USER = N'usr_gestor_publicidad';
 BEGIN TRY
     UPDATE Publicidad.EXHIBICION SET costo = 0;
     PRINT N'ERROR 10. Pudo modificar Publicidad.EXHIBICION y no debería.';
@@ -235,7 +235,7 @@ GO
 
 /* Caso 11: NO PUEDE abrir la clave de cifrado. SQL Server responde como si
    la clave no existiera (error 15151). */
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
+EXECUTE AS USER = N'usr_gestor_publicidad';
 BEGIN TRY
     OPEN SYMMETRIC KEY ClaveDatosPersonales DECRYPTION BY CERTIFICATE CertDatosPersonales;
     PRINT N'ERROR 11. Pudo abrir la clave ClaveDatosPersonales y no debería.';
@@ -253,7 +253,7 @@ GO
 /* Caso 12: NO PUEDE descifrar los datos personales: no tiene permiso sobre
    el certificado que abre la clave. El usuario pregunta por su propio
    permiso (descifrar necesita CONTROL sobre el certificado). */
-EXECUTE AS USER = N'usr_test_gestor_publicidad';
+EXECUTE AS USER = N'usr_gestor_publicidad';
 IF HAS_PERMS_BY_NAME(N'CertDatosPersonales', N'CERTIFICATE', N'CONTROL') = 1
     PRINT N'ERROR 12. Tiene permiso sobre el certificado CertDatosPersonales y no debería: podría descifrar.';
 ELSE

@@ -14,7 +14,7 @@
  Objetivo: Crear el proceso de importación de cotizaciones de monedas desde
            la API Frankfurter, con las que se factura la publicidad en otra
            moneda (las tarifas de los espacios están en dólares). Los SP, en
-           el orden en que se crean (primero el que usa el otro):
+           el orden en que se crean:
              DatosGenerales.usp_CargarCotizaciones        carga masiva de cotizaciones
              DatosGenerales.usp_ProcesarCotizacionesJSON  valida la respuesta de la API y carga sus registros
              DatosGenerales.usp_ImportarCotizacionesAPI   consulta la API y procesa la respuesta
@@ -36,30 +36,25 @@
    1. Se controla el documento: que sea JSON, que no sea un mensaje de error
       de la API y que sea un arreglo. Si no, no se importa nada.
    2. OPENJSON pasa los registros, tal como vienen, a la tabla de staging
-      #staging_cotizaciones, y ahí se convierten (TRY_CONVERT). Todas las
-      transformaciones se hacen acá, en T-SQL.
+      #staging_cotizaciones, y ahí se convierten (TRY_CONVERT), en T-SQL.
    3. Antes de cargar, cada registro puede quedar:
         OMITIDO      si es el dólar contra sí mismo (vale siempre 1). No es
                      un error.
         RECHAZADO    si no es una cotización contra el dólar o si la fecha o
                      el valor no se pueden convertir.
-   4. DatosGenerales.usp_CargarCotizaciones (en este archivo) lee
-      #staging_cotizaciones, valida los demás con
-      las reglas de las cotizaciones y rechaza los que no las cumplen (moneda
-      que no es un código de 3 letras, fecha futura o valor que no es mayor
-      que cero), y hace el upsert de los válidos, todos juntos. En la misma transacción se
-      registra la importación (DatosGenerales.IMPORTACION, su número queda en
+   4. DatosGenerales.usp_CargarCotizaciones valida los demás con las reglas
+      de las cotizaciones (moneda de 3 letras, fecha no futura, valor mayor
+      que cero) y hace el upsert de los válidos, todos juntos. En la misma
+      transacción se registra la importación (su número queda en
       @id_importacion) y los rechazados, en DatosGenerales.ERRORES_COTIZACION.
    5. Se devuelve el resumen, los omitidos por motivo y los rechazados con
       sus motivos.
-   La importación puede correr dentro de una transacción del que la llama
-   (los tests la deshacen con ROLLBACK).
 
  Criterios del upsert (los de usp_CargarCotizaciones):
    - Clave natural: moneda y fecha. Cada día es un registro, así que se
      conserva la serie histórica.
    - Si la fuente corrige el valor de un día, se actualiza ese día y su
-     fecha_actualizacion. Importar dos veces lo mismo no cambia nada.
+     fecha_actualizacion.
    - Los días sin cotización (fines de semana, feriados bancarios) no se
      inventan: DatosGenerales.fn_CotizacionVigente usa la última anterior.
 */

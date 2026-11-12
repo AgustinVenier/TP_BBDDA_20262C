@@ -19,23 +19,20 @@
 ================================================================================
 
  Orden: lo ejecuta 40_Ejecutar_Cifrado.sql, después de 41_SP_Cifrado.sql y de
- configurar las claves. Los scripts 42, 43 y 44 hacen lo mismo, cada uno sobre
- su tabla. Después van 45, 46 y 47, que modifican los SP, las funciones y las
- vistas que usan estas columnas: hasta que se ejecutan, los objetos que leen
- las columnas cifradas devuelven bytes.
+ configurar las claves. 42 y 44 hacen lo mismo con su tabla. Hasta que se
+ ejecutan 45 a 47, que modifican los SP, las funciones y las vistas que usan
+ estas columnas, los objetos que leen las columnas cifradas devuelven bytes.
 
  Cambios en la tabla:
    - nombre y apellido pasan de NVARCHAR(60) NOT NULL a VARBINARY(256) NOT NULL.
    - fecha_nacimiento pasa de DATE NULL a VARBINARY(256) NULL.
    - Las columnas conservan su nombre, pero quedan al final de la tabla.
 
- Vista descifrada: Seguridad.vw_PersonaCuerpoTecnico tiene las mismas
- columnas que la tabla, con el nombre, el apellido y la fecha de nacimiento
- descifrados y con su tipo original. Los SP y las vistas que leen esos datos
- (45_Cifrado_Torneo.sql y 47_Cifrado_Reportes.sql) leen la vista en lugar de
- la tabla; los que escriben, escriben la tabla y cifran con
- Seguridad.fn_CifrarTexto y Seguridad.fn_CifrarFecha. La vista descifra con los permisos del usuario que
- consulta: quien no tiene permiso sobre la clave (27_SP_Roles.sql) ve NULL.
+ Vista descifrada: Seguridad.vw_PersonaCuerpoTecnico tiene las mismas columnas que la
+ tabla, con los datos personales descifrados y con su tipo original. La
+ leen, en lugar de la tabla, los SP y las vistas de 45 y 47. Descifra con
+ los permisos del usuario que consulta: quien no tiene permiso sobre la
+ clave (27_SP_Roles.sql) ve NULL.
 */
 
 USE MundialFutbol;

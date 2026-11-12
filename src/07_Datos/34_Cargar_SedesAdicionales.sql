@@ -17,20 +17,18 @@
            las que pudieran importar)". Son estadios de Sudamérica con cinco
            husos distintos: Argentina (UTC-3), Brasil (UTC-3, otro huso),
            Chile (UTC-4 en junio y julio), Bolivia (UTC-4) y Colombia y Perú
-           (UTC-5). Cada sede se registra con sus 4 espacios publicitarios.
-           Hay que ejecutarlo para cumplir ese criterio, aunque el torneo
-           real no juega en estas sedes y ningún otro script depende de
-           ellas.
-           Requiere haber ejecutado 01 a 28 (usa los países de
-           28_Cargar_DatosIniciales.sql y Torneo.usp_CargarSedes). Se puede
-           ejecutar más de una vez: las sedes ya cargadas quedan SIN CAMBIOS.
+           (UTC-5). El torneo real no juega en estas sedes y ningún otro
+           script depende de ellas.
+           Requiere haber ejecutado 01 a 28. Se puede ejecutar más de una
+           vez: las sedes ya cargadas quedan SIN CAMBIOS.
 ================================================================================
 
- Se cargan con Torneo.usp_CargarSedes (18_SP_Importar_Mundial2026.sql), que valida
- sobre todas las sedes juntas las reglas de usp_SEDE_Alta y usp_RegistrarSede y da de alta
- cada sede con sus 4 espacios, en una sola transacción. No es una importación,
- así que no se registra en DatosGenerales.IMPORTACION: si alguna sede se
- rechaza, se muestran los motivos y no se carga ninguna.
+ Se cargan con Torneo.usp_CargarSedes (18_SP_Importar_Mundial2026.sql), que
+ valida todas las sedes juntas con las reglas de usp_SEDE_Alta y
+ usp_RegistrarSede y da de alta cada una con sus 4 espacios, en una sola
+ transacción. No es una importación, así que no se registra en
+ DatosGenerales.IMPORTACION: si alguna sede se rechaza, se muestran los
+ motivos y no se carga ninguna.
 
  Capacidad y coordenadas: las publicadas para cada estadio (capacidad
  habilitada, coordenadas del centro del campo). Las tarifas de los espacios

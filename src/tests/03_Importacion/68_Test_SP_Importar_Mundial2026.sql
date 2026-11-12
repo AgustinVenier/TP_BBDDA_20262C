@@ -20,11 +20,9 @@
            errores parciales (con el registro de la importación y sus
            rechazados en las tablas ERRORES_), reconocimiento de jugadores por
            nombre y los archivos que no se pueden importar. Las reglas de cada
-           tabla las prueba 66_Test_SP_CargaMasiva.sql, con los SP de
-           carga (usp_Cargar...). La importación de jugadores y cuerpos
-           técnicos (19_SP_Importar_Jugadores.sql) la prueba
-           69_Test_SP_Importar_Jugadores.sql; acá solo se usa para cargar los
-           jugadores que necesitan los partidos.
+           tabla las prueba 66_Test_SP_CargaMasiva.sql, y la importación de
+           jugadores, 69_Test_SP_Importar_Jugadores.sql (acá solo carga los
+           jugadores que necesitan los partidos).
            Requiere haber ejecutado 01 a 28. No depende del juego de datos
            (sirve con o sin el torneo real del 32 cargado): crea
            sus propios países (códigos ZZA, ZZB y ZZC), selecciones, sede,

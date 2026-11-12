@@ -12,13 +12,13 @@
  Fecha: 10/11/2026
  Archivo: 77_Test_Rol_Administrador.sql
  Objetivo: Probar lo que puede y lo que no puede hacer el usuario
-           usr_test_administrador (rol_AdministradorOperativo).
+           usr_administrador (rol_AdministradorOperativo).
 ================================================================================
 
  Requiere haber ejecutado 00_Ejecutar_PrepararBase.sql (roles), las
  importaciones y 40_Ejecutar_Cifrado.sql.
 
- usr_test_administrador es un usuario SIN LOGIN: nadie puede iniciar sesión
+ usr_administrador es un usuario SIN LOGIN: nadie puede iniciar sesión
  con él. Cada caso se ejecuta "como" ese usuario con EXECUTE AS USER y vuelve
  a dbo con REVERT.
 
@@ -44,7 +44,6 @@
    - Los demás reciben datos vacíos: pasan el control de permisos y los
      rechaza la validación del SP (error 50000 o mayor), sin guardar nada.
      Si el rechazo fuera por permisos (error 229), el caso da ERROR.
-
 */
 
 USE MundialFutbol;
@@ -52,22 +51,22 @@ SET QUOTED_IDENTIFIER ON;
 SET NOCOUNT ON;
 GO
 
-IF DATABASE_PRINCIPAL_ID(N'usr_test_administrador') IS NULL
-    THROW 51010, N'Falta el usuario de prueba. Ejecute primero 27_SP_Roles.sql (lo incluye 00_Ejecutar_PrepararBase.sql).', 1;
+IF DATABASE_PRINCIPAL_ID(N'usr_administrador') IS NULL
+    THROW 51010, N'Falta el usuario del rol. Ejecute primero 27_SP_Roles.sql (lo incluye 00_Ejecutar_PrepararBase.sql).', 1;
 IF KEY_ID(N'ClaveDatosPersonales') IS NULL
     THROW 51012, N'Falta el cifrado de los datos personales. Ejecute primero 40_Ejecutar_Cifrado.sql.', 1;
 IF NOT EXISTS (SELECT 1 FROM Torneo.JUGADOR)
     THROW 51013, N'No hay datos del torneo cargados. Ejecute primero las importaciones (31 a 35).', 1;
 GO
 
-PRINT N'=== Lo que PUEDE hacer usr_test_administrador ===';
+PRINT N'=== Lo que PUEDE hacer usr_administrador ===';
 GO
 
 
 /* Caso 1: PUEDE leer las plantillas, con nombre y apellido descifrados.
    Si no tuviera permiso sobre la clave, la vista se lee igual pero los
    nombres salen NULL. */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRY
     SELECT TOP (5) seleccion, dorsal, apellido, nombre
     FROM Reportes.vw_Plantillas
@@ -86,7 +85,7 @@ GO
 
 
 /* Caso 2: PUEDE ejecutar un SP de reportes. */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRY
     EXEC Reportes.usp_Goleadores;
     PRINT N'OK     2. Puede ejecutar Reportes.usp_Goleadores.';
@@ -104,7 +103,7 @@ GO
    el mismo usuario lo deshace al final. Nombre y apellido no admiten NULL:
    si el usuario no pudiera cifrar, el cifrado daría NULL y el alta
    fallaría. */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRANSACTION;
 BEGIN TRY
     DECLARE @id_pais SMALLINT, @id_arbitro INT;
@@ -128,7 +127,7 @@ GO
 
 /* Caso 4: PUEDE registrar una convocatoria. Para eso también necesita usar
    el tipo tabla Torneo.TT_CONVOCADO (declarar la variable). */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRY
     DECLARE @jugadores Torneo.TT_CONVOCADO;
     EXEC Torneo.usp_RegistrarConvocatoria @id_seleccion = NULL, @jugadores = @jugadores;
@@ -145,7 +144,7 @@ GO
 
 
 /* Caso 5: PUEDE registrar un gol (módulo DesarrolloPartido). */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRY
     EXEC DesarrolloPartido.usp_RegistrarGol @id_partido = NULL, @id_jugador_autor = NULL,
                                             @id_tipo_gol = NULL, @periodo = NULL;
@@ -162,7 +161,7 @@ GO
 
 
 /* Caso 6: PUEDE dar de alta un anunciante (módulo Publicidad). */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRY
     EXEC Publicidad.usp_ANUNCIANTE_Alta @razon_social = NULL, @id_pais = NULL;
     PRINT N'OK     6. Puede ejecutar Publicidad.usp_ANUNCIANTE_Alta.';
@@ -178,12 +177,12 @@ GO
 
 
 PRINT N'';
-PRINT N'=== Lo que NO PUEDE hacer usr_test_administrador ===';
+PRINT N'=== Lo que NO PUEDE hacer usr_administrador ===';
 GO
 
 
 /* Caso 7: NO PUEDE leer una tabla directamente. */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRY
     SELECT TOP (5) * FROM Torneo.JUGADOR;
     PRINT N'ERROR  7. Pudo leer la tabla Torneo.JUGADOR y no debería.';
@@ -199,7 +198,7 @@ GO
 
 
 /* Caso 8: NO PUEDE borrar en una tabla directamente. */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRY
     DELETE FROM DesarrolloPartido.GOL;
     PRINT N'ERROR  8. Pudo borrar en DesarrolloPartido.GOL y no debería.';
@@ -216,7 +215,7 @@ GO
 
 /* Caso 9: NO PUEDE importar un archivo del servidor: las importaciones con
    BULK quedan para el DBA. Se pasa un archivo que no existe. */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRY
     EXEC Torneo.usp_ImportarJugadoresCSV @ruta_archivo = N'C:\no\existe.csv';
     PRINT N'ERROR  9. Pudo ejecutar Torneo.usp_ImportarJugadoresCSV y no debería.';
@@ -233,7 +232,7 @@ GO
 
 /* Caso 10: NO PUEDE leer la vista descifrada de jugadores directamente: los
    datos personales los ve a través de los reportes y los SP. */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRY
     SELECT TOP (5) id_jugador, apellido, nombre, fecha_nacimiento FROM Seguridad.vw_Jugador;
     PRINT N'ERROR 10. Pudo leer Seguridad.vw_Jugador y no debería.';
@@ -250,7 +249,7 @@ GO
 
 /* Caso 11: NO PUEDE usar la función de cifrado directamente: cifra solo a
    través de los SP de alta y modificación. */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRY
     SELECT Seguridad.fn_CifrarTexto(N'Prueba') AS texto_cifrado;
     PRINT N'ERROR 11. Pudo ejecutar Seguridad.fn_CifrarTexto y no debería.';
@@ -266,7 +265,7 @@ GO
 
 
 /* Caso 12: NO PUEDE abrir la clave de cifrado por su cuenta. */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRY
     EXEC Seguridad.usp_AbrirClave;
     PRINT N'ERROR 12. Pudo ejecutar Seguridad.usp_AbrirClave y no debería.';
@@ -284,7 +283,7 @@ GO
 /* Casos 13 y 14: NO PUEDE modificar el certificado (por ejemplo, quitarle
    la clave privada) ni la clave de cifrado. No se intenta el ALTER: se
    pregunta si tiene el permiso. */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 IF HAS_PERMS_BY_NAME(N'CertDatosPersonales', N'CERTIFICATE', N'ALTER') = 0
     PRINT N'OK    13. No tiene permiso para modificar el certificado CertDatosPersonales.';
 ELSE
@@ -300,7 +299,7 @@ GO
 
 /* Caso 15: NO PUEDE leer la tabla de países directamente: los consulta con
    el SP (caso 3). */
-EXECUTE AS USER = N'usr_test_administrador';
+EXECUTE AS USER = N'usr_administrador';
 BEGIN TRY
     SELECT TOP (5) * FROM DatosGenerales.PAIS;
     PRINT N'ERROR 15. Pudo leer la tabla DatosGenerales.PAIS y no debería.';

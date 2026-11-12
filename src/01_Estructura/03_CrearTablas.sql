@@ -16,7 +16,6 @@
            indices sobre claves foraneas.
            Requiere haber ejecutado 01_CrearBaseDeDatos.sql y
            02_CrearEsquemas.sql.
-
 ================================================================================
 
     Nomenclatura: 

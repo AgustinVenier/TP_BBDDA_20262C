@@ -36,7 +36,7 @@ SET NOCOUNT ON;
 GO
 
 IF OBJECT_ID(N'Torneo.usp_ConsultarSedes', N'P') IS NULL
-   OR DATABASE_PRINCIPAL_ID(N'usr_test_administrador') IS NULL
+   OR DATABASE_PRINCIPAL_ID(N'usr_administrador') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE codigo_fifa = 'ARG')
 BEGIN
     RAISERROR(N'Faltan los SP de consulta, los roles o los datos iniciales: ejecutar 01 a 28.', 16, 1);
@@ -142,10 +142,10 @@ GO
 
 /* CO7 Permisos.
    Esperado:
-     usr_test_administrador (rol_AdministradorOperativo): SELECT directo sobre
+     usr_administrador (rol_AdministradorOperativo): SELECT directo sobre
        Torneo.SEDE denegado; usp_ConsultarSedes y usp_ConsultarSede permitidos
        (encadenamiento de propiedad).
-     usr_test_consulta (rol_ConsultaReportes): usp_ConsultarSedes denegado (las
+     usr_consulta (rol_ConsultaReportes): usp_ConsultarSedes denegado (las
        sedes las lee en Reportes.vw_Sedes); usp_ConsultarPaises permitido, y
        SELECT directo sobre DatosGenerales.PAIS denegado. */
 DECLARE @id_sede INT = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio José María Minella1');
@@ -154,7 +154,7 @@ DROP TABLE IF EXISTS #sedes;
 CREATE TABLE #sedes (id_sede INT, nombre_estadio VARCHAR(100), ciudad VARCHAR(80), pais VARCHAR(60),
                      capacidad INT, huso_horario VARCHAR(50), espacios INT);
 
-EXECUTE AS USER = 'usr_test_administrador';
+EXECUTE AS USER = 'usr_administrador';
 BEGIN TRY
     SELECT @filas = COUNT(*) FROM Torneo.SEDE;
     PRINT N'CO7a: FALLÓ, el administrador leyó la tabla Torneo.SEDE directamente.';
@@ -173,7 +173,7 @@ BEGIN CATCH
 END CATCH;
 REVERT;
 
-EXECUTE AS USER = 'usr_test_consulta';
+EXECUTE AS USER = 'usr_consulta';
 BEGIN TRY
     EXEC Torneo.usp_ConsultarSedes;
     PRINT N'CO7c: FALLÓ, el usuario de consulta ejecutó usp_ConsultarSedes.';

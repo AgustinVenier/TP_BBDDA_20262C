@@ -18,9 +18,7 @@
              Torneo.usp_ImportarJugadoresCSV      importa el archivo jugadores.csv
              Torneo.usp_CargarCuerpoTecnico       carga masiva de cuerpos técnicos
              Torneo.usp_ImportarCuerpoTecnicoCSV  importa el archivo cuerpo_tecnico.csv
-           Cada SP de carga masiva (usp_Cargar...) está antes del SP de
-           importación que lo usa; la forma de trabajo común está en el
-           encabezado de 17_SP_Utilidades_Importacion.sql.
+           La forma de trabajo común está en 17_SP_Utilidades_Importacion.sql.
            Las selecciones y sus listas tienen que estar cargadas antes
            (Torneo.usp_ImportarSeleccionesJSON, en 18_SP_Importar_Mundial2026.sql).
            Requiere haber ejecutado 01 a 18. Su script de testing es
@@ -40,19 +38,16 @@
       esas columnas. Si no, o si alguna fila no es CSV válido, no se importa
       nada (THROW 50002).
    2. BULK INSERT pasa las filas, tal como vienen, a una tabla temporal, y
-      de ahí a #staging_jugadores, la tabla que lee el SP de carga,
-      donde se convierten el dorsal y la fecha de nacimiento.
-   3. Se rechazan las filas que no se pudieron convertir: un UPDATE sobre
-      toda la tabla anota el motivo y las marca RECHAZADO.
-   4. Torneo.usp_CargarJugadores (en este archivo) valida las demás
-      con las reglas de los jugadores y de cada lista de convocados, marca
-      las que no las cumplen y carga las válidas, todas juntas. En la misma
-      transacción se registra la importación (DatosGenerales.IMPORTACION, su
-      número queda en @id_importacion) y las filas rechazadas, en
-      Torneo.ERRORES_JUGADOR.
+      de ahí a #staging_jugadores, donde se convierten el dorsal y la fecha
+      de nacimiento.
+   3. Un UPDATE marca RECHAZADO, con su motivo, lo que no se pudo convertir.
+   4. Torneo.usp_CargarJugadores valida las demás con las reglas de los
+      jugadores y de cada lista de convocados y carga las válidas, todas
+      juntas. En la misma transacción se registra la importación (su número
+      queda en @id_importacion) y las rechazadas, en Torneo.ERRORES_JUGADOR.
    5. Se devuelve el resumen y los rechazados con sus motivos.
-   Importar dos veces el mismo archivo no duplica nada: un jugador se
-   reconoce por su selección, apellido y nombre.
+   Un jugador se reconoce por su selección, apellido y nombre: importar dos
+   veces el mismo archivo no duplica nada.
 
  Se usa SQL dinámico solo para leer el archivo, porque BULK INSERT no acepta
  la ruta en una variable.

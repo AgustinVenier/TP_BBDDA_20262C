@@ -12,16 +12,13 @@
  Fecha: 02/11/2026
  Archivo: 18_SP_Importar_Mundial2026.sql
  Objetivo: Crear el proceso de importación del Mundial 2026 real desde los
-           archivos JSON del proyecto openfootball (ver
-           doc/Fuentes_de_Datos_y_APIs.docx): sedes, selecciones y
-           partidos con lo que pasó en cada uno (formaciones, cambios, goles,
-           penales de la definición y tarjetas). Los jugadores se importan
-           antes, desde el CSV del scraping (19_SP_Importar_Jugadores.sql).
-           Y el equipo arbitral de cada partido, desde el CSV del scraping de
-           Wikipedia (doc/Tecnica_de_Scraping.docx), después de los partidos.
-           Los objetos, en el orden en que se crean (las utilidades que usan,
-           como usp_LeerArchivoUTF8 y usp_IdentificarJugadores, están en
-           17_SP_Utilidades_Importacion.sql):
+           archivos JSON de openfootball (ver doc/Fuentes_de_Datos_y_APIs.docx):
+           sedes, selecciones y partidos con lo que pasó en cada uno
+           (formaciones, cambios, goles, penales de la definición y
+           tarjetas), y después el equipo arbitral de cada partido, desde el
+           CSV del scraping de Wikipedia (doc/Tecnica_de_Scraping.docx). Los
+           jugadores se importan antes (19_SP_Importar_Jugadores.sql).
+           Los objetos, en el orden en que se crean:
              Torneo.fn_CoordenadaDecimal                     coordenada en grados con decimales
              Torneo.usp_CargarSedes                          carga masiva de sedes
              Torneo.usp_ImportarSedesJSON                    worldcup.stadiums.json
@@ -33,33 +30,27 @@
              Arbitraje.usp_CargarArbitros                    carga masiva de árbitros
              Arbitraje.usp_CargarDesignaciones               carga masiva de designaciones
              Arbitraje.usp_ImportarDesignacionesCSV          designaciones_arbitrales.csv (scraping)
-           Cada SP de carga masiva (usp_Cargar...) está antes del SP de
-           importación que lo usa; la forma de trabajo común está en el
-           encabezado de 17_SP_Utilidades_Importacion.sql.
-           Requiere haber ejecutado 01 a 17. Su script de testing es
-           68_Test_SP_Importar_Mundial2026.sql. La carga del torneo real está
-           en 32_Importar_Mundial2026.sql.
+           La forma de trabajo común y las utilidades que usan
+           (usp_LeerArchivoUTF8, usp_IdentificarJugadores) están en
+           17_SP_Utilidades_Importacion.sql. Requiere haber ejecutado 01 a 17.
+           Su script de testing es 68_Test_SP_Importar_Mundial2026.sql; la
+           carga del torneo real la hace 32_Importar_Mundial2026.sql.
 ================================================================================
 
- Cómo importa cada SP (igual que 19, 21, 22 y 23):
+ Cómo importa cada SP (igual que 19, 21, 22 y 23; los pasos tienen el mismo
+ número en el código):
    1. Se controla el archivo: que se pueda leer, que sea JSON y que tenga la
       estructura del archivo de openfootball que corresponde (o, el CSV del
       equipo arbitral, sus columnas). Si no, no se importa nada (THROW 50002).
    2. OPENJSON (o BULK INSERT, el CSV) pasa los registros, tal como vienen, a
-      la tabla de staging que lee el SP de carga (#staging_sedes, por
-      ejemplo), y ahí se convierten. Todas las transformaciones se hacen acá,
-      en T-SQL.
-   3. Se rechazan los registros que no se pudieron convertir: un UPDATE
-      sobre toda la tabla anota el motivo y los marca RECHAZADO.
-   4. El SP de carga que corresponde (en este archivo) valida
-      los demás con las reglas de la tabla, marca los que no las cumplen y
-      carga los válidos, todos juntos. Así los registros válidos se cargan
-      aunque haya otros rechazados. En la misma transacción se registra la
-      importación (DatosGenerales.IMPORTACION, su número queda en el
-      parámetro @id_importacion) y sus registros rechazados, en la tabla
-      ERRORES_ de lo que se importó (Torneo.ERRORES_SEDE, por ejemplo).
+      la tabla de staging del SP de carga (#staging_sedes, por ejemplo), y
+      ahí se convierten, en T-SQL.
+   3. Un UPDATE marca RECHAZADO, con su motivo, lo que no se pudo convertir.
+   4. El SP de carga valida los demás y carga los válidos, todos juntos. En
+      la misma transacción se registra la importación (su número queda en
+      @id_importacion) y sus rechazados, en la tabla ERRORES_ de lo que se
+      importó (Torneo.ERRORES_SEDE, por ejemplo).
    5. Se devuelve el resumen y los rechazados con sus motivos.
-   Importar dos veces el mismo archivo no duplica nada.
 
  Transformaciones de los datos de openfootball:
    - Sedes: el país sale del código ISO alfa-2 (cc) y el huso horario de

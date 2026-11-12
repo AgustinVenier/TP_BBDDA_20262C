@@ -23,10 +23,8 @@
              Reportes.usp_Resultados                 tabla de posiciones y resultados
            Las vistas son la fuente de datos de Power BI: devuelven el detalle
            sin filtrar y los SP las filtran y les dan forma. Las suspensiones
-           activas, que dependen de la fecha de corte, están para Power BI en
-           Reportes.vw_SuspensionesActivas, una vez antes de cada partido. Las cotizaciones
-           (22) y los feriados (23) de las APIs se usan para convertir los
-           ingresos a otras monedas y para marcar los feriados de cada mercado.
+           activas dependen de la fecha de corte: para Power BI,
+           Reportes.vw_SuspensionesActivas las calcula antes de cada partido.
            Requiere haber ejecutado 01 a 25. Su script de testing es
            76_Test_SP_Reportes.sql.
 ================================================================================

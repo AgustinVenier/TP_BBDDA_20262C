@@ -13,7 +13,7 @@
  Archivo: 27_SP_Roles.sql
  Objetivo: Crear el SP Seguridad.usp_ConfigurarRoles (el esquema Seguridad lo
            crea 02_CrearEsquemas.sql), que crea los roles de aplicación con
-           privilegios mínimos, los usuarios sin login para probarlos y sus
+           privilegios mínimos, un usuario sin login por rol y sus
            permisos sobre los SP y las vistas. Se deniega el acceso directo a
            las tablas: los cambios se hacen con los SP y las consultas, con
            las vistas de Reportes y los SP de consulta.
@@ -23,39 +23,31 @@
  00_Ejecutar_PrepararBase.sql. Se puede volver a ejecutar: el SP crea solo lo
  que falta y vuelve a aplicar los permisos.
 
- Los usuarios usr_test_* son PRINCIPALS SIN LOGIN únicamente para demostrar los
- permisos con EXECUTE AS USER. En producción se asignan usuarios de Windows o
- logins de aplicación a los roles; no se agregan usuarios a db_owner,
- db_datareader ni db_datawriter.
+ Usuarios: cada rol tiene un usuario SIN LOGIN (usr_administrador,
+ usr_cargador_resultados, usr_gestor_publicidad y usr_consulta). Nadie puede
+ iniciar sesión con ellos: los scripts de test los usan con EXECUTE AS USER
+ para mostrar los permisos de cada rol. En producción se agregan a los roles
+ los usuarios de Windows o los logins de la aplicación; no se agregan usuarios
+ a db_owner, db_datareader ni db_datawriter.
 
- Roles:
-   rol_AdministradorOperativo  ABM y SP de negocio de todos los módulos, y reportes.
+ Roles (el cuadro completo de permisos lo devuelve el SP al final):
+   rol_AdministradorOperativo  ABM y SP de negocio de todos los módulos,
+                               reportes y SP de consulta. Cifra y descifra
+                               los datos personales.
    rol_CargadorResultados      Iniciar y finalizar partidos, y registrar
                                formaciones, cambios, goles y amonestaciones.
                                Lee los partidos y las plantillas, para saber
-                               qué cargar; el resto de los reportes, no.
-   rol_GestorPublicidad        ABM y asignación de publicidad, y sus reportes.
-   rol_ConsultaReportes        Solo las vistas y los SP de Reportes.
-
- Catálogos: ningún rol lee las tablas, tampoco las de datos de referencia.
- Los datos que hacen falta para elegir los valores que piden los SP (el país
- de un árbitro o de un anunciante, el tipo de un gol) se consultan con los SP
- de 25_SP_Consultas.sql:
-   rol_AdministradorOperativo  todos (tiene EXECUTE sobre los esquemas).
-   rol_CargadorResultados      usp_ConsultarTiposGol.
-   rol_GestorPublicidad        usp_ConsultarPaises.
-   rol_ConsultaReportes        usp_ConsultarPaises.
-
- Datos personales cifrados (41_SP_Cifrado.sql): ningún rol usa directamente
- las funciones de cifrado (se deniega el esquema Seguridad), pero SQL Server
- controla el uso de la clave con el usuario que consulta, aunque lo haga a
- través de un SP o una vista. Por eso, cuando las claves ya existen, el SP da
- permiso para usarlas a los roles que trabajan con datos personales:
-   rol_AdministradorOperativo  cifrar y descifrar (da de alta y modifica personas).
-   rol_CargadorResultados      descifrar (los nombres en formaciones, tarjetas, avisos y plantillas).
-   rol_ConsultaReportes        descifrar (los nombres en los reportes).
-   rol_GestorPublicidad        ninguno: no trabaja con datos personales.
- 40_Ejecutar_Cifrado.sql vuelve a ejecutar el SP después de crear las claves.
+                               qué cargar, y los tipos de gol; el resto de
+                               los reportes, no. Descifra.
+   rol_GestorPublicidad        ABM y asignación de publicidad, sus reportes
+                               y los países. No ve datos personales.
+   rol_ConsultaReportes        Solo las vistas y los SP de Reportes, y los
+                               países. Descifra.
+ Ningún rol lee ni modifica las tablas (tampoco las de catálogos: se
+ consultan con los SP de 25_SP_Consultas.sql) ni usa el esquema Seguridad.
+ Los permisos sobre la clave de los datos personales (41_SP_Cifrado.sql) se
+ dan solo si la clave ya existe: 40_Ejecutar_Cifrado.sql vuelve a ejecutar
+ el SP después de crearla.
 */
 
 USE MundialFutbol;
@@ -66,7 +58,7 @@ GO
 
 /*
   usp_ConfigurarRoles
-  Crea los cuatro roles y sus usuarios de prueba si no existen, asocia cada
+  Crea los cuatro roles y sus usuarios si no existen, asocia cada
   usuario a su rol y aplica los permisos. Los GRANT y DENY se pueden repetir
   sin error, así que el SP se puede ejecutar más de una vez.
 */
@@ -85,25 +77,25 @@ BEGIN
     IF DATABASE_PRINCIPAL_ID(N'rol_ConsultaReportes') IS NULL
         CREATE ROLE rol_ConsultaReportes AUTHORIZATION dbo;
 
-    /* Usuarios de demostración sin LOGIN: no permiten iniciar sesión. */
-    IF DATABASE_PRINCIPAL_ID(N'usr_test_administrador') IS NULL
-        CREATE USER usr_test_administrador WITHOUT LOGIN;
-    IF DATABASE_PRINCIPAL_ID(N'usr_test_cargador_resultados') IS NULL
-        CREATE USER usr_test_cargador_resultados WITHOUT LOGIN;
-    IF DATABASE_PRINCIPAL_ID(N'usr_test_gestor_publicidad') IS NULL
-        CREATE USER usr_test_gestor_publicidad WITHOUT LOGIN;
-    IF DATABASE_PRINCIPAL_ID(N'usr_test_consulta') IS NULL
-        CREATE USER usr_test_consulta WITHOUT LOGIN;
+    /* Un usuario sin LOGIN por rol: no permite iniciar sesión. */
+    IF DATABASE_PRINCIPAL_ID(N'usr_administrador') IS NULL
+        CREATE USER usr_administrador WITHOUT LOGIN;
+    IF DATABASE_PRINCIPAL_ID(N'usr_cargador_resultados') IS NULL
+        CREATE USER usr_cargador_resultados WITHOUT LOGIN;
+    IF DATABASE_PRINCIPAL_ID(N'usr_gestor_publicidad') IS NULL
+        CREATE USER usr_gestor_publicidad WITHOUT LOGIN;
+    IF DATABASE_PRINCIPAL_ID(N'usr_consulta') IS NULL
+        CREATE USER usr_consulta WITHOUT LOGIN;
 
-    /* Cada usuario de demostración en su rol. */
-    IF IS_ROLEMEMBER(N'rol_AdministradorOperativo', N'usr_test_administrador') = 0
-        ALTER ROLE rol_AdministradorOperativo ADD MEMBER usr_test_administrador;
-    IF IS_ROLEMEMBER(N'rol_CargadorResultados', N'usr_test_cargador_resultados') = 0
-        ALTER ROLE rol_CargadorResultados ADD MEMBER usr_test_cargador_resultados;
-    IF IS_ROLEMEMBER(N'rol_GestorPublicidad', N'usr_test_gestor_publicidad') = 0
-        ALTER ROLE rol_GestorPublicidad ADD MEMBER usr_test_gestor_publicidad;
-    IF IS_ROLEMEMBER(N'rol_ConsultaReportes', N'usr_test_consulta') = 0
-        ALTER ROLE rol_ConsultaReportes ADD MEMBER usr_test_consulta;
+    /* Cada usuario en su rol. */
+    IF IS_ROLEMEMBER(N'rol_AdministradorOperativo', N'usr_administrador') = 0
+        ALTER ROLE rol_AdministradorOperativo ADD MEMBER usr_administrador;
+    IF IS_ROLEMEMBER(N'rol_CargadorResultados', N'usr_cargador_resultados') = 0
+        ALTER ROLE rol_CargadorResultados ADD MEMBER usr_cargador_resultados;
+    IF IS_ROLEMEMBER(N'rol_GestorPublicidad', N'usr_gestor_publicidad') = 0
+        ALTER ROLE rol_GestorPublicidad ADD MEMBER usr_gestor_publicidad;
+    IF IS_ROLEMEMBER(N'rol_ConsultaReportes', N'usr_consulta') = 0
+        ALTER ROLE rol_ConsultaReportes ADD MEMBER usr_consulta;
 
     /* Administrador operativo: todos los SP de los módulos y los reportes. El
        permiso por esquema incluye los tipos tabla de esos esquemas (los que
@@ -191,13 +183,13 @@ BEGIN
         DENY CONTROL ON CERTIFICATE::CertDatosPersonales TO rol_GestorPublicidad;
     END;
 
-    /* Evidencia: roles con su usuario de prueba, y el cuadro de permisos. */
+    /* Evidencia: roles con su usuario, y el cuadro de permisos. */
     SELECT r.name AS rol,
-           u.name AS usuario_prueba_sin_login
+           u.name AS usuario_sin_login
     FROM sys.database_role_members AS rm
     INNER JOIN sys.database_principals AS r ON r.principal_id = rm.role_principal_id
     INNER JOIN sys.database_principals AS u ON u.principal_id = rm.member_principal_id
-    WHERE r.name LIKE N'rol[_]%' AND u.name LIKE N'usr[_]test[_]%'
+    WHERE r.name LIKE N'rol[_]%' AND u.name LIKE N'usr[_]%'
     ORDER BY r.name, u.name;
 
     SELECT pr.name                                              AS rol,

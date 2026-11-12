@@ -12,13 +12,13 @@
  Fecha: 10/11/2026
  Archivo: 78_Test_Rol_CargadorResultados.sql
  Objetivo: Probar lo que puede y lo que no puede hacer el usuario
-           usr_test_cargador_resultados (rol_CargadorResultados).
+           usr_cargador_resultados (rol_CargadorResultados).
 ================================================================================
 
  Requiere haber ejecutado 00_Ejecutar_PrepararBase.sql (roles), las
  importaciones y 40_Ejecutar_Cifrado.sql.
 
- usr_test_cargador_resultados es un usuario SIN LOGIN: nadie puede iniciar
+ usr_cargador_resultados es un usuario SIN LOGIN: nadie puede iniciar
  sesión con él. Cada caso se ejecuta "como" ese usuario con EXECUTE AS USER y
  vuelve a dbo con REVERT.
 
@@ -51,20 +51,20 @@ SET QUOTED_IDENTIFIER ON;
 SET NOCOUNT ON;
 GO
 
-IF DATABASE_PRINCIPAL_ID(N'usr_test_cargador_resultados') IS NULL
-    THROW 51010, N'Falta el usuario de prueba. Ejecute primero 27_SP_Roles.sql (lo incluye 00_Ejecutar_PrepararBase.sql).', 1;
+IF DATABASE_PRINCIPAL_ID(N'usr_cargador_resultados') IS NULL
+    THROW 51010, N'Falta el usuario del rol. Ejecute primero 27_SP_Roles.sql (lo incluye 00_Ejecutar_PrepararBase.sql).', 1;
 IF KEY_ID(N'ClaveDatosPersonales') IS NULL
     THROW 51012, N'Falta el cifrado de los datos personales. Ejecute primero 40_Ejecutar_Cifrado.sql.', 1;
 IF NOT EXISTS (SELECT 1 FROM DesarrolloPartido.FORMACION)
     THROW 51013, N'No hay partidos con formaciones cargados. Ejecute primero las importaciones (31 a 35).', 1;
 GO
 
-PRINT N'=== Lo que PUEDE hacer usr_test_cargador_resultados ===';
+PRINT N'=== Lo que PUEDE hacer usr_cargador_resultados ===';
 GO
 
 
 /* Caso 1: PUEDE leer los partidos, para saber qué cargar. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     SELECT TOP (5) id_partido, partido, estado
     FROM Reportes.vw_Resultados
@@ -82,7 +82,7 @@ GO
    Si no tuviera permiso sobre la clave, la vista se leería igual pero los
    nombres saldrían NULL: por eso el caso controla que no haya ninguno en
    NULL. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     SELECT TOP (5) id_jugador, seleccion, dorsal, apellido, nombre
     FROM Reportes.vw_Plantillas
@@ -104,7 +104,7 @@ GO
    de un partido finalizado que no tiene tarjetas, y se deshace al final.
    El SP muestra al jugador con el nombre descifrado.  */
 
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRANSACTION;
 BEGIN TRY
     EXEC DesarrolloPartido.usp_RegistrarAmonestacion @id_partido = 1, @tipo_tarjeta = 'AMARILLA',
@@ -121,7 +121,7 @@ GO
 
 /* Caso 4: PUEDE registrar una formación. Para eso también necesita usar el
    tipo tabla DesarrolloPartido.TT_ALINEACION (declarar la variable). */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     DECLARE @jugadores DesarrolloPartido.TT_ALINEACION;
     EXEC DesarrolloPartido.usp_RegistrarFormacion @id_partido = 1, @id_seleccion = 1,
@@ -139,7 +139,7 @@ GO
 
 
 /* Caso 5: PUEDE iniciar un partido. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     EXEC Torneo.usp_IniciarPartido @id_partido = -1;
     PRINT N'OK     5. Puede ejecutar Torneo.usp_IniciarPartido.';
@@ -158,7 +158,7 @@ GO
    (DesarrolloPartido.usp_ConsultarTiposGol) para elegir el del gol, y
    registrar un gol. Se pasa un partido que no existe (id -1), para que lo
    rechace la validación del SP y no guarde nada. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     DECLARE @id_tipo_gol TINYINT;
     DECLARE @tipos_gol TABLE (id_tipo_gol TINYINT, descripcion VARCHAR(40), es_en_contra BIT);
@@ -182,7 +182,7 @@ GO
 
 
 /* Caso 7: PUEDE registrar un cambio. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     EXEC DesarrolloPartido.usp_RegistrarCambio @id_partido = -1, @id_jugador_sale = 2,
                                                @id_jugador_entra = 22, @minuto = 67, @motivo = 'LESION';
@@ -199,7 +199,7 @@ GO
 
 
 /* Caso 8: PUEDE finalizar un partido. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     EXEC Torneo.usp_FinalizarPartido @id_partido = -1;
     PRINT N'OK     8. Puede ejecutar Torneo.usp_FinalizarPartido.';
@@ -215,12 +215,12 @@ GO
 
 
 PRINT N'';
-PRINT N'=== Lo que NO PUEDE hacer usr_test_cargador_resultados ===';
+PRINT N'=== Lo que NO PUEDE hacer usr_cargador_resultados ===';
 GO
 
 
 /* Caso 9: NO PUEDE leer otros reportes: solo los partidos y las plantillas. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     SELECT TOP (5) * FROM Reportes.vw_Tarjetas;
     PRINT N'ERROR  9. Pudo leer Reportes.vw_Tarjetas y no debería.';
@@ -236,7 +236,7 @@ GO
 
 
 /* Caso 10: NO PUEDE ejecutar los SP de reportes. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     EXEC Reportes.usp_Goleadores;
     PRINT N'ERROR 10. Pudo ejecutar Reportes.usp_Goleadores y no debería.';
@@ -252,7 +252,7 @@ GO
 
 
 /* Caso 11: NO PUEDE dar de alta un jugador. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     EXEC Torneo.usp_JUGADOR_Alta @id_lista = NULL, @nombre = NULL, @apellido = NULL,
                                  @posicion_habitual = NULL, @dorsal = NULL;
@@ -270,7 +270,7 @@ GO
 
 /* Caso 12: NO PUEDE asignar la publicidad de un partido. Se pasa un partido
    que no existe: sin id, el SP asignaría todos los partidos. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     EXEC Publicidad.usp_AsignarPublicidadPartido @id_partido = -1;
     PRINT N'ERROR 12. Pudo ejecutar Publicidad.usp_AsignarPublicidadPartido y no debería.';
@@ -286,7 +286,7 @@ GO
 
 
 /* Caso 13: NO PUEDE leer una tabla directamente. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     SELECT TOP (5) * FROM Torneo.JUGADOR;
     PRINT N'ERROR 13. Pudo leer la tabla Torneo.JUGADOR y no debería.';
@@ -303,7 +303,7 @@ GO
 
 /* Caso 14: NO PUEDE insertar una tarjeta directamente en la tabla (sin pasar
    por el SP y sus validaciones). */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     INSERT INTO DesarrolloPartido.AMONESTACION (id_partido, id_jugador, tipo_tarjeta, minuto)
     SELECT NULL, NULL, 'AMARILLA', 1 ;
@@ -321,7 +321,7 @@ GO
 
 /* Caso 15: NO PUEDE leer la vista descifrada de jugadores directamente: los
    datos personales los ve solo a través de las plantillas. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 BEGIN TRY
     SELECT TOP (5) id_jugador, apellido, nombre, fecha_nacimiento FROM Seguridad.vw_Jugador;
     PRINT N'ERROR 15. Pudo leer Seguridad.vw_Jugador y no debería.';
@@ -338,7 +338,7 @@ GO
 
 /* Caso 16: NO PUEDE modificar el certificado (por ejemplo, quitarle la clave
    privada). No se intenta el ALTER: se pregunta si tiene el permiso. */
-EXECUTE AS USER = N'usr_test_cargador_resultados';
+EXECUTE AS USER = N'usr_cargador_resultados';
 IF HAS_PERMS_BY_NAME(N'CertDatosPersonales', N'CERTIFICATE', N'ALTER') = 0
     PRINT N'OK    16. No tiene permiso para modificar el certificado CertDatosPersonales.';
 ELSE

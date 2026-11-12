@@ -14,17 +14,13 @@
  Objetivo: Crear el proceso de importación de las campañas publicitarias del
            Mundial 2026 publicadas en el Dossier Mundial
            (https://dossiermundial.netlify.app/), con su anunciante y sus
-           piezas. Los SP, en el orden en que se crean (primero el que usa
-           el otro):
+           piezas. Los SP, en el orden en que se crean:
              Publicidad.usp_CargarCampanias        carga masiva de campañas, con su anunciante y sus piezas
              Publicidad.usp_ProcesarCampaniasJSON  valida la respuesta de la API y carga sus campañas
              Publicidad.usp_ImportarCampaniasAPI   consulta la API y procesa la respuesta
            El pedido a la API lo hace DatosGenerales.usp_ConsumirAPI
-           (17_SP_Utilidades_Importacion.sql), que tiene que existir cuando se ejecutan
-           (no cuando se crean). Requiere haber ejecutado 01 a 19. Su script
-           de testing es 70_Test_SP_Importar_Publicidad.sql y la importación
-           la hace 31_Importar_APIs.sql, antes de los datos complementarios
-           (33), para que sus piezas compitan en la asignación de publicidad.
+           (17_SP_Utilidades_Importacion.sql). Requiere haber ejecutado 01 a
+           19. Su script de testing es 70_Test_SP_Importar_Publicidad.sql.
 ================================================================================
 
  Fuente: la página no trae las campañas en el HTML: las lee con JavaScript
@@ -69,16 +65,13 @@
    2. OPENJSON pasa las campañas, tal como vienen, a #staging_campanias, y
       sus videos a #staging_piezas, una fila por pieza. Todas las
       transformaciones se hacen acá, en T-SQL.
-   3. Publicidad.usp_CargarCampanias (en este archivo) lee las dos tablas, valida las campañas con las
-      reglas de anunciantes, campañas y piezas, rechaza las que no las
-      cumplen y hace el upsert de las válidas, todas juntas. En la misma
-      transacción se registra la importación (DatosGenerales.IMPORTACION, su
-      número queda en @id_importacion) y las rechazadas, en
+   3. Publicidad.usp_CargarCampanias lee las dos tablas, valida las campañas
+      con las reglas de anunciantes, campañas y piezas y hace el upsert de
+      las válidas, todas juntas. En la misma transacción se registra la
+      importación (su número queda en @id_importacion) y las rechazadas, en
       Publicidad.ERRORES_CAMPANIA.
    4. Se devuelve el resumen, las rechazadas con sus motivos y las campañas
       cargadas.
-   La importación puede correr dentro de una transacción del que la llama
-   (los tests la deshacen con ROLLBACK).
 
  Criterios del upsert (los de usp_CargarCampanias):
    - Clave natural: la razón social del anunciante, el nombre de la campaña

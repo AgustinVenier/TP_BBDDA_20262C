@@ -77,7 +77,8 @@
       expulsiones.
  Se cargan con los SP de carga masiva (usp_Cargar...) y de negocio, sobre
  tablas armadas acá, nunca con INSERT directo. No es una importación, así
- que no se registra en DatosGenerales.IMPORTACION: si algún dato se rechaza, se muestran los motivos y no se ejecuta el resto.
+ que no se registra en DatosGenerales.IMPORTACION: si algún dato se
+ rechaza, se muestran los motivos y no se ejecuta el resto.
 
  Casos obligatorios de la consigna (sección IV), al final del script:
    - Doble amarilla y roja directa, suspensión por acumulación que deja al

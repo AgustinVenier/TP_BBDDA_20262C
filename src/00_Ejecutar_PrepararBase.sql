@@ -12,12 +12,9 @@
  Fecha: 08/11/2026
  Archivo: 00_Ejecutar_PrepararBase.sql
  Objetivo: Dejar la base lista para importar en vivo: la recrea desde cero, crea
-           todos los objetos y carga los datos iniciales, sin importar nada.
-           Ejecuta, en orden, los scripts 01 a 28: estructura (01 a 04),
-           objetos (05 a 27, el 27 crea los roles) y datos iniciales (28).
-           Las importaciones y cargas (31 a 35), los reportes (36), el cifrado
-           (40 a 47), las consultas del alcance (48) y los tests (54 a 97)
-           se ejecutan aparte.
+           todos los objetos y carga los datos iniciales. Ejecuta, en orden,
+           los scripts 01 a 28: estructura (01 a 04), objetos (05 a 27) y
+           datos iniciales (28). Lo demás se ejecuta aparte (ver abajo).
 ================================================================================
 
  ATENCIÓN: ELIMINA LA BASE MundialFutbol, con todos sus datos (lo hace
@@ -25,8 +22,7 @@
 
  Antes de ejecutar:
    - En SSMS, activar el modo SQLCMD: menú Query > SQLCMD Mode. Sin él, las
-     líneas que empiezan con dos puntos dan error de sintaxis y no se ejecuta
-     ninguno de los scripts.
+     líneas que empiezan con dos puntos dan error de sintaxis.
    - CAMBIAR la ruta de :setvar src por la carpeta src\ del repositorio en tu
      máquina, terminada en \.
    Si un script falla, se detiene ahí (:on error exit).

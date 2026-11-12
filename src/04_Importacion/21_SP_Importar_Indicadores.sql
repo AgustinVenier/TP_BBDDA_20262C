@@ -15,8 +15,7 @@
            por país del Banco Mundial, como el PBI per cápita
            (NY.GDP.PCAP.CD) con el que la asignación de publicidad estima el
            poder adquisitivo de cada mercado. Se importa consultando la API,
-           que responde en XML. Los SP, en el orden en que se crean (primero
-           el que usa el otro):
+           que responde en XML. Los SP, en el orden en que se crean:
              DatosGenerales.usp_CargarIndicadoresEconomicos  carga masiva de indicadores
              DatosGenerales.usp_ProcesarIndicadoresXML  valida el XML de la API y carga sus registros
              DatosGenerales.usp_ImportarIndicadoresAPI  consulta la API y procesa la respuesta
@@ -37,9 +36,7 @@
       Mundial y no un mensaje de error de la API, y que traiga todos los
       registros (una sola página). Si no, no se importa nada.
    2. nodes() pasa los registros, tal como vienen, a la tabla de staging
-      #staging_indicadores, y ahí se convierten (TRY_CONVERT). La respuesta
-      se importa tal como la entrega la API: todas las transformaciones se
-      hacen acá, en T-SQL.
+      #staging_indicadores, y ahí se convierten (TRY_CONVERT), en T-SQL.
    3. Antes de cargar, cada registro puede quedar:
         OMITIDO      si es de un país que el sistema no tiene registrado (la
                      API trae todos los países y también agregados como
@@ -48,19 +45,14 @@
         RECHAZADO    si el año o el valor no son números.
       Cada regla es un UPDATE sobre toda la tabla de staging, que anota el
       motivo en los registros que no la cumplen.
-   4. DatosGenerales.usp_CargarIndicadoresEconomicos (en este archivo) lee
-      #staging_indicadores, valida los demás con
-      las reglas de los indicadores y rechaza los que no las cumplen (sin
-      año o código de indicador, año fuera de 1960 al actual, o código de
-      indicador de más de 30 caracteres o con caracteres no admitidos), y
-      hace el upsert de los válidos, todos juntos. En la misma transacción se registra la
-      importación (DatosGenerales.IMPORTACION, su número queda en
-      @id_importacion) y los rechazados, en
-      DatosGenerales.ERRORES_INDICADOR_ECONOMICO.
+   4. DatosGenerales.usp_CargarIndicadoresEconomicos valida los demás con las
+      reglas de los indicadores (año y código de indicador informados, año
+      de 1960 al actual, código de hasta 30 caracteres admitidos) y hace el
+      upsert de los válidos, todos juntos. En la misma transacción se
+      registra la importación (su número queda en @id_importacion) y los
+      rechazados, en DatosGenerales.ERRORES_INDICADOR_ECONOMICO.
    5. Se devuelve el resumen, los omitidos por motivo y los rechazados con
       sus motivos.
-   La importación puede correr dentro de una transacción del que la llama
-   (los tests la deshacen con ROLLBACK).
 
  Criterios del upsert (los de usp_CargarIndicadoresEconomicos):
    - Clave natural: país (ISO alfa-3), indicador y año.
@@ -69,7 +61,6 @@
    - Cada año es un registro, así que la serie histórica se conserva. Si el
      Banco Mundial revisa el valor de un año, se actualiza ese año y su
      fecha_actualizacion. Un valor que no viene no borra el guardado.
-   - Importar dos veces la misma respuesta no cambia nada.
 */
 
 USE MundialFutbol;
