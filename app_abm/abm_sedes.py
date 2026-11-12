@@ -43,6 +43,8 @@ import customtkinter as ctk
 import pyodbc
 from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
 
+from pestanas_xml import ReportesXML
+
 CARPETA_FOTOS = Path(__file__).resolve().parent.parent / "datos" / "fuentes" / "sedes"
 
 SERVER = os.environ.get("MUNDIAL_SERVER", "localhost")
@@ -93,7 +95,7 @@ class Repositorio:
         except pyodbc.Error as e:
             raise ErrorBD(_limpiar(e)) from e
 
-    # Todas las lecturas van por los SP de consulta (src/25_SP_Consultas.sql): la
+    # Todas las lecturas van por los SP de consulta (src/05_Consultas_Reportes/25_SP_Consultas.sql): la
     # aplicación no lee ninguna tabla, así funciona con un usuario de
     # rol_AdministradorOperativo, que tiene DENY SELECT sobre las tablas.
 
@@ -122,7 +124,7 @@ class Repositorio:
                     @tarifa_espacio_1 = ?, @tarifa_espacio_2 = ?,
                     @tarifa_espacio_3 = ?, @tarifa_espacio_4 = ?,
                     @latitud = ?, @longitud = ?,
-                    @id_sede = @id OUTPUT, @mostrar = 0;
+                    @id_sede = @id OUTPUT, @mostrar_resultados = 0;
                SELECT @id;""",
             (d["nombre_estadio"], d["ciudad"], d["id_pais"], d["capacidad"], d["huso_horario"],
              *d["tarifas"], d["latitud"], d["longitud"]),
@@ -144,12 +146,12 @@ class Repositorio:
                     @id_sede = ?, @nombre_estadio = ?, @ciudad = ?, @id_pais = ?, @capacidad = ?,
                     @huso_horario = ?, @latitud = ?, @longitud = ?,
                     @tarifa_espacio_1 = ?, @tarifa_espacio_2 = ?,
-                    @tarifa_espacio_3 = ?, @tarifa_espacio_4 = ?, @mostrar = 0;""",
+                    @tarifa_espacio_3 = ?, @tarifa_espacio_4 = ?, @mostrar_resultados = 0;""",
             (id_sede, d["nombre_estadio"], d["ciudad"], d["id_pais"], d["capacidad"], d["huso_horario"],
              d["latitud"], d["longitud"], *d["tarifas"]))
 
     def baja(self, id_sede):
-        self._ejecutar("EXEC Torneo.usp_EliminarSede @id_sede = ?, @mostrar = 0;", (id_sede,))
+        self._ejecutar("EXEC Torneo.usp_EliminarSede @id_sede = ?, @mostrar_resultados = 0;", (id_sede,))
 
     def imagen(self, id_sede):
         """Devuelve (bytes, formato, fecha_carga) o None si la sede no tiene foto."""
@@ -166,8 +168,24 @@ class Repositorio:
     def importar_fotos(self, carpeta):
         """Carga las fotos prebajadas con usp_ImportarImagenesSedes. Devuelve las
         filas del resultado (estadio, archivo, estado, formato, kb, motivo)."""
-        cur = self._ejecutar("EXEC Torneo.usp_ImportarImagenesSedes @carpeta = ?, @mostrar = 1;", (carpeta,))
+        cur = self._ejecutar("EXEC Torneo.usp_ImportarImagenesSedes @carpeta = ?, @mostrar_resultados = 1;", (carpeta,))
         return cur.fetchall()
+
+    def selecciones(self):
+        """Las selecciones (id_seleccion, país, ...) para filtrar los reportes."""
+        return self._ejecutar("EXEC Torneo.usp_ConsultarSelecciones;").fetchall()
+
+    def reporte_tarjetas(self, id_seleccion, fecha_corte):
+        """El XML de Reportes.usp_TarjetasXML, como texto."""
+        cur = self._ejecutar("EXEC Reportes.usp_TarjetasXML @id_seleccion = ?, @fecha_corte = ?;",
+                             (id_seleccion, fecha_corte))
+        return cur.fetchone()[0]
+
+    def reporte_plantillas(self, id_seleccion, incluir_bajas):
+        """El XML de Reportes.usp_SeleccionesYPlantillasXML, como texto."""
+        cur = self._ejecutar("EXEC Reportes.usp_SeleccionesYPlantillasXML @id_seleccion = ?, @incluir_bajas = ?;",
+                             (id_seleccion, int(incluir_bajas)))
+        return cur.fetchone()[0]
 
 
 # ---------------------------------------------------------------------------
@@ -302,16 +320,26 @@ class App(ctk.CTk):
         self.huso_a_etiqueta = {v: k for k, v in self.husos.items()}
 
         self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=0)
         self.grid_rowconfigure(0, weight=1)
+        pestanas = ctk.CTkTabview(self)
+        pestanas.grid(row=0, column=0, sticky="nsew", padx=6, pady=(0, 6))
+        self.pest_sedes = pestanas.add("Sedes")
+        pest_reportes = pestanas.add("Reportes XML")
+        self.pest_sedes.grid_columnconfigure(0, weight=1)
+        self.pest_sedes.grid_columnconfigure(1, weight=0)
+        self.pest_sedes.grid_rowconfigure(0, weight=1)
 
         self._panel_lista()
         self._panel_formulario()
         self.recargar()
 
+        pest_reportes.grid_columnconfigure(0, weight=1)
+        pest_reportes.grid_rowconfigure(0, weight=1)
+        ReportesXML(pest_reportes, repo, "Sedes.Treeview").grid(row=0, column=0, sticky="nsew")
+
     # --- Lista de sedes -----------------------------------------------------
     def _panel_lista(self):
-        marco = ctk.CTkFrame(self)
+        marco = ctk.CTkFrame(self.pest_sedes)
         marco.grid(row=0, column=0, sticky="nsew", padx=(12, 6), pady=12)
         marco.grid_columnconfigure(0, weight=1)
         marco.grid_rowconfigure(2, weight=1)
@@ -637,7 +665,7 @@ class App(ctk.CTk):
     TARIFAS = ("t1", "t2", "t3", "t4")
 
     def _panel_formulario(self):
-        marco = ctk.CTkFrame(self, width=420)
+        marco = ctk.CTkFrame(self.pest_sedes, width=420)
         marco.grid(row=0, column=1, sticky="nsew", padx=(6, 12), pady=12)
         marco.grid_columnconfigure((0, 1), weight=1)
 

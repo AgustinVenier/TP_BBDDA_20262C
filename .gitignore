@@ -16,6 +16,9 @@ DocumentLayout.backup.json
 *.sqlplan
 *.queryanalysis
 
+# XML generados por la app (pestana "Reportes XML"); la app crea la carpeta si falta
+datos/salidas/
+
 # ---------------------------------------------
 # Archivos de base de datos y backups
 # (nunca versionar: son binarios y pesados)
