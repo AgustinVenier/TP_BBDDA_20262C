@@ -60,8 +60,8 @@
    python Scraping_Arbitros.py [--salida CARPETA]
  Si no se indica, el CSV se guarda en la carpeta "datos", junto al script.
  Se escribe en UTF-8, separado por comas y con encabezado.
- La documentación completa (fuente, técnica, límites y formato) está en
- README.md, en esta misma carpeta.
+ La técnica y las páginas de origen están documentadas en
+ doc/Tecnica_de_Scraping.docx.
 """
 
 import argparse
