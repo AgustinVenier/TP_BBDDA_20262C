@@ -16,7 +16,7 @@
            designaciones_arbitrales.csv, una fila por árbitro designado:
            fecha y selecciones del partido (código FIFA), rol, nombre,
            apellido y país del árbitro (código FIFA). El archivo lo importa
-           Arbitraje.usp_ImportarDesignacionesCSV (23_SP_Importar_Mundial2026.sql),
+           Arbitraje.usp_ImportarDesignacionesCSV (18_SP_Importar_Mundial2026.sql),
            después de los partidos.
 ================================================================================
 
@@ -42,7 +42,7 @@
      una línea "Nombre (País)" por árbitro.
  El rol se guarda como lo publica la página ("Referee", "Fourth official"),
  salvo los dos asistentes, que se numeran por su orden ("Assistant referee
- 1" y "Assistant referee 2"): lo traduce Arbitraje.usp_ImportarDesignaciones.
+ 1" y "Assistant referee 2"): lo traduce Arbitraje.usp_CargarDesignaciones.
  La página no marca el apellido: el nombre es la primera palabra y el
  apellido, el resto. Algunos árbitros están escritos de dos formas en
  distintos partidos ("Hamza El-Fariq" y "Hamza El Fariq"): se unifican en la
@@ -60,8 +60,8 @@
    python Scraping_Arbitros.py [--salida CARPETA]
  Si no se indica, el CSV se guarda en la carpeta "datos", junto al script.
  Se escribe en UTF-8, separado por comas y con encabezado.
- La documentación completa (fuente, técnica, límites y formato) está en
- README.md, en esta misma carpeta.
+ La técnica y las páginas de origen están documentadas en
+ doc/Tecnica_de_Scraping.docx.
 """
 
 import argparse

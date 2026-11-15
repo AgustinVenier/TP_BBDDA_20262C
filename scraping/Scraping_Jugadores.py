@@ -17,8 +17,8 @@
            apellido, fecha de nacimiento y club. De la misma página sale
            cuerpo_tecnico.csv, con el director técnico de cada selección
            (Torneo.usp_ImportarCuerpoTecnicoCSV). Los dos los importa
-           src/31_Ejecutar_ImportarMundial2026.sql (con los SP de
-           24_SP_Importar_Jugadores.sql), después de importar las selecciones
+           src/07_Datos/32_Importar_Mundial2026.sql (con los SP de
+           19_SP_Importar_Jugadores.sql), después de importar las selecciones
            y sus listas de convocados.
 ================================================================================
 
@@ -45,7 +45,7 @@
      se toma como país de nacimiento. La página no trae su fecha de
      nacimiento ni el resto del cuerpo técnico.
  La posición se guarda como la publica la página (GK, DF, MF, FW): la
- traduce Torneo.usp_ImportarJugadores.
+ traduce Torneo.usp_CargarJugadores.
 
  Límites de uso: Wikipedia no pide clave, pero exige un User-Agent que
  identifique al cliente y pide no hacer muchos pedidos seguidos. El script
@@ -58,8 +58,8 @@
    python Scraping_Jugadores.py [--salida CARPETA]
  Si no se indica, los CSV se guardan en la carpeta "datos", junto al script.
  Se escribe en UTF-8, separado por comas y con encabezado.
- La documentación completa (fuente, técnica, límites y formato) está en
- README.md, en esta misma carpeta.
+ La técnica y las páginas de origen están documentadas en
+ doc/Tecnica_de_Scraping.docx.
 """
 
 import argparse

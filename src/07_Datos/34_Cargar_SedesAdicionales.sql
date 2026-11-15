@@ -10,27 +10,25 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 03/11/2026
- Archivo: 33_Ejecutar_SedesAdicionales.sql
+ Archivo: 34_Cargar_SedesAdicionales.sql
  Objetivo: Cargar 8 sedes propias del juego de datos, además de las 16 que
-           importa el 31, para el criterio de aceptación "al menos 8 sedes,
+           importa el 32, para el criterio de aceptación "al menos 8 sedes,
            con huso horario distinto entre al menos tres de ellas (además de
            las que pudieran importar)". Son estadios de Sudamérica con cinco
            husos distintos: Argentina (UTC-3), Brasil (UTC-3, otro huso),
            Chile (UTC-4 en junio y julio), Bolivia (UTC-4) y Colombia y Perú
-           (UTC-5). Cada sede se registra con sus 4 espacios publicitarios.
-           Hay que ejecutarlo para cumplir ese criterio, aunque el torneo
-           real no juega en estas sedes y ningún otro script depende de
-           ellas.
-           Requiere haber ejecutado 00 a 20 (usa los países de
-           20_Ejecutar_DatosIniciales.sql y el SP de 16_SP_Importacion.sql). Se puede
-           ejecutar más de una vez: las sedes ya cargadas quedan SIN CAMBIOS.
+           (UTC-5). El torneo real no juega en estas sedes y ningún otro
+           script depende de ellas.
+           Requiere haber ejecutado 01 a 28. Se puede ejecutar más de una
+           vez: las sedes ya cargadas quedan SIN CAMBIOS.
 ================================================================================
 
- Se cargan con Torneo.usp_ImportarSedes (16_SP_Importacion.sql), que valida
- por conjuntos las reglas de usp_SEDE_Alta y usp_RegistrarSede y da de alta
- cada sede con sus 4 espacios, en una sola transacción. No es una importación,
- así que no se registra en DatosGenerales.IMPORTACION: si alguna sede se
- rechaza, se muestran los motivos y no se carga ninguna.
+ Se cargan con Torneo.usp_CargarSedes (18_SP_Importar_Mundial2026.sql), que
+ valida todas las sedes juntas con las reglas de usp_SEDE_Alta y
+ usp_RegistrarSede y da de alta cada una con sus 4 espacios, en una sola
+ transacción. No es una importación, así que no se registra en
+ DatosGenerales.IMPORTACION: si alguna sede se rechaza, se muestran los
+ motivos y no se carga ninguna.
 
  Capacidad y coordenadas: las publicadas para cada estadio (capacidad
  habilitada, coordenadas del centro del campo). Las tarifas de los espacios
@@ -44,11 +42,11 @@ GO
 SET NOCOUNT ON;
 GO
 
-IF OBJECT_ID(N'Torneo.usp_ImportarSedes', N'P') IS NULL
+IF OBJECT_ID(N'Torneo.usp_CargarSedes', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE codigo_fifa = 'BOL')
 BEGIN
-    PRINT N'33_Ejecutar_SedesAdicionales.sql: la base tiene que tener los SP de importación (16) y los datos '
-        + N'iniciales (20). Ejecutá los scripts 00 a 20 y volvé a ejecutar este.';
+    PRINT N'34_Cargar_SedesAdicionales.sql: la base tiene que tener los SP de importación y los datos '
+        + N'iniciales (28). Ejecutá los scripts 01 a 28 y volvé a ejecutar este.';
     SET NOEXEC ON;
 END;
 GO
@@ -56,7 +54,7 @@ GO
 DROP TABLE IF EXISTS #staging_sedes;
 GO
 
--- La tabla que lee usp_ImportarSedes, con las columnas que usa.
+-- La tabla que lee usp_CargarSedes, con las columnas que usa.
 CREATE TABLE #staging_sedes (
     id_registro     INT           PRIMARY KEY,
     nombre_estadio  VARCHAR(400)  COLLATE DATABASE_DEFAULT NULL,
@@ -91,7 +89,7 @@ FROM (VALUES
 
 BEGIN TRY
     BEGIN TRANSACTION;
-    EXEC Torneo.usp_ImportarSedes;
+    EXEC Torneo.usp_CargarSedes;
 
     IF EXISTS (SELECT 1 FROM #staging_sedes WHERE accion = 'RECHAZADO')
     BEGIN

@@ -10,14 +10,14 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 02/11/2026
- Archivo: 31_Ejecutar_ImportarMundial2026.sql
+ Archivo: 32_Importar_Mundial2026.sql
  Objetivo: Cargar el Mundial 2026 real (las 16 sedes, las 48 selecciones con
            sus 1248 convocados y su director técnico, los 104 partidos con formaciones, cambios,
            goles y tarjetas, y el equipo arbitral de cada uno) desde los
            archivos de openfootball y los CSV del scraping, con los SP de
-           23_SP_Importar_Mundial2026.sql y 24_SP_Importar_Jugadores.sql.
-           Requiere haber ejecutado 00 a 30. Después va
-           32_Ejecutar_DatosComplementarios.sql, que completa lo que los archivos no
+           18_SP_Importar_Mundial2026.sql y 19_SP_Importar_Jugadores.sql.
+           Requiere haber ejecutado 01 a 31. Después va
+           33_Cargar_DatosComplementarios.sql, que completa lo que los archivos no
            traen (el resto de los cuerpos técnicos, idiomas de los
            árbitros, la publicidad de cada partido).
 ================================================================================
@@ -38,8 +38,9 @@
 
  Qué hace:
    1. Importa sedes, selecciones, jugadores, directores técnicos y
-      partidos, en ese orden (cada uno necesita lo anterior). Es una importación con errores parciales:
-      se cargan los registros válidos y se informan los rechazados, que
+      partidos, en ese orden (cada uno necesita lo anterior). Es una
+      importación con errores parciales: se cargan los registros válidos y
+      se informan los rechazados, que
       quedan en las tablas ERRORES_ con el número de su importación (ver el
       resumen, al final).
       - 13 partidos se rechazan porque el archivo de partidos nombra a tres
@@ -47,17 +48,15 @@
         "Côte d'Ivoire", "Congo DR").
       - 5 partidos se rechazan porque su asistencia supera la capacidad de
         SoFi Stadium que trae el archivo de estadios (70.000, redondeada).
-      - Catorce jugadores no se reconocen: el archivo de partidos escribe sus
+      - Veinte jugadores no se reconocen: el archivo de partidos escribe sus
         nombres de otra forma que el CSV (DANILO, "Behruzjon KARIMOV", Kaku
-        con su nombre completo...). Sus formaciones quedan incompletas y se
+        con su nombre completo, "MOUSA ALTAMARI"...). Sus formaciones quedan incompletas y se
         rechazan, con sus cambios, goles y tarjetas.
    2. Corrige a mano lo que no se puede deducir de los archivos: registra
       los nombres alternativos de esas selecciones y jugadores, y la
       capacidad de SoFi Stadium.
-   3. Reprocesa solo los partidos que tuvieron algún rechazo en la primera
-      importación (@reprocesar_importacion): los demás ya están cargados y
-      no se vuelven a procesar. De los reprocesados, lo que ya estaba queda
-      SIN CAMBIOS y se carga lo que faltaba.
+   3. Vuelve a importar el archivo de partidos: lo que ya estaba queda SIN
+      CAMBIOS y se carga lo que faltaba.
    4. Importa el equipo arbitral de cada partido (los ocho roles que publica
       la FIFA, del CSV del scraping de Wikipedia), con sus árbitros.
    Se puede ejecutar más de una vez sobre la base del torneo real: lo que ya
@@ -74,8 +73,8 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS)
 BEGIN
-    PRINT N'31_Ejecutar_ImportarMundial2026.sql: la base tiene que tener los datos iniciales (20). '
-        + N'Ejecutá los scripts 00 a 30 y volvé a ejecutarlo.';
+    PRINT N'32_Importar_Mundial2026.sql: la base tiene que tener los datos iniciales (28). '
+        + N'Ejecutá los scripts 01 a 31 y volvé a ejecutarlo.';
     SET NOEXEC ON;
 END;
 GO
@@ -111,12 +110,9 @@ SET @archivo = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHAR(400)) + N'scrapi
 EXEC Torneo.usp_ImportarCuerpoTecnicoCSV @ruta_archivo = @archivo;
 GO
 
--- Su número, para reprocesar después solo los partidos que rechace (sección 3).
 DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHAR(400))
                                + N'datos\fuentes\openfootball\worldcup-full.json';
-DECLARE @id_importacion INT;
-EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @id_importacion = @id_importacion OUTPUT;
-EXEC sp_set_session_context @key = N'importacion_partidos', @value = @id_importacion;
+EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo;
 GO
 
 
@@ -144,11 +140,12 @@ BEGIN
     INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
     WHERE pa.codigo_fifa = @codigo_fifa;
 
-    SELECT @id_jugador = j.id_jugador
-    FROM Torneo.JUGADOR AS j
-    INNER JOIN Torneo.LISTA_CONVOCADOS AS lc ON lc.id_lista = j.id_lista
-    WHERE lc.id_seleccion = @id_seleccion
-      AND j.nombre = @nombre COLLATE DATABASE_DEFAULT AND j.apellido = @apellido COLLATE DATABASE_DEFAULT;
+    -- El jugador se busca en Reportes.vw_Plantillas, que devuelve el nombre y el apellido
+    -- legibles también con los datos personales cifrados.
+    SELECT @id_jugador = p.id_jugador
+    FROM Reportes.vw_Plantillas AS p
+    WHERE p.id_seleccion = @id_seleccion
+      AND p.nombre = @nombre COLLATE DATABASE_DEFAULT AND p.apellido = @apellido COLLATE DATABASE_DEFAULT;
 
     IF @nombre IS NOT NULL AND @id_jugador IS NULL
     BEGIN
@@ -187,6 +184,12 @@ BEGIN TRY
     EXEC #usp_RegistrarNombreAlternativo 'TUN', N'Mohamed HADJ MAHMOUD',    N'Mohamed',    N'Belhadj Mahmoud';
     EXEC #usp_RegistrarNombreAlternativo 'UZB', N'Behruzjon KARIMOV',       N'Bekhruz',    N'Karimov';
     EXEC #usp_RegistrarNombreAlternativo 'UZB', N'Odiljon XAMROBEKOV',      N'Odiljon',    N'Hamrobekov';
+    EXEC #usp_RegistrarNombreAlternativo 'CIV', N'Guela DOUE',              N'Guéla',      N'Doué';
+    EXEC #usp_RegistrarNombreAlternativo 'IRN', N'Mehdi TORABI',            N'Mahdi',      N'Torabi';
+    EXEC #usp_RegistrarNombreAlternativo 'IRQ', N'MUNAF YOUNUS',            N'Manaf',      N'Younis';
+    EXEC #usp_RegistrarNombreAlternativo 'JOR', N'MOUSA ALTAMARI',          N'Musa',       N'Al-Taamari';
+    EXEC #usp_RegistrarNombreAlternativo 'KSA', N'ALA ALHAJJI',             N'Alaa',       N'Al-Hejji';
+    EXEC #usp_RegistrarNombreAlternativo 'KSA', N'FERAS ALBRIKAN',          N'Firas',      N'Al-Buraikan';
 
     -- El archivo de estadios trae la capacidad redondeada (70.000) y en SoFi Stadium
     -- hubo partidos con 70.492 espectadores: se toma esa asistencia como capacidad.
@@ -204,12 +207,11 @@ GO
 
 
 /* ============================================================================
-   3. REPROCESO DE LOS PARTIDOS RECHAZADOS
+   3. SEGUNDA IMPORTACIÓN DE LOS PARTIDOS, CON LAS CORRECCIONES
    ============================================================================ */
 DECLARE @archivo NVARCHAR(400) = CAST(SESSION_CONTEXT(N'repositorio') AS NVARCHAR(400))
                                + N'datos\fuentes\openfootball\worldcup-full.json';
-DECLARE @reprocesar INT = CAST(SESSION_CONTEXT(N'importacion_partidos') AS INT);
-EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo, @reprocesar_importacion = @reprocesar;
+EXEC Torneo.usp_ImportarPartidosJSON @ruta_archivo = @archivo;
 GO
 
 
@@ -251,6 +253,26 @@ SELECT i.id_importacion, i.proceso, i.origen, i.fecha_hora, i.leidos, i.insertad
 FROM DatosGenerales.IMPORTACION AS i
 WHERE i.id_importacion > CAST(SESSION_CONTEXT(N'importacion_desde') AS INT)
 ORDER BY i.id_importacion;
+
+-- Partidos que caen en feriado en algún mercado, con la fecha local de cada mercado (feriados del 31).
+SELECT p.numero_partido, p.fecha_hora_utc, m.mercado, m.hora_local, m.feriado, m.en_prime_time
+FROM Torneo.PARTIDO AS p
+CROSS APPLY Publicidad.fn_MercadosEnPrimeTime(p.id_partido) AS m
+WHERE m.es_feriado = 1
+ORDER BY p.numero_partido, m.mercado;
+
+-- Tarifa del espacio 1 de la primera sede en la moneda de cada mercado (los 20 primeros por nombre), con la
+-- cotización del día del primer partido (cotizaciones del 31).
+DECLARE @fecha DATE = (SELECT CAST(MIN(fecha_hora_local) AS DATE) FROM Torneo.PARTIDO);
+
+SELECT TOP (20) s.nombre_estadio, ep.numero_espacio, ep.tarifa_usd, pa.nombre AS mercado, c.codigo_moneda,
+       c.fecha_cotizacion, CAST(ep.tarifa_usd * c.unidades_por_usd AS DECIMAL(19,2)) AS tarifa_en_moneda
+FROM Publicidad.ESPACIO_PUBLICITARIO AS ep
+INNER JOIN Torneo.SEDE AS s ON s.id_sede = ep.id_sede
+CROSS JOIN DatosGenerales.PAIS AS pa
+CROSS APPLY DatosGenerales.fn_CotizacionVigente(pa.codigo_moneda, @fecha) AS c
+WHERE s.id_sede = (SELECT MIN(id_sede) FROM Torneo.SEDE) AND ep.numero_espacio = 1
+ORDER BY pa.nombre;
 GO
 
 SET NOEXEC OFF;
