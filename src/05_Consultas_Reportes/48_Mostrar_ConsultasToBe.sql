@@ -10,16 +10,19 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 03/11/2026
- Archivo: 35_Ejecutar_Entrega9_ConsultasToBe.sql
- Objetivo: Entrega 9. Recorrer los puntos del alcance (sección 2, "To Be") con
+ Archivo: 48_Mostrar_ConsultasToBe.sql
+ Objetivo: Recorrer los puntos del alcance (sección 2, "To Be") con
            las consultas que muestran que el sistema los cumple, sobre el
            torneo real cargado. Usa las vistas y funciones de
-           03_CrearFuncionesYVistas.sql y 30_SP_Reportes.sql; los reportes
-           de la Entrega 7 se ven en 34_Ejecutar_Entrega7_Reportes.sql.
-           Requiere haber ejecutado 00 a 33: el torneo real
-           (31_Ejecutar_ImportarMundial2026.sql) con sus datos complementarios
-           (32_Ejecutar_DatosComplementarios.sql) y las sedes propias del juego de
-           datos (33_Ejecutar_SedesAdicionales.sql).
+           04_CrearFuncionesYVistas.sql y 26_SP_Reportes.sql; los reportes
+           se ven en 36_Mostrar_Reportes.sql.
+           Requiere haber ejecutado 01 a 34: el torneo real
+           (32_Importar_Mundial2026.sql) con sus datos complementarios
+           (33_Cargar_DatosComplementarios.sql) y las sedes propias del juego de
+           datos (34_Cargar_SedesAdicionales.sql), y el cifrado
+           (40_Ejecutar_Cifrado.sql): los jugadores, cuerpos
+           técnicos y árbitros se leen de las vistas descifradas de
+           Seguridad (vw_Jugador, vw_PersonaCuerpoTecnico, vw_Arbitro).
 ================================================================================
 
  Cómo leer los resultados:
@@ -53,7 +56,17 @@ GO
 IF OBJECT_ID(N'Reportes.vw_Plantillas', N'V') IS NULL
    OR NOT EXISTS (SELECT 1 FROM Torneo.PARTIDO WHERE estado = 'FINALIZADO')
 BEGIN
-    RAISERROR(N'Faltan los objetos o los datos: ejecutar 00 a 33.', 16, 1);
+    RAISERROR(N'Faltan los objetos o los datos: ejecutar 01 a 34.', 16, 1);
+    SET NOEXEC ON;
+END;
+GO
+-- Las personas se leen de las vistas descifradas que crea el cifrado (42 a 44): sin ellas,
+-- cada consulta fallaría con "Invalid object name".
+IF OBJECT_ID(N'Seguridad.vw_Jugador', N'V') IS NULL
+   OR OBJECT_ID(N'Seguridad.vw_PersonaCuerpoTecnico', N'V') IS NULL
+   OR OBJECT_ID(N'Seguridad.vw_Arbitro', N'V') IS NULL
+BEGIN
+    RAISERROR(N'Falta el cifrado de los datos personales: ejecutar 40_Ejecutar_Cifrado.sql antes de este script.', 16, 1);
     SET NOEXEC ON;
 END;
 GO
@@ -129,8 +142,8 @@ FROM Torneo.fn_Fixture(NULL, 'GRUPOS', @id_seleccion, NULL)
 ORDER BY fecha_hora_utc;
 GO
 
--- La segunda corrida de los partidos es el reproceso de los rechazados (ver 31): lo que ya
--- estaba cargado queda sin cambios, no se duplica.
+-- La segunda corrida de los partidos vuelve a importar el archivo después de las correcciones
+-- (ver 32): lo que ya estaba cargado queda sin cambios, no se duplica.
 SELECT N'A4. Importación del fixture, las sedes y los resultados oficiales (openfootball)' AS consulta;
 SELECT id_importacion, proceso, origen, fecha_hora, leidos, insertados, actualizados, sin_cambios, omitidos, rechazados
 FROM DatosGenerales.IMPORTACION
@@ -148,13 +161,15 @@ SELECT pa.nombre AS seleccion, pa.codigo_fifa, s.confederacion, s.grupo,
        dt.director_tecnico, ct.ayudantes
 FROM Torneo.SELECCION AS s
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
-OUTER APPLY (SELECT CONCAT(p.nombre, N' ', p.apellido) AS director_tecnico
-             FROM Torneo.PERSONA_CUERPO_TECNICO AS p
-             WHERE p.id_seleccion = s.id_seleccion AND p.rol = 'DIRECTOR_TECNICO') AS dt
-OUTER APPLY (SELECT STRING_AGG(CONCAT(p.nombre, N' ', p.apellido, N' (', LOWER(REPLACE(p.rol, '_', ' ')), N')'), N'; ')
-                        WITHIN GROUP (ORDER BY p.rol, p.apellido) AS ayudantes
-             FROM Torneo.PERSONA_CUERPO_TECNICO AS p
-             WHERE p.id_seleccion = s.id_seleccion AND p.rol <> 'DIRECTOR_TECNICO') AS ct
+LEFT JOIN (SELECT p.id_seleccion, CONCAT(p.nombre, N' ', p.apellido) AS director_tecnico
+           FROM Seguridad.vw_PersonaCuerpoTecnico AS p
+           WHERE p.rol = 'DIRECTOR_TECNICO') AS dt ON dt.id_seleccion = s.id_seleccion
+LEFT JOIN (SELECT p.id_seleccion,
+                  STRING_AGG(CONCAT(p.nombre, N' ', p.apellido, N' (', LOWER(REPLACE(p.rol, '_', ' ')), N')'), N'; ')
+                      WITHIN GROUP (ORDER BY p.rol, p.apellido) AS ayudantes
+           FROM Seguridad.vw_PersonaCuerpoTecnico AS p
+           WHERE p.rol <> 'DIRECTOR_TECNICO'
+           GROUP BY p.id_seleccion) AS ct ON ct.id_seleccion = s.id_seleccion
 ORDER BY s.grupo, pa.nombre;
 GO
 
@@ -191,11 +206,14 @@ SELECT CONCAT(N'B3. Lista de convocados de ', pa.nombre, N': datos personales, c
 FROM Torneo.SELECCION AS s
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
 WHERE s.id_seleccion = @id_seleccion;
-SELECT dorsal, apellido, nombre, fecha_nacimiento, posicion_habitual, club_origen,
-       IIF(activo = 1, N'ACTIVO', N'BAJA') AS situacion
-FROM Reportes.vw_Plantillas
-WHERE id_seleccion = @id_seleccion
-ORDER BY CHARINDEX(LEFT(posicion_habitual, 3), 'ARQ DEF MED DEL'), dorsal;
+-- La fecha de nacimiento no está en Reportes.vw_Plantillas (la leen roles que no la
+-- necesitan): se lee de Seguridad.vw_Jugador.
+SELECT p.dorsal, p.apellido, p.nombre, j.fecha_nacimiento, p.posicion_habitual, p.club_origen,
+       IIF(p.activo = 1, N'ACTIVO', N'BAJA') AS situacion
+FROM Reportes.vw_Plantillas AS p
+INNER JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = p.id_jugador
+WHERE p.id_seleccion = @id_seleccion
+ORDER BY CHARINDEX(LEFT(p.posicion_habitual, 3), 'ARQ DEF MED DEL'), p.dorsal;
 GO
 
 -- El reemplazante hereda el dorsal salvo que se informe otro (usp_ReemplazarJugador): se
@@ -210,12 +228,12 @@ SELECT pa.nombre AS seleccion,
        r.fecha_alta,
        r.motivo_alta,
        r.posicion_habitual
-FROM Torneo.JUGADOR AS b
+FROM Seguridad.vw_Jugador AS b
 INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = b.id_lista
 INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = l.id_seleccion
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
 OUTER APPLY (SELECT TOP (1) j.nombre, j.apellido, j.fecha_alta, j.motivo_alta, j.posicion_habitual
-             FROM Torneo.JUGADOR AS j
+             FROM Seguridad.vw_Jugador AS j
              WHERE j.id_lista = b.id_lista
                AND j.fecha_baja IS NULL
                AND j.fecha_alta >= b.fecha_baja
@@ -242,7 +260,7 @@ SELECT pa.nombre AS seleccion, f.esquema_tactico, j.dorsal, CONCAT(j.nombre, N' 
        a.posicion_en_cancha
 FROM DesarrolloPartido.FORMACION AS f
 INNER JOIN DesarrolloPartido.ALINEACION AS a ON a.id_formacion = f.id_formacion
-INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = a.id_jugador
+INNER JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = a.id_jugador
 INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = f.id_seleccion
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
 WHERE f.id_partido = @id_partido AND a.es_titular = 1
@@ -252,7 +270,7 @@ SELECT N'C2. Banco de suplentes del mismo partido' AS consulta;
 SELECT pa.nombre AS seleccion, j.dorsal, CONCAT(j.nombre, N' ', j.apellido) AS jugador, j.posicion_habitual
 FROM DesarrolloPartido.FORMACION AS f
 INNER JOIN DesarrolloPartido.ALINEACION AS a ON a.id_formacion = f.id_formacion
-INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = a.id_jugador
+INNER JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = a.id_jugador
 INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = f.id_seleccion
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
 WHERE f.id_partido = @id_partido AND a.es_titular = 0
@@ -277,7 +295,7 @@ DECLARE @id_jugador INT = (SELECT TOP (1) id_jugador
                            ORDER BY goles DESC, id_jugador);
 
 SELECT CONCAT(N'C3. Historial de titularidad de ', nombre, N' ', apellido, N' (el máximo goleador)') AS consulta
-FROM Torneo.JUGADOR WHERE id_jugador = @id_jugador;
+FROM Seguridad.vw_Jugador WHERE id_jugador = @id_jugador;
 SELECT numero_partido, fase, fecha_hora_local, rival, condicion, posicion_en_cancha,
        IIF(jugo = 1, N'SÍ', N'NO') AS jugo, minuto_ingreso, minuto_salida, minuto_expulsion
 FROM DesarrolloPartido.vw_HistorialTitularidad
@@ -301,7 +319,7 @@ SELECT h.dorsal, h.apellido, h.nombre,
        SUM(IIF(h.jugo = 0, 1, 0))                             AS partidos_sin_jugar,
        COUNT(*)                                               AS partidos_en_la_formacion
 FROM DesarrolloPartido.vw_HistorialTitularidad AS h
-INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = h.id_jugador
+INNER JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = h.id_jugador
 INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
 WHERE l.id_seleccion = @id_seleccion
 GROUP BY h.id_jugador, h.dorsal, h.apellido, h.nombre
@@ -329,8 +347,8 @@ SELECT pa.nombre AS seleccion,
        CONCAT(je.dorsal, N'. ', je.nombre, N' ', je.apellido)                              AS entra,
        c.motivo
 FROM DesarrolloPartido.CAMBIO AS c
-INNER JOIN Torneo.JUGADOR AS js ON js.id_jugador = c.id_jugador_sale
-INNER JOIN Torneo.JUGADOR AS je ON je.id_jugador = c.id_jugador_entra
+INNER JOIN Seguridad.vw_Jugador AS js ON js.id_jugador = c.id_jugador_sale
+INNER JOIN Seguridad.vw_Jugador AS je ON je.id_jugador = c.id_jugador_entra
 INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = js.id_lista
 INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = l.id_seleccion
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
@@ -342,8 +360,8 @@ SELECT f.numero_partido, CONCAT(f.seleccion_local, N' vs ', f.seleccion_visitant
        c.minuto, CONCAT(js.nombre, N' ', js.apellido) AS sale, CONCAT(je.nombre, N' ', je.apellido) AS entra, c.motivo
 FROM DesarrolloPartido.CAMBIO AS c
 INNER JOIN Torneo.vw_Fixture AS f ON f.id_partido = c.id_partido
-INNER JOIN Torneo.JUGADOR AS js ON js.id_jugador = c.id_jugador_sale
-INNER JOIN Torneo.JUGADOR AS je ON je.id_jugador = c.id_jugador_entra
+INNER JOIN Seguridad.vw_Jugador AS js ON js.id_jugador = c.id_jugador_sale
+INNER JOIN Seguridad.vw_Jugador AS je ON je.id_jugador = c.id_jugador_entra
 WHERE c.motivo = 'LESION' AND c.minuto <= 20
 ORDER BY c.minuto, f.numero_partido;
 GO
@@ -365,7 +383,7 @@ uso AS (
            COUNT(DISTINCT IIF(c.en_entretiempo = 0, c.minuto * 100 + c.minuto_adicional, NULL)) AS ventanas,
            SUM(IIF(c.en_entretiempo = 1, 1, 0))                                             AS en_entretiempo
     FROM DesarrolloPartido.CAMBIO AS c
-    INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = c.id_jugador_sale
+    INNER JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = c.id_jugador_sale
     INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
     GROUP BY c.id_partido, l.id_seleccion
 ),
@@ -391,13 +409,13 @@ GO
 -- Selecciones que superaron los cambios o las ventanas en todo el torneo. Al registrar un
 -- cambio, usp_RegistrarCambio lo impide (ver 62_Test_SP_Negocio_FormacionesYCambios.sql), pero
 -- el torneo real se importó como carga histórica, que no repite las reglas del partido en vivo
--- (usp_ImportarDesarrolloPartidos, en 16): los que aparecen son cambios del partido real que el
+-- (usp_CargarDesarrolloPartidos, en 18): los que aparecen son cambios del partido real que el
 -- reglamento cargado no contempla. Son las filas NO CUMPLE de la grilla anterior.
 WITH uso AS (
     SELECT c.id_partido, l.id_seleccion, COUNT(*) AS cambios,
            COUNT(DISTINCT IIF(c.en_entretiempo = 0, c.minuto * 100 + c.minuto_adicional, NULL)) AS ventanas
     FROM DesarrolloPartido.CAMBIO AS c
-    INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = c.id_jugador_sale
+    INNER JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = c.id_jugador_sale
     INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
     GROUP BY c.id_partido, l.id_seleccion
 )
@@ -418,7 +436,7 @@ DECLARE @id_seleccion INT;
 DECLARE @minuto       TINYINT;
 SELECT TOP (1) @id_partido = c.id_partido, @id_seleccion = l.id_seleccion, @minuto = c.minuto
 FROM DesarrolloPartido.CAMBIO AS c
-INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = c.id_jugador_sale
+INNER JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = c.id_jugador_sale
 INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
 WHERE c.motivo = 'LESION' AND c.en_entretiempo = 0
 ORDER BY c.minuto, c.minuto_adicional, c.id_cambio;
@@ -442,7 +460,7 @@ DECLARE @id_partido   INT;
 DECLARE @id_seleccion INT;
 SELECT TOP (1) @id_partido = a.id_partido, @id_seleccion = l.id_seleccion
 FROM DesarrolloPartido.AMONESTACION AS a
-INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = a.id_jugador
+INNER JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = a.id_jugador
 INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
 WHERE a.tipo_tarjeta = 'ROJA'
 ORDER BY a.id_partido;
@@ -481,11 +499,11 @@ SELECT g.periodo,
        CONCAT(js.nombre, N' ', js.apellido)                                              AS asistencia
 FROM DesarrolloPartido.GOL AS g
 INNER JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.id_tipo_gol = g.id_tipo_gol
-INNER JOIN Torneo.JUGADOR AS ja ON ja.id_jugador = g.id_jugador_autor
+INNER JOIN Seguridad.vw_Jugador AS ja ON ja.id_jugador = g.id_jugador_autor
 INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = ja.id_lista
 INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = l.id_seleccion
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
-LEFT JOIN Torneo.JUGADOR AS js ON js.id_jugador = g.id_jugador_asistencia
+LEFT JOIN Seguridad.vw_Jugador AS js ON js.id_jugador = g.id_jugador_asistencia
 WHERE g.id_partido = @id_partido
 ORDER BY IIF(g.periodo = 'PENALES', 1, 0), g.minuto, g.minuto_adicional, g.id_gol;
 GO
@@ -541,9 +559,9 @@ SELECT f.numero_partido, CONCAT(f.seleccion_local, N' vs ', f.seleccion_visitant
        a.motivo
 FROM DesarrolloPartido.AMONESTACION AS a
 INNER JOIN Torneo.vw_Fixture AS f ON f.id_partido = a.id_partido
-LEFT JOIN Torneo.JUGADOR AS j ON j.id_jugador = a.id_jugador
+LEFT JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = a.id_jugador
 LEFT JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
-LEFT JOIN Torneo.PERSONA_CUERPO_TECNICO AS ct ON ct.id_persona_ct = a.id_persona_ct
+LEFT JOIN Seguridad.vw_PersonaCuerpoTecnico AS ct ON ct.id_persona_ct = a.id_persona_ct
 INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = COALESCE(l.id_seleccion, ct.id_seleccion)
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
 WHERE a.tipo_tarjeta = 'ROJA'
@@ -566,9 +584,9 @@ SELECT CONCAT(a.minuto, IIF(a.minuto_adicional > 0, CONCAT(N'+', a.minuto_adicio
        IIF(a.tipo_tarjeta = 'ROJA', IIF(a.es_doble_amarilla = 1, N'DOBLE AMARILLA', N'ROJA DIRECTA'), NULL) AS tipo_expulsion,
        a.motivo
 FROM DesarrolloPartido.AMONESTACION AS a
-LEFT JOIN Torneo.JUGADOR AS j ON j.id_jugador = a.id_jugador
+LEFT JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = a.id_jugador
 LEFT JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
-LEFT JOIN Torneo.PERSONA_CUERPO_TECNICO AS ct ON ct.id_persona_ct = a.id_persona_ct
+LEFT JOIN Seguridad.vw_PersonaCuerpoTecnico AS ct ON ct.id_persona_ct = a.id_persona_ct
 INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = COALESCE(l.id_seleccion, ct.id_seleccion)
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
 WHERE a.id_partido = @id_partido
@@ -579,7 +597,7 @@ GO
 -- (fn_JugadoresSuspendidos). figura_en_la_formacion es NO: la formación de un suspendido la
 -- rechaza usp_RegistrarFormacion. La excepción es Balogun (Estados Unidos): la FIFA dejó sin
 -- efecto su suspensión y el partido se importó tal como se jugó, como carga histórica que no
--- controla suspensiones (ver 16 y 32).
+-- controla suspensiones (ver 18 y 33).
 SELECT N'F4. Suspensiones calculadas y el partido en que se cumplen (incluye la acumulación de amarillas)' AS consulta;
 SELECT pa.nombre AS seleccion,
        CONCAT(j.nombre, N' ', j.apellido) AS jugador,
@@ -595,7 +613,7 @@ SELECT pa.nombre AS seleccion,
 FROM Torneo.PARTIDO AS x
 CROSS APPLY DesarrolloPartido.fn_JugadoresSuspendidos(x.id_partido) AS su
 INNER JOIN Torneo.vw_Fixture AS f ON f.id_partido = x.id_partido
-INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = su.id_jugador
+INNER JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = su.id_jugador
 INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = su.id_seleccion
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
 ORDER BY x.fecha_hora_utc, pa.nombre, j.apellido;
@@ -606,7 +624,7 @@ SELECT pa.nombre AS seleccion, CONCAT(j.nombre, N' ', j.apellido) AS jugador, sa
        o.numero_partido AS numero_partido_origen, sa.partidos_de_suspension
 FROM DesarrolloPartido.fn_Sanciones() AS sa
 INNER JOIN Torneo.PARTIDO AS o ON o.id_partido = sa.id_partido_origen
-INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = sa.id_jugador
+INNER JOIN Seguridad.vw_Jugador AS j ON j.id_jugador = sa.id_jugador
 INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = sa.id_seleccion
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
 WHERE NOT EXISTS (SELECT 1
@@ -623,16 +641,16 @@ GO
 
 SELECT N'G1. Árbitros habilitados: datos personales, país, categoría e idiomas' AS consulta;
 SELECT a.apellido, a.nombre, a.fecha_nacimiento, pa.nombre AS pais, a.categoria,
-       IIF(a.activo = 1, N'SÍ', N'NO') AS activo, i.idiomas, d.partidos_designado
-FROM Arbitraje.ARBITRO AS a
+       IIF(a.activo = 1, N'SÍ', N'NO') AS activo, i.idiomas, ISNULL(d.partidos_designado, 0) AS partidos_designado
+FROM Seguridad.vw_Arbitro AS a
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = a.id_pais
-OUTER APPLY (SELECT STRING_AGG(id.nombre, ', ') WITHIN GROUP (ORDER BY id.nombre) AS idiomas
-             FROM Arbitraje.ARBITRO_IDIOMA AS ai
-             INNER JOIN DatosGenerales.IDIOMA AS id ON id.id_idioma = ai.id_idioma
-             WHERE ai.id_arbitro = a.id_arbitro) AS i
-OUTER APPLY (SELECT COUNT(*) AS partidos_designado
-             FROM Arbitraje.DESIGNACION_ARBITRAL AS dd
-             WHERE dd.id_arbitro = a.id_arbitro) AS d
+LEFT JOIN (SELECT ai.id_arbitro, STRING_AGG(id.nombre, ', ') WITHIN GROUP (ORDER BY id.nombre) AS idiomas
+           FROM Arbitraje.ARBITRO_IDIOMA AS ai
+           INNER JOIN DatosGenerales.IDIOMA AS id ON id.id_idioma = ai.id_idioma
+           GROUP BY ai.id_arbitro) AS i ON i.id_arbitro = a.id_arbitro
+LEFT JOIN (SELECT dd.id_arbitro, COUNT(*) AS partidos_designado
+           FROM Arbitraje.DESIGNACION_ARBITRAL AS dd
+           GROUP BY dd.id_arbitro) AS d ON d.id_arbitro = a.id_arbitro
 ORDER BY pa.nombre, a.apellido, a.nombre;
 GO
 
@@ -646,7 +664,7 @@ SELECT CONCAT(N'G2. Designación arbitral del partido ', numero_partido, N' (', 
 FROM Torneo.vw_Fixture WHERE id_partido = @id_partido;
 SELECT d.rol, CONCAT(a.nombre, N' ', a.apellido) AS arbitro, pa.nombre AS pais, a.categoria, d.fecha_designacion
 FROM Arbitraje.DESIGNACION_ARBITRAL AS d
-INNER JOIN Arbitraje.ARBITRO AS a ON a.id_arbitro = d.id_arbitro
+INNER JOIN Seguridad.vw_Arbitro AS a ON a.id_arbitro = d.id_arbitro
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = a.id_pais
 INNER JOIN (VALUES ('PRINCIPAL', 1), ('ASISTENTE_1', 2), ('ASISTENTE_2', 3), ('CUARTO', 4), ('VAR', 5),
                    ('AVAR', 6), ('VAR_APOYO', 7), ('ASISTENTE_RESERVA', 8)) AS r (rol, orden) ON r.rol = d.rol
@@ -665,7 +683,7 @@ SELECT (SELECT COUNT(*)
                  AND d.rol IN ('PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR')) < 5) AS partidos_sin_designacion_completa,
        (SELECT COUNT(*)
         FROM Arbitraje.DESIGNACION_ARBITRAL AS d
-        INNER JOIN Arbitraje.ARBITRO AS a ON a.id_arbitro = d.id_arbitro
+        INNER JOIN Seguridad.vw_Arbitro AS a ON a.id_arbitro = d.id_arbitro
         INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = d.id_partido
         INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion IN (p.id_seleccion_local, p.id_seleccion_visitante)
         WHERE s.id_pais = a.id_pais) AS designaciones_con_conflicto_de_nacionalidad;
@@ -696,7 +714,7 @@ DECLARE @arbitro_4   INT;
 SELECT TOP (1) @local = s.id_seleccion
 FROM Torneo.SELECCION AS s
 WHERE s.id_seleccion NOT IN (SELECT id_seleccion FROM Torneo.fn_SeleccionesEnCompetencia())
-  AND EXISTS (SELECT 1 FROM Arbitraje.ARBITRO AS a
+  AND EXISTS (SELECT 1 FROM Seguridad.vw_Arbitro AS a
               WHERE a.id_pais = s.id_pais AND a.activo = 1 AND a.categoria = 'FIFA')
 ORDER BY s.id_seleccion;
 SELECT TOP (1) @visitante = s.id_seleccion
@@ -708,12 +726,12 @@ ORDER BY s.id_seleccion;
 -- El árbitro en conflicto (del país local), uno de un país que sigue en competencia (puede
 -- cruzarse) y cuatro sin conflicto ni posible cruce.
 SELECT TOP (1) @conflicto = a.id_arbitro
-FROM Arbitraje.ARBITRO AS a
+FROM Seguridad.vw_Arbitro AS a
 INNER JOIN Torneo.SELECCION AS s ON s.id_pais = a.id_pais
 WHERE s.id_seleccion = @local AND a.activo = 1 AND a.categoria = 'FIFA'
 ORDER BY a.id_arbitro;
 SELECT TOP (1) @cruce = a.id_arbitro
-FROM Arbitraje.ARBITRO AS a
+FROM Seguridad.vw_Arbitro AS a
 INNER JOIN Torneo.fn_SeleccionesEnCompetencia() AS sc ON sc.id_pais = a.id_pais
 WHERE a.activo = 1
 ORDER BY a.id_arbitro;
@@ -722,7 +740,7 @@ SELECT @arbitro_1 = MAX(IIF(x.orden = 1, x.id_arbitro, NULL)),
        @arbitro_3 = MAX(IIF(x.orden = 3, x.id_arbitro, NULL)),
        @arbitro_4 = MAX(IIF(x.orden = 4, x.id_arbitro, NULL))
 FROM (SELECT TOP (4) ROW_NUMBER() OVER (ORDER BY a.id_arbitro) AS orden, a.id_arbitro
-      FROM Arbitraje.ARBITRO AS a
+      FROM Seguridad.vw_Arbitro AS a
       WHERE a.activo = 1 AND a.categoria = 'FIFA'
         AND a.id_pais NOT IN (SELECT s.id_pais FROM Torneo.SELECCION AS s WHERE s.id_seleccion IN (@local, @visitante))
         AND a.id_pais NOT IN (SELECT id_pais FROM Torneo.fn_SeleccionesEnCompetencia())
@@ -739,7 +757,7 @@ BEGIN TRY
     SELECT N'Partido ficticio' AS partido, f.numero_partido, f.fase, f.seleccion_local, f.seleccion_visitante,
            CONCAT(a.nombre, N' ', a.apellido, N' (', pa.nombre, N')') AS arbitro_principal_propuesto
     FROM Torneo.vw_Fixture AS f
-    CROSS JOIN Arbitraje.ARBITRO AS a
+    CROSS JOIN Seguridad.vw_Arbitro AS a
     INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = a.id_pais
     WHERE f.id_partido = @id_partido AND a.id_arbitro = @conflicto;
 
@@ -788,7 +806,7 @@ DECLARE @id_arbitro INT = (SELECT TOP (1) d.id_arbitro
                            ORDER BY p.fecha_hora_utc DESC);
 
 SELECT CONCAT(N'G6. Historial de partidos de ', nombre, N' ', apellido, N' (principal de la final), con informes y sanciones') AS consulta
-FROM Arbitraje.ARBITRO WHERE id_arbitro = @id_arbitro;
+FROM Seguridad.vw_Arbitro WHERE id_arbitro = @id_arbitro;
 SELECT rol, numero_partido, fase, fecha_hora_local, seleccion_local, seleccion_visitante, resultado,
        amarillas_del_partido, rojas_del_partido, informe_postpartido, sancion
 FROM Arbitraje.vw_HistorialArbitro
@@ -840,10 +858,10 @@ FROM Publicidad.PIEZA_PUBLICITARIA AS pz
 INNER JOIN Publicidad.CAMPANIA AS c ON c.id_campania = pz.id_campania
 INNER JOIN Publicidad.ANUNCIANTE AS an ON an.id_anunciante = c.id_anunciante
 LEFT JOIN DatosGenerales.IDIOMA AS i ON i.id_idioma = pz.id_idioma
-OUTER APPLY (SELECT STRING_AGG(pa.nombre, ', ') WITHIN GROUP (ORDER BY pa.nombre) AS mercados
-             FROM Publicidad.PIEZA_PAIS_INTERES AS ppi
-             INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = ppi.id_pais
-             WHERE ppi.id_pieza = pz.id_pieza) AS m
+LEFT JOIN (SELECT ppi.id_pieza, STRING_AGG(pa.nombre, ', ') WITHIN GROUP (ORDER BY pa.nombre) AS mercados
+           FROM Publicidad.PIEZA_PAIS_INTERES AS ppi
+           INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = ppi.id_pais
+           GROUP BY ppi.id_pieza) AS m ON m.id_pieza = pz.id_pieza
 ORDER BY an.razon_social, c.fecha_inicio, pz.titulo;
 GO
 
@@ -906,8 +924,7 @@ GO
    I. Importación de datos externos
    ============================================================================ */
 
--- Upsert y sin duplicados: el PBI per cápita entra primero por XML (26) y después por la
--- API del Banco Mundial (29), que encuentra los mismos registros y los deja sin cambios.
+-- Lo que registró cada proceso de importación (31 y 32) en DatosGenerales.IMPORTACION.
 SELECT N'I1. Procesos de importación: registros leídos, insertados, actualizados, sin cambios, omitidos y rechazados' AS consulta;
 SELECT proceso, COUNT(*) AS corridas, SUM(leidos) AS leidos, SUM(insertados) AS insertados,
        SUM(actualizados) AS actualizados, SUM(sin_cambios) AS sin_cambios, SUM(omitidos) AS omitidos,
@@ -918,7 +935,7 @@ ORDER BY MIN(id_importacion);
 GO
 
 -- Los CSV de jugadores, cuerpos técnicos y designaciones salen del scraping de Wikipedia
--- (scraping/Scraping_Jugadores.py y scraping/Scraping_Arbitros.py; técnica en scraping/README.md).
+-- (scraping/Scraping_Jugadores.py y scraping/Scraping_Arbitros.py; técnica en doc/Tecnica_de_Scraping.docx).
 SELECT N'I2. Importaciones de datos obtenidos por scraping de Wikipedia' AS consulta;
 SELECT id_importacion, proceso, origen, fecha_hora, leidos, insertados, rechazados
 FROM DatosGenerales.IMPORTACION
@@ -936,6 +953,7 @@ FROM (SELECT N'Torneo.ERRORES_SEDE' AS tabla, COUNT(*) AS rechazados FROM Torneo
       UNION ALL SELECT N'Torneo.ERRORES_PARTIDO', COUNT(*) FROM Torneo.ERRORES_PARTIDO
       UNION ALL SELECT N'DesarrolloPartido.ERRORES_EVENTO', COUNT(*) FROM DesarrolloPartido.ERRORES_EVENTO
       UNION ALL SELECT N'Arbitraje.ERRORES_DESIGNACION', COUNT(*) FROM Arbitraje.ERRORES_DESIGNACION
+      UNION ALL SELECT N'Arbitraje.ERRORES_ARBITRO', COUNT(*) FROM Arbitraje.ERRORES_ARBITRO
       UNION ALL SELECT N'Publicidad.ERRORES_CAMPANIA', COUNT(*) FROM Publicidad.ERRORES_CAMPANIA
       UNION ALL SELECT N'DatosGenerales.ERRORES_INDICADOR_ECONOMICO', COUNT(*) FROM DatosGenerales.ERRORES_INDICADOR_ECONOMICO
       UNION ALL SELECT N'DatosGenerales.ERRORES_COTIZACION', COUNT(*) FROM DatosGenerales.ERRORES_COTIZACION

@@ -1,4 +1,4 @@
-/*
+﻿/*
 ================================================================================
  Universidad Nacional de La Matanza
  Materia: 3641 - Bases de Datos Aplicada
@@ -10,13 +10,13 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 03/11/2026
- Archivo: 34_Ejecutar_Entrega7_Reportes.sql
- Objetivo: Entrega 7. Ejecutar de punta a punta los reportes de
-           30_SP_Reportes.sql para verlos a mano, sin verificaciones ni datos
-           de prueba (para eso está 80_Test_SP_Reportes.sql).
-           Requiere haber ejecutado 00 a 32: el torneo real
-           (31_Ejecutar_ImportarMundial2026.sql) con sus datos complementarios
-           (32_Ejecutar_DatosComplementarios.sql), que traen la publicidad.
+ Archivo: 36_Mostrar_Reportes.sql
+ Objetivo: Ejecutar de punta a punta los reportes de
+           26_SP_Reportes.sql para verlos a mano, sin verificaciones ni datos
+           de prueba (para eso está 76_Test_SP_Reportes.sql).
+           Requiere haber ejecutado 01 a 33: el torneo real
+           (32_Importar_Mundial2026.sql) con sus datos complementarios
+           (33_Cargar_DatosComplementarios.sql), que traen la publicidad.
 ================================================================================
 
  Cómo leer los resultados:
@@ -27,7 +27,7 @@
    - Los parámetros no tienen valores fijos: se eligen de los datos cargados
      (el goleador, el corte con más suspensiones, un árbitro, una selección),
      así que el script sirve con cualquier juego de datos.
-   - Sin publicidad cargada (sin el 32), R4 y R5 salen vacíos o con un aviso.
+   - Sin publicidad cargada (sin el 33), R4 y R5 salen vacíos o con un aviso.
 
  Reportes:
    R1. Goleadores por selección, fase y torneo.            usp_Goleadores
@@ -50,7 +50,7 @@ GO
 IF OBJECT_ID(N'Reportes.usp_Goleadores', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM Torneo.PARTIDO WHERE estado = 'FINALIZADO')
 BEGIN
-    RAISERROR(N'Faltan los reportes o los datos: ejecutar 00 a 32.', 16, 1);
+    RAISERROR(N'Faltan los reportes o los datos: ejecutar 01 a 33.', 16, 1);
     SET NOEXEC ON;
 END;
 GO
@@ -73,11 +73,10 @@ DECLARE @id_seleccion INT = (SELECT TOP (1) id_seleccion
                              FROM Reportes.vw_Goles
                              GROUP BY id_seleccion
                              ORDER BY COUNT(*) DESC, id_seleccion);
-SELECT CONCAT(N'R1. Goleadores de ', seleccion_nombre) AS reporte
-FROM (SELECT pa.nombre AS seleccion_nombre
-      FROM Torneo.SELECCION AS s
-      INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
-      WHERE s.id_seleccion = @id_seleccion) AS x;
+SELECT CONCAT(N'R1. Goleadores de ', pa.nombre) AS reporte
+FROM Torneo.SELECCION AS s
+INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
+WHERE s.id_seleccion = @id_seleccion;
 EXEC Reportes.usp_Goleadores @id_seleccion = @id_seleccion;
 GO
 
@@ -146,7 +145,7 @@ BEGIN
     EXEC Reportes.usp_OcupacionPublicitaria @codigo_moneda = 'ARS';
 END
 ELSE
-    SELECT N'R4. No hay cotizaciones de ARS cargadas (ver 29_Ejecutar_ImportarAPIs.sql): no se muestran los ingresos en pesos.' AS reporte;
+    SELECT N'R4. No hay cotizaciones de ARS cargadas (ver 31_Importar_APIs.sql): no se muestran los ingresos en pesos.' AS reporte;
 GO
 
 

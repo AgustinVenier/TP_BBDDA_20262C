@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 31/10/2026
- Archivo: 30_SP_Reportes.sql
+ Archivo: 26_SP_Reportes.sql
  Objetivo: Crear las vistas y los SP de reportes del esquema Reportes:
              Reportes.usp_Goleadores                 goleadores por selección, fase y torneo
              Reportes.usp_TarjetasXML                tarjetas por selección y jugador, con
@@ -23,12 +23,10 @@
              Reportes.usp_Resultados                 tabla de posiciones y resultados
            Las vistas son la fuente de datos de Power BI: devuelven el detalle
            sin filtrar y los SP las filtran y les dan forma. Las suspensiones
-           activas, que dependen de la fecha de corte, están para Power BI en
-           Reportes.vw_SuspensionesActivas, una vez antes de cada partido. Las cotizaciones
-           (27) y los feriados (28) de las APIs se usan para convertir los
-           ingresos a otras monedas y para marcar los feriados de cada mercado.
-           Requiere haber ejecutado 00 a 20. Su script de testing es
-           80_Test_SP_Reportes.sql.
+           activas dependen de la fecha de corte: para Power BI,
+           Reportes.vw_SuspensionesActivas las calcula antes de cada partido.
+           Requiere haber ejecutado 01 a 25. Su script de testing es
+           76_Test_SP_Reportes.sql.
 ================================================================================
 
  Convenciones:
@@ -223,6 +221,22 @@ GO
 
 
 /*
+  vw_Arbitros
+  Un árbitro designado por fila, para el segmentador de árbitros del BI
+  (relacionado con vw_DesignacionesArbitrales y vw_Tarjetas).
+*/
+CREATE OR ALTER VIEW Reportes.vw_Arbitros
+AS
+SELECT ar.id_arbitro,
+       CONCAT(ar.apellido, N', ', ar.nombre) AS arbitro
+FROM Arbitraje.ARBITRO AS ar
+WHERE EXISTS (SELECT 1
+              FROM Arbitraje.DESIGNACION_ARBITRAL AS d
+              WHERE d.id_arbitro = ar.id_arbitro);
+GO
+
+
+/*
   vw_DesignacionesArbitrales
   Una designación por fila: árbitro, rol y partido. Las tarjetas las señala
   el árbitro principal (AMONESTACION no guarda qué árbitro la mostró), así
@@ -249,11 +263,11 @@ FROM Arbitraje.DESIGNACION_ARBITRAL AS d
 INNER JOIN Arbitraje.ARBITRO AS ar ON ar.id_arbitro = d.id_arbitro
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = ar.id_pais
 INNER JOIN Torneo.vw_Fixture AS f ON f.id_partido = d.id_partido
-OUTER APPLY (SELECT SUM(IIF(am.tipo_tarjeta = 'AMARILLA', 1, 0)) AS amarillas,
-                    SUM(IIF(am.tipo_tarjeta = 'ROJA', 1, 0))     AS rojas
-             FROM DesarrolloPartido.AMONESTACION AS am
-             WHERE am.id_partido = d.id_partido
-               AND d.rol = 'PRINCIPAL') AS t;
+LEFT JOIN (SELECT am.id_partido,
+                  SUM(IIF(am.tipo_tarjeta = 'AMARILLA', 1, 0)) AS amarillas,
+                  SUM(IIF(am.tipo_tarjeta = 'ROJA', 1, 0))     AS rojas
+           FROM DesarrolloPartido.AMONESTACION AS am
+           GROUP BY am.id_partido) AS t ON t.id_partido = d.id_partido AND d.rol = 'PRINCIPAL';
 GO
 
 
@@ -388,7 +402,8 @@ GO
 /*
   vw_Plantillas
   Un convocado por fila con su selección. activo = 0 son los dados de baja
-  (reemplazados).
+  (reemplazados). No incluye la fecha de nacimiento: el reporte no la pide y
+  la vista la leen roles que no la necesitan (27_SP_Roles.sql).
 */
 CREATE OR ALTER VIEW Reportes.vw_Plantillas
 AS
@@ -403,7 +418,6 @@ SELECT s.id_seleccion,
        j.nombre,
        j.posicion_habitual,
        j.club_origen,
-       j.fecha_nacimiento,
        CAST(IIF(j.fecha_baja IS NULL, 1, 0) AS BIT) AS activo,
        j.fecha_baja,
        j.motivo_baja
@@ -424,6 +438,33 @@ GO
 */
 CREATE OR ALTER VIEW Reportes.vw_Resultados
 AS
+WITH goles AS (
+    -- Los goles del partido (sin la definición por penales), con la selección que los suma:
+    -- un gol en contra suma para el rival.
+    SELECT g.id_partido,
+           IIF(tg.es_en_contra = 1,
+               IIF(l.id_seleccion = p.id_seleccion_local, p.id_seleccion_visitante, p.id_seleccion_local),
+               l.id_seleccion) AS id_seleccion,
+           g.id_gol,
+           g.minuto,
+           g.minuto_adicional,
+           CONCAT(j.apellido, N' ', g.minuto,
+                  IIF(g.minuto_adicional > 0, CONCAT(N'+', g.minuto_adicional), N''), N'''',
+                  IIF(tg.es_en_contra = 1, N' (e/c)', N'')) AS detalle
+    FROM DesarrolloPartido.GOL AS g
+    INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = g.id_partido
+    INNER JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.id_tipo_gol = g.id_tipo_gol
+    INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = g.id_jugador_autor
+    INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
+    WHERE g.periodo <> 'PENALES'
+),
+goles_por_seleccion AS (
+    SELECT id_partido,
+           id_seleccion,
+           STRING_AGG(detalle, N', ') WITHIN GROUP (ORDER BY minuto, minuto_adicional, id_gol) AS detalle
+    FROM goles
+    GROUP BY id_partido, id_seleccion
+)
 SELECT f.id_partido,
        f.numero_partido,
        CONCAT(f.numero_partido, N'. ', f.seleccion_local, N' vs ', f.seleccion_visitante) AS partido,
@@ -457,36 +498,8 @@ SELECT f.id_partido,
        f.asistencia,
        f.estado
 FROM Torneo.vw_Fixture AS f
-OUTER APPLY (SELECT STRING_AGG(gs.detalle, N', ') WITHIN GROUP (ORDER BY gs.minuto, gs.minuto_adicional, gs.id_gol) AS detalle
-             FROM (SELECT g.id_gol, g.minuto, g.minuto_adicional,
-                          CONCAT(j.apellido, N' ', g.minuto,
-                                 IIF(g.minuto_adicional > 0, CONCAT(N'+', g.minuto_adicional), N''), N'''',
-                                 IIF(tg.es_en_contra = 1, N' (e/c)', N'')) AS detalle,
-                          IIF(tg.es_en_contra = 1,
-                              IIF(l.id_seleccion = f.id_seleccion_local, f.id_seleccion_visitante, f.id_seleccion_local),
-                              l.id_seleccion) AS id_seleccion_que_suma
-                   FROM DesarrolloPartido.GOL AS g
-                   INNER JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.id_tipo_gol = g.id_tipo_gol
-                   INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = g.id_jugador_autor
-                   INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
-                   WHERE g.id_partido = f.id_partido
-                     AND g.periodo <> 'PENALES') AS gs
-             WHERE gs.id_seleccion_que_suma = f.id_seleccion_local) AS gl
-OUTER APPLY (SELECT STRING_AGG(gs.detalle, N', ') WITHIN GROUP (ORDER BY gs.minuto, gs.minuto_adicional, gs.id_gol) AS detalle
-             FROM (SELECT g.id_gol, g.minuto, g.minuto_adicional,
-                          CONCAT(j.apellido, N' ', g.minuto,
-                                 IIF(g.minuto_adicional > 0, CONCAT(N'+', g.minuto_adicional), N''), N'''',
-                                 IIF(tg.es_en_contra = 1, N' (e/c)', N'')) AS detalle,
-                          IIF(tg.es_en_contra = 1,
-                              IIF(l.id_seleccion = f.id_seleccion_local, f.id_seleccion_visitante, f.id_seleccion_local),
-                              l.id_seleccion) AS id_seleccion_que_suma
-                   FROM DesarrolloPartido.GOL AS g
-                   INNER JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.id_tipo_gol = g.id_tipo_gol
-                   INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = g.id_jugador_autor
-                   INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
-                   WHERE g.id_partido = f.id_partido
-                     AND g.periodo <> 'PENALES') AS gs
-             WHERE gs.id_seleccion_que_suma = f.id_seleccion_visitante) AS gv;
+LEFT JOIN goles_por_seleccion AS gl ON gl.id_partido = f.id_partido AND gl.id_seleccion = f.id_seleccion_local
+LEFT JOIN goles_por_seleccion AS gv ON gv.id_partido = f.id_partido AND gv.id_seleccion = f.id_seleccion_visitante;
 GO
 
 
@@ -534,87 +547,6 @@ FROM totales;
 GO
 
 
-/*
-  vw_CuadroEliminacion
-  Partidos de eliminación directa ubicados en el cuadro, para dibujarlo en el
-  BI: ronda (0 = la primera ronda de eliminación que tenga el torneo; la
-  última, rondas - 1, es la final), posición dentro de la ronda (0 arriba) y
-  qué selección ganó (gana_local: 1 la local, 0 la visitante, NULL sin
-  definir). El tercer puesto va aparte, en la ronda de la final.
-  El cuadro no está modelado (no se guarda qué partido alimenta a cuál), así
-  que se reconstruye con los resultados, desde la final hacia atrás: el
-  partido que ganó la selección local de un cruce va en la posición 2p y el
-  que ganó la visitante, en la 2p + 1. Una ronda en la que no se pueden ubicar
-  todos los partidos así (porque falta jugar el cruce siguiente) se ordena por
-  número de partido.
-*/
-CREATE OR ALTER VIEW Reportes.vw_CuadroEliminacion
-AS
-WITH eliminacion AS (
-    SELECT p.id_partido,
-           p.numero_partido,
-           p.fase,
-           CASE p.fase WHEN 'DIECISEISAVOS' THEN 1 WHEN 'OCTAVOS' THEN 2 WHEN 'CUARTOS' THEN 3
-                       WHEN 'SEMIFINAL' THEN 4 ELSE 5 END AS nivel,
-           p.id_seleccion_local,
-           p.id_seleccion_visitante,
-           CASE WHEN p.estado <> 'FINALIZADO'               THEN NULL
-                WHEN p.goles_local > p.goles_visitante      THEN p.id_seleccion_local
-                WHEN p.goles_visitante > p.goles_local      THEN p.id_seleccion_visitante
-                WHEN p.penales_local > p.penales_visitante  THEN p.id_seleccion_local
-                WHEN p.penales_visitante > p.penales_local  THEN p.id_seleccion_visitante
-           END AS id_ganador
-    FROM Torneo.PARTIDO AS p
-    WHERE p.fase IN ('DIECISEISAVOS', 'OCTAVOS', 'CUARTOS', 'SEMIFINAL', 'FINAL', 'TERCER_PUESTO')
-),
--- Desde la final hacia atrás: cada partido ubica al anterior que ganó cada una de sus selecciones.
-arbol AS (
-    SELECT id_partido, nivel, 0 AS posicion
-    FROM eliminacion
-    WHERE fase = 'FINAL'
-    UNION ALL
-    SELECT h.id_partido, h.nivel, a.posicion * 2 + IIF(h.id_ganador = padre.id_seleccion_local, 0, 1)
-    FROM arbol AS a
-    INNER JOIN eliminacion AS padre ON padre.id_partido = a.id_partido
-    INNER JOIN eliminacion AS h ON h.nivel = padre.nivel - 1
-                               AND h.fase <> 'TERCER_PUESTO'
-                               AND h.id_ganador IN (padre.id_seleccion_local, padre.id_seleccion_visitante)
-),
-ubicados AS (
-    SELECT e.*,
-           a.posicion                                                                   AS posicion_arbol,
-           COUNT(a.id_partido) OVER (PARTITION BY e.nivel, IIF(e.fase = 'TERCER_PUESTO', 1, 0)) AS ubicados_en_ronda,
-           COUNT(*) OVER (PARTITION BY e.nivel, IIF(e.fase = 'TERCER_PUESTO', 1, 0))           AS partidos_en_ronda,
-           ROW_NUMBER() OVER (PARTITION BY e.nivel, IIF(e.fase = 'TERCER_PUESTO', 1, 0)
-                              ORDER BY e.numero_partido) - 1                            AS posicion_numero
-    FROM eliminacion AS e
-    LEFT JOIN arbol AS a ON a.id_partido = e.id_partido
-)
-SELECT u.id_partido,
-       u.numero_partido,
-       u.fase,
-       CASE u.fase WHEN 'DIECISEISAVOS' THEN 'Dieciseisavos de final' WHEN 'OCTAVOS' THEN 'Octavos de final'
-                   WHEN 'CUARTOS' THEN 'Cuartos de final' WHEN 'SEMIFINAL' THEN 'Semifinales'
-                   WHEN 'FINAL' THEN 'Final' ELSE 'Tercer puesto' END                  AS etiqueta,
-       u.nivel - r.primera                                                              AS ronda,
-       5 - r.primera + 1                                                                AS rondas,
-       IIF(u.ubicados_en_ronda = u.partidos_en_ronda, u.posicion_arbol, u.posicion_numero) AS posicion,
-       CAST(IIF(u.fase = 'TERCER_PUESTO', 1, 0) AS BIT)                                 AS es_tercer_puesto,
-       f.seleccion_local,
-       f.seleccion_visitante,
-       f.goles_local,
-       f.goles_visitante,
-       f.penales_local,
-       f.penales_visitante,
-       CASE WHEN u.id_ganador IS NULL THEN NULL
-            WHEN u.id_ganador = u.id_seleccion_local THEN 1
-            ELSE 0 END                                                                  AS gana_local
-FROM ubicados AS u
-INNER JOIN Torneo.vw_Fixture AS f ON f.id_partido = u.id_partido
-CROSS JOIN (SELECT MIN(nivel) AS primera FROM eliminacion) AS r;
-GO
-
-
 /* ============================================================================
    Stored procedures
    ============================================================================ */
@@ -634,16 +566,16 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @fase = UPPER(NULLIF(TRIM(@fase), ''));
 
     IF @id_seleccion IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Torneo.SELECCION WHERE id_seleccion = @id_seleccion)
-        SET @errores += @nl + N'- No existe la selección con id ' + CAST(@id_seleccion AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe la selección con id ' + CAST(@id_seleccion AS NVARCHAR(10)) + N'.';
 
     IF @fase NOT IN ('GRUPOS', 'DIECISEISAVOS', 'OCTAVOS', 'CUARTOS', 'SEMIFINAL', 'TERCER_PUESTO', 'FINAL')
-        SET @errores += @nl + N'- La fase "' + @fase + N'" no existe.';
+        SET @errores += @salto_linea + N'- La fase "' + @fase + N'" no existe.';
 
     IF @errores <> N''
     BEGIN
@@ -706,13 +638,13 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @fecha_corte = ISNULL(@fecha_corte, CAST(SYSUTCDATETIME() AS DATETIME2(0)));
 
     IF @id_seleccion IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Torneo.SELECCION WHERE id_seleccion = @id_seleccion)
-        SET @errores += @nl + N'- No existe la selección con id ' + CAST(@id_seleccion AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe la selección con id ' + CAST(@id_seleccion AS NVARCHAR(10)) + N'.';
 
     IF @errores <> N''
     BEGIN
@@ -829,9 +761,9 @@ GO
 
 /*
   usp_DesignacionesArbitrales
-  Una fila por designación: el árbitro con su total de designaciones y de
-  partidos dirigidos (como principal), el partido y, cuando fue el principal,
-  las amarillas y rojas que señaló con el detalle de cada una. Con
+  Una fila por designación: el árbitro con su total de partidos dirigidos
+  (como principal), el partido y, cuando fue el principal, las amarillas y
+  rojas que señaló con el detalle de cada una. Con
   @solo_principal = 1 muestra solo los partidos dirigidos.
   Ej.: EXEC Reportes.usp_DesignacionesArbitrales @solo_principal = 1;
 */
@@ -842,11 +774,11 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     IF @id_arbitro IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Arbitraje.ARBITRO WHERE id_arbitro = @id_arbitro)
-        SET @errores += @nl + N'- No existe el árbitro con id ' + CAST(@id_arbitro AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe el árbitro con id ' + CAST(@id_arbitro AS NVARCHAR(10)) + N'.';
 
     IF @errores <> N''
     BEGIN
@@ -857,7 +789,6 @@ BEGIN
     SELECT v.arbitro,
            v.pais,
            v.categoria,
-           COUNT(*) OVER (PARTITION BY v.id_arbitro)                          AS designaciones,
            SUM(IIF(v.rol = 'PRINCIPAL', 1, 0)) OVER (PARTITION BY v.id_arbitro) AS partidos_dirigidos,
            v.rol,
            v.numero_partido,
@@ -869,13 +800,13 @@ BEGIN
            v.rojas_senaladas,
            det.detalle                                                        AS tarjetas_senaladas
     FROM Reportes.vw_DesignacionesArbitrales AS v
-    OUTER APPLY (SELECT STRING_AGG(CONCAT(t.minuto, N''' ', t.tipo_tarjeta,
-                                          IIF(t.es_doble_amarilla = 1, N' (doble amarilla)', N''),
-                                          N' a ', t.apellido, N' (', t.seleccion, N')'), N'; ')
-                            WITHIN GROUP (ORDER BY t.instante, t.id_amonestacion) AS detalle
-                 FROM Reportes.vw_Tarjetas AS t
-                 WHERE t.id_partido = v.id_partido
-                   AND v.rol = 'PRINCIPAL') AS det
+    LEFT JOIN (SELECT t.id_partido,
+                      STRING_AGG(CONCAT(t.minuto, N''' ', t.tipo_tarjeta,
+                                        IIF(t.es_doble_amarilla = 1, N' (doble amarilla)', N''),
+                                        N' a ', t.apellido, N' (', t.seleccion, N')'), N'; ')
+                          WITHIN GROUP (ORDER BY t.instante, t.id_amonestacion) AS detalle
+               FROM Reportes.vw_Tarjetas AS t
+               GROUP BY t.id_partido) AS det ON det.id_partido = v.id_partido AND v.rol = 'PRINCIPAL'
     WHERE (@id_arbitro IS NULL OR v.id_arbitro = @id_arbitro)
       AND (@solo_principal = 0 OR v.rol = 'PRINCIPAL')
     ORDER BY v.arbitro, v.fecha_hora_local;
@@ -905,20 +836,20 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @codigo_moneda = UPPER(ISNULL(NULLIF(TRIM(@codigo_moneda), ''), 'USD'));
 
     IF @id_sede IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Torneo.SEDE WHERE id_sede = @id_sede)
-        SET @errores += @nl + N'- No existe la sede con id ' + CAST(@id_sede AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe la sede con id ' + CAST(@id_sede AS NVARCHAR(10)) + N'.';
 
     IF @id_partido IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Torneo.PARTIDO WHERE id_partido = @id_partido)
-        SET @errores += @nl + N'- No existe el partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe el partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
 
     IF @codigo_moneda <> 'USD'
        AND NOT EXISTS (SELECT 1 FROM DatosGenerales.COTIZACION WHERE codigo_moneda = @codigo_moneda)
-        SET @errores += @nl + N'- La moneda ' + @codigo_moneda + N' no tiene cotizaciones cargadas.';
+        SET @errores += @salto_linea + N'- La moneda ' + @codigo_moneda + N' no tiene cotizaciones cargadas.';
 
     IF @errores <> N''
     BEGIN
@@ -969,11 +900,12 @@ BEGIN
            ISNULL(pt.con_feriado, 0)
     FROM por_partido AS pp
     OUTER APPLY DatosGenerales.fn_CotizacionVigente(@codigo_moneda, CAST(pp.fecha_hora_local AS DATE)) AS c
-    OUTER APPLY (SELECT SUM(CAST(v.en_prime_time AS INT)) AS en_prime_time,
-                        SUM(CAST(v.es_feriado AS INT))    AS con_feriado
-                 FROM Reportes.vw_PrimeTimePorMercado AS v
-                 WHERE v.id_partido = pp.id_partido
-                   AND v.es_mercado_publicitario = 1) AS pt;
+    LEFT JOIN (SELECT v.id_partido,
+                      SUM(CAST(v.en_prime_time AS INT)) AS en_prime_time,
+                      SUM(CAST(v.es_feriado AS INT))    AS con_feriado
+               FROM Reportes.vw_PrimeTimePorMercado AS v
+               WHERE v.es_mercado_publicitario = 1
+               GROUP BY v.id_partido) AS pt ON pt.id_partido = pp.id_partido;
 
     SELECT sede, numero_partido, fase, fecha_hora_local, partido,
            espacio_1, espacio_2, espacio_3, espacio_4, espacios_ocupados,
@@ -1016,16 +948,16 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores   NVARCHAR(2048) = N'';
-    DECLARE @nl        NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @columnas  NVARCHAR(MAX);
-    DECLARE @sql       NVARCHAR(MAX);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @columnas    NVARCHAR(MAX);
+    DECLARE @sql         NVARCHAR(MAX);
 
     SET @fase = UPPER(NULLIF(TRIM(@fase), ''));
     SET @solo_mercados_publicitarios = ISNULL(@solo_mercados_publicitarios, 1);
 
     IF @fase NOT IN ('GRUPOS', 'DIECISEISAVOS', 'OCTAVOS', 'CUARTOS', 'SEMIFINAL', 'TERCER_PUESTO', 'FINAL')
-        SET @errores += @nl + N'- La fase "' + @fase + N'" no existe.';
+        SET @errores += @salto_linea + N'- La fase "' + @fase + N'" no existe.';
 
     SELECT @columnas = STRING_AGG(CAST(QUOTENAME(pa.nombre) AS NVARCHAR(MAX)), N', ') WITHIN GROUP (ORDER BY pa.nombre)
     FROM DatosGenerales.PAIS AS pa
@@ -1033,7 +965,7 @@ BEGIN
        OR EXISTS (SELECT 1 FROM Publicidad.PIEZA_PAIS_INTERES AS ppi WHERE ppi.id_pais = pa.id_pais);
 
     IF @columnas IS NULL
-        SET @errores += @nl + N'- No hay mercados: ninguna pieza publicitaria tiene países de interés.';
+        SET @errores += @salto_linea + N'- No hay mercados: ninguna pieza publicitaria tiene países de interés.';
 
     IF @errores <> N''
     BEGIN
@@ -1052,11 +984,12 @@ FROM (SELECT v.numero_partido,
              CONCAT(IIF(v.en_prime_time = 1, N''SI'', N''NO''), IIF(v.es_feriado = 1, N'' + FERIADO'', N'''')) AS valor
       FROM Reportes.vw_PrimeTimePorMercado AS v
       WHERE (@fase IS NULL OR v.fase = @fase)
-        AND (@solo = 0 OR v.es_mercado_publicitario = 1)) AS d
+        AND (@solo_mercados_publicitarios = 0 OR v.es_mercado_publicitario = 1)) AS d
 PIVOT (MAX(valor) FOR mercado IN (' + @columnas + N')) AS pv
 ORDER BY fecha_hora_utc, numero_partido;';
 
-    EXEC sp_executesql @sql, N'@fase VARCHAR(15), @solo BIT', @fase = @fase, @solo = @solo_mercados_publicitarios;
+    EXEC sp_executesql @sql, N'@fase VARCHAR(15), @solo_mercados_publicitarios BIT',
+                       @fase = @fase, @solo_mercados_publicitarios = @solo_mercados_publicitarios;
 END;
 GO
 
@@ -1081,13 +1014,13 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @incluir_bajas = ISNULL(@incluir_bajas, 0);
 
     IF @id_seleccion IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Torneo.SELECCION WHERE id_seleccion = @id_seleccion)
-        SET @errores += @nl + N'- No existe la selección con id ' + CAST(@id_seleccion AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe la selección con id ' + CAST(@id_seleccion AS NVARCHAR(10)) + N'.';
 
     IF @errores <> N''
     BEGIN
@@ -1152,16 +1085,16 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @fase = UPPER(NULLIF(TRIM(@fase), ''));
 
     IF @fase NOT IN ('GRUPOS', 'DIECISEISAVOS', 'OCTAVOS', 'CUARTOS', 'SEMIFINAL', 'TERCER_PUESTO', 'FINAL')
-        SET @errores += @nl + N'- La fase "' + @fase + N'" no existe.';
+        SET @errores += @salto_linea + N'- La fase "' + @fase + N'" no existe.';
 
     IF @id_seleccion IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Torneo.SELECCION WHERE id_seleccion = @id_seleccion)
-        SET @errores += @nl + N'- No existe la selección con id ' + CAST(@id_seleccion AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe la selección con id ' + CAST(@id_seleccion AS NVARCHAR(10)) + N'.';
 
     IF @errores <> N''
     BEGIN

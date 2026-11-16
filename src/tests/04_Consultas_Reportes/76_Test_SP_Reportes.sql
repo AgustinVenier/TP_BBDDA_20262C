@@ -10,24 +10,25 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 31/10/2026
- Archivo: 80_Test_SP_Reportes.sql
- Objetivo: Probar las vistas y los SP de 30_SP_Reportes.sql. Trabaja sobre
-           los datos que haya cargados (el torneo real del 31 y lo que
-           completa el 32): muestra cada reporte y verifica que sus totales coincidan
+ Archivo: 76_Test_SP_Reportes.sql
+ Objetivo: Probar las vistas y los SP de 26_SP_Reportes.sql. Trabaja sobre
+           los datos que haya cargados (el torneo real del 32 y lo que
+           completa el 33): muestra cada reporte y verifica que sus totales coincidan
            con las tablas base, sin depender de valores fijos.
-           Requiere haber ejecutado 00 a 20 y 30, y tener partidos jugados.
+           Requiere haber ejecutado 01 a 28, y tener partidos jugados.
            Para probar la conversión de monedas usa su propia cotización: la
-           moneda XTS (código ISO 4217 reservado para pruebas), que se borra
-           al empezar y al terminar.
+           moneda XTS (código ISO 4217 reservado para pruebas), cargada con un
+           INSERT. Corre dentro de una transacción que se deshace al final,
+           así que no deja datos y se puede ejecutar más de una vez.
 ================================================================================
 
  Cómo leer los resultados:
    - Reportes (R): la grilla muestra lo que devuelve cada SP.
-   - Verificaciones (V): en Mensajes se imprime "OK" o "FALLÓ" con los dos
+   - Verificaciones (V): en Mensajes se imprime "OK" o "ERROR" con los dos
      valores comparados.
    - Casos ERROR (E): en Mensajes se imprime "OK" y el mensaje que devolvió el
      SP. Si el SP no falla, o falla con un error que no es de validación, se
-     imprime "FALLÓ".
+     imprime "ERROR".
    - Al final, la verificación tiene que mostrar 0 datos de prueba.
 */
 
@@ -41,22 +42,8 @@ GO
 IF OBJECT_ID(N'Reportes.usp_Goleadores', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM Torneo.PARTIDO WHERE estado = 'FINALIZADO')
 BEGIN
-    RAISERROR(N'Faltan los reportes o los datos: ejecutar 00 a 20 y 30, y cargar partidos (por ejemplo, con 31).', 16, 1);
+    RAISERROR(N'Faltan los reportes o los datos: ejecutar 01 a 28, y cargar partidos (por ejemplo, con 32).', 16, 1);
     SET NOEXEC ON;
-END;
-GO
-
-IF OBJECT_ID(N'tempdb..#usp_MostrarError', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_MostrarError;
-GO
-CREATE PROCEDURE #usp_MostrarError
-    @caso VARCHAR(10)
-AS
-BEGIN
-    PRINT CONCAT(@caso, N': ',
-                 IIF(ERROR_NUMBER() = 50001, N'OK, falló la validación como se esperaba.',
-                     CONCAT(N'FALLÓ, error inesperado ', ERROR_NUMBER(), N'.')),
-                 NCHAR(13), NCHAR(10), ERROR_MESSAGE(), NCHAR(13), NCHAR(10));
 END;
 GO
 
@@ -72,17 +59,16 @@ AS
 BEGIN
     -- Una suma sobre ninguna fila (NULL) vale 0: la base puede no tener, por ejemplo, publicidad.
     PRINT CONCAT(@caso, N' ', @descripcion, N': ',
-                 IIF(ISNULL(@obtenido, 0) = ISNULL(@esperado, 0), N'OK', N'FALLÓ'),
+                 IIF(ISNULL(@obtenido, 0) = ISNULL(@esperado, 0), N'OK', N'ERROR'),
                  N' (reporte ', ISNULL(CAST(@obtenido AS NVARCHAR(30)), N'NULL'),
                  N', esperado ', ISNULL(CAST(@esperado AS NVARCHAR(30)), N'NULL'), N')');
 END;
 GO
 
--- Limpieza previa: la cotización de prueba de una ejecución anterior.
-DECLARE @id_cotizacion INT = (SELECT id_cotizacion FROM DatosGenerales.COTIZACION
-                              WHERE codigo_moneda = 'XTS' AND fecha = '2000-01-01');
-IF @id_cotizacion IS NOT NULL
-    EXEC DatosGenerales.usp_COTIZACION_Baja @id_cotizacion = @id_cotizacion;
+-- Todo el test corre en una transacción que se deshace al final: no deja datos de prueba.
+-- Se puede porque los SP de reportes no usan XACT_ABORT: un error de validación
+-- no arruina la transacción.
+BEGIN TRANSACTION;
 GO
 
 
@@ -169,24 +155,24 @@ DECLARE @corte DATETIME2(0) = (
     CROSS APPLY (SELECT COUNT(*) AS cantidad
                  FROM Reportes.fn_SuspensionesActivas(DATEADD(SECOND, -1, p.fecha_hora_utc))) AS s
     ORDER BY s.cantidad DESC, p.fecha_hora_utc);
-DECLARE @x XML, @reporte INT, @esperado INT;
+DECLARE @xml_reporte XML, @reporte INT, @esperado INT;
 CREATE TABLE #xml (x XML);
 INSERT INTO #xml EXEC Reportes.usp_TarjetasXML @fecha_corte = @corte;
-SET @x = (SELECT x FROM #xml);
+SET @xml_reporte = (SELECT x FROM #xml);
 
-SET @reporte = @x.value('count(//Tarjeta)', 'INT');
+SET @reporte = @xml_reporte.value('count(//Tarjeta)', 'INT');
 SET @esperado = (SELECT COUNT(*) FROM DesarrolloPartido.AMONESTACION AS a
                  INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = a.id_partido
                  WHERE a.id_jugador IS NOT NULL AND p.fecha_hora_utc <= @corte);
 EXEC #usp_Verificar 'V2a', N'tarjetas a jugadores en el XML', @reporte, @esperado;
 
-SET @reporte = CAST(@x.value('sum(//Persona/@amarillas) + sum(//Persona/@rojas)', 'FLOAT') AS INT);
+SET @reporte = CAST(@xml_reporte.value('sum(//Persona/@amarillas) + sum(//Persona/@rojas)', 'FLOAT') AS INT);
 SET @esperado = (SELECT COUNT(*) FROM DesarrolloPartido.AMONESTACION AS a
                  INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = a.id_partido
                  WHERE a.id_persona_ct IS NOT NULL AND p.fecha_hora_utc <= @corte);
 EXEC #usp_Verificar 'V2b', N'tarjetas al cuerpo técnico en el XML', @reporte, @esperado;
 
-SET @reporte = @x.value('count(//SuspensionActiva)', 'INT');
+SET @reporte = @xml_reporte.value('count(//SuspensionActiva)', 'INT');
 SET @esperado = (SELECT COUNT(*) FROM Reportes.fn_SuspensionesActivas(@corte));
 EXEC #usp_Verificar 'V2c', N'suspensiones activas en el XML', @reporte, @esperado;
 DROP TABLE #xml;
@@ -245,7 +231,7 @@ GO
 
 -- V6. Conversión de monedas: con la cotización de prueba (1 USD = 2,5 XTS
 -- desde el 01/01/2000), los ingresos en XTS son 2,5 veces los en dólares.
-EXEC DatosGenerales.usp_COTIZACION_Alta @codigo_moneda = 'XTS', @fecha = '2000-01-01', @unidades_por_usd = 2.5;
+INSERT INTO DatosGenerales.COTIZACION (codigo_moneda, fecha, unidades_por_usd) VALUES ('XTS', '2000-01-01', 2.5);
 
 DECLARE @reporte DECIMAL(19,2) = (SELECT SUM(ingresos_en_moneda) FROM Reportes.vw_IngresosPublicitariosPorMoneda
                                   WHERE codigo_moneda = 'XTS');
@@ -323,32 +309,7 @@ SET @esperado = (SELECT COUNT(*) FROM Torneo.PARTIDO);
 EXEC #usp_Verificar 'V11b', N'partidos por sede', @reporte, @esperado;
 GO
 
--- V12. Cuadro de eliminación (BI): un partido por fila, sin posiciones
--- repetidas ni fuera del rango de su ronda, y el ganador de cada partido
--- juega el cruce de la ronda siguiente que le toca por su posición.
-DECLARE @reporte INT = (SELECT COUNT(*) FROM Reportes.vw_CuadroEliminacion);
-DECLARE @esperado INT = (SELECT COUNT(*) FROM Torneo.PARTIDO
-                         WHERE fase IN ('DIECISEISAVOS', 'OCTAVOS', 'CUARTOS', 'SEMIFINAL', 'FINAL', 'TERCER_PUESTO'));
-EXEC #usp_Verificar 'V12a', N'partidos del cuadro', @reporte, @esperado;
-
-SET @reporte = (SELECT COUNT(*) FROM (SELECT ronda, es_tercer_puesto, posicion FROM Reportes.vw_CuadroEliminacion
-                                      GROUP BY ronda, es_tercer_puesto, posicion HAVING COUNT(*) > 1) AS repetidas)
-             + (SELECT COUNT(*) FROM Reportes.vw_CuadroEliminacion WHERE posicion >= POWER(2, rondas - 1 - ronda));
-EXEC #usp_Verificar 'V12b', N'posiciones repetidas o fuera de rango', @reporte, 0;
-
-SET @reporte = (SELECT COUNT(*)
-                FROM Reportes.vw_CuadroEliminacion AS h
-                INNER JOIN Reportes.vw_CuadroEliminacion AS p
-                        ON p.es_tercer_puesto = 0 AND p.ronda = h.ronda + 1 AND p.posicion = h.posicion / 2
-                       AND p.gana_local IS NOT NULL
-                WHERE h.es_tercer_puesto = 0
-                  AND h.gana_local IS NOT NULL
-                  AND IIF(h.gana_local = 1, h.seleccion_local, h.seleccion_visitante)
-                      NOT IN (p.seleccion_local, p.seleccion_visitante));
-EXEC #usp_Verificar 'V12c', N'ganadores que no juegan el cruce que les toca', @reporte, 0;
-GO
-
--- V13. Suspensiones activas (BI): antes de cada partido, la vista tiene las
+-- V12. Suspensiones activas (BI): antes de cada partido, la vista tiene las
 -- mismas suspensiones que fn_SuspensionesActivas un segundo antes del partido
 -- (las que usa el XML de tarjetas). Se cuentan las diferencias en los dos sentidos.
 DECLARE @diferencias INT;
@@ -365,7 +326,7 @@ segun_funcion AS (
 )
 SELECT @diferencias = (SELECT COUNT(*) FROM (SELECT * FROM segun_vista EXCEPT SELECT * FROM segun_funcion) AS a)
                     + (SELECT COUNT(*) FROM (SELECT * FROM segun_funcion EXCEPT SELECT * FROM segun_vista) AS b);
-EXEC #usp_Verificar 'V13', N'diferencias entre vw_SuspensionesActivas y fn_SuspensionesActivas', @diferencias, 0;
+EXEC #usp_Verificar 'V12', N'diferencias entre vw_SuspensionesActivas y fn_SuspensionesActivas', @diferencias, 0;
 GO
 
 
@@ -376,30 +337,42 @@ GO
 -- E1. Fase inexistente.
 BEGIN TRY
     EXEC Reportes.usp_Goleadores @fase = 'OCTAVO';
-    PRINT N'E1: FALLÓ, el SP no rechazó la fase.';
+    PRINT N'E1: ERROR, el SP no rechazó la fase.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError 'E1';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'E1: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'E1: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 -- E2. Selección inexistente.
 BEGIN TRY
     EXEC Reportes.usp_TarjetasXML @id_seleccion = -1;
-    PRINT N'E2: FALLÓ, el SP no rechazó la selección.';
+    PRINT N'E2: ERROR, el SP no rechazó la selección.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError 'E2';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'E2: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'E2: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 -- E3. Árbitro inexistente.
 BEGIN TRY
     EXEC Reportes.usp_DesignacionesArbitrales @id_arbitro = -1;
-    PRINT N'E3: FALLÓ, el SP no rechazó el árbitro.';
+    PRINT N'E3: ERROR, el SP no rechazó el árbitro.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError 'E3';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'E3: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'E3: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -407,59 +380,71 @@ GO
 -- errores juntos. XXX es el código ISO 4217 de "sin moneda".
 BEGIN TRY
     EXEC Reportes.usp_OcupacionPublicitaria @id_sede = -1, @id_partido = -1, @codigo_moneda = 'XXX';
-    PRINT N'E4: FALLÓ, el SP no rechazó los parámetros.';
+    PRINT N'E4: ERROR, el SP no rechazó los parámetros.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError 'E4';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'E4: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'E4: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 -- E5. Fase inexistente en la matriz de prime time.
 BEGIN TRY
     EXEC Reportes.usp_MatrizPrimeTime @fase = 'REPECHAJE';
-    PRINT N'E5: FALLÓ, el SP no rechazó la fase.';
+    PRINT N'E5: ERROR, el SP no rechazó la fase.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError 'E5';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'E5: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'E5: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 -- E6. Selección inexistente en las plantillas.
 BEGIN TRY
     EXEC Reportes.usp_SeleccionesYPlantillasXML @id_seleccion = -1;
-    PRINT N'E6: FALLÓ, el SP no rechazó la selección.';
+    PRINT N'E6: ERROR, el SP no rechazó la selección.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError 'E6';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'E6: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'E6: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 -- E7. Fase y selección inexistentes en los resultados: los dos errores juntos.
 BEGIN TRY
     EXEC Reportes.usp_Resultados @fase = 'REPECHAJE', @id_seleccion = -1;
-    PRINT N'E7: FALLÓ, el SP no rechazó los parámetros.';
+    PRINT N'E7: ERROR, el SP no rechazó los parámetros.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError 'E7';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'E7: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'E7: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 
 /* ============================================================================
-   Limpieza y verificación final
+   Verificación final
    ============================================================================ */
 
-DECLARE @id_cotizacion INT = (SELECT id_cotizacion FROM DatosGenerales.COTIZACION
-                              WHERE codigo_moneda = 'XTS' AND fecha = '2000-01-01');
-IF @id_cotizacion IS NOT NULL
-    EXEC DatosGenerales.usp_COTIZACION_Baja @id_cotizacion = @id_cotizacion;
+ROLLBACK TRANSACTION;
 GO
 
 SELECT 'Datos de prueba que quedaron (tiene que ser 0)' AS verificacion,
        (SELECT COUNT(*) FROM DatosGenerales.COTIZACION WHERE codigo_moneda = 'XTS') AS cantidad;
 GO
 
-DROP PROCEDURE #usp_MostrarError;
 DROP PROCEDURE #usp_Verificar;
 GO
 
