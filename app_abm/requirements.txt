@@ -1,2 +1,4 @@
-pyodbc
-customtkinter
+pyodbc==5.3.0
+customtkinter==6.0.0
+Pillow==12.2.0
+tkcalendar==1.6.1
