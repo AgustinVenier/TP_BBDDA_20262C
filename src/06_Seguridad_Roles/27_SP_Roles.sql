@@ -97,9 +97,7 @@ BEGIN
     IF IS_ROLEMEMBER(N'rol_ConsultaReportes', N'usr_consulta') = 0
         ALTER ROLE rol_ConsultaReportes ADD MEMBER usr_consulta;
 
-    /* Administrador operativo: todos los SP de los módulos y los reportes. El
-       permiso por esquema incluye los tipos tabla de esos esquemas (los que
-       reciben usp_RegistrarConvocatoria y usp_RegistrarFormacion). */
+    /* Administrador operativo: todos los SP de los módulos y los reportes. */
     GRANT EXECUTE ON SCHEMA::DatosGenerales TO rol_AdministradorOperativo;
     GRANT EXECUTE ON SCHEMA::Torneo TO rol_AdministradorOperativo;
     GRANT EXECUTE ON SCHEMA::DesarrolloPartido TO rol_AdministradorOperativo;
@@ -107,9 +105,7 @@ BEGIN
     GRANT EXECUTE ON SCHEMA::Publicidad TO rol_AdministradorOperativo;
     GRANT SELECT, EXECUTE ON SCHEMA::Reportes TO rol_AdministradorOperativo;
 
-    /* Cargador de resultados: operación del partido y eventos en cancha. El tipo
-       tabla de la formación necesita su propio permiso: sin él, el usuario no
-       puede declarar la variable que recibe usp_RegistrarFormacion. */
+    /* Cargador de resultados: operación del partido y eventos en cancha.  */
     GRANT EXECUTE ON OBJECT::Torneo.usp_IniciarPartido TO rol_CargadorResultados;
     GRANT EXECUTE ON OBJECT::Torneo.usp_FinalizarPartido TO rol_CargadorResultados;
     GRANT EXECUTE ON OBJECT::DesarrolloPartido.usp_RegistrarFormacion TO rol_CargadorResultados;
@@ -142,9 +138,7 @@ BEGIN
     GRANT EXECUTE ON OBJECT::DatosGenerales.usp_ConsultarPaises TO rol_GestorPublicidad, rol_ConsultaReportes;
 
     /* Las cargas que leen rutas del servidor requieren ADMINISTER BULK OPERATIONS.
-       Se reservan para una sesión controlada de DBA; ningún rol de aplicación puede
-       invocar estos módulos, aunque el administrador operativo tenga EXECUTE por
-       esquema. La instancia debe restringir los paths visibles al servicio SQL. */
+       Ningún rol de aplicación puede usar estos módulos */
     DENY EXECUTE ON OBJECT::DatosGenerales.usp_LeerArchivoUTF8 TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::Torneo.usp_ImportarSedesJSON TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::Torneo.usp_ImportarSeleccionesJSON TO rol_AdministradorOperativo;
@@ -154,14 +148,9 @@ BEGIN
     DENY EXECUTE ON OBJECT::Arbitraje.usp_ImportarDesignacionesCSV TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::Arbitraje.usp_ImportarArbitrosCSV TO rol_AdministradorOperativo;
 
-    /* Lo mismo con las importaciones desde APIs (usan OLE Automation, que es
-       de sysadmin) y con el registro de importaciones: ningún rol de
-       aplicación puede escribir ni borrar el historial de importaciones y
-       sus rechazados (es la auditoría de las cargas). Eso incluye los SP que
-       procesan la respuesta de cada API (usp_Procesar...): registran una
-       importación con el origen y el proceso que se les pase. Los SP de
-       importación los siguen usando: el encadenamiento de propiedad no
-       revisa permisos entre módulos del mismo propietario. */
+    /* Idem de lo anterior para las importaciones desde APIs (usan OLE Automation, que es
+       de sysadmin) y ningún rol de aplicación puede escribir ni borrar el historial 
+       de importaciones y sus rechazados. */
     DENY EXECUTE ON OBJECT::DatosGenerales.usp_RegistrarImportacion TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::DatosGenerales.usp_BorrarImportacion TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::DatosGenerales.usp_ConsumirAPI TO rol_AdministradorOperativo;
@@ -174,10 +163,9 @@ BEGIN
     DENY EXECUTE ON OBJECT::Publicidad.usp_ImportarCampaniasAPI TO rol_AdministradorOperativo, rol_GestorPublicidad;
     DENY EXECUTE ON OBJECT::Publicidad.usp_ProcesarCampaniasJSON TO rol_AdministradorOperativo, rol_GestorPublicidad;
 
-    /* Defensa en profundidad: ningún rol de aplicación lee o modifica directamente
-       las tablas, ni usa los objetos de Seguridad (las funciones de cifrado y
-       los SP que abren la clave). Al compartir propietario dbo, el
-       encadenamiento de propiedad permite que los SP y las vistas usen las
+    /* Ningún rol de aplicación lee o modifica directamente
+       las tablas, ni usa las vistas de Seguridad. Como el  propietario es dbo, el
+       encadenamiento de propiedad hace que los SP y las vistas usen las
        tablas y las funciones sin conceder esos permisos a quien los invoca. */
     DENY SELECT, INSERT, UPDATE, DELETE ON SCHEMA::DatosGenerales TO rol_AdministradorOperativo, rol_CargadorResultados, rol_GestorPublicidad, rol_ConsultaReportes;
     DENY SELECT, INSERT, UPDATE, DELETE ON SCHEMA::Torneo TO rol_AdministradorOperativo, rol_CargadorResultados, rol_GestorPublicidad, rol_ConsultaReportes;
@@ -186,8 +174,7 @@ BEGIN
     DENY SELECT, INSERT, UPDATE, DELETE ON SCHEMA::Publicidad TO rol_AdministradorOperativo, rol_CargadorResultados, rol_GestorPublicidad, rol_ConsultaReportes;
     DENY SELECT, EXECUTE ON SCHEMA::Seguridad TO rol_AdministradorOperativo, rol_CargadorResultados, rol_GestorPublicidad, rol_ConsultaReportes;
 
-    /* Uso de la clave de los datos personales, si ya está creada (40_Ejecutar_Cifrado.sql).
-       Cifrar necesita ver la clave (VIEW DEFINITION); los SP la abren con
+    /* Uso de la clave de los datos personales, los SP la abren con
        Seguridad.usp_AbrirClave, que se ejecuta como su dueño. Descifrar necesita
        además CONTROL sobre el certificado: se otorga sin ALTER ni TAKE OWNERSHIP,
        así el rol puede usarlo pero no quitarle la clave privada ni apropiárselo

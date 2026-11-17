@@ -12,8 +12,7 @@
  Fecha: 25/10/2026
  Archivo: 03_CrearTablas.sql
  Objetivo: Crear todas las tablas del sistema con sus claves primarias,
-           claves foraneas, restricciones UNIQUE, CHECK y DEFAULT, y los
-           indices sobre claves foraneas.
+           claves foraneas, restricciones UNIQUE, CHECK y DEFAULT.
            Requiere haber ejecutado 01_CrearBaseDeDatos.sql y
            02_CrearEsquemas.sql.
 ================================================================================
@@ -1211,53 +1210,6 @@ CREATE TABLE Publicidad.ERRORES_CAMPANIA (
         FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
 );
 GO
-
-
-/* ============================================================================
-   INDICES
-   Indices sobre claves foraneas: SQL Server no los crea solo. Sirven a los
-   JOIN de las vistas y los SP, y a las bajas: al borrar una fila, SQL Server
-   busca en cada tabla hija para validar la FK, y los SP de baja cuentan las
-   referencias antes de borrar. Sin el indice, cada una de esas busquedas
-   recorre la tabla hija completa.
-   ============================================================================ */
-   
-CREATE INDEX IX_SEDE_id_pais                        ON Torneo.SEDE (id_pais);
-CREATE INDEX IX_JUGADOR_id_pais_nacimiento          ON Torneo.JUGADOR (id_pais_nacimiento);
-CREATE INDEX IX_NOMBRE_ALTERNATIVO_id_seleccion     ON Torneo.NOMBRE_ALTERNATIVO (id_seleccion);
-CREATE INDEX IX_NOMBRE_ALTERNATIVO_id_jugador       ON Torneo.NOMBRE_ALTERNATIVO (id_jugador);
-CREATE INDEX IX_PERSONA_CUERPO_TECNICO_id_seleccion ON Torneo.PERSONA_CUERPO_TECNICO (id_seleccion);
-CREATE INDEX IX_PERSONA_CUERPO_TECNICO_id_pais_nacimiento
-    ON Torneo.PERSONA_CUERPO_TECNICO (id_pais_nacimiento);
-CREATE INDEX IX_PARTIDO_id_sede                     ON Torneo.PARTIDO (id_sede);
-CREATE INDEX IX_PARTIDO_id_seleccion_local          ON Torneo.PARTIDO (id_seleccion_local);
-CREATE INDEX IX_PARTIDO_id_seleccion_visitante      ON Torneo.PARTIDO (id_seleccion_visitante);
-GO
-
-CREATE INDEX IX_FORMACION_id_seleccion              ON DesarrolloPartido.FORMACION (id_seleccion);
-CREATE INDEX IX_ALINEACION_id_jugador               ON DesarrolloPartido.ALINEACION (id_jugador);
-CREATE INDEX IX_CAMBIO_id_jugador_sale              ON DesarrolloPartido.CAMBIO (id_jugador_sale);
-CREATE INDEX IX_CAMBIO_id_jugador_entra             ON DesarrolloPartido.CAMBIO (id_jugador_entra);
-CREATE INDEX IX_GOL_id_partido                      ON DesarrolloPartido.GOL (id_partido);
-CREATE INDEX IX_GOL_id_jugador_autor                ON DesarrolloPartido.GOL (id_jugador_autor);
-CREATE INDEX IX_GOL_id_jugador_asistencia           ON DesarrolloPartido.GOL (id_jugador_asistencia);
-CREATE INDEX IX_GOL_id_tipo_gol                     ON DesarrolloPartido.GOL (id_tipo_gol);
-CREATE INDEX IX_AMONESTACION_id_partido             ON DesarrolloPartido.AMONESTACION (id_partido);
-CREATE INDEX IX_AMONESTACION_id_jugador             ON DesarrolloPartido.AMONESTACION (id_jugador);
-CREATE INDEX IX_AMONESTACION_id_persona_ct          ON DesarrolloPartido.AMONESTACION (id_persona_ct);
-GO
-
-CREATE INDEX IX_ARBITRO_IDIOMA_id_idioma            ON Arbitraje.ARBITRO_IDIOMA (id_idioma);
-CREATE INDEX IX_DESIGNACION_ARBITRAL_id_arbitro     ON Arbitraje.DESIGNACION_ARBITRAL (id_arbitro);
-GO
-
-CREATE INDEX IX_ANUNCIANTE_id_pais                  ON Publicidad.ANUNCIANTE (id_pais);
-CREATE INDEX IX_PIEZA_PUBLICITARIA_id_idioma        ON Publicidad.PIEZA_PUBLICITARIA (id_idioma);
-CREATE INDEX IX_PIEZA_PAIS_INTERES_id_pais          ON Publicidad.PIEZA_PAIS_INTERES (id_pais);
-CREATE INDEX IX_EXHIBICION_id_espacio               ON Publicidad.EXHIBICION (id_espacio);
-CREATE INDEX IX_EXHIBICION_id_pieza                 ON Publicidad.EXHIBICION (id_pieza);
-GO
-
 
 -- Evidencia: tablas creadas por esquema.
 SELECT s.name AS esquema, t.name AS tabla
