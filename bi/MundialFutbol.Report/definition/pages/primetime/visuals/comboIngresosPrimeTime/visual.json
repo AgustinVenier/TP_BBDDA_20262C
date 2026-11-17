@@ -110,5 +110,51 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "51dc6073dbe870b3aa69",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_Resultados"
+              }
+            },
+            "Property": "partido"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "26bab1165349dd893d01",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_OcupacionPublicitaria"
+              }
+            },
+            "Property": "Ingresos USD"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "132270361209177e0be5",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_PrimeTimePorMercado"
+              }
+            },
+            "Property": "Mercados en prime time"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
   }
 }

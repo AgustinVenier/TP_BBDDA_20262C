@@ -94,5 +94,23 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "3c73200cc363e07d8c22",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_IngresosPublicitariosPorMoneda"
+              }
+            },
+            "Property": "codigo_moneda"
+          }
+        },
+        "type": "Categorical"
+      }
+    ]
   }
 }

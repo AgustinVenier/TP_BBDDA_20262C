@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "segFase",
   "position": {
-    "x": 20,
-    "y": 20,
+    "x": 20.425531914893618,
+    "y": 20.425531914893618,
     "z": 0,
-    "height": 100,
-    "width": 300,
+    "height": 99.209726443769,
+    "width": 316.10942249240122,
     "tabOrder": 0
   },
   "visual": {
@@ -89,5 +89,23 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "6807b276e4b608135c66",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_Resultados"
+              }
+            },
+            "Property": "fase"
+          }
+        },
+        "type": "Categorical"
+      }
+    ]
   }
 }

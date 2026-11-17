@@ -83,7 +83,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Ingresos por sede en la moneda elegida (cotización del día del partido)'"
+                  "Value": "'Ingresos por sede en la moneda elegida'"
                 }
               }
             }
@@ -92,5 +92,37 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "569e8fb5411e30d3a3da",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_Sedes"
+              }
+            },
+            "Property": "sede"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "61f069180cc04b76acdc",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_IngresosPublicitariosPorMoneda"
+              }
+            },
+            "Property": "Ingresos en moneda"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
   }
 }
