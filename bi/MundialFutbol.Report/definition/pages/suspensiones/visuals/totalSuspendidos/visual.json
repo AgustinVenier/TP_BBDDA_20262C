@@ -20,13 +20,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Suspensiones"
+                      "Entity": "Reportes.vw_SuspensionesActivas"
                     }
                   },
                   "Property": "Jugadores suspendidos"
                 }
               },
-              "queryRef": "Suspensiones.Jugadores suspendidos",
+              "queryRef": "Reportes.vw_SuspensionesActivas.Jugadores suspendidos",
               "nativeQueryRef": "Jugadores suspendidos"
             }
           ]

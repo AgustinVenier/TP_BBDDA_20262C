@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Sedes"
+                      "Entity": "Reportes.vw_Sedes"
                     }
                   },
                   "Property": "sede"
                 }
               },
-              "queryRef": "Sedes.sede",
+              "queryRef": "Reportes.vw_Sedes.sede",
               "nativeQueryRef": "sede",
               "active": true
             }
@@ -39,13 +39,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Sedes"
+                      "Entity": "Reportes.vw_Sedes"
                     }
                   },
                   "Property": "Partidos por sede"
                 }
               },
-              "queryRef": "Sedes.Partidos por sede",
+              "queryRef": "Reportes.vw_Sedes.Partidos por sede",
               "nativeQueryRef": "Partidos por sede"
             }
           ]
@@ -59,7 +59,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Sedes"
+                          "Entity": "Reportes.vw_Sedes"
                         }
                       },
                       "Property": "longitud"
@@ -68,7 +68,7 @@
                   "Function": 1
                 }
               },
-              "queryRef": "Avg(Sedes.longitud)",
+              "queryRef": "Avg(Reportes.vw_Sedes.longitud)",
               "nativeQueryRef": "Promedio de longitud"
             }
           ]
@@ -82,7 +82,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Sedes"
+                          "Entity": "Reportes.vw_Sedes"
                         }
                       },
                       "Property": "latitud"
@@ -91,7 +91,7 @@
                   "Function": 1
                 }
               },
-              "queryRef": "Avg(Sedes.latitud)",
+              "queryRef": "Avg(Reportes.vw_Sedes.latitud)",
               "nativeQueryRef": "Promedio de latitud"
             }
           ]

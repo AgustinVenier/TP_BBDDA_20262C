@@ -1,7 +1,7 @@
-table Goles
+table 'Reportes.vw_Goles'
 	lineageTag: bf50ba81-007c-52fe-b19f-f2c826ebc132
 
-	measure 'Total goles' = COUNTROWS(Goles)
+	measure 'Total goles' = COUNTROWS('Reportes.vw_Goles')
 		formatString: 0
 		lineageTag: a6582645-8b8a-57f2-9a1c-ae6cf64ac542
 
@@ -163,14 +163,14 @@ table Goles
 
 		annotation SummarizationSetBy = Automatic
 
-	partition Goles = m
+	partition 'Reportes.vw_Goles' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_Goles"]}[Data]
+				    Reportes_vw_Goles = Origen{[Schema="Reportes",Item="vw_Goles"]}[Data]
 				in
-				    Vista
+				    Reportes_vw_Goles
 
 	annotation PBI_ResultType = Table
 

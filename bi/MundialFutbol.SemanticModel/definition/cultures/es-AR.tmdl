@@ -5,10 +5,10 @@ cultureInfo es-AR
 			  "Version": "2.0.0",
 			  "Language": "en-US",
 			  "Entities": {
-			    "posiciones.grupo": {
+			    "reportes_vw_tablaposiciones.grupo": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Posiciones",
+			          "ConceptualEntity": "Reportes.vw_TablaPosiciones",
 			          "ConceptualProperty": "grupo"
 			        }
 			      },
@@ -26,10 +26,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "posiciones.seleccion": {
+			    "reportes_vw_tablaposiciones.seleccion": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Posiciones",
+			          "ConceptualEntity": "Reportes.vw_TablaPosiciones",
 			          "ConceptualProperty": "seleccion"
 			        }
 			      },
@@ -47,10 +47,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "partidos.partido": {
+			    "reportes_vw_resultados.partido": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Partidos",
+			          "ConceptualEntity": "Reportes.vw_Resultados",
 			          "ConceptualProperty": "partido"
 			        }
 			      },
@@ -68,10 +68,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "partidos.resultado_de_grupo": {
+			    "reportes_vw_resultados.resultado_de_grupo": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Partidos",
+			          "ConceptualEntity": "Reportes.vw_Resultados",
 			          "ConceptualProperty": "Resultado de grupo"
 			        }
 			      },
@@ -89,10 +89,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "partidos.ganador": {
+			    "reportes_vw_resultados.ganador": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Partidos",
+			          "ConceptualEntity": "Reportes.vw_Resultados",
 			          "ConceptualProperty": "ganador"
 			        }
 			      },
@@ -110,10 +110,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "partidos.goles_del_local": {
+			    "reportes_vw_resultados.goles_del_local": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Partidos",
+			          "ConceptualEntity": "Reportes.vw_Resultados",
 			          "ConceptualProperty": "goles_del_local"
 			        }
 			      },
@@ -131,10 +131,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "partidos.goles_del_visitante": {
+			    "reportes_vw_resultados.goles_del_visitante": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Partidos",
+			          "ConceptualEntity": "Reportes.vw_Resultados",
 			          "ConceptualProperty": "goles_del_visitante"
 			        }
 			      },
@@ -152,10 +152,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "partidos.fase": {
+			    "reportes_vw_resultados.fase": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Partidos",
+			          "ConceptualEntity": "Reportes.vw_Resultados",
 			          "ConceptualProperty": "fase"
 			        }
 			      },
@@ -173,10 +173,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "partidos.resultado_de_eliminación": {
+			    "reportes_vw_resultados.resultado_de_eliminación": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Partidos",
+			          "ConceptualEntity": "Reportes.vw_Resultados",
 			          "ConceptualProperty": "Resultado de eliminación"
 			        }
 			      },
@@ -194,10 +194,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "partidos.campeón": {
+			    "reportes_vw_resultados.campeón": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Partidos",
+			          "ConceptualEntity": "Reportes.vw_Resultados",
 			          "ConceptualProperty": "Campeón"
 			        }
 			      },
@@ -215,10 +215,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "partidos.segundo_puesto": {
+			    "reportes_vw_resultados.segundo_puesto": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Partidos",
+			          "ConceptualEntity": "Reportes.vw_Resultados",
 			          "ConceptualProperty": "Segundo puesto"
 			        }
 			      },
@@ -236,10 +236,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "partidos.tercer_puesto": {
+			    "reportes_vw_resultados.tercer_puesto": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Partidos",
+			          "ConceptualEntity": "Reportes.vw_Resultados",
 			          "ConceptualProperty": "Tercer puesto"
 			        }
 			      },
@@ -257,10 +257,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "suspensiones.momento": {
+			    "reportes_vw_suspensionesactivas.momento": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Suspensiones",
+			          "ConceptualEntity": "Reportes.vw_SuspensionesActivas",
 			          "ConceptualProperty": "momento"
 			        }
 			      },
@@ -278,10 +278,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "suspensiones.seleccion": {
+			    "reportes_vw_suspensionesactivas.seleccion": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Suspensiones",
+			          "ConceptualEntity": "Reportes.vw_SuspensionesActivas",
 			          "ConceptualProperty": "seleccion"
 			        }
 			      },
@@ -299,10 +299,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "suspensiones.dorsal": {
+			    "reportes_vw_suspensionesactivas.dorsal": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Suspensiones",
+			          "ConceptualEntity": "Reportes.vw_SuspensionesActivas",
 			          "ConceptualProperty": "dorsal"
 			        }
 			      },
@@ -320,10 +320,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "suspensiones.jugador": {
+			    "reportes_vw_suspensionesactivas.jugador": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Suspensiones",
+			          "ConceptualEntity": "Reportes.vw_SuspensionesActivas",
 			          "ConceptualProperty": "jugador"
 			        }
 			      },
@@ -341,10 +341,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "suspensiones.motivo": {
+			    "reportes_vw_suspensionesactivas.motivo": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Suspensiones",
+			          "ConceptualEntity": "Reportes.vw_SuspensionesActivas",
 			          "ConceptualProperty": "motivo"
 			        }
 			      },
@@ -362,10 +362,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "suspensiones.numero_partido_origen": {
+			    "reportes_vw_suspensionesactivas.numero_partido_origen": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Suspensiones",
+			          "ConceptualEntity": "Reportes.vw_SuspensionesActivas",
 			          "ConceptualProperty": "numero_partido_origen"
 			        }
 			      },
@@ -383,10 +383,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "suspensiones.partidos_de_suspension": {
+			    "reportes_vw_suspensionesactivas.partidos_de_suspension": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Suspensiones",
+			          "ConceptualEntity": "Reportes.vw_SuspensionesActivas",
 			          "ConceptualProperty": "partidos_de_suspension"
 			        }
 			      },
@@ -404,10 +404,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "suspensiones.partidos_cumplidos": {
+			    "reportes_vw_suspensionesactivas.partidos_cumplidos": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Suspensiones",
+			          "ConceptualEntity": "Reportes.vw_SuspensionesActivas",
 			          "ConceptualProperty": "partidos_cumplidos"
 			        }
 			      },
@@ -425,10 +425,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "suspensiones.partidos_pendientes": {
+			    "reportes_vw_suspensionesactivas.partidos_pendientes": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Suspensiones",
+			          "ConceptualEntity": "Reportes.vw_SuspensionesActivas",
 			          "ConceptualProperty": "partidos_pendientes"
 			        }
 			      },
@@ -446,10 +446,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "suspensiones.proximo_partido": {
+			    "reportes_vw_suspensionesactivas.proximo_partido": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Suspensiones",
+			          "ConceptualEntity": "Reportes.vw_SuspensionesActivas",
 			          "ConceptualProperty": "proximo_partido"
 			        }
 			      },
@@ -467,10 +467,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "plantillas.seleccion": {
+			    "reportes_vw_plantillas.seleccion": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Plantillas",
+			          "ConceptualEntity": "Reportes.vw_Plantillas",
 			          "ConceptualProperty": "seleccion"
 			        }
 			      },
@@ -488,10 +488,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "plantillas.jugador": {
+			    "reportes_vw_plantillas.jugador": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Plantillas",
+			          "ConceptualEntity": "Reportes.vw_Plantillas",
 			          "ConceptualProperty": "jugador"
 			        }
 			      },
@@ -509,10 +509,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "plantillas.dorsal_del_convocado": {
+			    "reportes_vw_plantillas.dorsal_del_convocado": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Plantillas",
+			          "ConceptualEntity": "Reportes.vw_Plantillas",
 			          "ConceptualProperty": "Dorsal del convocado"
 			        }
 			      },
@@ -530,10 +530,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "plantillas.baja": {
+			    "reportes_vw_plantillas.baja": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Plantillas",
+			          "ConceptualEntity": "Reportes.vw_Plantillas",
 			          "ConceptualProperty": "Baja"
 			        }
 			      },
@@ -551,10 +551,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "plantillas.estado": {
+			    "reportes_vw_plantillas.estado": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Plantillas",
+			          "ConceptualEntity": "Reportes.vw_Plantillas",
 			          "ConceptualProperty": "estado"
 			        }
 			      },
@@ -572,10 +572,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "designaciones.arbitro": {
+			    "reportes_vw_designacionesarbitrales.arbitro": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Designaciones",
+			          "ConceptualEntity": "Reportes.vw_DesignacionesArbitrales",
 			          "ConceptualProperty": "arbitro"
 			        }
 			      },
@@ -593,10 +593,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "designaciones.partidos_dirigidos": {
+			    "reportes_vw_designacionesarbitrales.partidos_dirigidos": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Designaciones",
+			          "ConceptualEntity": "Reportes.vw_DesignacionesArbitrales",
 			          "ConceptualProperty": "Partidos dirigidos"
 			        }
 			      },
@@ -614,10 +614,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "designaciones.amarillas_señaladas": {
+			    "reportes_vw_designacionesarbitrales.amarillas_señaladas": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Designaciones",
+			          "ConceptualEntity": "Reportes.vw_DesignacionesArbitrales",
 			          "ConceptualProperty": "Amarillas señaladas"
 			        }
 			      },
@@ -635,10 +635,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "designaciones.rojas_señaladas": {
+			    "reportes_vw_designacionesarbitrales.rojas_señaladas": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Designaciones",
+			          "ConceptualEntity": "Reportes.vw_DesignacionesArbitrales",
 			          "ConceptualProperty": "Rojas señaladas"
 			        }
 			      },
@@ -656,10 +656,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "designaciones.rol": {
+			    "reportes_vw_designacionesarbitrales.rol": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Designaciones",
+			          "ConceptualEntity": "Reportes.vw_DesignacionesArbitrales",
 			          "ConceptualProperty": "rol"
 			        }
 			      },
@@ -677,10 +677,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "designaciones.numero_partido": {
+			    "reportes_vw_designacionesarbitrales.numero_partido": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Designaciones",
+			          "ConceptualEntity": "Reportes.vw_DesignacionesArbitrales",
 			          "ConceptualProperty": "numero_partido"
 			        }
 			      },
@@ -698,10 +698,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "designaciones.partido": {
+			    "reportes_vw_designacionesarbitrales.partido": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Designaciones",
+			          "ConceptualEntity": "Reportes.vw_DesignacionesArbitrales",
 			          "ConceptualProperty": "partido"
 			        }
 			      },
@@ -719,10 +719,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "designaciones.resultado": {
+			    "reportes_vw_designacionesarbitrales.resultado": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Designaciones",
+			          "ConceptualEntity": "Reportes.vw_DesignacionesArbitrales",
 			          "ConceptualProperty": "resultado"
 			        }
 			      },
@@ -740,10 +740,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "designaciones.amarillas_senaladas": {
+			    "reportes_vw_designacionesarbitrales.amarillas_senaladas": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Designaciones",
+			          "ConceptualEntity": "Reportes.vw_DesignacionesArbitrales",
 			          "ConceptualProperty": "amarillas_senaladas"
 			        }
 			      },
@@ -761,10 +761,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "designaciones.rojas_senaladas": {
+			    "reportes_vw_designacionesarbitrales.rojas_senaladas": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Designaciones",
+			          "ConceptualEntity": "Reportes.vw_DesignacionesArbitrales",
 			          "ConceptualProperty": "rojas_senaladas"
 			        }
 			      },
@@ -782,10 +782,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "designaciones.designaciones": {
+			    "reportes_vw_designacionesarbitrales.designaciones": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Designaciones",
+			          "ConceptualEntity": "Reportes.vw_DesignacionesArbitrales",
 			          "ConceptualProperty": "Designaciones"
 			        }
 			      },
@@ -803,10 +803,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "arbitros.arbitro": {
+			    "reportes_vw_arbitros.arbitro": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Arbitros",
+			          "ConceptualEntity": "Reportes.vw_Arbitros",
 			          "ConceptualProperty": "arbitro"
 			        }
 			      },
@@ -824,10 +824,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "tarjetas.arbitro_principal": {
+			    "reportes_vw_tarjetas.arbitro_principal": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Tarjetas",
+			          "ConceptualEntity": "Reportes.vw_Tarjetas",
 			          "ConceptualProperty": "arbitro_principal"
 			        }
 			      },
@@ -845,10 +845,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "tarjetas.numero_partido": {
+			    "reportes_vw_tarjetas.numero_partido": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Tarjetas",
+			          "ConceptualEntity": "Reportes.vw_Tarjetas",
 			          "ConceptualProperty": "numero_partido"
 			        }
 			      },
@@ -866,10 +866,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "tarjetas.minuto": {
+			    "reportes_vw_tarjetas.minuto": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Tarjetas",
+			          "ConceptualEntity": "Reportes.vw_Tarjetas",
 			          "ConceptualProperty": "minuto"
 			        }
 			      },
@@ -887,10 +887,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "tarjetas.tipo_tarjeta": {
+			    "reportes_vw_tarjetas.tipo_tarjeta": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Tarjetas",
+			          "ConceptualEntity": "Reportes.vw_Tarjetas",
 			          "ConceptualProperty": "tipo_tarjeta"
 			        }
 			      },
@@ -908,10 +908,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "tarjetas.persona": {
+			    "reportes_vw_tarjetas.persona": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Tarjetas",
+			          "ConceptualEntity": "Reportes.vw_Tarjetas",
 			          "ConceptualProperty": "persona"
 			        }
 			      },
@@ -929,10 +929,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "tarjetas.seleccion": {
+			    "reportes_vw_tarjetas.seleccion": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Tarjetas",
+			          "ConceptualEntity": "Reportes.vw_Tarjetas",
 			          "ConceptualProperty": "seleccion"
 			        }
 			      },
@@ -950,10 +950,10 @@ cultureInfo es-AR
 			        }
 			      ]
 			    },
-			    "tarjetas.motivo": {
+			    "reportes_vw_tarjetas.motivo": {
 			      "Definition": {
 			        "Binding": {
-			          "ConceptualEntity": "Tarjetas",
+			          "ConceptualEntity": "Reportes.vw_Tarjetas",
 			          "ConceptualProperty": "motivo"
 			        }
 			      },

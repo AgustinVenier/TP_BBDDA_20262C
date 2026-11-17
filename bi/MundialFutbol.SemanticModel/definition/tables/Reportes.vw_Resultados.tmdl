@@ -1,19 +1,19 @@
-table Partidos
+table 'Reportes.vw_Resultados'
 	lineageTag: 483190f2-5eeb-5b65-8b8a-b3f68e58d2ab
 
-	measure 'Resultado de grupo' = IF(HASONEVALUE(Partidos[id_partido]) && SELECTEDVALUE(Partidos[grupo]) IN VALUES(Posiciones[grupo]), COALESCE(SELECTEDVALUE(Partidos[resultado]), "Pendiente"))
+	measure 'Resultado de grupo' = IF(HASONEVALUE('Reportes.vw_Resultados'[id_partido]) && SELECTEDVALUE('Reportes.vw_Resultados'[grupo]) IN VALUES('Reportes.vw_TablaPosiciones'[grupo]), COALESCE(SELECTEDVALUE('Reportes.vw_Resultados'[resultado]), "Pendiente"))
 		lineageTag: 4350d2a3-8c83-5802-958a-54e63c2e94bb
 
-	measure 'Resultado de eliminación' = IF(HASONEVALUE(Partidos[id_partido]) && SELECTEDVALUE(Partidos[fase]) <> "GRUPOS", COALESCE(SELECTEDVALUE(Partidos[resultado]), "Pendiente"))
+	measure 'Resultado de eliminación' = IF(HASONEVALUE('Reportes.vw_Resultados'[id_partido]) && SELECTEDVALUE('Reportes.vw_Resultados'[fase]) <> "GRUPOS", COALESCE(SELECTEDVALUE('Reportes.vw_Resultados'[resultado]), "Pendiente"))
 		lineageTag: 29bd5d1d-fe81-58b1-8f71-edca1d37fbd1
 
-	measure Campeón = COALESCE(CALCULATE(SELECTEDVALUE(Partidos[ganador]), Partidos[fase] = "FINAL"), "A definir")
+	measure Campeón = COALESCE(CALCULATE(SELECTEDVALUE('Reportes.vw_Resultados'[ganador]), 'Reportes.vw_Resultados'[fase] = "FINAL"), "A definir")
 		lineageTag: af9bf311-e51e-510d-bc15-5cf572cf91ed
 
-	measure 'Segundo puesto' = VAR equipo_ganador = CALCULATE(SELECTEDVALUE(Partidos[ganador]), Partidos[fase] = "FINAL") VAR equipo_local = CALCULATE(SELECTEDVALUE(Partidos[seleccion_local]), Partidos[fase] = "FINAL") VAR equipo_visitante = CALCULATE(SELECTEDVALUE(Partidos[seleccion_visitante]), Partidos[fase] = "FINAL") RETURN IF(ISBLANK(equipo_ganador) || equipo_ganador = "Empate", "A definir", IF(equipo_ganador = equipo_local, equipo_visitante, equipo_local))
+	measure 'Segundo puesto' = VAR equipo_ganador = CALCULATE(SELECTEDVALUE('Reportes.vw_Resultados'[ganador]), 'Reportes.vw_Resultados'[fase] = "FINAL") VAR equipo_local = CALCULATE(SELECTEDVALUE('Reportes.vw_Resultados'[seleccion_local]), 'Reportes.vw_Resultados'[fase] = "FINAL") VAR equipo_visitante = CALCULATE(SELECTEDVALUE('Reportes.vw_Resultados'[seleccion_visitante]), 'Reportes.vw_Resultados'[fase] = "FINAL") RETURN IF(ISBLANK(equipo_ganador) || equipo_ganador = "Empate", "A definir", IF(equipo_ganador = equipo_local, equipo_visitante, equipo_local))
 		lineageTag: 64d7c5da-0f48-5fec-80f5-7c59dc4d0ee0
 
-	measure 'Tercer puesto' = COALESCE(CALCULATE(SELECTEDVALUE(Partidos[ganador]), Partidos[fase] = "TERCER_PUESTO"), "A definir")
+	measure 'Tercer puesto' = COALESCE(CALCULATE(SELECTEDVALUE('Reportes.vw_Resultados'[ganador]), 'Reportes.vw_Resultados'[fase] = "TERCER_PUESTO"), "A definir")
 		lineageTag: 551489a9-0ab3-5443-95e3-f4a3f36cacb9
 
 	column id_partido
@@ -226,14 +226,14 @@ table Partidos
 
 		annotation SummarizationSetBy = Automatic
 
-	partition Partidos = m
+	partition 'Reportes.vw_Resultados' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_Resultados"]}[Data]
+				    Reportes_vw_Resultados = Origen{[Schema="Reportes",Item="vw_Resultados"]}[Data]
 				in
-				    Vista
+				    Reportes_vw_Resultados
 
 	annotation PBI_ResultType = Table
 

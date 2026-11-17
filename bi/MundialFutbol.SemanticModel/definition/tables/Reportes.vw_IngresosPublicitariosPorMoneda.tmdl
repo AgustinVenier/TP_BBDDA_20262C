@@ -1,10 +1,10 @@
-table IngresosPorMoneda
+table 'Reportes.vw_IngresosPublicitariosPorMoneda'
 	lineageTag: 2cf5dcdd-756c-5c79-afb2-45e677654fc6
 
-	measure 'Moneda mostrada' = IF(HASONEVALUE(IngresosPorMoneda[codigo_moneda]), VALUES(IngresosPorMoneda[codigo_moneda]), "USD")
+	measure 'Moneda mostrada' = IF(HASONEVALUE('Reportes.vw_IngresosPublicitariosPorMoneda'[codigo_moneda]), VALUES('Reportes.vw_IngresosPublicitariosPorMoneda'[codigo_moneda]), "USD")
 		lineageTag: 0b3ea36e-6b96-59f8-afc5-1cd1ce1517bc
 
-	measure 'Ingresos en moneda' = VAR moneda = [Moneda mostrada] RETURN CALCULATE(SUM(IngresosPorMoneda[ingresos_en_moneda]), IngresosPorMoneda[codigo_moneda] = moneda)
+	measure 'Ingresos en moneda' = VAR moneda = [Moneda mostrada] RETURN CALCULATE(SUM('Reportes.vw_IngresosPublicitariosPorMoneda'[ingresos_en_moneda]), 'Reportes.vw_IngresosPublicitariosPorMoneda'[codigo_moneda] = moneda)
 		formatString: #,0
 		lineageTag: 707c6e4c-7afc-52c7-bbb2-29f317338c5e
 
@@ -107,14 +107,14 @@ table IngresosPorMoneda
 
 		annotation SummarizationSetBy = Automatic
 
-	partition IngresosPorMoneda = m
+	partition 'Reportes.vw_IngresosPublicitariosPorMoneda' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_IngresosPublicitariosPorMoneda"]}[Data]
+				    Reportes_vw_IngresosPublicitariosPorMoneda = Origen{[Schema="Reportes",Item="vw_IngresosPublicitariosPorMoneda"]}[Data]
 				in
-				    Vista
+				    Reportes_vw_IngresosPublicitariosPorMoneda
 
 	annotation PBI_ResultType = Table
 

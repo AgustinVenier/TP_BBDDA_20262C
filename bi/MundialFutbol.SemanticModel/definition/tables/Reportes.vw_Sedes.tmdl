@@ -1,7 +1,7 @@
-table Sedes
+table 'Reportes.vw_Sedes'
 	lineageTag: 8c619234-1994-5a70-b9a8-32b8910c9f17
 
-	measure 'Partidos por sede' = SUM(Sedes[partidos])
+	measure 'Partidos por sede' = SUM('Reportes.vw_Sedes'[partidos])
 		formatString: 0
 		lineageTag: 4653cc4d-66cf-53a0-8de6-09ec6e981eb0
 
@@ -89,14 +89,14 @@ table Sedes
 
 		annotation SummarizationSetBy = Automatic
 
-	partition Sedes = m
+	partition 'Reportes.vw_Sedes' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_Sedes"]}[Data]
+				    Reportes_vw_Sedes = Origen{[Schema="Reportes",Item="vw_Sedes"]}[Data]
 				in
-				    Vista
+				    Reportes_vw_Sedes
 
 	annotation PBI_ResultType = Table
 

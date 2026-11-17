@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Ocupacion"
+                      "Entity": "Reportes.vw_OcupacionPublicitaria"
                     }
                   },
                   "Property": "sede"
                 }
               },
-              "queryRef": "Ocupacion.sede",
+              "queryRef": "Reportes.vw_OcupacionPublicitaria.sede",
               "nativeQueryRef": "sede",
               "active": true
             },
@@ -35,13 +35,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "partido"
                 }
               },
-              "queryRef": "Partidos.partido",
+              "queryRef": "Reportes.vw_Resultados.partido",
               "nativeQueryRef": "partido",
               "active": true
             }
@@ -54,13 +54,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Ocupacion"
+                      "Entity": "Reportes.vw_OcupacionPublicitaria"
                     }
                   },
                   "Property": "Espacio 1"
                 }
               },
-              "queryRef": "Ocupacion.Espacio 1",
+              "queryRef": "Reportes.vw_OcupacionPublicitaria.Espacio 1",
               "nativeQueryRef": "Espacio 1"
             },
             {
@@ -68,13 +68,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Ocupacion"
+                      "Entity": "Reportes.vw_OcupacionPublicitaria"
                     }
                   },
                   "Property": "Espacio 2"
                 }
               },
-              "queryRef": "Ocupacion.Espacio 2",
+              "queryRef": "Reportes.vw_OcupacionPublicitaria.Espacio 2",
               "nativeQueryRef": "Espacio 2"
             },
             {
@@ -82,13 +82,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Ocupacion"
+                      "Entity": "Reportes.vw_OcupacionPublicitaria"
                     }
                   },
                   "Property": "Espacio 3"
                 }
               },
-              "queryRef": "Ocupacion.Espacio 3",
+              "queryRef": "Reportes.vw_OcupacionPublicitaria.Espacio 3",
               "nativeQueryRef": "Espacio 3"
             },
             {
@@ -96,13 +96,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Ocupacion"
+                      "Entity": "Reportes.vw_OcupacionPublicitaria"
                     }
                   },
                   "Property": "Espacio 4"
                 }
               },
-              "queryRef": "Ocupacion.Espacio 4",
+              "queryRef": "Reportes.vw_OcupacionPublicitaria.Espacio 4",
               "nativeQueryRef": "Espacio 4"
             },
             {
@@ -110,13 +110,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Ocupacion"
+                      "Entity": "Reportes.vw_OcupacionPublicitaria"
                     }
                   },
                   "Property": "Espacios ocupados"
                 }
               },
-              "queryRef": "Ocupacion.Espacios ocupados",
+              "queryRef": "Reportes.vw_OcupacionPublicitaria.Espacios ocupados",
               "nativeQueryRef": "Espacios ocupados"
             },
             {
@@ -124,13 +124,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Ocupacion"
+                      "Entity": "Reportes.vw_OcupacionPublicitaria"
                     }
                   },
                   "Property": "Ingresos USD"
                 }
               },
-              "queryRef": "Ocupacion.Ingresos USD",
+              "queryRef": "Reportes.vw_OcupacionPublicitaria.Ingresos USD",
               "nativeQueryRef": "Ingresos USD"
             }
           ]
@@ -143,7 +143,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Ocupacion"
+                    "Entity": "Reportes.vw_OcupacionPublicitaria"
                   }
                 },
                 "Property": "sede"

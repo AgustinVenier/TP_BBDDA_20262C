@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "partido"
                 }
               },
-              "queryRef": "Partidos.partido",
+              "queryRef": "Reportes.vw_Resultados.partido",
               "nativeQueryRef": "partido",
               "active": true
             }
@@ -39,13 +39,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Ocupacion"
+                      "Entity": "Reportes.vw_OcupacionPublicitaria"
                     }
                   },
                   "Property": "Ingresos USD"
                 }
               },
-              "queryRef": "Ocupacion.Ingresos USD",
+              "queryRef": "Reportes.vw_OcupacionPublicitaria.Ingresos USD",
               "nativeQueryRef": "Ingresos USD"
             }
           ]
@@ -57,13 +57,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "PrimeTime"
+                      "Entity": "Reportes.vw_PrimeTimePorMercado"
                     }
                   },
                   "Property": "Mercados en prime time"
                 }
               },
-              "queryRef": "PrimeTime.Mercados en prime time",
+              "queryRef": "Reportes.vw_PrimeTimePorMercado.Mercados en prime time",
               "nativeQueryRef": "Mercados en prime time"
             }
           ]
@@ -76,7 +76,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Partidos"
+                    "Entity": "Reportes.vw_Resultados"
                   }
                 },
                 "Property": "partido"
@@ -101,7 +101,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Ingresos por partido (columnas) y mercados en prime time (línea)'"
+                  "Value": "'Ingresos por partido con recargo por fase y prime time (columnas) y mercados en prime time (línea)'"
                 }
               }
             }

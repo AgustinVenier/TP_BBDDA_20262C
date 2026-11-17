@@ -1,7 +1,7 @@
-table Suspensiones
+table 'Reportes.vw_SuspensionesActivas'
 	lineageTag: 1bfeb950-7d0d-49a0-919a-64021f360930
 
-	measure 'Jugadores suspendidos' = DISTINCTCOUNT(Suspensiones[id_jugador])
+	measure 'Jugadores suspendidos' = DISTINCTCOUNT('Reportes.vw_SuspensionesActivas'[id_jugador])
 		formatString: 0
 		lineageTag: dfaf4b2f-b750-4dc9-873b-a1a7c41fe050
 
@@ -122,14 +122,14 @@ table Suspensiones
 
 		annotation SummarizationSetBy = Automatic
 
-	partition Suspensiones = m
+	partition 'Reportes.vw_SuspensionesActivas' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_SuspensionesActivas"]}[Data]
+				    Reportes_vw_SuspensionesActivas = Origen{[Schema="Reportes",Item="vw_SuspensionesActivas"]}[Data]
 				in
-				    Vista
+				    Reportes_vw_SuspensionesActivas
 
 	annotation PBI_ResultType = Table
 

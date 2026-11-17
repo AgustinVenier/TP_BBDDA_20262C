@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "fase"
                 }
               },
-              "queryRef": "Partidos.fase",
+              "queryRef": "Reportes.vw_Resultados.fase",
               "nativeQueryRef": "fase",
               "active": true
             }
@@ -39,13 +39,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Goles"
+                      "Entity": "Reportes.vw_Goles"
                     }
                   },
                   "Property": "Total goles"
                 }
               },
-              "queryRef": "Goles.Total goles",
+              "queryRef": "Reportes.vw_Goles.Total goles",
               "nativeQueryRef": "Total goles"
             }
           ]
@@ -58,7 +58,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Partidos"
+                    "Entity": "Reportes.vw_Resultados"
                   }
                 },
                 "Property": "fase"

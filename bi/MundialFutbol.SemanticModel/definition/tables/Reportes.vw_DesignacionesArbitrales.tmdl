@@ -1,19 +1,19 @@
-table Designaciones
+table 'Reportes.vw_DesignacionesArbitrales'
 	lineageTag: 236e1c9b-06ad-4536-b7df-feac9aa2c5e9
 
-	measure 'Partidos dirigidos' = CALCULATE(DISTINCTCOUNT(Designaciones[id_partido]), Designaciones[rol] = "PRINCIPAL")
+	measure 'Partidos dirigidos' = CALCULATE(DISTINCTCOUNT('Reportes.vw_DesignacionesArbitrales'[id_partido]), 'Reportes.vw_DesignacionesArbitrales'[rol] = "PRINCIPAL")
 		formatString: 0
 		lineageTag: c734287c-4f72-4827-a729-0eca35548336
 
-	measure Designaciones = COUNTROWS(Designaciones)
+	measure Designaciones = COUNTROWS('Reportes.vw_DesignacionesArbitrales')
 		formatString: 0
 		lineageTag: 4527835e-679f-4e8f-b035-0ecf7df1141b
 
-	measure 'Amarillas señaladas' = SUM(Designaciones[amarillas_senaladas])
+	measure 'Amarillas señaladas' = SUM('Reportes.vw_DesignacionesArbitrales'[amarillas_senaladas])
 		formatString: 0
 		lineageTag: 31ec9623-cdb2-4b5c-a897-7c3041537db2
 
-	measure 'Rojas señaladas' = SUM(Designaciones[rojas_senaladas])
+	measure 'Rojas señaladas' = SUM('Reportes.vw_DesignacionesArbitrales'[rojas_senaladas])
 		formatString: 0
 		lineageTag: f1a59438-3e64-4e06-bb38-d110ec721ce1
 
@@ -145,14 +145,14 @@ table Designaciones
 
 		annotation SummarizationSetBy = Automatic
 
-	partition Designaciones = m
+	partition 'Reportes.vw_DesignacionesArbitrales' = m
 		mode: import
 		source =
 				let
 				    Origen = Sql.Database(Servidor, BaseDeDatos),
-				    Vista = Origen{[Schema="Reportes",Item="vw_DesignacionesArbitrales"]}[Data]
+				    Reportes_vw_DesignacionesArbitrales = Origen{[Schema="Reportes",Item="vw_DesignacionesArbitrales"]}[Data]
 				in
-				    Vista
+				    Reportes_vw_DesignacionesArbitrales
 
 	annotation PBI_ResultType = Table
 

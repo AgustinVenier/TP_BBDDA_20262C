@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Sedes"
+                      "Entity": "Reportes.vw_Sedes"
                     }
                   },
                   "Property": "sede"
                 }
               },
-              "queryRef": "Sedes.sede",
+              "queryRef": "Reportes.vw_Sedes.sede",
               "nativeQueryRef": "sede",
               "active": true
             }
@@ -39,13 +39,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "IngresosPorMoneda"
+                      "Entity": "Reportes.vw_IngresosPublicitariosPorMoneda"
                     }
                   },
                   "Property": "Ingresos en moneda"
                 }
               },
-              "queryRef": "IngresosPorMoneda.Ingresos en moneda",
+              "queryRef": "Reportes.vw_IngresosPublicitariosPorMoneda.Ingresos en moneda",
               "nativeQueryRef": "Ingresos en moneda"
             }
           ]
@@ -58,7 +58,7 @@
               "Measure": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "IngresosPorMoneda"
+                    "Entity": "Reportes.vw_IngresosPublicitariosPorMoneda"
                   }
                 },
                 "Property": "Ingresos en moneda"
