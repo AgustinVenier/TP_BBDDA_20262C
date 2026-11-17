@@ -18,9 +18,9 @@
              DesarrolloPartido.usp_RegistrarAmonestacion  tarjeta, roja por doble amarilla
                                                           y suspensión resultante
            Las sanciones y suspensiones las calculan fn_Sanciones y
-           fn_JugadoresSuspendidos (03_CrearFuncionesYVistas.sql) con los
+           fn_JugadoresSuspendidos (04_CrearFuncionesYVistas.sql) con los
            criterios de PARAMETRO_REGLAMENTO. Siguen las convenciones de
-           10_SP_Negocio_SedesYPartidos.sql. Requiere haber ejecutado 00 a 08.
+           10_SP_Negocio_SedesYPartidos.sql. Requiere haber ejecutado 01 a 09.
            Su script de testing es 63_Test_SP_Negocio_GolesYTarjetas.sql.
 ================================================================================
 */
@@ -53,76 +53,75 @@ CREATE OR ALTER PROCEDURE DesarrolloPartido.usp_RegistrarGol
     @minuto_adicional       TINYINT = 0,
     @id_jugador_asistencia  INT     = NULL,
     @id_gol                 INT     = NULL OUTPUT,
-    @mostrar                BIT     = 1
+    @mostrar_resultados                BIT     = 1
 AS
 BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    DECLARE @errores        NVARCHAR(2048) = N'';
-    DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @tran_propia    BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
-    DECLARE @estado         VARCHAR(12);
-    DECLARE @sel_autor      INT;
-    DECLARE @sel_asistencia INT;
-    DECLARE @minuto_cancha  TINYINT;
-    DECLARE @adic_cancha    TINYINT;
-    DECLARE @gl             INT;
-    DECLARE @gv             INT;
-    DECLARE @gl_90          INT;
-    DECLARE @gv_90          INT;
+    DECLARE @errores              NVARCHAR(2048) = N'';
+    DECLARE @salto_linea          NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @estado               VARCHAR(12);
+    DECLARE @seleccion_autor      INT;
+    DECLARE @seleccion_asistencia INT;
+    DECLARE @minuto_cancha        TINYINT;
+    DECLARE @adicional_cancha     TINYINT;
+    DECLARE @goles_local          INT;
+    DECLARE @goles_visitante      INT;
+    DECLARE @goles_local_90       INT;
+    DECLARE @goles_visitante_90   INT;
 
     SET @periodo          = UPPER(NULLIF(TRIM(@periodo), ''));
     SET @minuto_adicional = ISNULL(@minuto_adicional, 0);
 
     -- Para la definición por penales se mira quién estaba en cancha al final.
-    SELECT @minuto_cancha = IIF(@periodo = 'PENALES', 120, @minuto),
-           @adic_cancha   = IIF(@periodo = 'PENALES', 99, @minuto_adicional);
+    SELECT @minuto_cancha    = IIF(@periodo = 'PENALES', 120, @minuto),
+           @adicional_cancha = IIF(@periodo = 'PENALES', 99, @minuto_adicional);
 
     SELECT @estado = estado FROM Torneo.PARTIDO WHERE id_partido = @id_partido;
 
-    SELECT @sel_autor = f.id_seleccion
+    SELECT @seleccion_autor = f.id_seleccion
     FROM DesarrolloPartido.ALINEACION AS a
     INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = a.id_formacion
     WHERE f.id_partido = @id_partido AND a.id_jugador = @id_jugador_autor;
 
-    SELECT @sel_asistencia = f.id_seleccion
+    SELECT @seleccion_asistencia = f.id_seleccion
     FROM DesarrolloPartido.ALINEACION AS a
     INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = a.id_formacion
     WHERE f.id_partido = @id_partido AND a.id_jugador = @id_jugador_asistencia;
 
-    SELECT @gl = goles_local, @gv = goles_visitante, @gl_90 = goles_local_90, @gv_90 = goles_visitante_90
+    SELECT @goles_local = goles_local, @goles_visitante = goles_visitante, @goles_local_90 = goles_local_90, @goles_visitante_90 = goles_visitante_90
     FROM DesarrolloPartido.fn_MarcadorSegunGoles(@id_partido);
 
     IF @id_partido IS NULL
-        SET @errores += @nl + N'- El partido es obligatorio.';
+        SET @errores += @salto_linea + N'- El partido es obligatorio.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
     ELSE IF @estado <> 'EN_JUEGO'
-        SET @errores += @nl + N'- Los goles se registran con el partido EN_JUEGO (estado actual: ' + @estado + N').';
+        SET @errores += @salto_linea + N'- Los goles se registran con el partido EN_JUEGO (estado actual: ' + @estado + N').';
     ELSE
     BEGIN
-        IF @sel_autor IS NOT NULL AND @minuto_cancha IS NOT NULL
+        IF @seleccion_autor IS NOT NULL AND @minuto_cancha IS NOT NULL
            AND NOT EXISTS (SELECT 1
-                           FROM DesarrolloPartido.fn_EquipoEnCancha(@id_partido, @sel_autor, @minuto_cancha, @adic_cancha)
+                           FROM DesarrolloPartido.fn_EquipoEnCancha(@id_partido, @seleccion_autor, @minuto_cancha, @adicional_cancha)
                            WHERE id_jugador = @id_jugador_autor)
-            SET @errores += @nl + N'- El autor no estaba en cancha en ese minuto.';
+            SET @errores += @salto_linea + N'- El autor no estaba en cancha en ese minuto.';
 
-        IF @sel_asistencia IS NOT NULL AND @minuto_cancha IS NOT NULL
+        IF @seleccion_asistencia IS NOT NULL AND @minuto_cancha IS NOT NULL
            AND NOT EXISTS (SELECT 1
-                           FROM DesarrolloPartido.fn_EquipoEnCancha(@id_partido, @sel_asistencia, @minuto_cancha, @adic_cancha)
+                           FROM DesarrolloPartido.fn_EquipoEnCancha(@id_partido, @seleccion_asistencia, @minuto_cancha, @adicional_cancha)
                            WHERE id_jugador = @id_jugador_asistencia)
-            SET @errores += @nl + N'- El jugador que asiste no estaba en cancha en ese minuto.';
+            SET @errores += @salto_linea + N'- El jugador que asiste no estaba en cancha en ese minuto.';
 
         IF (@periodo = 'ALARGUE' OR (@periodo = 'ADICIONALES' AND @minuto IN (105, 120)))
-           AND @gl_90 <> @gv_90
-            SET @errores += @nl + N'- El partido no terminó empatado el tiempo reglamentario ('
-                          + CAST(@gl_90 AS NVARCHAR(3)) + N' - ' + CAST(@gv_90 AS NVARCHAR(3))
+           AND @goles_local_90 <> @goles_visitante_90
+            SET @errores += @salto_linea + N'- El partido no terminó empatado el tiempo reglamentario ('
+                          + CAST(@goles_local_90 AS NVARCHAR(3)) + N' - ' + CAST(@goles_visitante_90 AS NVARCHAR(3))
                           + N'): no hay alargue.';
 
-        IF @periodo = 'PENALES' AND @gl <> @gv
-            SET @errores += @nl + N'- El partido no está empatado (' + CAST(@gl AS NVARCHAR(3)) + N' - '
-                          + CAST(@gv AS NVARCHAR(3)) + N'): no hay definición por penales.';
+        IF @periodo = 'PENALES' AND @goles_local <> @goles_visitante
+            SET @errores += @salto_linea + N'- El partido no está empatado (' + CAST(@goles_local AS NVARCHAR(3)) + N' - '
+                          + CAST(@goles_visitante AS NVARCHAR(3)) + N'): no hay definición por penales.';
     END;
 
     IF @errores <> N''
@@ -131,22 +130,12 @@ BEGIN
         THROW 50001, @errores, 1;
     END;
 
-    BEGIN TRY
-        IF @tran_propia = 1 BEGIN TRANSACTION;
+    EXEC DesarrolloPartido.usp_GOL_Alta
+        @id_partido = @id_partido, @id_jugador_autor = @id_jugador_autor, @id_tipo_gol = @id_tipo_gol,
+        @periodo = @periodo, @minuto = @minuto, @minuto_adicional = @minuto_adicional,
+        @id_jugador_asistencia = @id_jugador_asistencia, @id_gol = @id_gol OUTPUT;
 
-        EXEC DesarrolloPartido.usp_GOL_Alta
-            @id_partido = @id_partido, @id_jugador_autor = @id_jugador_autor, @id_tipo_gol = @id_tipo_gol,
-            @periodo = @periodo, @minuto = @minuto, @minuto_adicional = @minuto_adicional,
-            @id_jugador_asistencia = @id_jugador_asistencia, @id_gol = @id_gol OUTPUT;
-
-        IF @tran_propia = 1 COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW;
-    END CATCH;
-
-    IF @mostrar = 1
+    IF @mostrar_resultados = 1
         SELECT f.seleccion_local, m.goles_local, m.goles_visitante, f.seleccion_visitante,
                m.penales_local, m.penales_visitante
         FROM Torneo.vw_Fixture AS f
@@ -177,14 +166,14 @@ CREATE OR ALTER PROCEDURE DesarrolloPartido.usp_RegistrarAmonestacion
     @id_persona_ct     INT     = NULL,
     @minuto_adicional  TINYINT = 0,
     @id_amonestacion   INT     = NULL OUTPUT,
-    @mostrar           BIT     = 1
+    @mostrar_resultados           BIT     = 1
 AS
 BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
     DECLARE @errores           NVARCHAR(2048) = N'';
-    DECLARE @nl                NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @salto_linea       NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @tran_propia       BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
     DECLARE @estado            VARCHAR(12);
     DECLARE @amarillas_previas INT;
@@ -207,11 +196,11 @@ BEGIN
         SET @es_segunda = 1;
 
     IF @id_partido IS NULL
-        SET @errores += @nl + N'- El partido es obligatorio.';
+        SET @errores += @salto_linea + N'- El partido es obligatorio.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
     ELSE IF @estado NOT IN ('EN_JUEGO', 'FINALIZADO')
-        SET @errores += @nl + N'- Las tarjetas se registran con el partido EN_JUEGO o FINALIZADO (estado actual: '
+        SET @errores += @salto_linea + N'- Las tarjetas se registran con el partido EN_JUEGO o FINALIZADO (estado actual: '
                       + @estado + N').';
 
     IF @errores <> N''
@@ -257,7 +246,7 @@ BEGIN
                   + CAST(@partidos_sancion AS NVARCHAR(3)) + N' partido(s) de su selección (' + @motivo_sancion + N').';
     END;
 
-    IF @mostrar = 1 AND @id_jugador IS NOT NULL
+    IF @mostrar_resultados = 1 AND @id_jugador IS NOT NULL
         SELECT j.dorsal, j.apellido, j.nombre,
                SUM(IIF(a.tipo_tarjeta = 'AMARILLA', 1, 0))                        AS amarillas_en_el_partido,
                SUM(IIF(a.tipo_tarjeta = 'ROJA', 1, 0))                            AS rojas_en_el_partido,

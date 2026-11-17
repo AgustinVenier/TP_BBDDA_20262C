@@ -18,8 +18,8 @@
            y el tipo de tabla DesarrolloPartido.TT_ALINEACION, con el que se
            pasan los jugadores de la formación. El equipo en cancha en
            cualquier minuto lo reconstruye DesarrolloPartido.fn_EquipoEnCancha
-           (03_CrearFuncionesYVistas.sql). Siguen las convenciones de
-           10_SP_Negocio_SedesYPartidos.sql. Requiere haber ejecutado 00 a 08.
+           (04_CrearFuncionesYVistas.sql). Siguen las convenciones de
+           10_SP_Negocio_SedesYPartidos.sql. Requiere haber ejecutado 01 a 09.
            Su script de testing es 62_Test_SP_Negocio_FormacionesYCambios.sql.
 ================================================================================
 */
@@ -60,7 +60,7 @@ GO
   partido, la selección y el esquema los valida
   DesarrolloPartido.usp_FORMACION_Alta. Con eso cubre las reglas de
   DesarrolloPartido.usp_ALINEACION_Alta y carga a todos los jugadores con un
-  solo INSERT, sin recorrer la lista fila por fila.
+  solo INSERT.
 */
 CREATE OR ALTER PROCEDURE DesarrolloPartido.usp_RegistrarFormacion
     @id_partido       INT,
@@ -68,14 +68,14 @@ CREATE OR ALTER PROCEDURE DesarrolloPartido.usp_RegistrarFormacion
     @esquema_tactico  VARCHAR(20),
     @jugadores        DesarrolloPartido.TT_ALINEACION READONLY,
     @id_formacion     INT = NULL OUTPUT,
-    @mostrar          BIT = 1
+    @mostrar_resultados          BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
     DECLARE @errores       NVARCHAR(2048) = N'';
-    DECLARE @nl            NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @salto_linea   NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @tran_propia   BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
     DECLARE @fecha_partido DATE;
     DECLARE @titulares     INT;
@@ -104,27 +104,27 @@ BEGIN
     SELECT @sin_jugador = COUNT(*) FROM @lista WHERE id_jugador IS NULL OR es_titular IS NULL;
 
     IF @titulares <> 11
-        SET @errores += @nl + N'- La formación tiene ' + CAST(@titulares AS NVARCHAR(3)) + N' titulares: tienen que ser 11.';
+        SET @errores += @salto_linea + N'- La formación tiene ' + CAST(@titulares AS NVARCHAR(3)) + N' titulares: tienen que ser 11.';
 
     IF ISNULL(@arqueros, 0) <> 1
-        SET @errores += @nl + N'- Tiene que haber exactamente un titular en la posición ARQUERO (hay '
+        SET @errores += @salto_linea + N'- Tiene que haber exactamente un titular en la posición ARQUERO (hay '
                       + CAST(ISNULL(@arqueros, 0) AS NVARCHAR(3)) + N').';
 
     IF @sin_posicion > 0
-        SET @errores += @nl + N'- Hay ' + CAST(@sin_posicion AS NVARCHAR(3)) + N' titular(es) sin posición en cancha.';
+        SET @errores += @salto_linea + N'- Hay ' + CAST(@sin_posicion AS NVARCHAR(3)) + N' titular(es) sin posición en cancha.';
 
     IF @sin_jugador > 0
-        SET @errores += @nl + N'- Hay ' + CAST(@sin_jugador AS NVARCHAR(3))
+        SET @errores += @salto_linea + N'- Hay ' + CAST(@sin_jugador AS NVARCHAR(3))
                       + N' fila(s) sin jugador o sin indicar si es titular.';
 
     SET @errores += ISNULL((
-        SELECT @nl + N'- Jugadores repetidos (id): ' + STRING_AGG(CAST(id_jugador AS NVARCHAR(10)), ', ') + N'.'
+        SELECT @salto_linea + N'- Jugadores repetidos (id): ' + STRING_AGG(CAST(id_jugador AS NVARCHAR(10)), ', ') + N'.'
         FROM (SELECT id_jugador FROM @lista WHERE id_jugador IS NOT NULL
               GROUP BY id_jugador HAVING COUNT(*) > 1) AS x), N'');
 
     -- Jugadores que no son de la selección o que no estaban convocados en la fecha del partido.
     SET @errores += ISNULL((
-        SELECT @nl + N'- No son convocados de la selección en la fecha del partido (id): '
+        SELECT @salto_linea + N'- No son convocados de la selección en la fecha del partido (id): '
                + STRING_AGG(CAST(x.id_jugador AS NVARCHAR(10)), ', ') + N'.'
         FROM (SELECT DISTINCT li.id_jugador
               FROM @lista AS li
@@ -136,7 +136,7 @@ BEGIN
 
     -- Suspendidos, con el motivo y el partido en que se originó la sanción.
     SET @errores += ISNULL((
-        SELECT STRING_AGG(@nl + N'- Suspendido: ' + CAST(j.dorsal AS NVARCHAR(3)) + N' ' + j.apellido + N', '
+        SELECT STRING_AGG(@salto_linea + N'- Suspendido: ' + CAST(j.dorsal AS NVARCHAR(3)) + N' ' + j.apellido + N', '
                           + j.nombre + N' (' + s.motivo + N' en el partido '
                           + CAST(s.numero_partido_origen AS NVARCHAR(3)) + N').', N'')
         FROM DesarrolloPartido.fn_JugadoresSuspendidos(@id_partido) AS s
@@ -167,7 +167,7 @@ BEGIN
         THROW;
     END CATCH;
 
-    IF @mostrar = 1
+    IF @mostrar_resultados = 1
         SELECT f.id_formacion, f.esquema_tactico, IIF(a.es_titular = 1, 'TITULAR', 'SUPLENTE') AS condicion,
                j.dorsal, j.apellido, j.nombre, a.posicion_en_cancha
         FROM DesarrolloPartido.FORMACION AS f
@@ -209,8 +209,7 @@ BEGIN
     SET XACT_ABORT ON;
 
     DECLARE @errores         NVARCHAR(2048) = N'';
-    DECLARE @nl              NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @tran_propia     BIT            = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @salto_linea     NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @estado          VARCHAR(12);
     DECLARE @id_seleccion    INT;
     DECLARE @instante        INT;
@@ -258,20 +257,20 @@ BEGIN
                                         WHERE en_entretiempo = 0 AND instante = @instante), 0, 1);
 
     IF @id_partido IS NULL
-        SET @errores += @nl + N'- El partido es obligatorio.';
+        SET @errores += @salto_linea + N'- El partido es obligatorio.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
     ELSE IF @estado <> 'EN_JUEGO'
-        SET @errores += @nl + N'- Los cambios se registran con el partido EN_JUEGO (estado actual: ' + @estado + N').';
+        SET @errores += @salto_linea + N'- Los cambios se registran con el partido EN_JUEGO (estado actual: ' + @estado + N').';
 
     IF @minuto IS NULL
-        SET @errores += @nl + N'- El minuto es obligatorio.';
+        SET @errores += @salto_linea + N'- El minuto es obligatorio.';
     ELSE IF @id_seleccion IS NOT NULL AND @estado = 'EN_JUEGO'
     BEGIN
         IF NOT EXISTS (SELECT 1
                        FROM DesarrolloPartido.fn_EquipoEnCancha(@id_partido, @id_seleccion, @minuto, @minuto_adicional)
                        WHERE id_jugador = @id_jugador_sale)
-            SET @errores += @nl + N'- El jugador que sale no está en cancha en ese minuto.';
+            SET @errores += @salto_linea + N'- El jugador que sale no está en cancha en ese minuto.';
 
         IF NOT EXISTS (SELECT 1
                        FROM DesarrolloPartido.ALINEACION AS a
@@ -282,19 +281,19 @@ BEGIN
                       WHERE id_partido = @id_partido AND id_jugador_entra = @id_jugador_entra)
            OR EXISTS (SELECT 1 FROM DesarrolloPartido.AMONESTACION
                       WHERE id_partido = @id_partido AND id_jugador = @id_jugador_entra AND tipo_tarjeta = 'ROJA')
-            SET @errores += @nl + N'- El jugador que entra no está en el banco: tiene que ser un suplente de la '
+            SET @errores += @salto_linea + N'- El jugador que entra no está en el banco: tiene que ser un suplente de la '
                           + N'selección que no haya entrado ni haya sido expulsado.';
 
         IF @instante < @ultimo_cambio
-            SET @errores += @nl + N'- La selección ya tiene un cambio registrado después de ese minuto: '
+            SET @errores += @salto_linea + N'- La selección ya tiene un cambio registrado después de ese minuto: '
                           + N'los cambios se registran en orden.';
 
         IF @cambios_hechos + 1 > @max_cambios
-            SET @errores += @nl + N'- La selección ya hizo sus ' + CAST(@max_cambios AS NVARCHAR(3))
+            SET @errores += @salto_linea + N'- La selección ya hizo sus ' + CAST(@max_cambios AS NVARCHAR(3))
                           + N' cambios permitidos' + IIF(@en_alargue = 1, N' con el tiempo suplementario.', N' (MAX_CAMBIOS).');
 
         IF @ventanas_usadas + @ventana_nueva > @max_ventanas
-            SET @errores += @nl + N'- La selección ya usó sus ' + CAST(@max_ventanas AS NVARCHAR(3))
+            SET @errores += @salto_linea + N'- La selección ya usó sus ' + CAST(@max_ventanas AS NVARCHAR(3))
                           + N' ventanas de cambio' + IIF(@en_alargue = 1, N' con el tiempo suplementario.', N' (MAX_VENTANAS).');
     END;
 
@@ -304,21 +303,11 @@ BEGIN
         THROW 50001, @errores, 1;
     END;
 
-    BEGIN TRY
-        IF @tran_propia = 1 BEGIN TRANSACTION;
-
-        EXEC DesarrolloPartido.usp_CAMBIO_Alta
-            @id_partido = @id_partido, @id_jugador_sale = @id_jugador_sale,
-            @id_jugador_entra = @id_jugador_entra, @minuto = @minuto, @motivo = @motivo,
-            @minuto_adicional = @minuto_adicional, @en_entretiempo = @en_entretiempo,
-            @id_cambio = @id_cambio OUTPUT;
-
-        IF @tran_propia = 1 COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW;
-    END CATCH;
+    EXEC DesarrolloPartido.usp_CAMBIO_Alta
+        @id_partido = @id_partido, @id_jugador_sale = @id_jugador_sale,
+        @id_jugador_entra = @id_jugador_entra, @minuto = @minuto, @motivo = @motivo,
+        @minuto_adicional = @minuto_adicional, @en_entretiempo = @en_entretiempo,
+        @id_cambio = @id_cambio OUTPUT;
 END;
 GO
 
