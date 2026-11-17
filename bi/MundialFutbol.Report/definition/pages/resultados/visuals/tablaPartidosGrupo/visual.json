@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "tablaPartidosGrupo",
   "position": {
-    "x": 660,
-    "y": 130,
+    "x": 491.1854103343465,
+    "y": 130.33434650455928,
     "z": 2000,
-    "height": 570,
-    "width": 600,
+    "height": 569.96960486322189,
+    "width": 768.38905775075989,
     "tabOrder": 2000
   },
   "visual": {
@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "partido"
                 }
               },
-              "queryRef": "Partidos.partido",
+              "queryRef": "Reportes.vw_Resultados.partido",
               "nativeQueryRef": "partido",
               "displayName": "Partido"
             },
@@ -35,13 +35,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "Resultado de grupo"
                 }
               },
-              "queryRef": "Partidos.Resultado de grupo",
+              "queryRef": "Reportes.vw_Resultados.Resultado de grupo",
               "nativeQueryRef": "Resultado de grupo",
               "displayName": "Resultado"
             },
@@ -50,13 +50,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "ganador"
                 }
               },
-              "queryRef": "Partidos.ganador",
+              "queryRef": "Reportes.vw_Resultados.ganador",
               "nativeQueryRef": "ganador",
               "displayName": "Ganador"
             },
@@ -65,13 +65,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "goles_del_local"
                 }
               },
-              "queryRef": "Partidos.goles_del_local",
+              "queryRef": "Reportes.vw_Resultados.goles_del_local",
               "nativeQueryRef": "goles_del_local",
               "displayName": "Goles local"
             },
@@ -80,13 +80,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "goles_del_visitante"
                 }
               },
-              "queryRef": "Partidos.goles_del_visitante",
+              "queryRef": "Reportes.vw_Resultados.goles_del_visitante",
               "nativeQueryRef": "goles_del_visitante",
               "displayName": "Goles visitante"
             }
@@ -100,7 +100,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Partidos"
+                    "Entity": "Reportes.vw_Resultados"
                   }
                 },
                 "Property": "partido"
@@ -149,5 +149,79 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "bf137466a81020d52206",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_Resultados"
+              }
+            },
+            "Property": "partido"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "738f94b2ac85b7804a5b",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_Resultados"
+              }
+            },
+            "Property": "Resultado de grupo"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "bc973d2025d4e058640a",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_Resultados"
+              }
+            },
+            "Property": "ganador"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "9a25f4a4c7b0d507b2d0",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_Resultados"
+              }
+            },
+            "Property": "goles_del_local"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "376598490d2ddd3b7c0d",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_Resultados"
+              }
+            },
+            "Property": "goles_del_visitante"
+          }
+        },
+        "type": "Categorical"
+      }
+    ]
   }
 }

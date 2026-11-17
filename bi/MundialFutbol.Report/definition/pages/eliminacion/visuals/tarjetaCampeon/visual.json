@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
   "name": "tarjetaCampeon",
   "position": {
-    "x": 20,
+    "x": 330,
     "y": 20,
     "z": 0,
     "height": 100,
-    "width": 1140,
+    "width": 830,
     "tabOrder": 0
   },
   "visual": {
@@ -20,13 +20,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "Campeón"
                 }
               },
-              "queryRef": "Partidos.Campeón",
+              "queryRef": "Reportes.vw_Resultados.Campeón",
               "nativeQueryRef": "Campeón",
               "displayName": "🥇 Campeón"
             },
@@ -35,13 +35,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "Segundo puesto"
                 }
               },
-              "queryRef": "Partidos.Segundo puesto",
+              "queryRef": "Reportes.vw_Resultados.Segundo puesto",
               "nativeQueryRef": "Segundo puesto",
               "displayName": "🥈 Segundo puesto"
             },
@@ -50,13 +50,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "Tercer puesto"
                 }
               },
-              "queryRef": "Partidos.Tercer puesto",
+              "queryRef": "Reportes.vw_Resultados.Tercer puesto",
               "nativeQueryRef": "Tercer puesto",
               "displayName": "🥉 Tercer puesto"
             }

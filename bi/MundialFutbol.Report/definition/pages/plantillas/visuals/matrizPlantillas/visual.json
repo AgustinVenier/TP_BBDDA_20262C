@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Plantillas"
+                      "Entity": "Reportes.vw_Plantillas"
                     }
                   },
                   "Property": "seleccion"
                 }
               },
-              "queryRef": "Plantillas.seleccion",
+              "queryRef": "Reportes.vw_Plantillas.seleccion",
               "nativeQueryRef": "seleccion",
               "active": true,
               "displayName": "Selección"
@@ -36,13 +36,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Plantillas"
+                      "Entity": "Reportes.vw_Plantillas"
                     }
                   },
                   "Property": "jugador"
                 }
               },
-              "queryRef": "Plantillas.jugador",
+              "queryRef": "Reportes.vw_Plantillas.jugador",
               "nativeQueryRef": "jugador",
               "active": true,
               "displayName": "Jugador"
@@ -56,13 +56,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Plantillas"
+                      "Entity": "Reportes.vw_Plantillas"
                     }
                   },
                   "Property": "Dorsal del convocado"
                 }
               },
-              "queryRef": "Plantillas.Dorsal del convocado",
+              "queryRef": "Reportes.vw_Plantillas.Dorsal del convocado",
               "nativeQueryRef": "N.º",
               "displayName": "N.º"
             },
@@ -71,13 +71,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Plantillas"
+                      "Entity": "Reportes.vw_Plantillas"
                     }
                   },
                   "Property": "Posición"
                 }
               },
-              "queryRef": "Plantillas.Posición",
+              "queryRef": "Reportes.vw_Plantillas.Posición",
               "nativeQueryRef": "Posición"
             },
             {
@@ -85,13 +85,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Plantillas"
+                      "Entity": "Reportes.vw_Plantillas"
                     }
                   },
                   "Property": "Club"
                 }
               },
-              "queryRef": "Plantillas.Club",
+              "queryRef": "Reportes.vw_Plantillas.Club",
               "nativeQueryRef": "Club"
             },
             {
@@ -99,13 +99,13 @@
                 "Measure": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Plantillas"
+                      "Entity": "Reportes.vw_Plantillas"
                     }
                   },
                   "Property": "Baja"
                 }
               },
-              "queryRef": "Plantillas.Baja",
+              "queryRef": "Reportes.vw_Plantillas.Baja",
               "nativeQueryRef": "Baja",
               "displayName": "Motivo de la baja"
             }
@@ -119,7 +119,7 @@
               "Measure": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Plantillas"
+                    "Entity": "Reportes.vw_Plantillas"
                   }
                 },
                 "Property": "Dorsal del convocado"
@@ -149,6 +149,69 @@
               }
             }
           }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "153.85107241436918D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Reportes.vw_Plantillas.Baja"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "187.01519209814052D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Reportes.vw_Plantillas.Club"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "143.17932674845045D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Reportes.vw_Plantillas.Posición"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "196.20668593336256D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Reportes.vw_Plantillas.seleccion"
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {}
         }
       ]
     },
@@ -184,7 +247,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Plantillas"
+                "Entity": "Reportes.vw_Plantillas"
               }
             },
             "Property": "seleccion"
@@ -198,7 +261,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Plantillas"
+                "Entity": "Reportes.vw_Plantillas"
               }
             },
             "Property": "jugador"
@@ -212,7 +275,7 @@
           "Measure": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Plantillas"
+                "Entity": "Reportes.vw_Plantillas"
               }
             },
             "Property": "Dorsal del convocado"
@@ -226,7 +289,7 @@
           "Measure": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Plantillas"
+                "Entity": "Reportes.vw_Plantillas"
               }
             },
             "Property": "Posición"
@@ -240,7 +303,7 @@
           "Measure": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Plantillas"
+                "Entity": "Reportes.vw_Plantillas"
               }
             },
             "Property": "Club"
@@ -254,7 +317,7 @@
           "Measure": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Plantillas"
+                "Entity": "Reportes.vw_Plantillas"
               }
             },
             "Property": "Baja"

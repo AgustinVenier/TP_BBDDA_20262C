@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "segGrupo",
   "position": {
-    "x": 20,
-    "y": 20,
+    "x": 20.425531914893618,
+    "y": 20.425531914893618,
     "z": 0,
-    "height": 100,
-    "width": 300,
+    "height": 99.209726443769,
+    "width": 470.75987841945289,
     "tabOrder": 0
   },
   "visual": {
@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Posiciones"
+                      "Entity": "Reportes.vw_TablaPosiciones"
                     }
                   },
                   "Property": "grupo"
                 }
               },
-              "queryRef": "Posiciones.grupo",
+              "queryRef": "Reportes.vw_TablaPosiciones.grupo",
               "nativeQueryRef": "grupo",
               "active": true
             }
@@ -40,7 +40,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Posiciones"
+                    "Entity": "Reportes.vw_TablaPosiciones"
                   }
                 },
                 "Property": "grupo"
@@ -89,5 +89,23 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "f135cd32116720007903",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_TablaPosiciones"
+              }
+            },
+            "Property": "grupo"
+          }
+        },
+        "type": "Categorical"
+      }
+    ]
   }
 }

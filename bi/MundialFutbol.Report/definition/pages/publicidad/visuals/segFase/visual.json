@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Partidos"
+                      "Entity": "Reportes.vw_Resultados"
                     }
                   },
                   "Property": "fase"
                 }
               },
-              "queryRef": "Partidos.fase",
+              "queryRef": "Reportes.vw_Resultados.fase",
               "nativeQueryRef": "fase",
               "active": true
             }
@@ -40,7 +40,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Partidos"
+                    "Entity": "Reportes.vw_Resultados"
                   }
                 },
                 "Property": "fase"

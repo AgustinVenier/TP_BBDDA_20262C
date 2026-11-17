@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "IngresosPorMoneda"
+                      "Entity": "Reportes.vw_IngresosPublicitariosPorMoneda"
                     }
                   },
                   "Property": "codigo_moneda"
                 }
               },
-              "queryRef": "IngresosPorMoneda.codigo_moneda",
+              "queryRef": "Reportes.vw_IngresosPublicitariosPorMoneda.codigo_moneda",
               "nativeQueryRef": "codigo_moneda",
               "active": true
             }
@@ -40,7 +40,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "IngresosPorMoneda"
+                    "Entity": "Reportes.vw_IngresosPublicitariosPorMoneda"
                   }
                 },
                 "Property": "codigo_moneda"

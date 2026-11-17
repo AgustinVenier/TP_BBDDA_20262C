@@ -1,12 +1,12 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.4.0/schema.json",
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "matrizPosiciones",
   "position": {
-    "x": 20,
-    "y": 130,
+    "x": 20.425531914893618,
+    "y": 130.33434650455928,
     "z": 1000,
-    "height": 570,
-    "width": 620,
+    "height": 569.96960486322189,
+    "width": 462.97872340425533,
     "tabOrder": 1000
   },
   "visual": {
@@ -20,32 +20,32 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Posiciones"
+                      "Entity": "Reportes.vw_TablaPosiciones"
                     }
                   },
                   "Property": "grupo"
                 }
               },
-              "queryRef": "Posiciones.grupo",
+              "queryRef": "Reportes.vw_TablaPosiciones.grupo",
               "nativeQueryRef": "grupo",
-              "displayName": "Grupo",
-              "active": true
+              "active": true,
+              "displayName": "Grupo"
             },
             {
               "field": {
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Posiciones"
+                      "Entity": "Reportes.vw_TablaPosiciones"
                     }
                   },
                   "Property": "seleccion"
                 }
               },
-              "queryRef": "Posiciones.seleccion",
+              "queryRef": "Reportes.vw_TablaPosiciones.seleccion",
               "nativeQueryRef": "seleccion",
-              "displayName": "Selección",
-              "active": true
+              "active": true,
+              "displayName": "Selección"
             }
           ]
         },
@@ -58,7 +58,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "posicion"
@@ -67,7 +67,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.posicion)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.posicion)",
               "nativeQueryRef": "Pos",
               "displayName": "Pos"
             },
@@ -78,7 +78,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "pj"
@@ -87,7 +87,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.pj)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.pj)",
               "nativeQueryRef": "PJ",
               "displayName": "PJ"
             },
@@ -98,7 +98,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "pg"
@@ -107,7 +107,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.pg)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.pg)",
               "nativeQueryRef": "PG",
               "displayName": "PG"
             },
@@ -118,7 +118,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "pe"
@@ -127,7 +127,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.pe)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.pe)",
               "nativeQueryRef": "PE",
               "displayName": "PE"
             },
@@ -138,7 +138,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "pp"
@@ -147,7 +147,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.pp)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.pp)",
               "nativeQueryRef": "PP",
               "displayName": "PP"
             },
@@ -158,7 +158,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "gf"
@@ -167,7 +167,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.gf)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.gf)",
               "nativeQueryRef": "GF",
               "displayName": "GF"
             },
@@ -178,7 +178,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "gc"
@@ -187,7 +187,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.gc)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.gc)",
               "nativeQueryRef": "GC",
               "displayName": "GC"
             },
@@ -198,7 +198,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "dg"
@@ -207,7 +207,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.dg)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.dg)",
               "nativeQueryRef": "DG",
               "displayName": "DG"
             },
@@ -218,7 +218,7 @@
                     "Column": {
                       "Expression": {
                         "SourceRef": {
-                          "Entity": "Posiciones"
+                          "Entity": "Reportes.vw_TablaPosiciones"
                         }
                       },
                       "Property": "pts"
@@ -227,7 +227,7 @@
                   "Function": 0
                 }
               },
-              "queryRef": "Sum(Posiciones.pts)",
+              "queryRef": "Sum(Reportes.vw_TablaPosiciones.pts)",
               "nativeQueryRef": "Pts",
               "displayName": "Pts"
             }
@@ -241,7 +241,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Posiciones"
+                    "Entity": "Reportes.vw_TablaPosiciones"
                   }
                 },
                 "Property": "grupo"
@@ -297,5 +297,208 @@
       ]
     },
     "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "04e3b6322bad7277b22c",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_TablaPosiciones"
+              }
+            },
+            "Property": "grupo"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "6d1773a61d630b00d192",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "Reportes.vw_TablaPosiciones"
+              }
+            },
+            "Property": "seleccion"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "3aae4da46286e83c68dc",
+        "field": {
+          "Aggregation": {
+            "Expression": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Reportes.vw_TablaPosiciones"
+                  }
+                },
+                "Property": "posicion"
+              }
+            },
+            "Function": 0
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "4df1930a02624158eb2a",
+        "field": {
+          "Aggregation": {
+            "Expression": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Reportes.vw_TablaPosiciones"
+                  }
+                },
+                "Property": "pj"
+              }
+            },
+            "Function": 0
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "a5b4ca2c01b50ab0e306",
+        "field": {
+          "Aggregation": {
+            "Expression": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Reportes.vw_TablaPosiciones"
+                  }
+                },
+                "Property": "pg"
+              }
+            },
+            "Function": 0
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "21cb0e199baa92732e31",
+        "field": {
+          "Aggregation": {
+            "Expression": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Reportes.vw_TablaPosiciones"
+                  }
+                },
+                "Property": "pe"
+              }
+            },
+            "Function": 0
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "0758dbec6eeb4c56d170",
+        "field": {
+          "Aggregation": {
+            "Expression": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Reportes.vw_TablaPosiciones"
+                  }
+                },
+                "Property": "pp"
+              }
+            },
+            "Function": 0
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "f4a27ccd31079772956e",
+        "field": {
+          "Aggregation": {
+            "Expression": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Reportes.vw_TablaPosiciones"
+                  }
+                },
+                "Property": "gf"
+              }
+            },
+            "Function": 0
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "a9b370d7e250410a1245",
+        "field": {
+          "Aggregation": {
+            "Expression": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Reportes.vw_TablaPosiciones"
+                  }
+                },
+                "Property": "gc"
+              }
+            },
+            "Function": 0
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "c59a2e2770ac80d52982",
+        "field": {
+          "Aggregation": {
+            "Expression": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Reportes.vw_TablaPosiciones"
+                  }
+                },
+                "Property": "dg"
+              }
+            },
+            "Function": 0
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "be8aa9c874ee99e1c1c0",
+        "field": {
+          "Aggregation": {
+            "Expression": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Reportes.vw_TablaPosiciones"
+                  }
+                },
+                "Property": "pts"
+              }
+            },
+            "Function": 0
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
   }
 }

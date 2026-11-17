@@ -1,0 +1,9 @@
+pais,nombre,apellido,categoria,fecha_nacimiento,idiomas
+ARG,Árbitro,Prueba Rosario,FIFA,1985-03-14,"es,en"
+URU,Árbitro,Prueba Montevideo,CONFEDERATION,1990-07-02,es
+BRA,Árbitro,Prueba Santos,FIFA,,pt
+QQQ,Árbitro,Prueba Sin País,FIFA,1980-01-01,es
+MEX,Árbitro,Prueba Categoría,NACIONAL,1982-05-05,es
+USA,Árbitro,Prueba Fecha,FIFA,15/05/1982,en
+ESP,Árbitro,Prueba Idioma,FIFA,1983-02-02,"es,xx"
+ARG,,Prueba Sin Nombre,FIFA,1984-04-04,es

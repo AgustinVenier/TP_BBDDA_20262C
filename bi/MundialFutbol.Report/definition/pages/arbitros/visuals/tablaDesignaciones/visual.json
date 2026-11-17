@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Designaciones"
+                      "Entity": "Reportes.vw_DesignacionesArbitrales"
                     }
                   },
                   "Property": "arbitro"
                 }
               },
-              "queryRef": "Designaciones.arbitro",
+              "queryRef": "Reportes.vw_DesignacionesArbitrales.arbitro",
               "nativeQueryRef": "arbitro",
               "displayName": "Árbitro"
             },
@@ -35,13 +35,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Designaciones"
+                      "Entity": "Reportes.vw_DesignacionesArbitrales"
                     }
                   },
                   "Property": "rol"
                 }
               },
-              "queryRef": "Designaciones.rol",
+              "queryRef": "Reportes.vw_DesignacionesArbitrales.rol",
               "nativeQueryRef": "rol",
               "displayName": "Rol"
             },
@@ -50,13 +50,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Designaciones"
+                      "Entity": "Reportes.vw_DesignacionesArbitrales"
                     }
                   },
                   "Property": "numero_partido"
                 }
               },
-              "queryRef": "Designaciones.numero_partido",
+              "queryRef": "Reportes.vw_DesignacionesArbitrales.numero_partido",
               "nativeQueryRef": "numero_partido",
               "displayName": "Partido"
             },
@@ -65,13 +65,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Designaciones"
+                      "Entity": "Reportes.vw_DesignacionesArbitrales"
                     }
                   },
                   "Property": "partido"
                 }
               },
-              "queryRef": "Designaciones.partido",
+              "queryRef": "Reportes.vw_DesignacionesArbitrales.partido",
               "nativeQueryRef": "partido",
               "displayName": "Selecciones"
             },
@@ -80,13 +80,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Designaciones"
+                      "Entity": "Reportes.vw_DesignacionesArbitrales"
                     }
                   },
                   "Property": "resultado"
                 }
               },
-              "queryRef": "Designaciones.resultado",
+              "queryRef": "Reportes.vw_DesignacionesArbitrales.resultado",
               "nativeQueryRef": "resultado",
               "displayName": "Resultado"
             },
@@ -95,13 +95,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Designaciones"
+                      "Entity": "Reportes.vw_DesignacionesArbitrales"
                     }
                   },
                   "Property": "amarillas_senaladas"
                 }
               },
-              "queryRef": "Designaciones.amarillas_senaladas",
+              "queryRef": "Reportes.vw_DesignacionesArbitrales.amarillas_senaladas",
               "nativeQueryRef": "amarillas_senaladas",
               "displayName": "Amarillas"
             },
@@ -110,13 +110,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "Designaciones"
+                      "Entity": "Reportes.vw_DesignacionesArbitrales"
                     }
                   },
                   "Property": "rojas_senaladas"
                 }
               },
-              "queryRef": "Designaciones.rojas_senaladas",
+              "queryRef": "Reportes.vw_DesignacionesArbitrales.rojas_senaladas",
               "nativeQueryRef": "rojas_senaladas",
               "displayName": "Rojas"
             }
@@ -130,7 +130,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Designaciones"
+                    "Entity": "Reportes.vw_DesignacionesArbitrales"
                   }
                 },
                 "Property": "numero_partido"
@@ -143,7 +143,7 @@
               "Column": {
                 "Expression": {
                   "SourceRef": {
-                    "Entity": "Designaciones"
+                    "Entity": "Reportes.vw_DesignacionesArbitrales"
                   }
                 },
                 "Property": "rol"
@@ -186,7 +186,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Designaciones"
+                "Entity": "Reportes.vw_DesignacionesArbitrales"
               }
             },
             "Property": "arbitro"
@@ -200,7 +200,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Designaciones"
+                "Entity": "Reportes.vw_DesignacionesArbitrales"
               }
             },
             "Property": "rol"
@@ -214,7 +214,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Designaciones"
+                "Entity": "Reportes.vw_DesignacionesArbitrales"
               }
             },
             "Property": "numero_partido"
@@ -228,7 +228,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Designaciones"
+                "Entity": "Reportes.vw_DesignacionesArbitrales"
               }
             },
             "Property": "partido"
@@ -242,7 +242,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Designaciones"
+                "Entity": "Reportes.vw_DesignacionesArbitrales"
               }
             },
             "Property": "resultado"
@@ -256,7 +256,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Designaciones"
+                "Entity": "Reportes.vw_DesignacionesArbitrales"
               }
             },
             "Property": "amarillas_senaladas"
@@ -270,7 +270,7 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Entity": "Designaciones"
+                "Entity": "Reportes.vw_DesignacionesArbitrales"
               }
             },
             "Property": "rojas_senaladas"
