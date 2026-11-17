@@ -10,23 +10,18 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 03_CrearFuncionesYVistas.sql
- Objetivo: Crear las funciones y vistas que usan los SP y las consultas del
-           sistema: parámetros del sistema, cotización vigente de una
-           moneda, fixture filtrable, equipo en
-           cancha en cualquier minuto, marcador según los goles cargados,
-           sanciones y suspensiones, selecciones en competencia, simulación
-           de prime time y feriados por mercado, prioridad de piezas
-           publicitarias, historial de
+ Archivo: 04_CrearFuncionesYVistas.sql
+ Objetivo: Crear las funciones y vistas que usan los SP y las consultas:
+           parámetros del sistema, cotización vigente, fixture filtrable,
+           equipo en cancha en cualquier minuto, marcador, sanciones y
+           suspensiones, selecciones en competencia, prime time y feriados
+           por mercado, prioridad y recargos de la publicidad, historial de
            titularidad, goleadores e historial de árbitros.
-           Requiere haber ejecutado 00, 01 y 02. Su script de testing es
-           53_Test_FuncionesYVistas.sql.
+           Requiere haber ejecutado 01, 02 y 03. Su script de testing es
+           54_Test_FuncionesYVistas.sql.
 ================================================================================
 
  Convenciones:
-   - Todas las funciones son de tabla en línea (RETURNS TABLE): el optimizador
-     las expande dentro de la consulta que las usa, como si fueran una vista
-     con parámetros.
    - Un parámetro en NULL en fn_Fixture significa "sin filtrar".
    - Instante de un evento: minuto * 100 + minuto_adicional. Así 45+2 (4502)
      queda antes que 46 (4600) y 90+5 (9005) antes que 91 (9100). Un evento
@@ -72,7 +67,10 @@ RETURN
         ('SELECCIONES_POR_GRUPO',             2,   8),
         ('PRIME_TIME_DESDE',                  0,  23),
         ('PRIME_TIME_HASTA',                  0,  23),
-        ('PBI_FRANJA_MILES_USD',              1, 255)
+        ('PBI_FRANJA_MILES_USD',              1, 255),
+        ('RECARGO_PRIME_TIME_PCT',            0, 100),
+        ('RECARGO_PRIME_TIME_MAX_PCT',        0, 255),
+        ('RECARGO_FASE_PCT',                  0, 100)
     ) AS p (codigo, valor_minimo, valor_maximo);
 GO
 
@@ -244,10 +242,8 @@ RETURN
     FROM DesarrolloPartido.FORMACION AS f
     INNER JOIN DesarrolloPartido.ALINEACION AS a ON a.id_formacion = f.id_formacion
     INNER JOIN Torneo.JUGADOR AS j ON j.id_jugador = a.id_jugador
-    OUTER APPLY (SELECT c.minuto, c.minuto_adicional
-                 FROM DesarrolloPartido.CAMBIO AS c
-                 WHERE c.id_partido = f.id_partido
-                   AND c.id_jugador_entra = a.id_jugador) AS ingreso
+    LEFT JOIN DesarrolloPartido.CAMBIO AS ingreso
+           ON ingreso.id_partido = f.id_partido AND ingreso.id_jugador_entra = a.id_jugador
     WHERE f.id_partido = @id_partido
       AND f.id_seleccion = @id_seleccion
       AND (a.es_titular = 1
@@ -416,19 +412,19 @@ RETURN
            s.id_partido_origen,
            o.numero_partido       AS numero_partido_origen,
            s.partidos_de_suspension,
-           c.fechas               AS partido_que_cumple
+           COUNT(*)               AS partido_que_cumple
     FROM DesarrolloPartido.fn_Sanciones() AS s
     INNER JOIN Torneo.PARTIDO AS o ON o.id_partido = s.id_partido_origen
     INNER JOIN Torneo.PARTIDO AS x ON x.id_partido = @id_partido
                                   AND s.id_seleccion IN (x.id_seleccion_local, x.id_seleccion_visitante)
-    CROSS APPLY (SELECT COUNT(*) AS fechas
-                 FROM Torneo.PARTIDO AS q
-                 WHERE s.id_seleccion IN (q.id_seleccion_local, q.id_seleccion_visitante)
-                   AND q.estado <> 'SUSPENDIDO'
-                   AND q.fecha_hora_utc > o.fecha_hora_utc
-                   AND q.fecha_hora_utc <= x.fecha_hora_utc) AS c
-    WHERE o.fecha_hora_utc < x.fecha_hora_utc
-      AND c.fechas BETWEEN 1 AND s.partidos_de_suspension;
+                                  AND o.fecha_hora_utc < x.fecha_hora_utc
+    -- Las fechas cumplidas: los partidos de su selección después del de la sanción, hasta este incluido.
+    INNER JOIN Torneo.PARTIDO AS q ON s.id_seleccion IN (q.id_seleccion_local, q.id_seleccion_visitante)
+                                  AND q.estado <> 'SUSPENDIDO'
+                                  AND q.fecha_hora_utc > o.fecha_hora_utc
+                                  AND q.fecha_hora_utc <= x.fecha_hora_utc
+    GROUP BY s.id_jugador, s.id_seleccion, s.motivo, s.id_partido_origen, o.numero_partido, s.partidos_de_suspension
+    HAVING COUNT(*) <= s.partidos_de_suspension;
 GO
 
 
@@ -476,7 +472,8 @@ OUTER APPLY (SELECT TOP (1) r.minuto, r.minuto_adicional
              FROM DesarrolloPartido.AMONESTACION AS r
              WHERE r.id_partido = p.id_partido
                AND r.id_jugador = a.id_jugador
-               AND r.tipo_tarjeta = 'ROJA') AS roja;
+               AND r.tipo_tarjeta = 'ROJA'
+             ORDER BY r.minuto, r.minuto_adicional) AS roja;
 GO
 
 
@@ -540,10 +537,11 @@ FROM Arbitraje.DESIGNACION_ARBITRAL AS d
 INNER JOIN Arbitraje.ARBITRO AS ar ON ar.id_arbitro = d.id_arbitro
 INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = ar.id_pais
 INNER JOIN Torneo.vw_Fixture AS f ON f.id_partido = d.id_partido
-OUTER APPLY (SELECT SUM(IIF(am.tipo_tarjeta = 'AMARILLA', 1, 0)) AS amarillas,
-                    SUM(IIF(am.tipo_tarjeta = 'ROJA', 1, 0))     AS rojas
-             FROM DesarrolloPartido.AMONESTACION AS am
-             WHERE am.id_partido = d.id_partido) AS t;
+LEFT JOIN (SELECT am.id_partido,
+                  SUM(IIF(am.tipo_tarjeta = 'AMARILLA', 1, 0)) AS amarillas,
+                  SUM(IIF(am.tipo_tarjeta = 'ROJA', 1, 0))     AS rojas
+           FROM DesarrolloPartido.AMONESTACION AS am
+           GROUP BY am.id_partido) AS t ON t.id_partido = d.id_partido;
 GO
 
 
@@ -600,8 +598,8 @@ GO
   fn_PrioridadPiezas
   Propuesta de piezas para los espacios de un partido, en orden de prioridad.
   Son candidatas las piezas de campañas vigentes en la fecha local del
-  partido que tengan al menos un mercado de interés. Criterio (documentado
-  para el grupo), en este orden:
+  partido que tengan al menos un mercado de interés. Criterio, en este
+  orden:
     1. dirigida_a_seleccion: la pieza apunta al país de alguna de las dos
        selecciones del partido.
     2. franja_pbi: franja de PBI per cápita (indicador NY.GDP.PCAP.CD, último
@@ -694,6 +692,65 @@ RETURN
     INNER JOIN Publicidad.CAMPANIA AS c ON c.id_campania = mc.id_campania
     INNER JOIN Publicidad.ANUNCIANTE AS an ON an.id_anunciante = c.id_anunciante
     WHERE mc.orden_en_campania = 1;
+GO
+
+
+/*
+  fn_RecargosPublicidad
+  Recargo, en porcentaje sobre la tarifa del espacio, que paga cada pieza
+  candidata de un partido (las de fn_PrioridadPiezas) si se exhibe en él. La
+  consigna pide registrar "el costo o tarifa asociado a cada franja": la
+  franja la dan la instancia del torneo y el horario del partido en los
+  mercados de la pieza. Criterio:
+    - Por fase: RECARGO_FASE_PCT por cada ronda eliminatoria. Niveles: GRUPOS
+      0, DIECISEISAVOS 1, OCTAVOS 2, CUARTOS 3, SEMIFINAL y TERCER_PUESTO 4,
+      FINAL 5.
+    - Por prime time: RECARGO_PRIME_TIME_PCT por cada mercado de interés de la
+      pieza que ve el partido en prime time (fn_MercadosEnPrimeTime), con tope
+      RECARGO_PRIME_TIME_MAX_PCT.
+  Los dos recargos se suman (recargo_total_pct). Un parámetro que falte vale
+  0, y el costo queda igual a la tarifa. La usa usp_AsignarPublicidadPartido
+  para calcular el costo de cada exhibición.
+*/
+CREATE OR ALTER FUNCTION Publicidad.fn_RecargosPublicidad (@id_partido INT)
+RETURNS TABLE
+AS
+RETURN
+    WITH parametros AS (
+        SELECT ISNULL((SELECT valor FROM DatosGenerales.PARAMETRO_REGLAMENTO
+                       WHERE codigo = 'RECARGO_FASE_PCT'), 0)           AS fase_pct,
+               ISNULL((SELECT valor FROM DatosGenerales.PARAMETRO_REGLAMENTO
+                       WHERE codigo = 'RECARGO_PRIME_TIME_PCT'), 0)     AS prime_time_pct,
+               ISNULL((SELECT valor FROM DatosGenerales.PARAMETRO_REGLAMENTO
+                       WHERE codigo = 'RECARGO_PRIME_TIME_MAX_PCT'), 0) AS prime_time_max_pct
+    ),
+    partido AS (
+        SELECT p.fase,
+               CASE p.fase WHEN 'DIECISEISAVOS' THEN 1
+                           WHEN 'OCTAVOS'       THEN 2
+                           WHEN 'CUARTOS'       THEN 3
+                           WHEN 'SEMIFINAL'     THEN 4
+                           WHEN 'TERCER_PUESTO' THEN 4
+                           WHEN 'FINAL'         THEN 5
+                           ELSE 0 END AS nivel_fase
+        FROM Torneo.PARTIDO AS p
+        WHERE p.id_partido = @id_partido
+    )
+    SELECT pr.id_pieza,
+           pr.prioridad,
+           pt.fase,
+           pt.nivel_fase,
+           r.recargo_fase_pct,
+           pr.mercados_en_prime_time,
+           r.recargo_prime_time_pct,
+           r.recargo_fase_pct + r.recargo_prime_time_pct AS recargo_total_pct
+    FROM partido AS pt
+    CROSS JOIN parametros AS prm
+    CROSS JOIN Publicidad.fn_PrioridadPiezas(@id_partido) AS pr
+    CROSS APPLY (SELECT pt.nivel_fase * prm.fase_pct AS recargo_fase_pct,
+                        IIF(pr.mercados_en_prime_time * prm.prime_time_pct > prm.prime_time_max_pct,
+                            prm.prime_time_max_pct,
+                            pr.mercados_en_prime_time * prm.prime_time_pct) AS recargo_prime_time_pct) AS r;
 GO
 
 

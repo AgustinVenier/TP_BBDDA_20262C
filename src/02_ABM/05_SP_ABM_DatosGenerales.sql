@@ -10,15 +10,15 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 04_SP_ABM_DatosGenerales.sql
+ Archivo: 05_SP_ABM_DatosGenerales.sql
  Objetivo: Crear los stored procedures de alta, baja y modificación de las
            tablas del esquema DatosGenerales: PAIS, IDIOMA, INDICADOR_ECONOMICO,
            COTIZACION, FERIADO y PARAMETRO_REGLAMENTO. Requiere haber
-           ejecutado 00 a 03.
-           Su script de testing es 54_Test_SP_ABM_DatosGenerales.sql.
+           ejecutado 01 a 04.
+           Su script de testing es 55_Test_SP_ABM_DatosGenerales.sql.
 ================================================================================
 
- Convenciones de los SP de ABM (las siguen los scripts 04 a 08):
+ Convenciones de los SP de ABM (las siguen los scripts 05 a 09):
    - Un SP por tabla y operación: usp_<TABLA>_Alta, usp_<TABLA>_Modificacion
      y usp_<TABLA>_Baja.
    - Las validaciones no se cortan en la primera falla: cada condición que no
@@ -38,8 +38,7 @@
 USE MundialFutbol;
 GO
 
--- Los SP guardan estas dos opciones al crearse. QUOTED_IDENTIFIER ON es
--- obligatorio para modificar tablas con índices filtrados, como PAIS.
+-- Los SP guardan estas dos opciones al crearse.
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
 GO
@@ -68,8 +67,8 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @nombre        = NULLIF(TRIM(@nombre), '');
     SET @huso_horario  = NULLIF(TRIM(@huso_horario), '');
@@ -79,32 +78,32 @@ BEGIN
     SET @codigo_moneda = UPPER(NULLIF(TRIM(@codigo_moneda), ''));
 
     IF @nombre IS NULL
-        SET @errores += @nl + N'- El nombre es obligatorio.';
+        SET @errores += @salto_linea + N'- El nombre es obligatorio.';
     ELSE IF LEN(@nombre) > 60
-        SET @errores += @nl + N'- El nombre no puede superar los 60 caracteres.';
+        SET @errores += @salto_linea + N'- El nombre no puede superar los 60 caracteres.';
     ELSE IF EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE nombre = @nombre)
-        SET @errores += @nl + N'- Ya existe un país llamado "' + @nombre + N'".';
+        SET @errores += @salto_linea + N'- Ya existe un país llamado "' + @nombre + N'".';
 
     IF @huso_horario IS NULL
-        SET @errores += @nl + N'- El huso horario es obligatorio.';
+        SET @errores += @salto_linea + N'- El huso horario es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM sys.time_zone_info WHERE name = @huso_horario)
-        SET @errores += @nl + N'- El huso horario "' + @huso_horario
+        SET @errores += @salto_linea + N'- El huso horario "' + @huso_horario
                       + N'" no existe en sys.time_zone_info (ej. "Argentina Standard Time").';
 
     -- Con la intercalación binaria, [A-Z] acepta solo letras sin acentos.
     IF @codigo_fifa COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
-        SET @errores += @nl + N'- El código FIFA debe tener 3 letras.';
+        SET @errores += @salto_linea + N'- El código FIFA debe tener 3 letras.';
     ELSE IF EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE codigo_fifa = @codigo_fifa)
-        SET @errores += @nl + N'- El código FIFA "' + @codigo_fifa + N'" ya lo tiene otro país.';
+        SET @errores += @salto_linea + N'- El código FIFA "' + @codigo_fifa + N'" ya lo tiene otro país.';
 
     IF @codigo_iso2 COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z]'
-        SET @errores += @nl + N'- El código ISO alfa-2 debe tener 2 letras.';
+        SET @errores += @salto_linea + N'- El código ISO alfa-2 debe tener 2 letras.';
 
     IF @codigo_iso3 COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
-        SET @errores += @nl + N'- El código ISO alfa-3 debe tener 3 letras.';
+        SET @errores += @salto_linea + N'- El código ISO alfa-3 debe tener 3 letras.';
 
     IF @codigo_moneda COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
-        SET @errores += @nl + N'- El código de moneda debe tener 3 letras (ISO 4217).';
+        SET @errores += @salto_linea + N'- El código de moneda debe tener 3 letras (ISO 4217).';
 
     IF @errores <> N''
     BEGIN
@@ -144,8 +143,8 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @nombre        = NULLIF(TRIM(@nombre), '');
     SET @huso_horario  = NULLIF(TRIM(@huso_horario), '');
@@ -155,37 +154,37 @@ BEGIN
     SET @codigo_moneda = UPPER(NULLIF(TRIM(@codigo_moneda), ''));
 
     IF @id_pais IS NULL
-        SET @errores += @nl + N'- El id del país es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del país es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
-        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
 
     IF COALESCE(@nombre, @huso_horario, @codigo_fifa, @codigo_iso2, @codigo_iso3, @codigo_moneda) IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF LEN(@nombre) > 60
-        SET @errores += @nl + N'- El nombre no puede superar los 60 caracteres.';
+        SET @errores += @salto_linea + N'- El nombre no puede superar los 60 caracteres.';
     ELSE IF EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE nombre = @nombre AND id_pais <> @id_pais)
-        SET @errores += @nl + N'- Ya existe otro país llamado "' + @nombre + N'".';
+        SET @errores += @salto_linea + N'- Ya existe otro país llamado "' + @nombre + N'".';
 
     IF @huso_horario IS NOT NULL
        AND NOT EXISTS (SELECT 1 FROM sys.time_zone_info WHERE name = @huso_horario)
-        SET @errores += @nl + N'- El huso horario "' + @huso_horario
+        SET @errores += @salto_linea + N'- El huso horario "' + @huso_horario
                       + N'" no existe en sys.time_zone_info (ej. "Argentina Standard Time").';
 
     IF @codigo_fifa COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
-        SET @errores += @nl + N'- El código FIFA debe tener 3 letras.';
+        SET @errores += @salto_linea + N'- El código FIFA debe tener 3 letras.';
     ELSE IF EXISTS (SELECT 1 FROM DatosGenerales.PAIS
                     WHERE codigo_fifa = @codigo_fifa AND id_pais <> @id_pais)
-        SET @errores += @nl + N'- El código FIFA "' + @codigo_fifa + N'" ya lo tiene otro país.';
+        SET @errores += @salto_linea + N'- El código FIFA "' + @codigo_fifa + N'" ya lo tiene otro país.';
 
     IF @codigo_iso2 COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z]'
-        SET @errores += @nl + N'- El código ISO alfa-2 debe tener 2 letras.';
+        SET @errores += @salto_linea + N'- El código ISO alfa-2 debe tener 2 letras.';
 
     IF @codigo_iso3 COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
-        SET @errores += @nl + N'- El código ISO alfa-3 debe tener 3 letras.';
+        SET @errores += @salto_linea + N'- El código ISO alfa-3 debe tener 3 letras.';
 
     IF @codigo_moneda COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
-        SET @errores += @nl + N'- El código de moneda debe tener 3 letras (ISO 4217).';
+        SET @errores += @salto_linea + N'- El código de moneda debe tener 3 letras (ISO 4217).';
 
     IF @errores <> N''
     BEGIN
@@ -219,16 +218,16 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     IF @id_pais IS NULL
-        SET @errores += @nl + N'- El id del país es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del país es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
-        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
     ELSE
         SET @errores += ISNULL((
-            SELECT STRING_AGG(@nl + N'- Lo referencian ' + CAST(r.cantidad AS NVARCHAR(10))
+            SELECT STRING_AGG(@salto_linea + N'- Lo referencian ' + CAST(r.cantidad AS NVARCHAR(10))
                               + N' registro(s) de ' + r.tabla + N'.', N'')
             FROM (
                 SELECT N'Torneo.SEDE', COUNT(*)
@@ -289,23 +288,23 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @nombre     = NULLIF(TRIM(@nombre), '');
     SET @codigo_iso = LOWER(NULLIF(TRIM(@codigo_iso), ''));
 
     IF @nombre IS NULL
-        SET @errores += @nl + N'- El nombre es obligatorio.';
+        SET @errores += @salto_linea + N'- El nombre es obligatorio.';
     ELSE IF LEN(@nombre) > 40
-        SET @errores += @nl + N'- El nombre no puede superar los 40 caracteres.';
+        SET @errores += @salto_linea + N'- El nombre no puede superar los 40 caracteres.';
     ELSE IF EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA WHERE nombre = @nombre)
-        SET @errores += @nl + N'- Ya existe un idioma llamado "' + @nombre + N'".';
+        SET @errores += @salto_linea + N'- Ya existe un idioma llamado "' + @nombre + N'".';
 
     IF @codigo_iso COLLATE Latin1_General_BIN NOT LIKE '[a-z][a-z]'
-        SET @errores += @nl + N'- El código ISO 639-1 debe tener 2 letras (ej. "es").';
+        SET @errores += @salto_linea + N'- El código ISO 639-1 debe tener 2 letras (ej. "es").';
     ELSE IF EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA WHERE codigo_iso = @codigo_iso)
-        SET @errores += @nl + N'- El código ISO "' + @codigo_iso + N'" ya lo tiene otro idioma.';
+        SET @errores += @salto_linea + N'- El código ISO "' + @codigo_iso + N'" ya lo tiene otro idioma.';
 
     IF @errores <> N''
     BEGIN
@@ -334,30 +333,30 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @nombre     = NULLIF(TRIM(@nombre), '');
     SET @codigo_iso = LOWER(NULLIF(TRIM(@codigo_iso), ''));
 
     IF @id_idioma IS NULL
-        SET @errores += @nl + N'- El id del idioma es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del idioma es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA WHERE id_idioma = @id_idioma)
-        SET @errores += @nl + N'- No existe un idioma con id ' + CAST(@id_idioma AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un idioma con id ' + CAST(@id_idioma AS NVARCHAR(10)) + N'.';
 
     IF @nombre IS NULL AND @codigo_iso IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF LEN(@nombre) > 40
-        SET @errores += @nl + N'- El nombre no puede superar los 40 caracteres.';
+        SET @errores += @salto_linea + N'- El nombre no puede superar los 40 caracteres.';
     ELSE IF EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA WHERE nombre = @nombre AND id_idioma <> @id_idioma)
-        SET @errores += @nl + N'- Ya existe otro idioma llamado "' + @nombre + N'".';
+        SET @errores += @salto_linea + N'- Ya existe otro idioma llamado "' + @nombre + N'".';
 
     IF @codigo_iso COLLATE Latin1_General_BIN NOT LIKE '[a-z][a-z]'
-        SET @errores += @nl + N'- El código ISO 639-1 debe tener 2 letras (ej. "es").';
+        SET @errores += @salto_linea + N'- El código ISO 639-1 debe tener 2 letras (ej. "es").';
     ELSE IF EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA
                     WHERE codigo_iso = @codigo_iso AND id_idioma <> @id_idioma)
-        SET @errores += @nl + N'- El código ISO "' + @codigo_iso + N'" ya lo tiene otro idioma.';
+        SET @errores += @salto_linea + N'- El código ISO "' + @codigo_iso + N'" ya lo tiene otro idioma.';
 
     IF @errores <> N''
     BEGIN
@@ -383,16 +382,16 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     IF @id_idioma IS NULL
-        SET @errores += @nl + N'- El id del idioma es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del idioma es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA WHERE id_idioma = @id_idioma)
-        SET @errores += @nl + N'- No existe un idioma con id ' + CAST(@id_idioma AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un idioma con id ' + CAST(@id_idioma AS NVARCHAR(10)) + N'.';
     ELSE
         SET @errores += ISNULL((
-            SELECT STRING_AGG(@nl + N'- Lo referencian ' + CAST(r.cantidad AS NVARCHAR(10))
+            SELECT STRING_AGG(@salto_linea + N'- Lo referencian ' + CAST(r.cantidad AS NVARCHAR(10))
                               + N' registro(s) de ' + r.tabla + N'.', N'')
             FROM (
                 SELECT N'Arbitraje.ARBITRO_IDIOMA', COUNT(*)
@@ -436,34 +435,34 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @errores     NVARCHAR(2048) = N'';
-    DECLARE @nl          NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @anio_actual SMALLINT       = YEAR(GETDATE());
 
     SET @codigo_indicador = UPPER(NULLIF(TRIM(@codigo_indicador), ''));
 
     IF @id_pais IS NULL
-        SET @errores += @nl + N'- El país es obligatorio.';
+        SET @errores += @salto_linea + N'- El país es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
-        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
 
     IF @codigo_indicador IS NULL
-        SET @errores += @nl + N'- El código del indicador es obligatorio (ej. NY.GDP.PCAP.CD).';
+        SET @errores += @salto_linea + N'- El código del indicador es obligatorio (ej. NY.GDP.PCAP.CD).';
     ELSE IF LEN(@codigo_indicador) > 30
-        SET @errores += @nl + N'- El código del indicador no puede superar los 30 caracteres.';
+        SET @errores += @salto_linea + N'- El código del indicador no puede superar los 30 caracteres.';
     ELSE IF @codigo_indicador COLLATE Latin1_General_BIN LIKE '%[^A-Z0-9._]%'
-        SET @errores += @nl + N'- El código del indicador solo admite letras sin acentos, números, puntos y guiones bajos.';
+        SET @errores += @salto_linea + N'- El código del indicador solo admite letras sin acentos, números, puntos y guiones bajos.';
 
     IF @anio IS NULL
-        SET @errores += @nl + N'- El año es obligatorio.';
+        SET @errores += @salto_linea + N'- El año es obligatorio.';
     ELSE IF @anio NOT BETWEEN 1960 AND @anio_actual
-        SET @errores += @nl + N'- El año debe estar entre 1960 y ' + CAST(@anio_actual AS NVARCHAR(4)) + N'.';
+        SET @errores += @salto_linea + N'- El año debe estar entre 1960 y ' + CAST(@anio_actual AS NVARCHAR(4)) + N'.';
 
     IF @valor IS NULL
-        SET @errores += @nl + N'- El valor es obligatorio.';
+        SET @errores += @salto_linea + N'- El valor es obligatorio.';
 
     IF EXISTS (SELECT 1 FROM DatosGenerales.INDICADOR_ECONOMICO
                WHERE id_pais = @id_pais AND codigo_indicador = @codigo_indicador AND anio = @anio)
-        SET @errores += @nl + N'- Ese país ya tiene un valor de ' + @codigo_indicador + N' para '
+        SET @errores += @salto_linea + N'- Ese país ya tiene un valor de ' + @codigo_indicador + N' para '
                       + CAST(@anio AS NVARCHAR(4)) + N' (para cambiarlo se usa la modificación).';
 
     IF @errores <> N''
@@ -496,9 +495,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores       NVARCHAR(2048) = N'';
-    DECLARE @nl            NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @anio_actual   SMALLINT       = YEAR(GETDATE());
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @anio_actual SMALLINT       = YEAR(GETDATE());
     -- Valores que va a tener el registro después del cambio, para controlar repetidos.
     DECLARE @id_pais_final SMALLINT;
     DECLARE @codigo_final  VARCHAR(60);
@@ -507,23 +506,23 @@ BEGIN
     SET @codigo_indicador = UPPER(NULLIF(TRIM(@codigo_indicador), ''));
 
     IF @id_indicador IS NULL
-        SET @errores += @nl + N'- El id del indicador es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del indicador es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.INDICADOR_ECONOMICO WHERE id_indicador = @id_indicador)
-        SET @errores += @nl + N'- No existe un indicador con id ' + CAST(@id_indicador AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un indicador con id ' + CAST(@id_indicador AS NVARCHAR(10)) + N'.';
 
     IF @id_pais IS NULL AND @codigo_indicador IS NULL AND @anio IS NULL AND @valor IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF @id_pais IS NOT NULL AND NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
-        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
 
     IF LEN(@codigo_indicador) > 30
-        SET @errores += @nl + N'- El código del indicador no puede superar los 30 caracteres.';
+        SET @errores += @salto_linea + N'- El código del indicador no puede superar los 30 caracteres.';
     ELSE IF @codigo_indicador COLLATE Latin1_General_BIN LIKE '%[^A-Z0-9._]%'
-        SET @errores += @nl + N'- El código del indicador solo admite letras sin acentos, números, puntos y guiones bajos.';
+        SET @errores += @salto_linea + N'- El código del indicador solo admite letras sin acentos, números, puntos y guiones bajos.';
 
     IF @anio NOT BETWEEN 1960 AND @anio_actual
-        SET @errores += @nl + N'- El año debe estar entre 1960 y ' + CAST(@anio_actual AS NVARCHAR(4)) + N'.';
+        SET @errores += @salto_linea + N'- El año debe estar entre 1960 y ' + CAST(@anio_actual AS NVARCHAR(4)) + N'.';
 
     SELECT @id_pais_final = ISNULL(@id_pais, id_pais),
            @codigo_final  = ISNULL(@codigo_indicador, codigo_indicador),
@@ -534,7 +533,7 @@ BEGIN
     IF EXISTS (SELECT 1 FROM DatosGenerales.INDICADOR_ECONOMICO
                WHERE id_pais = @id_pais_final AND codigo_indicador = @codigo_final
                  AND anio = @anio_final AND id_indicador <> @id_indicador)
-        SET @errores += @nl + N'- Ese país ya tiene otro valor de ' + @codigo_final + N' para '
+        SET @errores += @salto_linea + N'- Ese país ya tiene otro valor de ' + @codigo_final + N' para '
                       + CAST(@anio_final AS NVARCHAR(4)) + N'.';
 
     IF @errores <> N''
@@ -564,13 +563,13 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     IF @id_indicador IS NULL
-        SET @errores += @nl + N'- El id del indicador es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del indicador es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.INDICADOR_ECONOMICO WHERE id_indicador = @id_indicador)
-        SET @errores += @nl + N'- No existe un indicador con id ' + CAST(@id_indicador AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un indicador con id ' + CAST(@id_indicador AS NVARCHAR(10)) + N'.';
 
     IF @errores <> N''
     BEGIN
@@ -604,30 +603,30 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @codigo_moneda = UPPER(NULLIF(TRIM(@codigo_moneda), ''));
 
     IF @codigo_moneda IS NULL
-        SET @errores += @nl + N'- La moneda es obligatoria.';
+        SET @errores += @salto_linea + N'- La moneda es obligatoria.';
     ELSE IF @codigo_moneda COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
-        SET @errores += @nl + N'- El código de moneda debe tener 3 letras (ISO 4217).';
+        SET @errores += @salto_linea + N'- El código de moneda debe tener 3 letras (ISO 4217).';
     ELSE IF @codigo_moneda = 'USD'
-        SET @errores += @nl + N'- El dólar no lleva cotización: es la base y vale siempre 1.';
+        SET @errores += @salto_linea + N'- El dólar no lleva cotización: es la base y vale siempre 1.';
 
     IF @fecha IS NULL
-        SET @errores += @nl + N'- La fecha es obligatoria.';
+        SET @errores += @salto_linea + N'- La fecha es obligatoria.';
     ELSE IF @fecha > CONVERT(DATE, GETDATE())
-        SET @errores += @nl + N'- La fecha no puede ser futura.';
+        SET @errores += @salto_linea + N'- La fecha no puede ser futura.';
 
     IF @unidades_por_usd IS NULL
-        SET @errores += @nl + N'- Las unidades por dólar son obligatorias.';
+        SET @errores += @salto_linea + N'- Las unidades por dólar son obligatorias.';
     ELSE IF @unidades_por_usd <= 0
-        SET @errores += @nl + N'- Las unidades por dólar tienen que ser mayores que cero.';
+        SET @errores += @salto_linea + N'- Las unidades por dólar tienen que ser mayores que cero.';
 
     IF EXISTS (SELECT 1 FROM DatosGenerales.COTIZACION WHERE codigo_moneda = @codigo_moneda AND fecha = @fecha)
-        SET @errores += @nl + N'- La moneda ' + @codigo_moneda + N' ya tiene una cotización para el '
+        SET @errores += @salto_linea + N'- La moneda ' + @codigo_moneda + N' ya tiene una cotización para el '
                       + CONVERT(NVARCHAR(10), @fecha, 103) + N' (para cambiarla se usa la modificación).';
 
     IF @errores <> N''
@@ -659,8 +658,8 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores        NVARCHAR(2048) = N'';
-    DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
     -- Valores que va a tener el registro después del cambio, para controlar repetidos.
     DECLARE @moneda_final   VARCHAR(10);
     DECLARE @fecha_final    DATE;
@@ -668,23 +667,23 @@ BEGIN
     SET @codigo_moneda = UPPER(NULLIF(TRIM(@codigo_moneda), ''));
 
     IF @id_cotizacion IS NULL
-        SET @errores += @nl + N'- El id de la cotización es obligatorio.';
+        SET @errores += @salto_linea + N'- El id de la cotización es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.COTIZACION WHERE id_cotizacion = @id_cotizacion)
-        SET @errores += @nl + N'- No existe una cotización con id ' + CAST(@id_cotizacion AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una cotización con id ' + CAST(@id_cotizacion AS NVARCHAR(10)) + N'.';
 
     IF @codigo_moneda IS NULL AND @fecha IS NULL AND @unidades_por_usd IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF @codigo_moneda COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
-        SET @errores += @nl + N'- El código de moneda debe tener 3 letras (ISO 4217).';
+        SET @errores += @salto_linea + N'- El código de moneda debe tener 3 letras (ISO 4217).';
     ELSE IF @codigo_moneda = 'USD'
-        SET @errores += @nl + N'- El dólar no lleva cotización: es la base y vale siempre 1.';
+        SET @errores += @salto_linea + N'- El dólar no lleva cotización: es la base y vale siempre 1.';
 
     IF @fecha > CONVERT(DATE, GETDATE())
-        SET @errores += @nl + N'- La fecha no puede ser futura.';
+        SET @errores += @salto_linea + N'- La fecha no puede ser futura.';
 
     IF @unidades_por_usd <= 0
-        SET @errores += @nl + N'- Las unidades por dólar tienen que ser mayores que cero.';
+        SET @errores += @salto_linea + N'- Las unidades por dólar tienen que ser mayores que cero.';
 
     SELECT @moneda_final = ISNULL(@codigo_moneda, codigo_moneda),
            @fecha_final  = ISNULL(@fecha, fecha)
@@ -693,7 +692,7 @@ BEGIN
 
     IF EXISTS (SELECT 1 FROM DatosGenerales.COTIZACION
                WHERE codigo_moneda = @moneda_final AND fecha = @fecha_final AND id_cotizacion <> @id_cotizacion)
-        SET @errores += @nl + N'- La moneda ' + @moneda_final + N' ya tiene otra cotización para el '
+        SET @errores += @salto_linea + N'- La moneda ' + @moneda_final + N' ya tiene otra cotización para el '
                       + CONVERT(NVARCHAR(10), @fecha_final, 103) + N'.';
 
     IF @errores <> N''
@@ -722,13 +721,13 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     IF @id_cotizacion IS NULL
-        SET @errores += @nl + N'- El id de la cotización es obligatorio.';
+        SET @errores += @salto_linea + N'- El id de la cotización es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.COTIZACION WHERE id_cotizacion = @id_cotizacion)
-        SET @errores += @nl + N'- No existe una cotización con id ' + CAST(@id_cotizacion AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una cotización con id ' + CAST(@id_cotizacion AS NVARCHAR(10)) + N'.';
 
     IF @errores <> N''
     BEGIN
@@ -760,26 +759,26 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @nombre = NULLIF(TRIM(@nombre), N'');
 
     IF @id_pais IS NULL
-        SET @errores += @nl + N'- El país es obligatorio.';
+        SET @errores += @salto_linea + N'- El país es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
-        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
 
     IF @fecha IS NULL
-        SET @errores += @nl + N'- La fecha es obligatoria.';
+        SET @errores += @salto_linea + N'- La fecha es obligatoria.';
 
     IF @nombre IS NULL
-        SET @errores += @nl + N'- El nombre del feriado es obligatorio.';
+        SET @errores += @salto_linea + N'- El nombre del feriado es obligatorio.';
     ELSE IF LEN(@nombre) > 200
-        SET @errores += @nl + N'- El nombre del feriado no puede superar los 200 caracteres.';
+        SET @errores += @salto_linea + N'- El nombre del feriado no puede superar los 200 caracteres.';
 
     IF EXISTS (SELECT 1 FROM DatosGenerales.FERIADO WHERE id_pais = @id_pais AND fecha = @fecha)
-        SET @errores += @nl + N'- Ese país ya tiene un feriado el ' + CONVERT(NVARCHAR(10), @fecha, 103)
+        SET @errores += @salto_linea + N'- Ese país ya tiene un feriado el ' + CONVERT(NVARCHAR(10), @fecha, 103)
                       + N' (si hay dos el mismo día, se registran juntos en el nombre con la modificación).';
 
     IF @errores <> N''
@@ -811,8 +810,8 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores        NVARCHAR(2048) = N'';
-    DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
     -- Valores que va a tener el registro después del cambio, para controlar repetidos.
     DECLARE @id_pais_final  SMALLINT;
     DECLARE @fecha_final    DATE;
@@ -820,18 +819,18 @@ BEGIN
     SET @nombre = NULLIF(TRIM(@nombre), N'');
 
     IF @id_feriado IS NULL
-        SET @errores += @nl + N'- El id del feriado es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del feriado es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.FERIADO WHERE id_feriado = @id_feriado)
-        SET @errores += @nl + N'- No existe un feriado con id ' + CAST(@id_feriado AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un feriado con id ' + CAST(@id_feriado AS NVARCHAR(10)) + N'.';
 
     IF @id_pais IS NULL AND @fecha IS NULL AND @nombre IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF @id_pais IS NOT NULL AND NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
-        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
 
     IF LEN(@nombre) > 200
-        SET @errores += @nl + N'- El nombre del feriado no puede superar los 200 caracteres.';
+        SET @errores += @salto_linea + N'- El nombre del feriado no puede superar los 200 caracteres.';
 
     SELECT @id_pais_final = ISNULL(@id_pais, id_pais),
            @fecha_final   = ISNULL(@fecha, fecha)
@@ -840,7 +839,7 @@ BEGIN
 
     IF EXISTS (SELECT 1 FROM DatosGenerales.FERIADO
                WHERE id_pais = @id_pais_final AND fecha = @fecha_final AND id_feriado <> @id_feriado)
-        SET @errores += @nl + N'- Ese país ya tiene otro feriado el ' + CONVERT(NVARCHAR(10), @fecha_final, 103) + N'.';
+        SET @errores += @salto_linea + N'- Ese país ya tiene otro feriado el ' + CONVERT(NVARCHAR(10), @fecha_final, 103) + N'.';
 
     IF @errores <> N''
     BEGIN
@@ -868,13 +867,13 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     IF @id_feriado IS NULL
-        SET @errores += @nl + N'- El id del feriado es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del feriado es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.FERIADO WHERE id_feriado = @id_feriado)
-        SET @errores += @nl + N'- No existe un feriado con id ' + CAST(@id_feriado AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un feriado con id ' + CAST(@id_feriado AS NVARCHAR(10)) + N'.';
 
     IF @errores <> N''
     BEGIN
@@ -908,32 +907,32 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @codigo      = UPPER(NULLIF(TRIM(@codigo), ''));
     SET @descripcion = NULLIF(TRIM(@descripcion), '');
 
     IF @codigo IS NULL
-        SET @errores += @nl + N'- El código es obligatorio.';
+        SET @errores += @salto_linea + N'- El código es obligatorio.';
     ELSE IF LEN(@codigo) > 50
-        SET @errores += @nl + N'- El código no puede superar los 50 caracteres.';
+        SET @errores += @salto_linea + N'- El código no puede superar los 50 caracteres.';
     ELSE IF @codigo COLLATE Latin1_General_BIN LIKE '%[^A-Z0-9_]%'
-        SET @errores += @nl + N'- El código solo admite letras sin acentos, números y guiones bajos.';
+        SET @errores += @salto_linea + N'- El código solo admite letras sin acentos, números y guiones bajos.';
     ELSE IF EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = @codigo)
-        SET @errores += @nl + N'- Ya existe el parámetro "' + @codigo + N'".';
+        SET @errores += @salto_linea + N'- Ya existe el parámetro "' + @codigo + N'".';
 
     IF @descripcion IS NULL
-        SET @errores += @nl + N'- La descripción es obligatoria.';
+        SET @errores += @salto_linea + N'- La descripción es obligatoria.';
     ELSE IF LEN(@descripcion) > 200
-        SET @errores += @nl + N'- La descripción no puede superar los 200 caracteres.';
+        SET @errores += @salto_linea + N'- La descripción no puede superar los 200 caracteres.';
 
     IF @valor IS NULL
-        SET @errores += @nl + N'- El valor es obligatorio.';
+        SET @errores += @salto_linea + N'- El valor es obligatorio.';
     ELSE
     BEGIN
         SET @errores += ISNULL((
-            SELECT @nl + N'- ' + ps.codigo + N' admite valores entre '
+            SELECT @salto_linea + N'- ' + ps.codigo + N' admite valores entre '
                    + CAST(ps.valor_minimo AS NVARCHAR(3)) + N' y ' + CAST(ps.valor_maximo AS NVARCHAR(3)) + N'.'
             FROM DatosGenerales.fn_ParametrosDelSistema() AS ps
             WHERE ps.codigo = @codigo
@@ -941,29 +940,28 @@ BEGIN
 
         -- Parámetros que van de a pares: el primero no puede superar al segundo.
         SET @errores += ISNULL((
-            SELECT STRING_AGG(@nl + N'- ' + par.codigo_menor + N' ('
+            SELECT STRING_AGG(@salto_linea + N'- ' + v.codigo_menor + N' ('
                               + CAST(v.valor_menor AS NVARCHAR(10)) + N') no puede superar a '
-                              + par.codigo_mayor + N' (' + CAST(v.valor_mayor AS NVARCHAR(10)) + N').', N'')
-            FROM (VALUES ('MIN_CONVOCADOS',         'MAX_CONVOCADOS'),
-                         ('MAX_VENTANAS',           'MAX_CAMBIOS'),
-                         ('VENTANAS_EXTRA_ALARGUE', 'CAMBIOS_EXTRA_ALARGUE')) AS par (codigo_menor, codigo_mayor)
-            CROSS APPLY (
-                SELECT IIF(par.codigo_menor = @codigo, @valor,
-                           (SELECT p.valor FROM DatosGenerales.PARAMETRO_REGLAMENTO AS p
-                            WHERE p.codigo = par.codigo_menor)),
-                       IIF(par.codigo_mayor = @codigo, @valor,
-                           (SELECT p.valor FROM DatosGenerales.PARAMETRO_REGLAMENTO AS p
-                            WHERE p.codigo = par.codigo_mayor))
-            ) AS v (valor_menor, valor_mayor)
-            WHERE @codigo IN (par.codigo_menor, par.codigo_mayor)
-              AND v.valor_menor > v.valor_mayor), N'');
+                              + v.codigo_mayor + N' (' + CAST(v.valor_mayor AS NVARCHAR(10)) + N').', N'')
+            FROM (SELECT par.codigo_menor,
+                         par.codigo_mayor,
+                         IIF(par.codigo_menor = @codigo, @valor, pmen.valor) AS valor_menor,
+                         IIF(par.codigo_mayor = @codigo, @valor, pmay.valor) AS valor_mayor
+                  FROM (VALUES ('MIN_CONVOCADOS',         'MAX_CONVOCADOS'),
+                               ('MAX_VENTANAS',           'MAX_CAMBIOS'),
+                               ('VENTANAS_EXTRA_ALARGUE', 'CAMBIOS_EXTRA_ALARGUE'),
+                               ('RECARGO_PRIME_TIME_PCT', 'RECARGO_PRIME_TIME_MAX_PCT')) AS par (codigo_menor, codigo_mayor)
+                  LEFT JOIN DatosGenerales.PARAMETRO_REGLAMENTO AS pmen ON pmen.codigo = par.codigo_menor
+                  LEFT JOIN DatosGenerales.PARAMETRO_REGLAMENTO AS pmay ON pmay.codigo = par.codigo_mayor
+                  WHERE @codigo IN (par.codigo_menor, par.codigo_mayor)) AS v
+            WHERE v.valor_menor > v.valor_mayor), N'');
 
         -- La franja de prime time no puede empezar y terminar a la misma hora.
         IF @codigo IN ('PRIME_TIME_DESDE', 'PRIME_TIME_HASTA')
            AND EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO AS p
                        WHERE p.codigo = IIF(@codigo = 'PRIME_TIME_DESDE', 'PRIME_TIME_HASTA', 'PRIME_TIME_DESDE')
                          AND p.valor = @valor)
-            SET @errores += @nl + N'- PRIME_TIME_DESDE y PRIME_TIME_HASTA no pueden tener el mismo valor.';
+            SET @errores += @salto_linea + N'- PRIME_TIME_DESDE y PRIME_TIME_HASTA no pueden tener el mismo valor.';
     END;
 
     IF @errores <> N''
@@ -991,27 +989,27 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @codigo      = UPPER(NULLIF(TRIM(@codigo), ''));
     SET @descripcion = NULLIF(TRIM(@descripcion), '');
 
     IF @codigo IS NULL
-        SET @errores += @nl + N'- El código es obligatorio.';
+        SET @errores += @salto_linea + N'- El código es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = @codigo)
-        SET @errores += @nl + N'- No existe el parámetro "' + @codigo + N'".';
+        SET @errores += @salto_linea + N'- No existe el parámetro "' + @codigo + N'".';
 
     IF @descripcion IS NULL AND @valor IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF LEN(@descripcion) > 200
-        SET @errores += @nl + N'- La descripción no puede superar los 200 caracteres.';
+        SET @errores += @salto_linea + N'- La descripción no puede superar los 200 caracteres.';
 
     IF @valor IS NOT NULL
     BEGIN
         SET @errores += ISNULL((
-            SELECT @nl + N'- ' + ps.codigo + N' admite valores entre '
+            SELECT @salto_linea + N'- ' + ps.codigo + N' admite valores entre '
                    + CAST(ps.valor_minimo AS NVARCHAR(3)) + N' y ' + CAST(ps.valor_maximo AS NVARCHAR(3)) + N'.'
             FROM DatosGenerales.fn_ParametrosDelSistema() AS ps
             WHERE ps.codigo = @codigo
@@ -1019,28 +1017,27 @@ BEGIN
 
         -- Parámetros que van de a pares: el primero no puede superar al segundo.
         SET @errores += ISNULL((
-            SELECT STRING_AGG(@nl + N'- ' + par.codigo_menor + N' ('
+            SELECT STRING_AGG(@salto_linea + N'- ' + v.codigo_menor + N' ('
                               + CAST(v.valor_menor AS NVARCHAR(10)) + N') no puede superar a '
-                              + par.codigo_mayor + N' (' + CAST(v.valor_mayor AS NVARCHAR(10)) + N').', N'')
-            FROM (VALUES ('MIN_CONVOCADOS',         'MAX_CONVOCADOS'),
-                         ('MAX_VENTANAS',           'MAX_CAMBIOS'),
-                         ('VENTANAS_EXTRA_ALARGUE', 'CAMBIOS_EXTRA_ALARGUE')) AS par (codigo_menor, codigo_mayor)
-            CROSS APPLY (
-                SELECT IIF(par.codigo_menor = @codigo, @valor,
-                           (SELECT p.valor FROM DatosGenerales.PARAMETRO_REGLAMENTO AS p
-                            WHERE p.codigo = par.codigo_menor)),
-                       IIF(par.codigo_mayor = @codigo, @valor,
-                           (SELECT p.valor FROM DatosGenerales.PARAMETRO_REGLAMENTO AS p
-                            WHERE p.codigo = par.codigo_mayor))
-            ) AS v (valor_menor, valor_mayor)
-            WHERE @codigo IN (par.codigo_menor, par.codigo_mayor)
-              AND v.valor_menor > v.valor_mayor), N'');
+                              + v.codigo_mayor + N' (' + CAST(v.valor_mayor AS NVARCHAR(10)) + N').', N'')
+            FROM (SELECT par.codigo_menor,
+                         par.codigo_mayor,
+                         IIF(par.codigo_menor = @codigo, @valor, pmen.valor) AS valor_menor,
+                         IIF(par.codigo_mayor = @codigo, @valor, pmay.valor) AS valor_mayor
+                  FROM (VALUES ('MIN_CONVOCADOS',         'MAX_CONVOCADOS'),
+                               ('MAX_VENTANAS',           'MAX_CAMBIOS'),
+                               ('VENTANAS_EXTRA_ALARGUE', 'CAMBIOS_EXTRA_ALARGUE'),
+                               ('RECARGO_PRIME_TIME_PCT', 'RECARGO_PRIME_TIME_MAX_PCT')) AS par (codigo_menor, codigo_mayor)
+                  LEFT JOIN DatosGenerales.PARAMETRO_REGLAMENTO AS pmen ON pmen.codigo = par.codigo_menor
+                  LEFT JOIN DatosGenerales.PARAMETRO_REGLAMENTO AS pmay ON pmay.codigo = par.codigo_mayor
+                  WHERE @codigo IN (par.codigo_menor, par.codigo_mayor)) AS v
+            WHERE v.valor_menor > v.valor_mayor), N'');
 
         IF @codigo IN ('PRIME_TIME_DESDE', 'PRIME_TIME_HASTA')
            AND EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO AS p
                        WHERE p.codigo = IIF(@codigo = 'PRIME_TIME_DESDE', 'PRIME_TIME_HASTA', 'PRIME_TIME_DESDE')
                          AND p.valor = @valor)
-            SET @errores += @nl + N'- PRIME_TIME_DESDE y PRIME_TIME_HASTA no pueden tener el mismo valor.';
+            SET @errores += @salto_linea + N'- PRIME_TIME_DESDE y PRIME_TIME_HASTA no pueden tener el mismo valor.';
     END;
 
     IF @errores <> N''
@@ -1069,17 +1066,17 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @codigo = UPPER(NULLIF(TRIM(@codigo), ''));
 
     IF @codigo IS NULL
-        SET @errores += @nl + N'- El código es obligatorio.';
+        SET @errores += @salto_linea + N'- El código es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = @codigo)
-        SET @errores += @nl + N'- No existe el parámetro "' + @codigo + N'".';
+        SET @errores += @salto_linea + N'- No existe el parámetro "' + @codigo + N'".';
     ELSE IF EXISTS (SELECT 1 FROM DatosGenerales.fn_ParametrosDelSistema() WHERE codigo = @codigo)
-        SET @errores += @nl + N'- "' + @codigo + N'" lo usa el sistema: se puede modificar, pero no eliminar.';
+        SET @errores += @salto_linea + N'- "' + @codigo + N'" lo usa el sistema: se puede modificar, pero no eliminar.';
 
     IF @errores <> N''
     BEGIN

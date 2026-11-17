@@ -10,12 +10,12 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 07_SP_ABM_Arbitraje.sql
+ Archivo: 08_SP_ABM_Arbitraje.sql
  Objetivo: Crear los stored procedures de alta, baja y modificación de las
            tablas del esquema Arbitraje: ARBITRO, ARBITRO_IDIOMA y
            DESIGNACION_ARBITRAL. Siguen las convenciones descriptas en
-           04_SP_ABM_DatosGenerales.sql. Requiere haber ejecutado 00 a 06.
-           Su script de testing es 57_Test_SP_ABM_Arbitraje.sql.
+           05_SP_ABM_DatosGenerales.sql. Requiere haber ejecutado 01 a 07.
+           Su script de testing es 58_Test_SP_ABM_Arbitraje.sql.
 ================================================================================
 
  Particularidades de este esquema:
@@ -62,39 +62,39 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @nombre    = NULLIF(TRIM(@nombre), N'');
     SET @apellido  = NULLIF(TRIM(@apellido), N'');
     SET @categoria = UPPER(NULLIF(TRIM(@categoria), ''));
 
     IF @id_pais IS NULL
-        SET @errores += @nl + N'- El país es obligatorio.';
+        SET @errores += @salto_linea + N'- El país es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
-        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
 
     IF @nombre IS NULL
-        SET @errores += @nl + N'- El nombre es obligatorio.';
+        SET @errores += @salto_linea + N'- El nombre es obligatorio.';
     ELSE IF LEN(@nombre) > 60
-        SET @errores += @nl + N'- El nombre no puede superar los 60 caracteres.';
+        SET @errores += @salto_linea + N'- El nombre no puede superar los 60 caracteres.';
 
     IF @apellido IS NULL
-        SET @errores += @nl + N'- El apellido es obligatorio.';
+        SET @errores += @salto_linea + N'- El apellido es obligatorio.';
     ELSE IF LEN(@apellido) > 60
-        SET @errores += @nl + N'- El apellido no puede superar los 60 caracteres.';
+        SET @errores += @salto_linea + N'- El apellido no puede superar los 60 caracteres.';
 
     IF EXISTS (SELECT 1 FROM Arbitraje.ARBITRO
                WHERE id_pais = @id_pais AND apellido = @apellido AND nombre = @nombre)
-        SET @errores += @nl + N'- Ya hay un árbitro ' + @nombre + N' ' + @apellido + N' de ese país.';
+        SET @errores += @salto_linea + N'- Ya hay un árbitro ' + @nombre + N' ' + @apellido + N' de ese país.';
 
     IF @categoria IS NULL
-        SET @errores += @nl + N'- La categoría es obligatoria.';
+        SET @errores += @salto_linea + N'- La categoría es obligatoria.';
     ELSE IF @categoria NOT IN ('FIFA', 'CONFEDERACION')
-        SET @errores += @nl + N'- La categoría debe ser FIFA o CONFEDERACION.';
+        SET @errores += @salto_linea + N'- La categoría debe ser FIFA o CONFEDERACION.';
 
     IF @fecha_nacimiento > CONVERT(DATE, GETDATE())
-        SET @errores += @nl + N'- La fecha de nacimiento no puede ser futura.';
+        SET @errores += @salto_linea + N'- La fecha de nacimiento no puede ser futura.';
 
     IF @errores <> N''
     BEGIN
@@ -130,7 +130,7 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @errores        NVARCHAR(2048) = N'';
-    DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @salto_linea    NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @pais_final     SMALLINT;
     DECLARE @nombre_final   NVARCHAR(60);
     DECLARE @apellido_final NVARCHAR(60);
@@ -147,16 +147,16 @@ BEGIN
     WHERE id_arbitro = @id_arbitro;
 
     IF @id_arbitro IS NULL
-        SET @errores += @nl + N'- El id del árbitro es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del árbitro es obligatorio.';
     ELSE IF @pais_final IS NULL
-        SET @errores += @nl + N'- No existe un árbitro con id ' + CAST(@id_arbitro AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un árbitro con id ' + CAST(@id_arbitro AS NVARCHAR(10)) + N'.';
 
     IF @id_pais IS NULL AND @nombre IS NULL AND @apellido IS NULL AND @categoria IS NULL
        AND @fecha_nacimiento IS NULL AND @activo IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF @id_pais IS NOT NULL AND NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
-        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
     ELSE IF @id_pais IS NOT NULL
     BEGIN
         SELECT TOP (1) @partido = p.numero_partido
@@ -165,32 +165,32 @@ BEGIN
         INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion IN (p.id_seleccion_local, p.id_seleccion_visitante)
         WHERE d.id_arbitro = @id_arbitro AND s.id_pais = @id_pais;
         IF @partido IS NOT NULL
-            SET @errores += @nl + N'- Con ese país quedaría en conflicto de nacionalidad en el partido '
+            SET @errores += @salto_linea + N'- Con ese país quedaría en conflicto de nacionalidad en el partido '
                           + CAST(@partido AS NVARCHAR(3)) + N', que tiene designado.';
     END;
 
     IF LEN(@nombre) > 60
-        SET @errores += @nl + N'- El nombre no puede superar los 60 caracteres.';
+        SET @errores += @salto_linea + N'- El nombre no puede superar los 60 caracteres.';
     IF LEN(@apellido) > 60
-        SET @errores += @nl + N'- El apellido no puede superar los 60 caracteres.';
+        SET @errores += @salto_linea + N'- El apellido no puede superar los 60 caracteres.';
     IF (@id_pais IS NOT NULL OR @nombre IS NOT NULL OR @apellido IS NOT NULL)
        AND EXISTS (SELECT 1 FROM Arbitraje.ARBITRO
                    WHERE id_pais = @pais_final AND apellido = @apellido_final AND nombre = @nombre_final
                      AND id_arbitro <> @id_arbitro)
-        SET @errores += @nl + N'- Ya hay otro árbitro ' + @nombre_final + N' ' + @apellido_final + N' de ese país.';
+        SET @errores += @salto_linea + N'- Ya hay otro árbitro ' + @nombre_final + N' ' + @apellido_final + N' de ese país.';
 
     IF @categoria NOT IN ('FIFA', 'CONFEDERACION')
-        SET @errores += @nl + N'- La categoría debe ser FIFA o CONFEDERACION.';
+        SET @errores += @salto_linea + N'- La categoría debe ser FIFA o CONFEDERACION.';
 
     IF @fecha_nacimiento > CONVERT(DATE, GETDATE())
-        SET @errores += @nl + N'- La fecha de nacimiento no puede ser futura.';
+        SET @errores += @salto_linea + N'- La fecha de nacimiento no puede ser futura.';
 
     IF @activo = 0
        AND EXISTS (SELECT 1
                    FROM Arbitraje.DESIGNACION_ARBITRAL AS d
                    INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = d.id_partido
                    WHERE d.id_arbitro = @id_arbitro AND p.estado IN ('PROGRAMADO', 'EN_JUEGO'))
-        SET @errores += @nl + N'- El árbitro está designado en un partido que todavía no se jugó: no se puede desactivar.';
+        SET @errores += @salto_linea + N'- El árbitro está designado en un partido que todavía no se jugó: no se puede desactivar.';
 
     IF @errores <> N''
     BEGIN
@@ -224,29 +224,29 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @activo  BIT;
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @activo      BIT;
 
     SELECT @activo = activo FROM Arbitraje.ARBITRO WHERE id_arbitro = @id_arbitro;
 
     IF @id_arbitro IS NULL
-        SET @errores += @nl + N'- El id del árbitro es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del árbitro es obligatorio.';
     ELSE IF @activo IS NULL
-        SET @errores += @nl + N'- No existe un árbitro con id ' + CAST(@id_arbitro AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un árbitro con id ' + CAST(@id_arbitro AS NVARCHAR(10)) + N'.';
     ELSE IF ISNULL(@eliminar_registro, 0) = 0
     BEGIN
         IF @activo = 0
-            SET @errores += @nl + N'- El árbitro ya está inactivo.';
+            SET @errores += @salto_linea + N'- El árbitro ya está inactivo.';
         IF EXISTS (SELECT 1
                    FROM Arbitraje.DESIGNACION_ARBITRAL AS d
                    INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = d.id_partido
                    WHERE d.id_arbitro = @id_arbitro AND p.estado IN ('PROGRAMADO', 'EN_JUEGO'))
-            SET @errores += @nl + N'- El árbitro está designado en un partido que todavía no se jugó.';
+            SET @errores += @salto_linea + N'- El árbitro está designado en un partido que todavía no se jugó.';
     END
     ELSE
         SET @errores += ISNULL((
-            SELECT STRING_AGG(@nl + N'- Lo referencian ' + CAST(r.cantidad AS NVARCHAR(10))
+            SELECT STRING_AGG(@salto_linea + N'- Lo referencian ' + CAST(r.cantidad AS NVARCHAR(10))
                               + N' registro(s) de ' + r.tabla + N'.', N'')
             FROM (
                 SELECT N'Arbitraje.ARBITRO_IDIOMA', COUNT(*)
@@ -286,21 +286,21 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     IF @id_arbitro IS NULL
-        SET @errores += @nl + N'- El árbitro es obligatorio.';
+        SET @errores += @salto_linea + N'- El árbitro es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Arbitraje.ARBITRO WHERE id_arbitro = @id_arbitro)
-        SET @errores += @nl + N'- No existe un árbitro con id ' + CAST(@id_arbitro AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un árbitro con id ' + CAST(@id_arbitro AS NVARCHAR(10)) + N'.';
 
     IF @id_idioma IS NULL
-        SET @errores += @nl + N'- El idioma es obligatorio.';
+        SET @errores += @salto_linea + N'- El idioma es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA WHERE id_idioma = @id_idioma)
-        SET @errores += @nl + N'- No existe un idioma con id ' + CAST(@id_idioma AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un idioma con id ' + CAST(@id_idioma AS NVARCHAR(10)) + N'.';
 
     IF EXISTS (SELECT 1 FROM Arbitraje.ARBITRO_IDIOMA WHERE id_arbitro = @id_arbitro AND id_idioma = @id_idioma)
-        SET @errores += @nl + N'- El árbitro ya tiene registrado ese idioma.';
+        SET @errores += @salto_linea + N'- El árbitro ya tiene registrado ese idioma.';
 
     IF @errores <> N''
     BEGIN
@@ -325,13 +325,13 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     IF @id_arbitro IS NULL OR @id_idioma IS NULL
-        SET @errores += @nl + N'- El árbitro y el idioma son obligatorios.';
+        SET @errores += @salto_linea + N'- El árbitro y el idioma son obligatorios.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Arbitraje.ARBITRO_IDIOMA WHERE id_arbitro = @id_arbitro AND id_idioma = @id_idioma)
-        SET @errores += @nl + N'- El árbitro no tiene registrado ese idioma.';
+        SET @errores += @salto_linea + N'- El árbitro no tiene registrado ese idioma.';
 
     IF @errores <> N''
     BEGIN
@@ -355,6 +355,9 @@ GO
   AVAR o VAR_APOYO) y libre en el partido; que el árbitro no esté ya
   designado en el partido; que su país no sea el de ninguna de las dos
   selecciones (conflicto de nacionalidad).
+  Desde dieciseisavos advierte, sin impedir la designación, cuando el árbitro
+  es de un país que puede cruzarse con los que juegan el partido
+  (Torneo.fn_SeleccionesEnCompetencia), como usp_DesignarTernaArbitral.
 */
 CREATE OR ALTER PROCEDURE Arbitraje.usp_DESIGNACION_ARBITRAL_Alta
     @id_partido  INT,
@@ -365,18 +368,20 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @errores        NVARCHAR(2048) = N'';
-    DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @salto_linea    NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @estado         VARCHAR(12);
+    DECLARE @fase           VARCHAR(15);
     DECLARE @local          INT;
     DECLARE @visitante      INT;
     DECLARE @activo         BIT;
     DECLARE @id_pais        SMALLINT;
     DECLARE @arbitro        NVARCHAR(130);
     DECLARE @pais_conflicto VARCHAR(60);
+    DECLARE @pais_arbitro   VARCHAR(60);
 
     SET @rol = UPPER(NULLIF(TRIM(@rol), ''));
 
-    SELECT @estado = estado, @local = id_seleccion_local, @visitante = id_seleccion_visitante
+    SELECT @estado = estado, @fase = fase, @local = id_seleccion_local, @visitante = id_seleccion_visitante
     FROM Torneo.PARTIDO
     WHERE id_partido = @id_partido;
 
@@ -385,30 +390,30 @@ BEGIN
     WHERE id_arbitro = @id_arbitro;
 
     IF @id_partido IS NULL
-        SET @errores += @nl + N'- El partido es obligatorio.';
+        SET @errores += @salto_linea + N'- El partido es obligatorio.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
     ELSE IF @estado <> 'PROGRAMADO'
-        SET @errores += @nl + N'- Las designaciones se hacen antes de que empiece el partido (estado actual: '
+        SET @errores += @salto_linea + N'- Las designaciones se hacen antes de que empiece el partido (estado actual: '
                       + @estado + N').';
 
     IF @id_arbitro IS NULL
-        SET @errores += @nl + N'- El árbitro es obligatorio.';
+        SET @errores += @salto_linea + N'- El árbitro es obligatorio.';
     ELSE IF @activo IS NULL
-        SET @errores += @nl + N'- No existe un árbitro con id ' + CAST(@id_arbitro AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un árbitro con id ' + CAST(@id_arbitro AS NVARCHAR(10)) + N'.';
     ELSE IF @activo = 0
-        SET @errores += @nl + N'- El árbitro ' + @arbitro + N' no está activo.';
+        SET @errores += @salto_linea + N'- El árbitro ' + @arbitro + N' no está activo.';
 
     IF @rol IS NULL
-        SET @errores += @nl + N'- El rol es obligatorio.';
+        SET @errores += @salto_linea + N'- El rol es obligatorio.';
     ELSE IF @rol NOT IN ('PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR', 'ASISTENTE_RESERVA', 'AVAR', 'VAR_APOYO')
-        SET @errores += @nl + N'- El rol debe ser PRINCIPAL, ASISTENTE_1, ASISTENTE_2, CUARTO, VAR, ASISTENTE_RESERVA, '
+        SET @errores += @salto_linea + N'- El rol debe ser PRINCIPAL, ASISTENTE_1, ASISTENTE_2, CUARTO, VAR, ASISTENTE_RESERVA, '
                       + N'AVAR o VAR_APOYO.';
     ELSE IF EXISTS (SELECT 1 FROM Arbitraje.DESIGNACION_ARBITRAL WHERE id_partido = @id_partido AND rol = @rol)
-        SET @errores += @nl + N'- El rol ' + @rol + N' ya está cubierto en ese partido.';
+        SET @errores += @salto_linea + N'- El rol ' + @rol + N' ya está cubierto en ese partido.';
 
     IF EXISTS (SELECT 1 FROM Arbitraje.DESIGNACION_ARBITRAL WHERE id_partido = @id_partido AND id_arbitro = @id_arbitro)
-        SET @errores += @nl + N'- El árbitro ya está designado en ese partido.';
+        SET @errores += @salto_linea + N'- El árbitro ya está designado en ese partido.';
 
     IF @id_pais IS NOT NULL
     BEGIN
@@ -417,7 +422,7 @@ BEGIN
         INNER JOIN DatosGenerales.PAIS AS pa ON pa.id_pais = s.id_pais
         WHERE s.id_seleccion IN (@local, @visitante) AND s.id_pais = @id_pais;
         IF @pais_conflicto IS NOT NULL
-            SET @errores += @nl + N'- Conflicto de nacionalidad: ' + @arbitro + N' es de ' + @pais_conflicto
+            SET @errores += @salto_linea + N'- Conflicto de nacionalidad: ' + @arbitro + N' es de ' + @pais_conflicto
                           + N', que juega este partido.';
     END;
 
@@ -429,6 +434,18 @@ BEGIN
 
     INSERT INTO Arbitraje.DESIGNACION_ARBITRAL (id_partido, id_arbitro, rol)
     VALUES (@id_partido, @id_arbitro, @rol);
+
+    -- Advertencia por posible cruce, desde dieciseisavos (el criterio de usp_DesignarTernaArbitral).
+    IF @fase <> 'GRUPOS'
+       AND EXISTS (SELECT 1 FROM Torneo.fn_SeleccionesEnCompetencia() AS sc
+                   WHERE sc.id_pais = @id_pais
+                     AND sc.id_seleccion NOT IN (ISNULL(@local, 0), ISNULL(@visitante, 0)))
+    BEGIN
+        SELECT @pais_arbitro = nombre FROM DatosGenerales.PAIS WHERE id_pais = @id_pais;
+        PRINT N'Advertencia de Arbitraje.usp_DESIGNACION_ARBITRAL_Alta (la designación se hizo igual): ' + @arbitro
+            + N' (' + @rol + N') es de ' + @pais_arbitro
+            + N', que sigue en competencia y puede cruzarse con las selecciones de este partido.';
+    END;
 END;
 GO
 
@@ -450,9 +467,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @estado  VARCHAR(12);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @estado      VARCHAR(12);
 
     SET @rol                 = UPPER(NULLIF(TRIM(@rol), ''));
     SET @informe_postpartido = NULLIF(TRIM(@informe_postpartido), '');
@@ -464,30 +481,30 @@ BEGIN
     WHERE d.id_partido = @id_partido AND d.id_arbitro = @id_arbitro;
 
     IF @id_partido IS NULL OR @id_arbitro IS NULL
-        SET @errores += @nl + N'- El partido y el árbitro son obligatorios.';
+        SET @errores += @salto_linea + N'- El partido y el árbitro son obligatorios.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- El árbitro no está designado en ese partido.';
+        SET @errores += @salto_linea + N'- El árbitro no está designado en ese partido.';
 
     IF @rol IS NULL AND @informe_postpartido IS NULL AND @sancion IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF @rol IS NOT NULL
     BEGIN
         IF @rol NOT IN ('PRINCIPAL', 'ASISTENTE_1', 'ASISTENTE_2', 'CUARTO', 'VAR', 'ASISTENTE_RESERVA', 'AVAR', 'VAR_APOYO')
-            SET @errores += @nl + N'- El rol debe ser PRINCIPAL, ASISTENTE_1, ASISTENTE_2, CUARTO, VAR, ASISTENTE_RESERVA, '
+            SET @errores += @salto_linea + N'- El rol debe ser PRINCIPAL, ASISTENTE_1, ASISTENTE_2, CUARTO, VAR, ASISTENTE_RESERVA, '
                           + N'AVAR o VAR_APOYO.';
         ELSE IF EXISTS (SELECT 1 FROM Arbitraje.DESIGNACION_ARBITRAL
                         WHERE id_partido = @id_partido AND rol = @rol AND id_arbitro <> @id_arbitro)
-            SET @errores += @nl + N'- El rol ' + @rol + N' ya está cubierto en ese partido.';
+            SET @errores += @salto_linea + N'- El rol ' + @rol + N' ya está cubierto en ese partido.';
         IF @estado <> 'PROGRAMADO'
-            SET @errores += @nl + N'- El rol se cambia antes de que empiece el partido.';
+            SET @errores += @salto_linea + N'- El rol se cambia antes de que empiece el partido.';
     END;
 
     IF (@informe_postpartido IS NOT NULL OR @sancion IS NOT NULL) AND @estado <> 'FINALIZADO'
-        SET @errores += @nl + N'- El informe y la sanción post-partido se registran con el partido FINALIZADO.';
+        SET @errores += @salto_linea + N'- El informe y la sanción post-partido se registran con el partido FINALIZADO.';
 
     IF LEN(@sancion) > 500
-        SET @errores += @nl + N'- La sanción no puede superar los 500 caracteres.';
+        SET @errores += @salto_linea + N'- La sanción no puede superar los 500 caracteres.';
 
     IF @errores <> N''
     BEGIN
@@ -516,9 +533,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @estado  VARCHAR(12);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @estado      VARCHAR(12);
 
     SELECT @estado = p.estado
     FROM Arbitraje.DESIGNACION_ARBITRAL AS d
@@ -526,11 +543,11 @@ BEGIN
     WHERE d.id_partido = @id_partido AND d.id_arbitro = @id_arbitro;
 
     IF @id_partido IS NULL OR @id_arbitro IS NULL
-        SET @errores += @nl + N'- El partido y el árbitro son obligatorios.';
+        SET @errores += @salto_linea + N'- El partido y el árbitro son obligatorios.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- El árbitro no está designado en ese partido.';
+        SET @errores += @salto_linea + N'- El árbitro no está designado en ese partido.';
     ELSE IF @estado <> 'PROGRAMADO'
-        SET @errores += @nl + N'- El partido está ' + @estado + N': la designación queda en el historial del árbitro.';
+        SET @errores += @salto_linea + N'- El partido está ' + @estado + N': la designación queda en el historial del árbitro.';
 
     IF @errores <> N''
     BEGIN

@@ -10,13 +10,12 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 02_CrearTablas.sql
+ Archivo: 03_CrearTablas.sql
  Objetivo: Crear todas las tablas del sistema con sus claves primarias,
            claves foraneas, restricciones UNIQUE, CHECK y DEFAULT, y los
            indices sobre claves foraneas.
-           Requiere haber ejecutado 00_CrearBaseDeDatos.sql y
-           01_CrearEsquemas.sql.
-
+           Requiere haber ejecutado 01_CrearBaseDeDatos.sql y
+           02_CrearEsquemas.sql.
 ================================================================================
 
     Nomenclatura: 
@@ -25,7 +24,6 @@
     Clave primaria              PK_<TABLA>
     Clave foranea               FK_<TABLA>_<TABLA_REFERENCIADA>[_<rol>]
     Unique                      UQ_<TABLA>_<columnas>
-    Índices únicos con filtro   UX_<TABLA>_<columnas>
     Indice                      IX_<TABLA>_<columnas>
     Check                       CK_<TABLA>_<regla>
     Default                     DF_<TABLA>_<columna>
@@ -65,9 +63,6 @@
                                 FK tiene el mismo tipo que la PK que referencia.
     Montos y coordenadas        DECIMAL, se evita FLOAT a menos que sea estrictamente necesario.
 
-  El script es re-ejecutable: borra las tablas en orden inverso de dependencias
-  y las vuelve a crear (CUIDADO: al hacer esto se pierden datos previamente cargados).
-
 */
 
 USE MundialFutbol;
@@ -82,6 +77,7 @@ GO
    ============================================================================ */
 
 DROP TABLE IF EXISTS Publicidad.ERRORES_CAMPANIA;
+DROP TABLE IF EXISTS Arbitraje.ERRORES_ARBITRO;
 DROP TABLE IF EXISTS Arbitraje.ERRORES_DESIGNACION;
 DROP TABLE IF EXISTS DesarrolloPartido.ERRORES_EVENTO;
 DROP TABLE IF EXISTS Torneo.ERRORES_PARTIDO;
@@ -160,11 +156,6 @@ CREATE TABLE DatosGenerales.PAIS (
     CONSTRAINT CK_PAIS_codigo_iso3   CHECK (codigo_iso3   LIKE '[A-Z][A-Z][A-Z]'),
     CONSTRAINT CK_PAIS_codigo_moneda CHECK (codigo_moneda LIKE '[A-Z][A-Z][A-Z]')
 );
-GO
-
-CREATE UNIQUE NONCLUSTERED INDEX UX_PAIS_codigo_fifa
-    ON DatosGenerales.PAIS (codigo_fifa)
-    WHERE codigo_fifa IS NOT NULL;
 GO
 
 
@@ -258,22 +249,14 @@ GO
 
 /*
   PARAMETRO_REGLAMENTO
-  No figura en el DER: es una tabla de configuracion del sistema, no una
-  entidad del dominio, y no se relaciona con ninguna otra tabla.
+  No figura en el DER: es una tabla de configuracion del sistema
   Valores del reglamento que usan los SP para validar y calcular, para que
   cambiar una regla no requiera tocar codigo (criterios de suspension
   parametrizables, maximo de cambios y ventanas).
   Formato clave-valor: agregar un parametro nuevo es un INSERT, no un ALTER.
-  Codigos previstos (los valores se cargan en el script de datos iniciales):
-    AMARILLAS_PARA_SUSPENSION        amarillas acumuladas en partidos distintos
-    FECHAS_SUSPENSION_ACUMULACION    partidos de suspension por acumulacion
-    FECHAS_SUSPENSION_DOBLE_AMARILLA partidos de suspension por doble amarilla
-    FECHAS_SUSPENSION_ROJA_DIRECTA   partidos de suspension por roja directa
-    MAX_CAMBIOS                      cambios permitidos en tiempo reglamentario
-    MAX_VENTANAS                     ventanas de cambio en tiempo reglamentario
-    CAMBIOS_EXTRA_ALARGUE            cambios adicionales en tiempo suplementario
-    VENTANAS_EXTRA_ALARGUE           ventanas adicionales en tiempo suplementario
-    MIN_CONVOCADOS / MAX_CONVOCADOS  tamanio de la lista de convocados
+  Los codigos que usa el sistema, con el rango de cada uno, los define
+  DatosGenerales.fn_ParametrosDelSistema (04); los valores se cargan en
+  28_Cargar_DatosIniciales.sql.
   valor es TINYINT: los parametros son conteos chicos (0 a 255) y el tipo ya
   impide valores negativos.
 */
@@ -297,7 +280,7 @@ GO
 /*
   SEDE
   Tiene su propio huso horario porque un mismo pais (EEUU, Mexico, Canada)
-  puede tener sedes en zonas distintas. Latitud y longitud para el mapa de BI.
+  puede tener sedes en zonas distintas.
 */
 CREATE TABLE Torneo.SEDE (
     id_sede         INT IDENTITY(1,1) NOT NULL,
@@ -365,7 +348,8 @@ GO
   Altas y bajas de ultima hora: el jugador dado de baja conserva el registro con
   fecha_baja y motivo_baja; el reemplazo se da de alta con motivo_alta.
   El dorsal es unico dentro de la lista solo entre jugadores activos, asi el
-  reemplazante puede heredar el numero del lesionado.
+  reemplazante puede heredar el numero del lesionado. Esa regla no la impone
+  la tabla: la validan los SP de alta y modificacion y las cargas masivas.
   (id_lista, apellido, nombre) es la clave para el upsert de plantillas.
 */
 CREATE TABLE Torneo.JUGADOR (
@@ -401,23 +385,19 @@ CREATE TABLE Torneo.JUGADOR (
 );
 GO
 
-CREATE UNIQUE NONCLUSTERED INDEX UX_JUGADOR_lista_dorsal_activo
-    ON Torneo.JUGADOR (id_lista, dorsal)
-    WHERE fecha_baja IS NULL;
-GO
-
 
 /*
   NOMBRE_ALTERNATIVO
   Otras formas en que las fuentes externas escriben el nombre de una
-  seleccion (en ingles, por ejemplo) o de uno de sus jugadores (otra
-  transliteracion, el apodo). La importacion las usa cuando el nombre del
+  seleccion (en ingles, por ejemplo) o de uno de sus jugadores.
+  La importacion las usa cuando el nombre del
   archivo no coincide con el registrado.
   Relacion N:1 con SELECCION y, si es el nombre de un jugador, N:1 con JUGADOR
   (id_jugador NULL: es un nombre de la seleccion). Que el jugador sea de esa
   seleccion se valida en el SP de alta.
   El nombre de una seleccion no se repite entre selecciones; el de un jugador
-  no se repite dentro de su seleccion.
+  no se repite dentro de su seleccion. Lo validan el SP de alta y la carga
+  masiva de selecciones, no la tabla.
 */
 CREATE TABLE Torneo.NOMBRE_ALTERNATIVO (
     id_nombre_alternativo  INT IDENTITY(1,1) NOT NULL,
@@ -433,20 +413,12 @@ CREATE TABLE Torneo.NOMBRE_ALTERNATIVO (
 );
 GO
 
-CREATE UNIQUE NONCLUSTERED INDEX UX_NOMBRE_ALTERNATIVO_seleccion
-    ON Torneo.NOMBRE_ALTERNATIVO (nombre)
-    WHERE id_jugador IS NULL;
-
-CREATE UNIQUE NONCLUSTERED INDEX UX_NOMBRE_ALTERNATIVO_jugador
-    ON Torneo.NOMBRE_ALTERNATIVO (id_seleccion, nombre)
-    WHERE id_jugador IS NOT NULL;
-GO
-
 
 /*
   PERSONA_CUERPO_TECNICO
   Relacion N:1 con SELECCION (se compone) y N:1 con PAIS (nacio en).
-  Un solo director tecnico por seleccion.
+  Un solo director tecnico por seleccion: lo validan los SP de alta y
+  modificacion y la carga masiva del cuerpo tecnico, no la tabla.
 */
 CREATE TABLE Torneo.PERSONA_CUERPO_TECNICO (
     id_persona_ct       INT IDENTITY(1,1) NOT NULL,
@@ -466,11 +438,6 @@ CREATE TABLE Torneo.PERSONA_CUERPO_TECNICO (
         'DIRECTOR_TECNICO', 'AYUDANTE_CAMPO', 'PREPARADOR_FISICO',
         'ENTRENADOR_ARQUEROS', 'MEDICO', 'OTRO'))
 );
-GO
-
-CREATE UNIQUE NONCLUSTERED INDEX UX_PERSONA_CUERPO_TECNICO_un_dt
-    ON Torneo.PERSONA_CUERPO_TECNICO (id_seleccion)
-    WHERE rol = 'DIRECTOR_TECNICO';
 GO
 
 
@@ -959,20 +926,18 @@ GO
 /* ============================================================================
    REGISTRO DE LAS IMPORTACIONES
    No figuran en el DER: son el registro tecnico de los procesos de
-   importacion de la Entrega 6 (23 a 28), como PARAMETRO_REGLAMENTO es
-   configuracion. Cada corrida de un proceso queda en IMPORTACION, y los
+   importacion. Cada corrida de un proceso queda en IMPORTACION, y los
    registros que rechazo, en la tabla ERRORES_ de lo que importo (en el
    esquema de esa tabla), tal como venian en el origen y con todos los
-   motivos. Se escriben y se borran con los SP de 16_SP_Importacion.sql.
+   motivos. Se escriben y se borran con los SP de 17_SP_Utilidades_Importacion.sql.
    ============================================================================ */
 
 /*
   IMPORTACION
   Una fila por cada vez que un proceso importa un archivo o una respuesta de
-  una API: el SP que importo (o el script, en una carga a mano como la de
-  29), el origen (ruta del archivo o URL), cuando y el resumen. Los totales cuentan los registros del origen (en
-  usp_ImportarPartidosJSON, los partidos y lo que paso en cada uno; en un
-  reproceso, solo los partidos que se reprocesan; en
+  una API: el SP que importo, el origen (ruta del archivo o URL), cuando y
+  el resumen. Los totales cuentan los registros del origen (en
+  usp_ImportarPartidosJSON, los partidos y lo que paso en cada uno; en
   usp_ImportarDesignacionesCSV, las designaciones, sin los arbitros), salvo
   insertados, actualizados y sin cambios de los feriados, que cuentan
   feriados por pais y dia. Una importacion que falla entera (archivo que no
@@ -1205,6 +1170,29 @@ GO
 
 
 /*
+  ERRORES_ARBITRO
+  Arbitros rechazados del CSV de arbitros (usp_ImportarArbitrosCSV):
+  registro es la linea del archivo; los demas datos, el texto que traia.
+*/
+CREATE TABLE Arbitraje.ERRORES_ARBITRO (
+    id_importacion    INT            NOT NULL,
+    registro          INT            NOT NULL,
+    pais              NVARCHAR(50)   NULL,
+    nombre            NVARCHAR(400)  NULL,
+    apellido          NVARCHAR(400)  NULL,
+    categoria         NVARCHAR(100)  NULL,
+    fecha_nacimiento  NVARCHAR(50)   NULL,
+    idiomas           NVARCHAR(400)  NULL,
+    motivos           NVARCHAR(MAX)  NOT NULL,
+
+    CONSTRAINT PK_ERRORES_ARBITRO PRIMARY KEY (id_importacion, registro),
+    CONSTRAINT FK_ERRORES_ARBITRO_IMPORTACION
+        FOREIGN KEY (id_importacion) REFERENCES DatosGenerales.IMPORTACION (id_importacion)
+);
+GO
+
+
+/*
   ERRORES_CAMPANIA
   Campañas rechazadas del Dossier Mundial: registro es la posicion de la
   campaña en la respuesta de la API; documento, su id en Firestore; los demas
@@ -1227,15 +1215,13 @@ GO
 
 /* ============================================================================
    INDICES
-   Regla: un indice por cada clave foranea que no sea la primera columna de
-   la PK o de un UNIQUE (esas ya tienen el suyo). SQL Server no los crea
-   solo. Sirven a los JOIN de las vistas y los SP, y a las bajas: al borrar
-   una fila, SQL Server busca en cada tabla hija para validar la FK, y los SP
-   de baja cuentan las referencias antes de borrar. Sin el indice, cada una
-   de esas busquedas recorre la tabla hija completa.
-   Los indices unicos filtrados (UX_) estan junto a su tabla: son reglas de
-   negocio, no indices de busqueda.
+   Indices sobre claves foraneas: SQL Server no los crea solo. Sirven a los
+   JOIN de las vistas y los SP, y a las bajas: al borrar una fila, SQL Server
+   busca en cada tabla hija para validar la FK, y los SP de baja cuentan las
+   referencias antes de borrar. Sin el indice, cada una de esas busquedas
+   recorre la tabla hija completa.
    ============================================================================ */
+   
 CREATE INDEX IX_SEDE_id_pais                        ON Torneo.SEDE (id_pais);
 CREATE INDEX IX_JUGADOR_id_pais_nacimiento          ON Torneo.JUGADOR (id_pais_nacimiento);
 CREATE INDEX IX_NOMBRE_ALTERNATIVO_id_seleccion     ON Torneo.NOMBRE_ALTERNATIVO (id_seleccion);

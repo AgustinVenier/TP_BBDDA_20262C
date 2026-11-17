@@ -10,13 +10,13 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 06_SP_ABM_DesarrolloPartido.sql
+ Archivo: 07_SP_ABM_DesarrolloPartido.sql
  Objetivo: Crear los stored procedures de alta, baja y modificación de las
            tablas del esquema DesarrolloPartido: TIPO_GOL, FORMACION,
            ALINEACION, CAMBIO, GOL y AMONESTACION. Siguen las convenciones
-           descriptas en 04_SP_ABM_DatosGenerales.sql. Requiere haber
-           ejecutado 00 a 05. Su script de testing es
-           56_Test_SP_ABM_DesarrolloPartido.sql.
+           descriptas en 05_SP_ABM_DatosGenerales.sql. Requiere haber
+           ejecutado 01 a 06. Su script de testing es
+           57_Test_SP_ABM_DesarrolloPartido.sql.
 ================================================================================
 
  Qué valida cada capa:
@@ -60,20 +60,20 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @descripcion = UPPER(NULLIF(TRIM(@descripcion), ''));
 
     IF @descripcion IS NULL
-        SET @errores += @nl + N'- La descripción es obligatoria.';
+        SET @errores += @salto_linea + N'- La descripción es obligatoria.';
     ELSE IF LEN(@descripcion) > 40
-        SET @errores += @nl + N'- La descripción no puede superar los 40 caracteres.';
+        SET @errores += @salto_linea + N'- La descripción no puede superar los 40 caracteres.';
     ELSE IF EXISTS (SELECT 1 FROM DesarrolloPartido.TIPO_GOL WHERE descripcion = @descripcion)
-        SET @errores += @nl + N'- Ya existe el tipo de gol "' + @descripcion + N'".';
+        SET @errores += @salto_linea + N'- Ya existe el tipo de gol "' + @descripcion + N'".';
 
     IF @es_en_contra IS NULL
-        SET @errores += @nl + N'- Hay que indicar si el tipo es un gol en contra (0 o 1).';
+        SET @errores += @salto_linea + N'- Hay que indicar si el tipo es un gol en contra (0 o 1).';
 
     IF @errores <> N''
     BEGIN
@@ -103,31 +103,31 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores        NVARCHAR(2048) = N'';
-    DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @en_contra_act  BIT;
+    DECLARE @errores          NVARCHAR(2048) = N'';
+    DECLARE @salto_linea      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @en_contra_actual BIT;
 
     SET @descripcion = UPPER(NULLIF(TRIM(@descripcion), ''));
 
-    SELECT @en_contra_act = es_en_contra FROM DesarrolloPartido.TIPO_GOL WHERE id_tipo_gol = @id_tipo_gol;
+    SELECT @en_contra_actual = es_en_contra FROM DesarrolloPartido.TIPO_GOL WHERE id_tipo_gol = @id_tipo_gol;
 
     IF @id_tipo_gol IS NULL
-        SET @errores += @nl + N'- El id del tipo de gol es obligatorio.';
-    ELSE IF @en_contra_act IS NULL
-        SET @errores += @nl + N'- No existe un tipo de gol con id ' + CAST(@id_tipo_gol AS NVARCHAR(3)) + N'.';
+        SET @errores += @salto_linea + N'- El id del tipo de gol es obligatorio.';
+    ELSE IF @en_contra_actual IS NULL
+        SET @errores += @salto_linea + N'- No existe un tipo de gol con id ' + CAST(@id_tipo_gol AS NVARCHAR(3)) + N'.';
 
     IF @descripcion IS NULL AND @es_en_contra IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF LEN(@descripcion) > 40
-        SET @errores += @nl + N'- La descripción no puede superar los 40 caracteres.';
+        SET @errores += @salto_linea + N'- La descripción no puede superar los 40 caracteres.';
     ELSE IF EXISTS (SELECT 1 FROM DesarrolloPartido.TIPO_GOL
                     WHERE descripcion = @descripcion AND id_tipo_gol <> @id_tipo_gol)
-        SET @errores += @nl + N'- Ya existe otro tipo de gol "' + @descripcion + N'".';
+        SET @errores += @salto_linea + N'- Ya existe otro tipo de gol "' + @descripcion + N'".';
 
-    IF @es_en_contra <> @en_contra_act
+    IF @es_en_contra <> @en_contra_actual
        AND EXISTS (SELECT 1 FROM DesarrolloPartido.GOL WHERE id_tipo_gol = @id_tipo_gol)
-        SET @errores += @nl + N'- Hay goles de este tipo: cambiar si es en contra alteraría sus resultados.';
+        SET @errores += @salto_linea + N'- Hay goles de este tipo: cambiar si es en contra alteraría sus resultados.';
 
     IF @errores <> N''
     BEGIN
@@ -153,19 +153,19 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @goles   INT;
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @goles       INT;
 
     IF @id_tipo_gol IS NULL
-        SET @errores += @nl + N'- El id del tipo de gol es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del tipo de gol es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DesarrolloPartido.TIPO_GOL WHERE id_tipo_gol = @id_tipo_gol)
-        SET @errores += @nl + N'- No existe un tipo de gol con id ' + CAST(@id_tipo_gol AS NVARCHAR(3)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un tipo de gol con id ' + CAST(@id_tipo_gol AS NVARCHAR(3)) + N'.';
     ELSE
     BEGIN
         SELECT @goles = COUNT(*) FROM DesarrolloPartido.GOL WHERE id_tipo_gol = @id_tipo_gol;
         IF @goles > 0
-            SET @errores += @nl + N'- Lo referencian ' + CAST(@goles AS NVARCHAR(10))
+            SET @errores += @salto_linea + N'- Lo referencian ' + CAST(@goles AS NVARCHAR(10))
                           + N' registro(s) de DesarrolloPartido.GOL.';
     END;
 
@@ -200,11 +200,11 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores   NVARCHAR(2048) = N'';
-    DECLARE @nl        NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @estado    VARCHAR(12);
-    DECLARE @local     INT;
-    DECLARE @visitante INT;
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @estado      VARCHAR(12);
+    DECLARE @local       INT;
+    DECLARE @visitante   INT;
 
     SET @esquema_tactico = NULLIF(TRIM(@esquema_tactico), '');
 
@@ -213,31 +213,31 @@ BEGIN
     WHERE id_partido = @id_partido;
 
     IF @id_partido IS NULL
-        SET @errores += @nl + N'- El partido es obligatorio.';
+        SET @errores += @salto_linea + N'- El partido es obligatorio.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
     ELSE IF @estado <> 'PROGRAMADO'
-        SET @errores += @nl + N'- La formación se registra antes de que empiece el partido (estado actual: '
+        SET @errores += @salto_linea + N'- La formación se registra antes de que empiece el partido (estado actual: '
                       + @estado + N').';
 
     IF @id_seleccion IS NULL
-        SET @errores += @nl + N'- La selección es obligatoria.';
+        SET @errores += @salto_linea + N'- La selección es obligatoria.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Torneo.SELECCION WHERE id_seleccion = @id_seleccion)
-        SET @errores += @nl + N'- No existe una selección con id ' + CAST(@id_seleccion AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una selección con id ' + CAST(@id_seleccion AS NVARCHAR(10)) + N'.';
     ELSE IF @estado IS NOT NULL AND @id_seleccion <> ISNULL(@local, -1) AND @id_seleccion <> ISNULL(@visitante, -1)
-        SET @errores += @nl + N'- La selección no juega ese partido.';
+        SET @errores += @salto_linea + N'- La selección no juega ese partido.';
     ELSE IF EXISTS (SELECT 1 FROM DesarrolloPartido.FORMACION
                     WHERE id_partido = @id_partido AND id_seleccion = @id_seleccion)
-        SET @errores += @nl + N'- La selección ya tiene formación para ese partido.';
+        SET @errores += @salto_linea + N'- La selección ya tiene formación para ese partido.';
 
     IF @esquema_tactico IS NULL
-        SET @errores += @nl + N'- El esquema táctico es obligatorio.';
+        SET @errores += @salto_linea + N'- El esquema táctico es obligatorio.';
     ELSE IF LEN(@esquema_tactico) > 10
             OR @esquema_tactico NOT LIKE '[1-9]-[1-9]%'
             OR EXISTS (SELECT 1 FROM STRING_SPLIT(@esquema_tactico, '-') WHERE value NOT LIKE '[1-9]')
             OR (SELECT SUM(CAST(value AS INT)) FROM STRING_SPLIT(@esquema_tactico, '-')
                 WHERE value LIKE '[1-9]') <> 10
-        SET @errores += @nl + N'- El esquema táctico son líneas de 1 a 9 jugadores separadas por guiones '
+        SET @errores += @salto_linea + N'- El esquema táctico son líneas de 1 a 9 jugadores separadas por guiones '
                       + N'que suman 10 jugadores de campo (ej. 4-3-3 o 4-2-3-1).';
 
     IF @errores <> N''
@@ -267,9 +267,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @estado  VARCHAR(12);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @estado      VARCHAR(12);
 
     SET @esquema_tactico = NULLIF(TRIM(@esquema_tactico), '');
 
@@ -279,20 +279,20 @@ BEGIN
     WHERE f.id_formacion = @id_formacion;
 
     IF @id_formacion IS NULL
-        SET @errores += @nl + N'- El id de la formación es obligatorio.';
+        SET @errores += @salto_linea + N'- El id de la formación es obligatorio.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No existe una formación con id ' + CAST(@id_formacion AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una formación con id ' + CAST(@id_formacion AS NVARCHAR(10)) + N'.';
     ELSE IF @estado = 'FINALIZADO'
-        SET @errores += @nl + N'- El partido ya terminó.';
+        SET @errores += @salto_linea + N'- El partido ya terminó.';
 
     IF @esquema_tactico IS NULL
-        SET @errores += @nl + N'- El esquema táctico es obligatorio.';
+        SET @errores += @salto_linea + N'- El esquema táctico es obligatorio.';
     ELSE IF LEN(@esquema_tactico) > 10
             OR @esquema_tactico NOT LIKE '[1-9]-[1-9]%'
             OR EXISTS (SELECT 1 FROM STRING_SPLIT(@esquema_tactico, '-') WHERE value NOT LIKE '[1-9]')
             OR (SELECT SUM(CAST(value AS INT)) FROM STRING_SPLIT(@esquema_tactico, '-')
                 WHERE value LIKE '[1-9]') <> 10
-        SET @errores += @nl + N'- El esquema táctico son líneas de 1 a 9 jugadores separadas por guiones '
+        SET @errores += @salto_linea + N'- El esquema táctico son líneas de 1 a 9 jugadores separadas por guiones '
                       + N'que suman 10 jugadores de campo (ej. 4-3-3 o 4-2-3-1).';
 
     IF @errores <> N''
@@ -318,19 +318,19 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores   NVARCHAR(2048) = N'';
-    DECLARE @nl        NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @alineados INT;
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @alineados   INT;
 
     IF @id_formacion IS NULL
-        SET @errores += @nl + N'- El id de la formación es obligatorio.';
+        SET @errores += @salto_linea + N'- El id de la formación es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DesarrolloPartido.FORMACION WHERE id_formacion = @id_formacion)
-        SET @errores += @nl + N'- No existe una formación con id ' + CAST(@id_formacion AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una formación con id ' + CAST(@id_formacion AS NVARCHAR(10)) + N'.';
     ELSE
     BEGIN
         SELECT @alineados = COUNT(*) FROM DesarrolloPartido.ALINEACION WHERE id_formacion = @id_formacion;
         IF @alineados > 0
-            SET @errores += @nl + N'- La referencian ' + CAST(@alineados AS NVARCHAR(10))
+            SET @errores += @salto_linea + N'- La referencian ' + CAST(@alineados AS NVARCHAR(10))
                           + N' registro(s) de DesarrolloPartido.ALINEACION.';
     END;
 
@@ -367,17 +367,17 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores        NVARCHAR(2048) = N'';
-    DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @id_partido     INT;
-    DECLARE @id_seleccion   INT;
-    DECLARE @estado         VARCHAR(12);
-    DECLARE @fecha_partido  DATE;
-    DECLARE @sel_jugador    INT;
-    DECLARE @fecha_alta     DATE;
-    DECLARE @fecha_baja     DATE;
-    DECLARE @titulares      INT;
-    DECLARE @suspension     VARCHAR(200);
+    DECLARE @errores           NVARCHAR(2048) = N'';
+    DECLARE @salto_linea       NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @id_partido        INT;
+    DECLARE @id_seleccion      INT;
+    DECLARE @estado            VARCHAR(12);
+    DECLARE @fecha_partido     DATE;
+    DECLARE @seleccion_jugador INT;
+    DECLARE @fecha_alta        DATE;
+    DECLARE @fecha_baja        DATE;
+    DECLARE @titulares         INT;
+    DECLARE @suspension        VARCHAR(200);
 
     SET @posicion_en_cancha = UPPER(NULLIF(TRIM(@posicion_en_cancha), ''));
 
@@ -389,56 +389,56 @@ BEGIN
     INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = f.id_partido
     WHERE f.id_formacion = @id_formacion;
 
-    SELECT @sel_jugador = l.id_seleccion, @fecha_alta = j.fecha_alta, @fecha_baja = j.fecha_baja
+    SELECT @seleccion_jugador = l.id_seleccion, @fecha_alta = j.fecha_alta, @fecha_baja = j.fecha_baja
     FROM Torneo.JUGADOR AS j
     INNER JOIN Torneo.LISTA_CONVOCADOS AS l ON l.id_lista = j.id_lista
     WHERE j.id_jugador = @id_jugador;
 
     IF @id_formacion IS NULL
-        SET @errores += @nl + N'- La formación es obligatoria.';
+        SET @errores += @salto_linea + N'- La formación es obligatoria.';
     ELSE IF @id_partido IS NULL
-        SET @errores += @nl + N'- No existe una formación con id ' + CAST(@id_formacion AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una formación con id ' + CAST(@id_formacion AS NVARCHAR(10)) + N'.';
     ELSE IF @estado <> 'PROGRAMADO'
-        SET @errores += @nl + N'- La alineación se registra antes de que empiece el partido (estado actual: '
+        SET @errores += @salto_linea + N'- La alineación se registra antes de que empiece el partido (estado actual: '
                       + @estado + N').';
 
     IF @id_jugador IS NULL
-        SET @errores += @nl + N'- El jugador es obligatorio.';
-    ELSE IF @sel_jugador IS NULL
-        SET @errores += @nl + N'- No existe un jugador con id ' + CAST(@id_jugador AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- El jugador es obligatorio.';
+    ELSE IF @seleccion_jugador IS NULL
+        SET @errores += @salto_linea + N'- No existe un jugador con id ' + CAST(@id_jugador AS NVARCHAR(10)) + N'.';
     ELSE IF @id_seleccion IS NOT NULL
     BEGIN
-        IF @sel_jugador <> @id_seleccion
-            SET @errores += @nl + N'- El jugador no es de la selección de la formación.';
+        IF @seleccion_jugador <> @id_seleccion
+            SET @errores += @salto_linea + N'- El jugador no es de la selección de la formación.';
         ELSE IF @fecha_alta > @fecha_partido OR @fecha_baja <= @fecha_partido
-            SET @errores += @nl + N'- El jugador no estaba convocado en la fecha del partido.';
+            SET @errores += @salto_linea + N'- El jugador no estaba convocado en la fecha del partido.';
 
         IF EXISTS (SELECT 1 FROM DesarrolloPartido.ALINEACION
                    WHERE id_formacion = @id_formacion AND id_jugador = @id_jugador)
-            SET @errores += @nl + N'- El jugador ya figura en la formación.';
+            SET @errores += @salto_linea + N'- El jugador ya figura en la formación.';
 
         SELECT TOP (1) @suspension = motivo + ' en el partido ' + CAST(numero_partido_origen AS VARCHAR(3))
         FROM DesarrolloPartido.fn_JugadoresSuspendidos(@id_partido)
         WHERE id_jugador = @id_jugador;
         IF @suspension IS NOT NULL
-            SET @errores += @nl + N'- El jugador está suspendido para este partido (' + @suspension + N').';
+            SET @errores += @salto_linea + N'- El jugador está suspendido para este partido (' + @suspension + N').';
     END;
 
     IF @es_titular IS NULL
-        SET @errores += @nl + N'- Hay que indicar si es titular (1) o suplente (0).';
+        SET @errores += @salto_linea + N'- Hay que indicar si es titular (1) o suplente (0).';
     ELSE IF @es_titular = 1
     BEGIN
         IF @posicion_en_cancha IS NULL
-            SET @errores += @nl + N'- Un titular necesita su posición en cancha.';
+            SET @errores += @salto_linea + N'- Un titular necesita su posición en cancha.';
         SELECT @titulares = COUNT(*)
         FROM DesarrolloPartido.ALINEACION
         WHERE id_formacion = @id_formacion AND es_titular = 1;
         IF @titulares >= 11
-            SET @errores += @nl + N'- La formación ya tiene sus 11 titulares.';
+            SET @errores += @salto_linea + N'- La formación ya tiene sus 11 titulares.';
     END;
 
     IF LEN(@posicion_en_cancha) > 30
-        SET @errores += @nl + N'- La posición en cancha no puede superar los 30 caracteres.';
+        SET @errores += @salto_linea + N'- La posición en cancha no puede superar los 30 caracteres.';
 
     IF @errores <> N''
     BEGIN
@@ -468,7 +468,7 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @errores        NVARCHAR(2048) = N'';
-    DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @salto_linea    NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @estado         VARCHAR(12);
     DECLARE @titular_final  BIT;
     DECLARE @posicion_final VARCHAR(30);
@@ -485,28 +485,28 @@ BEGIN
     WHERE a.id_formacion = @id_formacion AND a.id_jugador = @id_jugador;
 
     IF @id_formacion IS NULL OR @id_jugador IS NULL
-        SET @errores += @nl + N'- La formación y el jugador son obligatorios.';
+        SET @errores += @salto_linea + N'- La formación y el jugador son obligatorios.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- El jugador no figura en esa formación.';
+        SET @errores += @salto_linea + N'- El jugador no figura en esa formación.';
     ELSE IF @estado <> 'PROGRAMADO'
-        SET @errores += @nl + N'- La alineación se modifica antes de que empiece el partido (estado actual: '
+        SET @errores += @salto_linea + N'- La alineación se modifica antes de que empiece el partido (estado actual: '
                       + @estado + N'); durante el partido se registran cambios.';
 
     IF @es_titular IS NULL AND @posicion_en_cancha IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF LEN(@posicion_en_cancha) > 30
-        SET @errores += @nl + N'- La posición en cancha no puede superar los 30 caracteres.';
+        SET @errores += @salto_linea + N'- La posición en cancha no puede superar los 30 caracteres.';
 
     IF @titular_final = 1
     BEGIN
         IF @posicion_final IS NULL
-            SET @errores += @nl + N'- Un titular necesita su posición en cancha.';
+            SET @errores += @salto_linea + N'- Un titular necesita su posición en cancha.';
         SELECT @titulares = COUNT(*)
         FROM DesarrolloPartido.ALINEACION
         WHERE id_formacion = @id_formacion AND es_titular = 1 AND id_jugador <> @id_jugador;
         IF @titulares >= 11
-            SET @errores += @nl + N'- La formación ya tiene sus 11 titulares.';
+            SET @errores += @salto_linea + N'- La formación ya tiene sus 11 titulares.';
     END;
 
     IF @errores <> N''
@@ -535,9 +535,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores    NVARCHAR(2048) = N'';
-    DECLARE @nl         NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @id_partido INT;
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @id_partido  INT;
 
     SELECT @id_partido = f.id_partido
     FROM DesarrolloPartido.ALINEACION AS a
@@ -545,12 +545,12 @@ BEGIN
     WHERE a.id_formacion = @id_formacion AND a.id_jugador = @id_jugador;
 
     IF @id_formacion IS NULL OR @id_jugador IS NULL
-        SET @errores += @nl + N'- La formación y el jugador son obligatorios.';
+        SET @errores += @salto_linea + N'- La formación y el jugador son obligatorios.';
     ELSE IF @id_partido IS NULL
-        SET @errores += @nl + N'- El jugador no figura en esa formación.';
+        SET @errores += @salto_linea + N'- El jugador no figura en esa formación.';
     ELSE
         SET @errores += ISNULL((
-            SELECT STRING_AGG(@nl + N'- El jugador tiene ' + CAST(r.cantidad AS NVARCHAR(10))
+            SELECT STRING_AGG(@salto_linea + N'- El jugador tiene ' + CAST(r.cantidad AS NVARCHAR(10))
                               + N' registro(s) de ' + r.tabla + N' en el partido.', N'')
             FROM (
                 SELECT N'DesarrolloPartido.CAMBIO', COUNT(*)
@@ -607,14 +607,14 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores       NVARCHAR(2048) = N'';
-    DECLARE @nl            NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @estado        VARCHAR(12);
-    DECLARE @fase          VARCHAR(15);
-    DECLARE @sel_sale      INT;
-    DECLARE @titular_sale  BIT;
-    DECLARE @sel_entra     INT;
-    DECLARE @titular_entra BIT;
+    DECLARE @errores         NVARCHAR(2048) = N'';
+    DECLARE @salto_linea     NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @estado          VARCHAR(12);
+    DECLARE @fase            VARCHAR(15);
+    DECLARE @seleccion_sale  INT;
+    DECLARE @titular_sale    BIT;
+    DECLARE @seleccion_entra INT;
+    DECLARE @titular_entra   BIT;
 
     SET @motivo           = UPPER(NULLIF(TRIM(@motivo), ''));
     SET @minuto_adicional = ISNULL(@minuto_adicional, 0);
@@ -622,67 +622,67 @@ BEGIN
 
     SELECT @estado = estado, @fase = fase FROM Torneo.PARTIDO WHERE id_partido = @id_partido;
 
-    SELECT @sel_sale = f.id_seleccion, @titular_sale = a.es_titular
+    SELECT @seleccion_sale = f.id_seleccion, @titular_sale = a.es_titular
     FROM DesarrolloPartido.ALINEACION AS a
     INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = a.id_formacion
     WHERE f.id_partido = @id_partido AND a.id_jugador = @id_jugador_sale;
 
-    SELECT @sel_entra = f.id_seleccion, @titular_entra = a.es_titular
+    SELECT @seleccion_entra = f.id_seleccion, @titular_entra = a.es_titular
     FROM DesarrolloPartido.ALINEACION AS a
     INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = a.id_formacion
     WHERE f.id_partido = @id_partido AND a.id_jugador = @id_jugador_entra;
 
     IF @id_partido IS NULL
-        SET @errores += @nl + N'- El partido es obligatorio.';
+        SET @errores += @salto_linea + N'- El partido es obligatorio.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
     ELSE IF @estado NOT IN ('EN_JUEGO', 'FINALIZADO')
-        SET @errores += @nl + N'- Los cambios se registran con el partido EN_JUEGO o FINALIZADO (estado actual: '
+        SET @errores += @salto_linea + N'- Los cambios se registran con el partido EN_JUEGO o FINALIZADO (estado actual: '
                       + @estado + N').';
 
     IF @id_jugador_sale IS NULL OR @id_jugador_entra IS NULL
-        SET @errores += @nl + N'- El jugador que sale y el que entra son obligatorios.';
+        SET @errores += @salto_linea + N'- El jugador que sale y el que entra son obligatorios.';
     ELSE IF @id_jugador_sale = @id_jugador_entra
-        SET @errores += @nl + N'- El jugador que sale y el que entra tienen que ser distintos.';
+        SET @errores += @salto_linea + N'- El jugador que sale y el que entra tienen que ser distintos.';
     ELSE IF @estado IS NOT NULL
     BEGIN
-        IF @sel_sale IS NULL
-            SET @errores += @nl + N'- El jugador que sale no figura en la formación del partido.';
-        IF @sel_entra IS NULL
-            SET @errores += @nl + N'- El jugador que entra no figura en la formación del partido.';
-        IF @sel_sale <> @sel_entra
-            SET @errores += @nl + N'- Los dos jugadores tienen que ser de la misma selección.';
+        IF @seleccion_sale IS NULL
+            SET @errores += @salto_linea + N'- El jugador que sale no figura en la formación del partido.';
+        IF @seleccion_entra IS NULL
+            SET @errores += @salto_linea + N'- El jugador que entra no figura en la formación del partido.';
+        IF @seleccion_sale <> @seleccion_entra
+            SET @errores += @salto_linea + N'- Los dos jugadores tienen que ser de la misma selección.';
         IF @titular_entra = 1
-            SET @errores += @nl + N'- El jugador que entra es titular: tiene que ser un suplente.';
+            SET @errores += @salto_linea + N'- El jugador que entra es titular: tiene que ser un suplente.';
         IF EXISTS (SELECT 1 FROM DesarrolloPartido.CAMBIO
                    WHERE id_partido = @id_partido AND id_jugador_entra = @id_jugador_entra)
-            SET @errores += @nl + N'- El jugador que entra ya había entrado en este partido.';
+            SET @errores += @salto_linea + N'- El jugador que entra ya había entrado en este partido.';
         IF EXISTS (SELECT 1 FROM DesarrolloPartido.CAMBIO
                    WHERE id_partido = @id_partido AND id_jugador_sale = @id_jugador_sale)
-            SET @errores += @nl + N'- El jugador que sale ya había salido en este partido.';
+            SET @errores += @salto_linea + N'- El jugador que sale ya había salido en este partido.';
         IF @titular_sale = 0
            AND NOT EXISTS (SELECT 1 FROM DesarrolloPartido.CAMBIO
                            WHERE id_partido = @id_partido AND id_jugador_entra = @id_jugador_sale)
-            SET @errores += @nl + N'- El jugador que sale es suplente y no había entrado.';
+            SET @errores += @salto_linea + N'- El jugador que sale es suplente y no había entrado.';
     END;
 
     IF @minuto IS NULL
-        SET @errores += @nl + N'- El minuto es obligatorio.';
+        SET @errores += @salto_linea + N'- El minuto es obligatorio.';
     ELSE IF @minuto NOT BETWEEN 1 AND 120
-        SET @errores += @nl + N'- El minuto debe estar entre 1 y 120.';
+        SET @errores += @salto_linea + N'- El minuto debe estar entre 1 y 120.';
     ELSE IF @minuto > 90 AND @fase = 'GRUPOS'
-        SET @errores += @nl + N'- En la fase de grupos no hay tiempo suplementario (minuto mayor que 90).';
+        SET @errores += @salto_linea + N'- En la fase de grupos no hay tiempo suplementario (minuto mayor que 90).';
 
     IF @minuto_adicional > 30
-        SET @errores += @nl + N'- El tiempo adicional no puede superar los 30 minutos.';
+        SET @errores += @salto_linea + N'- El tiempo adicional no puede superar los 30 minutos.';
 
     IF @en_entretiempo = 1 AND (@minuto NOT IN (46, 91, 106) OR @minuto_adicional <> 0)
-        SET @errores += @nl + N'- Un cambio en el entretiempo se registra en el minuto 46, 91 o 106, sin adicional.';
+        SET @errores += @salto_linea + N'- Un cambio en el entretiempo se registra en el minuto 46, 91 o 106, sin adicional.';
 
     IF @motivo IS NULL
-        SET @errores += @nl + N'- El motivo es obligatorio.';
+        SET @errores += @salto_linea + N'- El motivo es obligatorio.';
     ELSE IF @motivo NOT IN ('TACTICO', 'LESION', 'PRECAUCION')
-        SET @errores += @nl + N'- El motivo debe ser TACTICO, LESION o PRECAUCION.';
+        SET @errores += @salto_linea + N'- El motivo debe ser TACTICO, LESION o PRECAUCION.';
 
     IF @errores <> N''
     BEGIN
@@ -718,7 +718,7 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @errores           NVARCHAR(2048) = N'';
-    DECLARE @nl                NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @salto_linea       NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @fase              VARCHAR(15);
     DECLARE @minuto_final      TINYINT;
     DECLARE @adicional_final   TINYINT;
@@ -735,26 +735,26 @@ BEGIN
     WHERE c.id_cambio = @id_cambio;
 
     IF @id_cambio IS NULL
-        SET @errores += @nl + N'- El id del cambio es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del cambio es obligatorio.';
     ELSE IF @fase IS NULL
-        SET @errores += @nl + N'- No existe un cambio con id ' + CAST(@id_cambio AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un cambio con id ' + CAST(@id_cambio AS NVARCHAR(10)) + N'.';
 
     IF @minuto IS NULL AND @minuto_adicional IS NULL AND @en_entretiempo IS NULL AND @motivo IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF @minuto_final NOT BETWEEN 1 AND 120
-        SET @errores += @nl + N'- El minuto debe estar entre 1 y 120.';
+        SET @errores += @salto_linea + N'- El minuto debe estar entre 1 y 120.';
     ELSE IF @minuto_final > 90 AND @fase = 'GRUPOS'
-        SET @errores += @nl + N'- En la fase de grupos no hay tiempo suplementario (minuto mayor que 90).';
+        SET @errores += @salto_linea + N'- En la fase de grupos no hay tiempo suplementario (minuto mayor que 90).';
 
     IF @adicional_final > 30
-        SET @errores += @nl + N'- El tiempo adicional no puede superar los 30 minutos.';
+        SET @errores += @salto_linea + N'- El tiempo adicional no puede superar los 30 minutos.';
 
     IF @entretiempo_final = 1 AND (@minuto_final NOT IN (46, 91, 106) OR @adicional_final <> 0)
-        SET @errores += @nl + N'- Un cambio en el entretiempo se registra en el minuto 46, 91 o 106, sin adicional.';
+        SET @errores += @salto_linea + N'- Un cambio en el entretiempo se registra en el minuto 46, 91 o 106, sin adicional.';
 
     IF @motivo NOT IN ('TACTICO', 'LESION', 'PRECAUCION')
-        SET @errores += @nl + N'- El motivo debe ser TACTICO, LESION o PRECAUCION.';
+        SET @errores += @salto_linea + N'- El motivo debe ser TACTICO, LESION o PRECAUCION.';
 
     IF @errores <> N''
     BEGIN
@@ -783,22 +783,22 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores    NVARCHAR(2048) = N'';
-    DECLARE @nl         NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @id_partido INT;
-    DECLARE @entra      INT;
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @id_partido  INT;
+    DECLARE @entra       INT;
 
     SELECT @id_partido = id_partido, @entra = id_jugador_entra
     FROM DesarrolloPartido.CAMBIO
     WHERE id_cambio = @id_cambio;
 
     IF @id_cambio IS NULL
-        SET @errores += @nl + N'- El id del cambio es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del cambio es obligatorio.';
     ELSE IF @id_partido IS NULL
-        SET @errores += @nl + N'- No existe un cambio con id ' + CAST(@id_cambio AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un cambio con id ' + CAST(@id_cambio AS NVARCHAR(10)) + N'.';
     ELSE
         SET @errores += ISNULL((
-            SELECT STRING_AGG(@nl + N'- El jugador que entró tiene ' + CAST(r.cantidad AS NVARCHAR(10))
+            SELECT STRING_AGG(@salto_linea + N'- El jugador que entró tiene ' + CAST(r.cantidad AS NVARCHAR(10))
                               + N' registro(s) de ' + r.tabla + N' en el partido.', N'')
             FROM (
                 SELECT N'DesarrolloPartido.CAMBIO', COUNT(*)
@@ -834,10 +834,12 @@ GO
   usp_GOL_Alta
   Valida: partido existente y EN_JUEGO; autor en la formación del partido;
   tipo de gol existente; período válido y minuto coherente con el período
-  (ver 02_CrearTablas.sql); ALARGUE, PENALES y los adicionales del alargue
+  (ver 03_CrearTablas.sql); ALARGUE, PENALES y los adicionales del alargue
   (105 y 120) solo en eliminación directa; un gol en contra no puede ser de
-  la definición por penales ni tener asistencia; la asistencia es de otro
-  jugador de la misma selección que figure en la formación.
+  la definición por penales; un gol en contra, de penal (el tipo de gol
+  'PENAL') o de la definición por penales no tiene asistencia; la
+  asistencia es de otro jugador de la misma selección que figure en la
+  formación.
   Que el autor y el asistente estén en cancha lo valida
   DesarrolloPartido.usp_RegistrarGol.
 */
@@ -854,51 +856,53 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores    NVARCHAR(2048) = N'';
-    DECLARE @nl         NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @estado     VARCHAR(12);
-    DECLARE @fase       VARCHAR(15);
-    DECLARE @sel_autor  INT;
-    DECLARE @sel_asist  INT;
-    DECLARE @en_contra  BIT;
+    DECLARE @errores              NVARCHAR(2048) = N'';
+    DECLARE @salto_linea          NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @estado               VARCHAR(12);
+    DECLARE @fase                 VARCHAR(15);
+    DECLARE @seleccion_autor      INT;
+    DECLARE @seleccion_asistencia INT;
+    DECLARE @en_contra            BIT;
+    DECLARE @tipo_descripcion     VARCHAR(40);
 
     SET @periodo          = UPPER(NULLIF(TRIM(@periodo), ''));
     SET @minuto_adicional = ISNULL(@minuto_adicional, 0);
 
     SELECT @estado = estado, @fase = fase FROM Torneo.PARTIDO WHERE id_partido = @id_partido;
-    SELECT @en_contra = es_en_contra FROM DesarrolloPartido.TIPO_GOL WHERE id_tipo_gol = @id_tipo_gol;
+    SELECT @en_contra = es_en_contra, @tipo_descripcion = descripcion
+    FROM DesarrolloPartido.TIPO_GOL WHERE id_tipo_gol = @id_tipo_gol;
 
-    SELECT @sel_autor = f.id_seleccion
+    SELECT @seleccion_autor = f.id_seleccion
     FROM DesarrolloPartido.ALINEACION AS a
     INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = a.id_formacion
     WHERE f.id_partido = @id_partido AND a.id_jugador = @id_jugador_autor;
 
-    SELECT @sel_asist = f.id_seleccion
+    SELECT @seleccion_asistencia = f.id_seleccion
     FROM DesarrolloPartido.ALINEACION AS a
     INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = a.id_formacion
     WHERE f.id_partido = @id_partido AND a.id_jugador = @id_jugador_asistencia;
 
     IF @id_partido IS NULL
-        SET @errores += @nl + N'- El partido es obligatorio.';
+        SET @errores += @salto_linea + N'- El partido es obligatorio.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
     ELSE IF @estado <> 'EN_JUEGO'
-        SET @errores += @nl + N'- Los goles se registran con el partido EN_JUEGO (estado actual: ' + @estado + N').';
+        SET @errores += @salto_linea + N'- Los goles se registran con el partido EN_JUEGO (estado actual: ' + @estado + N').';
 
     IF @id_jugador_autor IS NULL
-        SET @errores += @nl + N'- El autor es obligatorio.';
-    ELSE IF @estado IS NOT NULL AND @sel_autor IS NULL
-        SET @errores += @nl + N'- El autor no figura en la formación del partido.';
+        SET @errores += @salto_linea + N'- El autor es obligatorio.';
+    ELSE IF @estado IS NOT NULL AND @seleccion_autor IS NULL
+        SET @errores += @salto_linea + N'- El autor no figura en la formación del partido.';
 
     IF @id_tipo_gol IS NULL
-        SET @errores += @nl + N'- El tipo de gol es obligatorio.';
+        SET @errores += @salto_linea + N'- El tipo de gol es obligatorio.';
     ELSE IF @en_contra IS NULL
-        SET @errores += @nl + N'- No existe un tipo de gol con id ' + CAST(@id_tipo_gol AS NVARCHAR(3)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un tipo de gol con id ' + CAST(@id_tipo_gol AS NVARCHAR(3)) + N'.';
 
     IF @periodo IS NULL
-        SET @errores += @nl + N'- El período es obligatorio.';
+        SET @errores += @salto_linea + N'- El período es obligatorio.';
     ELSE IF @periodo NOT IN ('PRIMER_TIEMPO', 'SEGUNDO_TIEMPO', 'ALARGUE', 'ADICIONALES', 'PENALES')
-        SET @errores += @nl + N'- El período debe ser PRIMER_TIEMPO, SEGUNDO_TIEMPO, ALARGUE, ADICIONALES o PENALES.';
+        SET @errores += @salto_linea + N'- El período debe ser PRIMER_TIEMPO, SEGUNDO_TIEMPO, ALARGUE, ADICIONALES o PENALES.';
     ELSE
     BEGIN
         IF NOT (   (@periodo = 'PENALES'        AND @minuto IS NULL AND @minuto_adicional = 0)
@@ -907,28 +911,28 @@ BEGIN
                 OR (@periodo = 'ALARGUE'        AND @minuto BETWEEN 91 AND 120 AND @minuto_adicional = 0)
                 OR (@periodo = 'ADICIONALES'    AND @minuto IN (45, 90, 105, 120)
                                                 AND @minuto_adicional BETWEEN 1 AND 30))
-            SET @errores += @nl + N'- El minuto no corresponde al período: PRIMER_TIEMPO 1 a 45, SEGUNDO_TIEMPO 46 a 90, '
+            SET @errores += @salto_linea + N'- El minuto no corresponde al período: PRIMER_TIEMPO 1 a 45, SEGUNDO_TIEMPO 46 a 90, '
                           + N'ALARGUE 91 a 120, ADICIONALES minuto 45, 90, 105 o 120 con adicional de 1 a 30, '
                           + N'PENALES sin minuto.';
 
         IF @fase = 'GRUPOS'
            AND (@periodo IN ('ALARGUE', 'PENALES') OR (@periodo = 'ADICIONALES' AND @minuto IN (105, 120)))
-            SET @errores += @nl + N'- En la fase de grupos no hay alargue ni definición por penales.';
+            SET @errores += @salto_linea + N'- En la fase de grupos no hay alargue ni definición por penales.';
     END;
 
     IF @en_contra = 1 AND @periodo = 'PENALES'
-        SET @errores += @nl + N'- Un gol en contra no puede ser de la definición por penales.';
+        SET @errores += @salto_linea + N'- Un gol en contra no puede ser de la definición por penales.';
 
     IF @id_jugador_asistencia IS NOT NULL
     BEGIN
         IF @id_jugador_asistencia = @id_jugador_autor
-            SET @errores += @nl + N'- El autor no puede ser también el que asiste.';
-        ELSE IF @en_contra = 1 OR @periodo = 'PENALES'
-            SET @errores += @nl + N'- Un gol en contra o de la definición por penales no tiene asistencia.';
-        ELSE IF @sel_asist IS NULL
-            SET @errores += @nl + N'- El jugador que asiste no figura en la formación del partido.';
-        ELSE IF @sel_asist <> @sel_autor
-            SET @errores += @nl + N'- El que asiste tiene que ser de la misma selección que el autor.';
+            SET @errores += @salto_linea + N'- El autor no puede ser también el que asiste.';
+        ELSE IF @en_contra = 1 OR @periodo = 'PENALES' OR @tipo_descripcion = 'PENAL'
+            SET @errores += @salto_linea + N'- Un gol en contra, de penal o de la definición por penales no tiene asistencia.';
+        ELSE IF @seleccion_asistencia IS NULL
+            SET @errores += @salto_linea + N'- El jugador que asiste no figura en la formación del partido.';
+        ELSE IF @seleccion_asistencia <> @seleccion_autor
+            SET @errores += @salto_linea + N'- El que asiste tiene que ser de la misma selección que el autor.';
     END;
 
     IF @errores <> N''
@@ -954,6 +958,10 @@ GO
   puede cambiar cualquier dato; con el partido FINALIZADO solo los que no
   alteran el resultado (minuto, período dentro del juego, asistencia o un
   tipo con el mismo valor de "en contra").
+  Un parámetro en NULL deja el dato como está. Para que el gol quede sin
+  asistencia se pasa @quitar_asistencia = 1 (sin @id_jugador_asistencia);
+  así también se puede pasar a "en contra" o a la definición por penales un
+  gol que tenía asistencia, en la misma llamada.
 */
 CREATE OR ALTER PROCEDURE DesarrolloPartido.usp_GOL_Modificacion
     @id_gol                 INT,
@@ -961,29 +969,32 @@ CREATE OR ALTER PROCEDURE DesarrolloPartido.usp_GOL_Modificacion
     @periodo                VARCHAR(30) = NULL,
     @minuto                 TINYINT     = NULL,
     @minuto_adicional       TINYINT     = NULL,
-    @id_jugador_asistencia  INT         = NULL
+    @id_jugador_asistencia  INT         = NULL,
+    @quitar_asistencia      BIT         = 0
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores          NVARCHAR(2048) = N'';
-    DECLARE @nl               NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @id_partido       INT;
-    DECLARE @estado           VARCHAR(12);
-    DECLARE @fase             VARCHAR(15);
-    DECLARE @autor            INT;
-    DECLARE @sel_autor        INT;
-    DECLARE @sel_asist        INT;
-    DECLARE @tipo_final       TINYINT;
-    DECLARE @periodo_actual   VARCHAR(15);
-    DECLARE @periodo_final    VARCHAR(15);
-    DECLARE @minuto_final     TINYINT;
-    DECLARE @adicional_final  TINYINT;
-    DECLARE @asist_final      INT;
-    DECLARE @en_contra_actual BIT;
-    DECLARE @en_contra_final  BIT;
+    DECLARE @errores              NVARCHAR(2048) = N'';
+    DECLARE @salto_linea          NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @id_partido           INT;
+    DECLARE @estado               VARCHAR(12);
+    DECLARE @fase                 VARCHAR(15);
+    DECLARE @autor                INT;
+    DECLARE @seleccion_autor      INT;
+    DECLARE @seleccion_asistencia INT;
+    DECLARE @tipo_final           TINYINT;
+    DECLARE @periodo_actual       VARCHAR(15);
+    DECLARE @periodo_final        VARCHAR(15);
+    DECLARE @minuto_final         TINYINT;
+    DECLARE @adicional_final      TINYINT;
+    DECLARE @asistencia_final     INT;
+    DECLARE @en_contra_actual     BIT;
+    DECLARE @en_contra_final      BIT;
+    DECLARE @tipo_descripcion     VARCHAR(40);
 
-    SET @periodo = UPPER(NULLIF(TRIM(@periodo), ''));
+    SET @periodo           = UPPER(NULLIF(TRIM(@periodo), ''));
+    SET @quitar_asistencia = ISNULL(@quitar_asistencia, 0);
 
     SELECT @id_partido       = g.id_partido,
            @estado           = p.estado,
@@ -994,46 +1005,50 @@ BEGIN
            @periodo_final    = ISNULL(LEFT(@periodo, 15), g.periodo),
            @minuto_final     = IIF(@periodo = 'PENALES', NULL, ISNULL(@minuto, g.minuto)),
            @adicional_final  = ISNULL(@minuto_adicional, g.minuto_adicional),
-           @asist_final      = ISNULL(@id_jugador_asistencia, g.id_jugador_asistencia),
+           @asistencia_final = IIF(@quitar_asistencia = 1, NULL, ISNULL(@id_jugador_asistencia, g.id_jugador_asistencia)),
            @en_contra_actual = tg.es_en_contra
     FROM DesarrolloPartido.GOL AS g
     INNER JOIN DesarrolloPartido.TIPO_GOL AS tg ON tg.id_tipo_gol = g.id_tipo_gol
     INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = g.id_partido
     WHERE g.id_gol = @id_gol;
 
-    SELECT @en_contra_final = es_en_contra FROM DesarrolloPartido.TIPO_GOL WHERE id_tipo_gol = @tipo_final;
+    SELECT @en_contra_final = es_en_contra, @tipo_descripcion = descripcion
+    FROM DesarrolloPartido.TIPO_GOL WHERE id_tipo_gol = @tipo_final;
 
-    SELECT @sel_autor = f.id_seleccion
+    SELECT @seleccion_autor = f.id_seleccion
     FROM DesarrolloPartido.ALINEACION AS a
     INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = a.id_formacion
     WHERE f.id_partido = @id_partido AND a.id_jugador = @autor;
 
-    SELECT @sel_asist = f.id_seleccion
+    SELECT @seleccion_asistencia = f.id_seleccion
     FROM DesarrolloPartido.ALINEACION AS a
     INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = a.id_formacion
-    WHERE f.id_partido = @id_partido AND a.id_jugador = @asist_final;
+    WHERE f.id_partido = @id_partido AND a.id_jugador = @asistencia_final;
 
     IF @id_gol IS NULL
-        SET @errores += @nl + N'- El id del gol es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del gol es obligatorio.';
     ELSE IF @id_partido IS NULL
-        SET @errores += @nl + N'- No existe un gol con id ' + CAST(@id_gol AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un gol con id ' + CAST(@id_gol AS NVARCHAR(10)) + N'.';
     ELSE IF @estado NOT IN ('EN_JUEGO', 'FINALIZADO')
-        SET @errores += @nl + N'- El partido no está EN_JUEGO ni FINALIZADO.';
+        SET @errores += @salto_linea + N'- El partido no está EN_JUEGO ni FINALIZADO.';
     ELSE IF @estado = 'FINALIZADO'
             AND (@en_contra_final <> @en_contra_actual
                  OR (@periodo_final = 'PENALES' AND @periodo_actual <> 'PENALES')
                  OR (@periodo_final <> 'PENALES' AND @periodo_actual = 'PENALES'))
-        SET @errores += @nl + N'- El partido ya finalizó y ese cambio alteraría el resultado: hay que reabrirlo.';
+        SET @errores += @salto_linea + N'- El partido ya finalizó y ese cambio alteraría el resultado: hay que reabrirlo.';
 
     IF @id_tipo_gol IS NULL AND @periodo IS NULL AND @minuto IS NULL AND @minuto_adicional IS NULL
-       AND @id_jugador_asistencia IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+       AND @id_jugador_asistencia IS NULL AND @quitar_asistencia = 0
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
+
+    IF @quitar_asistencia = 1 AND @id_jugador_asistencia IS NOT NULL
+        SET @errores += @salto_linea + N'- Se informó un jugador que asiste y a la vez que se quite la asistencia: es uno u otro.';
 
     IF @id_tipo_gol IS NOT NULL AND @en_contra_final IS NULL
-        SET @errores += @nl + N'- No existe un tipo de gol con id ' + CAST(@id_tipo_gol AS NVARCHAR(3)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un tipo de gol con id ' + CAST(@id_tipo_gol AS NVARCHAR(3)) + N'.';
 
     IF @periodo NOT IN ('PRIMER_TIEMPO', 'SEGUNDO_TIEMPO', 'ALARGUE', 'ADICIONALES', 'PENALES')
-        SET @errores += @nl + N'- El período debe ser PRIMER_TIEMPO, SEGUNDO_TIEMPO, ALARGUE, ADICIONALES o PENALES.';
+        SET @errores += @salto_linea + N'- El período debe ser PRIMER_TIEMPO, SEGUNDO_TIEMPO, ALARGUE, ADICIONALES o PENALES.';
     ELSE IF @id_partido IS NOT NULL
     BEGIN
         IF NOT (   (@periodo_final = 'PENALES'        AND @minuto_final IS NULL AND @adicional_final = 0)
@@ -1042,29 +1057,29 @@ BEGIN
                 OR (@periodo_final = 'ALARGUE'        AND @minuto_final BETWEEN 91 AND 120 AND @adicional_final = 0)
                 OR (@periodo_final = 'ADICIONALES'    AND @minuto_final IN (45, 90, 105, 120)
                                                       AND @adicional_final BETWEEN 1 AND 30))
-            SET @errores += @nl + N'- El minuto no corresponde al período: PRIMER_TIEMPO 1 a 45, SEGUNDO_TIEMPO 46 a 90, '
+            SET @errores += @salto_linea + N'- El minuto no corresponde al período: PRIMER_TIEMPO 1 a 45, SEGUNDO_TIEMPO 46 a 90, '
                           + N'ALARGUE 91 a 120, ADICIONALES minuto 45, 90, 105 o 120 con adicional de 1 a 30, '
                           + N'PENALES sin minuto.';
 
         IF @fase = 'GRUPOS'
            AND (@periodo_final IN ('ALARGUE', 'PENALES')
                 OR (@periodo_final = 'ADICIONALES' AND @minuto_final IN (105, 120)))
-            SET @errores += @nl + N'- En la fase de grupos no hay alargue ni definición por penales.';
+            SET @errores += @salto_linea + N'- En la fase de grupos no hay alargue ni definición por penales.';
     END;
 
     IF @en_contra_final = 1 AND @periodo_final = 'PENALES'
-        SET @errores += @nl + N'- Un gol en contra no puede ser de la definición por penales.';
+        SET @errores += @salto_linea + N'- Un gol en contra no puede ser de la definición por penales.';
 
-    IF @asist_final IS NOT NULL
+    IF @asistencia_final IS NOT NULL
     BEGIN
-        IF @asist_final = @autor
-            SET @errores += @nl + N'- El autor no puede ser también el que asiste.';
-        ELSE IF @en_contra_final = 1 OR @periodo_final = 'PENALES'
-            SET @errores += @nl + N'- Un gol en contra o de la definición por penales no tiene asistencia.';
-        ELSE IF @sel_asist IS NULL
-            SET @errores += @nl + N'- El jugador que asiste no figura en la formación del partido.';
-        ELSE IF @sel_asist <> @sel_autor
-            SET @errores += @nl + N'- El que asiste tiene que ser de la misma selección que el autor.';
+        IF @asistencia_final = @autor
+            SET @errores += @salto_linea + N'- El autor no puede ser también el que asiste.';
+        ELSE IF @en_contra_final = 1 OR @periodo_final = 'PENALES' OR @tipo_descripcion = 'PENAL'
+            SET @errores += @salto_linea + N'- Un gol en contra, de penal o de la definición por penales no tiene asistencia.';
+        ELSE IF @seleccion_asistencia IS NULL
+            SET @errores += @salto_linea + N'- El jugador que asiste no figura en la formación del partido.';
+        ELSE IF @seleccion_asistencia <> @seleccion_autor
+            SET @errores += @salto_linea + N'- El que asiste tiene que ser de la misma selección que el autor.';
     END;
 
     IF @errores <> N''
@@ -1078,7 +1093,7 @@ BEGIN
         periodo               = @periodo_final,
         minuto                = @minuto_final,
         minuto_adicional      = @adicional_final,
-        id_jugador_asistencia = @asist_final
+        id_jugador_asistencia = @asistencia_final
     WHERE id_gol = @id_gol;
 END;
 GO
@@ -1095,9 +1110,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @estado  VARCHAR(12);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @estado      VARCHAR(12);
 
     SELECT @estado = p.estado
     FROM DesarrolloPartido.GOL AS g
@@ -1105,11 +1120,11 @@ BEGIN
     WHERE g.id_gol = @id_gol;
 
     IF @id_gol IS NULL
-        SET @errores += @nl + N'- El id del gol es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del gol es obligatorio.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No existe un gol con id ' + CAST(@id_gol AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un gol con id ' + CAST(@id_gol AS NVARCHAR(10)) + N'.';
     ELSE IF @estado <> 'EN_JUEGO'
-        SET @errores += @nl + N'- El partido está ' + @estado
+        SET @errores += @salto_linea + N'- El partido está ' + @estado
                       + N': un gol solo se quita con el partido EN_JUEGO (si terminó, hay que reabrirlo).';
 
     IF @errores <> N''
@@ -1132,7 +1147,8 @@ GO
   Valida: partido existente, EN_JUEGO o FINALIZADO; exactamente un receptor:
   un jugador de la formación del partido o una persona del cuerpo técnico de
   una de las dos selecciones; tipo AMARILLA o ROJA; que el receptor no haya
-  sido expulsado antes en el partido ni tenga ya dos amarillas; una roja por
+  sido expulsado antes en el partido ni tenga ya dos amarillas; que no tenga
+  ya una roja en el partido, en cualquier minuto (si la nueva es roja); una roja por
   doble amarilla necesita las dos amarillas previas; minuto entre 0 y 120,
   mayor que 90 solo en eliminación directa; adicional entre 0 y 30; motivo
   obligatorio de hasta 200 caracteres.
@@ -1153,14 +1169,14 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores    NVARCHAR(2048) = N'';
-    DECLARE @nl         NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @estado     VARCHAR(12);
-    DECLARE @fase       VARCHAR(15);
-    DECLARE @local      INT;
-    DECLARE @visitante  INT;
-    DECLARE @amarillas  INT;
-    DECLARE @roja_antes BIT = 0;
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @estado      VARCHAR(12);
+    DECLARE @fase        VARCHAR(15);
+    DECLARE @local       INT;
+    DECLARE @visitante   INT;
+    DECLARE @amarillas   INT;
+    DECLARE @roja_antes  BIT = 0;
 
     SET @tipo_tarjeta      = UPPER(NULLIF(TRIM(@tipo_tarjeta), ''));
     SET @motivo            = NULLIF(TRIM(@motivo), '');
@@ -1172,15 +1188,15 @@ BEGIN
     WHERE id_partido = @id_partido;
 
     IF @id_partido IS NULL
-        SET @errores += @nl + N'- El partido es obligatorio.';
+        SET @errores += @salto_linea + N'- El partido es obligatorio.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
     ELSE IF @estado NOT IN ('EN_JUEGO', 'FINALIZADO')
-        SET @errores += @nl + N'- Las tarjetas se registran con el partido EN_JUEGO o FINALIZADO (estado actual: '
+        SET @errores += @salto_linea + N'- Las tarjetas se registran con el partido EN_JUEGO o FINALIZADO (estado actual: '
                       + @estado + N').';
 
     IF (@id_jugador IS NULL AND @id_persona_ct IS NULL) OR (@id_jugador IS NOT NULL AND @id_persona_ct IS NOT NULL)
-        SET @errores += @nl + N'- La tarjeta la recibe un jugador o una persona del cuerpo técnico (exactamente uno).';
+        SET @errores += @salto_linea + N'- La tarjeta la recibe un jugador o una persona del cuerpo técnico (exactamente uno).';
     ELSE IF @estado IS NOT NULL
     BEGIN
         IF @id_jugador IS NOT NULL
@@ -1188,50 +1204,55 @@ BEGIN
                            FROM DesarrolloPartido.ALINEACION AS a
                            INNER JOIN DesarrolloPartido.FORMACION AS f ON f.id_formacion = a.id_formacion
                            WHERE f.id_partido = @id_partido AND a.id_jugador = @id_jugador)
-            SET @errores += @nl + N'- El jugador no figura en la formación del partido.';
+            SET @errores += @salto_linea + N'- El jugador no figura en la formación del partido.';
 
         IF @id_persona_ct IS NOT NULL
            AND NOT EXISTS (SELECT 1 FROM Torneo.PERSONA_CUERPO_TECNICO
                            WHERE id_persona_ct = @id_persona_ct
                              AND id_seleccion IN (@local, @visitante))
-            SET @errores += @nl + N'- La persona no es del cuerpo técnico de una de las selecciones del partido.';
+            SET @errores += @salto_linea + N'- La persona no es del cuerpo técnico de una de las selecciones del partido.';
 
+        -- Una amarilla anterior a la roja es válida aunque se cargue después;
+        -- una segunda roja no, sea cual sea su minuto.
         SELECT @amarillas  = SUM(IIF(tipo_tarjeta = 'AMARILLA', 1, 0)),
                @roja_antes = MAX(IIF(tipo_tarjeta = 'ROJA'
-                                     AND minuto * 100 + minuto_adicional <= @minuto * 100 + @minuto_adicional, 1, 0))
+                                     AND (@tipo_tarjeta = 'ROJA'
+                                          OR minuto * 100 + minuto_adicional <= @minuto * 100 + @minuto_adicional), 1, 0))
         FROM DesarrolloPartido.AMONESTACION
         WHERE id_partido = @id_partido
           AND (id_jugador = @id_jugador OR id_persona_ct = @id_persona_ct);
 
-        IF @roja_antes = 1
-            SET @errores += @nl + N'- El receptor ya había sido expulsado en este partido.';
+        IF @roja_antes = 1 AND @tipo_tarjeta = 'ROJA'
+            SET @errores += @salto_linea + N'- El receptor ya tiene una roja en este partido.';
+        ELSE IF @roja_antes = 1
+            SET @errores += @salto_linea + N'- El receptor ya había sido expulsado en este partido.';
         ELSE IF @tipo_tarjeta = 'AMARILLA' AND @amarillas >= 2
-            SET @errores += @nl + N'- El receptor ya tiene dos amarillas en este partido.';
+            SET @errores += @salto_linea + N'- El receptor ya tiene dos amarillas en este partido.';
         ELSE IF @es_doble_amarilla = 1 AND ISNULL(@amarillas, 0) < 2
-            SET @errores += @nl + N'- Una roja por doble amarilla necesita las dos amarillas registradas antes.';
+            SET @errores += @salto_linea + N'- Una roja por doble amarilla necesita las dos amarillas registradas antes.';
     END;
 
     IF @tipo_tarjeta IS NULL
-        SET @errores += @nl + N'- El tipo de tarjeta es obligatorio.';
+        SET @errores += @salto_linea + N'- El tipo de tarjeta es obligatorio.';
     ELSE IF @tipo_tarjeta NOT IN ('AMARILLA', 'ROJA')
-        SET @errores += @nl + N'- El tipo de tarjeta debe ser AMARILLA o ROJA.';
+        SET @errores += @salto_linea + N'- El tipo de tarjeta debe ser AMARILLA o ROJA.';
     ELSE IF @es_doble_amarilla = 1 AND @tipo_tarjeta <> 'ROJA'
-        SET @errores += @nl + N'- Solo una ROJA puede ser por doble amarilla.';
+        SET @errores += @salto_linea + N'- Solo una ROJA puede ser por doble amarilla.';
 
     IF @minuto IS NULL
-        SET @errores += @nl + N'- El minuto es obligatorio.';
+        SET @errores += @salto_linea + N'- El minuto es obligatorio.';
     ELSE IF @minuto > 120
-        SET @errores += @nl + N'- El minuto debe estar entre 0 y 120.';
+        SET @errores += @salto_linea + N'- El minuto debe estar entre 0 y 120.';
     ELSE IF @minuto > 90 AND @fase = 'GRUPOS'
-        SET @errores += @nl + N'- En la fase de grupos no hay tiempo suplementario (minuto mayor que 90).';
+        SET @errores += @salto_linea + N'- En la fase de grupos no hay tiempo suplementario (minuto mayor que 90).';
 
     IF @minuto_adicional > 30
-        SET @errores += @nl + N'- El tiempo adicional no puede superar los 30 minutos.';
+        SET @errores += @salto_linea + N'- El tiempo adicional no puede superar los 30 minutos.';
 
     IF @motivo IS NULL
-        SET @errores += @nl + N'- El motivo es obligatorio.';
+        SET @errores += @salto_linea + N'- El motivo es obligatorio.';
     ELSE IF LEN(@motivo) > 200
-        SET @errores += @nl + N'- El motivo no puede superar los 200 caracteres.';
+        SET @errores += @salto_linea + N'- El motivo no puede superar los 200 caracteres.';
 
     IF @errores <> N''
     BEGIN
@@ -1264,9 +1285,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @fase    VARCHAR(15);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @fase        VARCHAR(15);
 
     SET @motivo = NULLIF(TRIM(@motivo), '');
 
@@ -1276,23 +1297,23 @@ BEGIN
     WHERE a.id_amonestacion = @id_amonestacion;
 
     IF @id_amonestacion IS NULL
-        SET @errores += @nl + N'- El id de la tarjeta es obligatorio.';
+        SET @errores += @salto_linea + N'- El id de la tarjeta es obligatorio.';
     ELSE IF @fase IS NULL
-        SET @errores += @nl + N'- No existe una tarjeta con id ' + CAST(@id_amonestacion AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una tarjeta con id ' + CAST(@id_amonestacion AS NVARCHAR(10)) + N'.';
 
     IF @minuto IS NULL AND @minuto_adicional IS NULL AND @motivo IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF @minuto > 120
-        SET @errores += @nl + N'- El minuto debe estar entre 0 y 120.';
+        SET @errores += @salto_linea + N'- El minuto debe estar entre 0 y 120.';
     ELSE IF @minuto > 90 AND @fase = 'GRUPOS'
-        SET @errores += @nl + N'- En la fase de grupos no hay tiempo suplementario (minuto mayor que 90).';
+        SET @errores += @salto_linea + N'- En la fase de grupos no hay tiempo suplementario (minuto mayor que 90).';
 
     IF @minuto_adicional > 30
-        SET @errores += @nl + N'- El tiempo adicional no puede superar los 30 minutos.';
+        SET @errores += @salto_linea + N'- El tiempo adicional no puede superar los 30 minutos.';
 
     IF LEN(@motivo) > 200
-        SET @errores += @nl + N'- El motivo no puede superar los 200 caracteres.';
+        SET @errores += @salto_linea + N'- El motivo no puede superar los 200 caracteres.';
 
     IF @errores <> N''
     BEGIN
@@ -1320,26 +1341,26 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores    NVARCHAR(2048) = N'';
-    DECLARE @nl         NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @id_partido INT;
-    DECLARE @tipo       VARCHAR(8);
-    DECLARE @jugador    INT;
-    DECLARE @persona    INT;
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @id_partido  INT;
+    DECLARE @tipo        VARCHAR(8);
+    DECLARE @jugador     INT;
+    DECLARE @persona     INT;
 
     SELECT @id_partido = id_partido, @tipo = tipo_tarjeta, @jugador = id_jugador, @persona = id_persona_ct
     FROM DesarrolloPartido.AMONESTACION
     WHERE id_amonestacion = @id_amonestacion;
 
     IF @id_amonestacion IS NULL
-        SET @errores += @nl + N'- El id de la tarjeta es obligatorio.';
+        SET @errores += @salto_linea + N'- El id de la tarjeta es obligatorio.';
     ELSE IF @id_partido IS NULL
-        SET @errores += @nl + N'- No existe una tarjeta con id ' + CAST(@id_amonestacion AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una tarjeta con id ' + CAST(@id_amonestacion AS NVARCHAR(10)) + N'.';
     ELSE IF @tipo = 'AMARILLA'
             AND EXISTS (SELECT 1 FROM DesarrolloPartido.AMONESTACION
                         WHERE id_partido = @id_partido AND es_doble_amarilla = 1
                           AND (id_jugador = @jugador OR id_persona_ct = @persona))
-        SET @errores += @nl + N'- La amarilla es parte de una expulsión por doble amarilla: primero hay que dar de baja la roja.';
+        SET @errores += @salto_linea + N'- La amarilla es parte de una expulsión por doble amarilla: primero hay que dar de baja la roja.';
 
     IF @errores <> N''
     BEGIN

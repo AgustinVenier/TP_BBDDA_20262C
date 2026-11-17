@@ -10,7 +10,7 @@
    Venier, Agustin - AgustinVenier
    
  Fecha: 25/10/2026
- Archivo: 01_CrearEsquemas.sql
+ Archivo: 02_CrearEsquemas.sql
  Objetivo: Crear los esquemas lógicos en los que se agrupan las tablas.
 ================================================================================
 */
@@ -26,11 +26,12 @@ GO
       Arbitraje         Árbitros, idiomas que hablan y designaciones por partido.
       Publicidad        Anunciantes, campañas, piezas, espacios publicitarios y exhibiciones.
       Reportes          Vistas y SP de reportes (fuente de datos de la herramienta de BI).
+      Seguridad         Roles y cifrado de los datos personales.
 
-    CREATE SCHEMA debe ser la única sentencia de su lote, por lo que no puede
-    ir dentro de un IF. Para validar la existencia sin recurrir a SQL dinámico
-    se usa SET NOEXEC: si el esquema ya existe, el lote siguiente se compila
-    pero no se ejecuta, y luego se restablece la ejecución normal.
+    CREATE SCHEMA tiene que ser la única sentencia de su lote, entonces no puede
+    ir dentro de un IF. Si el esquema ya existe, SET NOEXEC ON hace que el lote
+    siguiente (el CREATE SCHEMA) se compile pero no se ejecute, y SET NOEXEC OFF
+    restablece la ejecución normal.
 */
 
 IF SCHEMA_ID(N'DatosGenerales') IS NOT NULL SET NOEXEC ON;
@@ -75,9 +76,16 @@ GO
 SET NOEXEC OFF;
 GO
 
+IF SCHEMA_ID(N'Seguridad') IS NOT NULL SET NOEXEC ON;
+GO
+CREATE SCHEMA Seguridad AUTHORIZATION dbo;
+GO
+SET NOEXEC OFF;
+GO
+
 -- Evidencia: esquemas creados.
 SELECT name AS Esquema
 FROM sys.schemas
-WHERE name IN (N'DatosGenerales', N'Torneo', N'DesarrolloPartido', N'Arbitraje', N'Publicidad', N'Reportes')
+WHERE name IN (N'DatosGenerales', N'Torneo', N'DesarrolloPartido', N'Arbitraje', N'Publicidad', N'Reportes', N'Seguridad')
 ORDER BY name;
 GO

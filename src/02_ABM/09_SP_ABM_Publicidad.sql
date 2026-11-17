@@ -10,13 +10,13 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 08_SP_ABM_Publicidad.sql
+ Archivo: 09_SP_ABM_Publicidad.sql
  Objetivo: Crear los stored procedures de alta, baja y modificación de las
            tablas del esquema Publicidad: ANUNCIANTE, CAMPANIA,
            PIEZA_PUBLICITARIA, PIEZA_PAIS_INTERES, ESPACIO_PUBLICITARIO y
            EXHIBICION. Siguen las convenciones descriptas en
-           04_SP_ABM_DatosGenerales.sql. Requiere haber ejecutado 00 a 07.
-           Su script de testing es 58_Test_SP_ABM_Publicidad.sql.
+           05_SP_ABM_DatosGenerales.sql. Requiere haber ejecutado 01 a 08.
+           Su script de testing es 59_Test_SP_ABM_Publicidad.sql.
 ================================================================================
 
  Particularidades de este esquema:
@@ -56,22 +56,22 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @razon_social = NULLIF(TRIM(@razon_social), N'');
 
     IF @razon_social IS NULL
-        SET @errores += @nl + N'- La razón social es obligatoria.';
+        SET @errores += @salto_linea + N'- La razón social es obligatoria.';
     ELSE IF LEN(@razon_social) > 150
-        SET @errores += @nl + N'- La razón social no puede superar los 150 caracteres.';
+        SET @errores += @salto_linea + N'- La razón social no puede superar los 150 caracteres.';
     ELSE IF EXISTS (SELECT 1 FROM Publicidad.ANUNCIANTE WHERE razon_social = @razon_social)
-        SET @errores += @nl + N'- Ya existe el anunciante "' + @razon_social + N'".';
+        SET @errores += @salto_linea + N'- Ya existe el anunciante "' + @razon_social + N'".';
 
     IF @id_pais IS NULL
-        SET @errores += @nl + N'- El país es obligatorio.';
+        SET @errores += @salto_linea + N'- El país es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
-        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
 
     IF @errores <> N''
     BEGIN
@@ -100,27 +100,27 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @razon_social = NULLIF(TRIM(@razon_social), N'');
 
     IF @id_anunciante IS NULL
-        SET @errores += @nl + N'- El id del anunciante es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del anunciante es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Publicidad.ANUNCIANTE WHERE id_anunciante = @id_anunciante)
-        SET @errores += @nl + N'- No existe un anunciante con id ' + CAST(@id_anunciante AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un anunciante con id ' + CAST(@id_anunciante AS NVARCHAR(10)) + N'.';
 
     IF @razon_social IS NULL AND @id_pais IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF LEN(@razon_social) > 150
-        SET @errores += @nl + N'- La razón social no puede superar los 150 caracteres.';
+        SET @errores += @salto_linea + N'- La razón social no puede superar los 150 caracteres.';
     ELSE IF EXISTS (SELECT 1 FROM Publicidad.ANUNCIANTE
                     WHERE razon_social = @razon_social AND id_anunciante <> @id_anunciante)
-        SET @errores += @nl + N'- Ya existe otro anunciante "' + @razon_social + N'".';
+        SET @errores += @salto_linea + N'- Ya existe otro anunciante "' + @razon_social + N'".';
 
     IF @id_pais IS NOT NULL AND NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
-        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
 
     IF @errores <> N''
     BEGIN
@@ -146,19 +146,19 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores   NVARCHAR(2048) = N'';
-    DECLARE @nl        NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @campanias INT;
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @campanias   INT;
 
     IF @id_anunciante IS NULL
-        SET @errores += @nl + N'- El id del anunciante es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del anunciante es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Publicidad.ANUNCIANTE WHERE id_anunciante = @id_anunciante)
-        SET @errores += @nl + N'- No existe un anunciante con id ' + CAST(@id_anunciante AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un anunciante con id ' + CAST(@id_anunciante AS NVARCHAR(10)) + N'.';
     ELSE
     BEGIN
         SELECT @campanias = COUNT(*) FROM Publicidad.CAMPANIA WHERE id_anunciante = @id_anunciante;
         IF @campanias > 0
-            SET @errores += @nl + N'- Lo referencian ' + CAST(@campanias AS NVARCHAR(10))
+            SET @errores += @salto_linea + N'- Lo referencian ' + CAST(@campanias AS NVARCHAR(10))
                           + N' registro(s) de Publicidad.CAMPANIA.';
     END;
 
@@ -193,27 +193,27 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @nombre = NULLIF(TRIM(@nombre), N'');
 
     IF @id_anunciante IS NULL
-        SET @errores += @nl + N'- El anunciante es obligatorio.';
+        SET @errores += @salto_linea + N'- El anunciante es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Publicidad.ANUNCIANTE WHERE id_anunciante = @id_anunciante)
-        SET @errores += @nl + N'- No existe un anunciante con id ' + CAST(@id_anunciante AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un anunciante con id ' + CAST(@id_anunciante AS NVARCHAR(10)) + N'.';
 
     IF @nombre IS NULL
-        SET @errores += @nl + N'- El nombre es obligatorio.';
+        SET @errores += @salto_linea + N'- El nombre es obligatorio.';
     ELSE IF LEN(@nombre) > 150
-        SET @errores += @nl + N'- El nombre no puede superar los 150 caracteres.';
+        SET @errores += @salto_linea + N'- El nombre no puede superar los 150 caracteres.';
     ELSE IF EXISTS (SELECT 1 FROM Publicidad.CAMPANIA WHERE id_anunciante = @id_anunciante AND nombre = @nombre)
-        SET @errores += @nl + N'- El anunciante ya tiene una campaña "' + @nombre + N'".';
+        SET @errores += @salto_linea + N'- El anunciante ya tiene una campaña "' + @nombre + N'".';
 
     IF @fecha_inicio IS NULL OR @fecha_fin IS NULL
-        SET @errores += @nl + N'- Las fechas de inicio y de fin son obligatorias.';
+        SET @errores += @salto_linea + N'- Las fechas de inicio y de fin son obligatorias.';
     ELSE IF @fecha_fin < @fecha_inicio
-        SET @errores += @nl + N'- La fecha de fin no puede ser anterior a la de inicio.';
+        SET @errores += @salto_linea + N'- La fecha de fin no puede ser anterior a la de inicio.';
 
     IF @errores <> N''
     BEGIN
@@ -246,7 +246,7 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @errores       NVARCHAR(2048) = N'';
-    DECLARE @nl            NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @salto_linea   NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @id_anunciante INT;
     DECLARE @inicio_final  DATE;
     DECLARE @fin_final     DATE;
@@ -261,21 +261,21 @@ BEGIN
     WHERE id_campania = @id_campania;
 
     IF @id_campania IS NULL
-        SET @errores += @nl + N'- El id de la campaña es obligatorio.';
+        SET @errores += @salto_linea + N'- El id de la campaña es obligatorio.';
     ELSE IF @id_anunciante IS NULL
-        SET @errores += @nl + N'- No existe una campaña con id ' + CAST(@id_campania AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una campaña con id ' + CAST(@id_campania AS NVARCHAR(10)) + N'.';
 
     IF @nombre IS NULL AND @fecha_inicio IS NULL AND @fecha_fin IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF LEN(@nombre) > 150
-        SET @errores += @nl + N'- El nombre no puede superar los 150 caracteres.';
+        SET @errores += @salto_linea + N'- El nombre no puede superar los 150 caracteres.';
     ELSE IF EXISTS (SELECT 1 FROM Publicidad.CAMPANIA
                     WHERE id_anunciante = @id_anunciante AND nombre = @nombre AND id_campania <> @id_campania)
-        SET @errores += @nl + N'- El anunciante ya tiene otra campaña "' + @nombre + N'".';
+        SET @errores += @salto_linea + N'- El anunciante ya tiene otra campaña "' + @nombre + N'".';
 
     IF @fin_final < @inicio_final
-        SET @errores += @nl + N'- La fecha de fin no puede ser anterior a la de inicio.';
+        SET @errores += @salto_linea + N'- La fecha de fin no puede ser anterior a la de inicio.';
     ELSE IF @fecha_inicio IS NOT NULL OR @fecha_fin IS NOT NULL
     BEGIN
         SELECT TOP (1) @partido = p.numero_partido
@@ -285,7 +285,7 @@ BEGIN
         WHERE pz.id_campania = @id_campania
           AND CAST(p.fecha_hora_local AS DATE) NOT BETWEEN @inicio_final AND @fin_final;
         IF @partido IS NOT NULL
-            SET @errores += @nl + N'- Con esas fechas quedaría afuera el partido '
+            SET @errores += @salto_linea + N'- Con esas fechas quedaría afuera el partido '
                           + CAST(@partido AS NVARCHAR(3)) + N', en el que ya se exhibe una pieza de la campaña.';
     END;
 
@@ -314,19 +314,19 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @piezas  INT;
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @piezas      INT;
 
     IF @id_campania IS NULL
-        SET @errores += @nl + N'- El id de la campaña es obligatorio.';
+        SET @errores += @salto_linea + N'- El id de la campaña es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Publicidad.CAMPANIA WHERE id_campania = @id_campania)
-        SET @errores += @nl + N'- No existe una campaña con id ' + CAST(@id_campania AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una campaña con id ' + CAST(@id_campania AS NVARCHAR(10)) + N'.';
     ELSE
     BEGIN
         SELECT @piezas = COUNT(*) FROM Publicidad.PIEZA_PUBLICITARIA WHERE id_campania = @id_campania;
         IF @piezas > 0
-            SET @errores += @nl + N'- La referencian ' + CAST(@piezas AS NVARCHAR(10))
+            SET @errores += @salto_linea + N'- La referencian ' + CAST(@piezas AS NVARCHAR(10))
                           + N' registro(s) de Publicidad.PIEZA_PUBLICITARIA.';
     END;
 
@@ -360,28 +360,28 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @titulo = NULLIF(TRIM(@titulo), N'');
 
     IF @id_campania IS NULL
-        SET @errores += @nl + N'- La campaña es obligatoria.';
+        SET @errores += @salto_linea + N'- La campaña es obligatoria.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Publicidad.CAMPANIA WHERE id_campania = @id_campania)
-        SET @errores += @nl + N'- No existe una campaña con id ' + CAST(@id_campania AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una campaña con id ' + CAST(@id_campania AS NVARCHAR(10)) + N'.';
 
     IF @titulo IS NULL
-        SET @errores += @nl + N'- El título es obligatorio.';
+        SET @errores += @salto_linea + N'- El título es obligatorio.';
     ELSE IF LEN(@titulo) > 150
-        SET @errores += @nl + N'- El título no puede superar los 150 caracteres.';
+        SET @errores += @salto_linea + N'- El título no puede superar los 150 caracteres.';
     ELSE IF EXISTS (SELECT 1 FROM Publicidad.PIEZA_PUBLICITARIA WHERE id_campania = @id_campania AND titulo = @titulo)
-        SET @errores += @nl + N'- La campaña ya tiene una pieza "' + @titulo + N'".';
+        SET @errores += @salto_linea + N'- La campaña ya tiene una pieza "' + @titulo + N'".';
 
     IF @id_idioma IS NOT NULL AND NOT EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA WHERE id_idioma = @id_idioma)
-        SET @errores += @nl + N'- No existe un idioma con id ' + CAST(@id_idioma AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un idioma con id ' + CAST(@id_idioma AS NVARCHAR(10)) + N'.';
 
     IF @duracion_segundos = 0
-        SET @errores += @nl + N'- La duración debe ser mayor que cero.';
+        SET @errores += @salto_linea + N'- La duración debe ser mayor que cero.';
 
     IF @errores <> N''
     BEGIN
@@ -412,7 +412,7 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @errores     NVARCHAR(2048) = N'';
-    DECLARE @nl          NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
     DECLARE @id_campania INT;
 
     SET @titulo = NULLIF(TRIM(@titulo), N'');
@@ -420,24 +420,24 @@ BEGIN
     SELECT @id_campania = id_campania FROM Publicidad.PIEZA_PUBLICITARIA WHERE id_pieza = @id_pieza;
 
     IF @id_pieza IS NULL
-        SET @errores += @nl + N'- El id de la pieza es obligatorio.';
+        SET @errores += @salto_linea + N'- El id de la pieza es obligatorio.';
     ELSE IF @id_campania IS NULL
-        SET @errores += @nl + N'- No existe una pieza con id ' + CAST(@id_pieza AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una pieza con id ' + CAST(@id_pieza AS NVARCHAR(10)) + N'.';
 
     IF @titulo IS NULL AND @id_idioma IS NULL AND @duracion_segundos IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF LEN(@titulo) > 150
-        SET @errores += @nl + N'- El título no puede superar los 150 caracteres.';
+        SET @errores += @salto_linea + N'- El título no puede superar los 150 caracteres.';
     ELSE IF EXISTS (SELECT 1 FROM Publicidad.PIEZA_PUBLICITARIA
                     WHERE id_campania = @id_campania AND titulo = @titulo AND id_pieza <> @id_pieza)
-        SET @errores += @nl + N'- La campaña ya tiene otra pieza "' + @titulo + N'".';
+        SET @errores += @salto_linea + N'- La campaña ya tiene otra pieza "' + @titulo + N'".';
 
     IF @id_idioma IS NOT NULL AND NOT EXISTS (SELECT 1 FROM DatosGenerales.IDIOMA WHERE id_idioma = @id_idioma)
-        SET @errores += @nl + N'- No existe un idioma con id ' + CAST(@id_idioma AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un idioma con id ' + CAST(@id_idioma AS NVARCHAR(10)) + N'.';
 
     IF @duracion_segundos = 0
-        SET @errores += @nl + N'- La duración debe ser mayor que cero.';
+        SET @errores += @salto_linea + N'- La duración debe ser mayor que cero.';
 
     IF @errores <> N''
     BEGIN
@@ -465,16 +465,16 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     IF @id_pieza IS NULL
-        SET @errores += @nl + N'- El id de la pieza es obligatorio.';
+        SET @errores += @salto_linea + N'- El id de la pieza es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Publicidad.PIEZA_PUBLICITARIA WHERE id_pieza = @id_pieza)
-        SET @errores += @nl + N'- No existe una pieza con id ' + CAST(@id_pieza AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una pieza con id ' + CAST(@id_pieza AS NVARCHAR(10)) + N'.';
     ELSE
         SET @errores += ISNULL((
-            SELECT STRING_AGG(@nl + N'- La referencian ' + CAST(r.cantidad AS NVARCHAR(10))
+            SELECT STRING_AGG(@salto_linea + N'- La referencian ' + CAST(r.cantidad AS NVARCHAR(10))
                               + N' registro(s) de ' + r.tabla + N'.', N'')
             FROM (
                 SELECT N'Publicidad.PIEZA_PAIS_INTERES', COUNT(*)
@@ -511,21 +511,21 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     IF @id_pieza IS NULL
-        SET @errores += @nl + N'- La pieza es obligatoria.';
+        SET @errores += @salto_linea + N'- La pieza es obligatoria.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Publicidad.PIEZA_PUBLICITARIA WHERE id_pieza = @id_pieza)
-        SET @errores += @nl + N'- No existe una pieza con id ' + CAST(@id_pieza AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una pieza con id ' + CAST(@id_pieza AS NVARCHAR(10)) + N'.';
 
     IF @id_pais IS NULL
-        SET @errores += @nl + N'- El país es obligatorio.';
+        SET @errores += @salto_linea + N'- El país es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE id_pais = @id_pais)
-        SET @errores += @nl + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un país con id ' + CAST(@id_pais AS NVARCHAR(10)) + N'.';
 
     IF EXISTS (SELECT 1 FROM Publicidad.PIEZA_PAIS_INTERES WHERE id_pieza = @id_pieza AND id_pais = @id_pais)
-        SET @errores += @nl + N'- La pieza ya tiene ese país como mercado de interés.';
+        SET @errores += @salto_linea + N'- La pieza ya tiene ese país como mercado de interés.';
 
     IF @errores <> N''
     BEGIN
@@ -550,13 +550,13 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     IF @id_pieza IS NULL OR @id_pais IS NULL
-        SET @errores += @nl + N'- La pieza y el país son obligatorios.';
+        SET @errores += @salto_linea + N'- La pieza y el país son obligatorios.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Publicidad.PIEZA_PAIS_INTERES WHERE id_pieza = @id_pieza AND id_pais = @id_pais)
-        SET @errores += @nl + N'- La pieza no tiene ese país como mercado de interés.';
+        SET @errores += @salto_linea + N'- La pieza no tiene ese país como mercado de interés.';
 
     IF @errores <> N''
     BEGIN
@@ -589,38 +589,38 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores  NVARCHAR(2048) = N'';
-    DECLARE @nl       NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @espacios INT;
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @espacios    INT;
 
     SET @descripcion = NULLIF(TRIM(@descripcion), '');
 
     IF @id_sede IS NULL
-        SET @errores += @nl + N'- La sede es obligatoria.';
+        SET @errores += @salto_linea + N'- La sede es obligatoria.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Torneo.SEDE WHERE id_sede = @id_sede)
-        SET @errores += @nl + N'- No existe una sede con id ' + CAST(@id_sede AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una sede con id ' + CAST(@id_sede AS NVARCHAR(10)) + N'.';
     ELSE
     BEGIN
         SELECT @espacios = COUNT(*) FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @id_sede;
         IF @espacios >= 4
-            SET @errores += @nl + N'- La sede ya tiene sus 4 espacios publicitarios.';
+            SET @errores += @salto_linea + N'- La sede ya tiene sus 4 espacios publicitarios.';
     END;
 
     IF @numero_espacio IS NULL
-        SET @errores += @nl + N'- El número de espacio es obligatorio.';
+        SET @errores += @salto_linea + N'- El número de espacio es obligatorio.';
     ELSE IF @numero_espacio NOT BETWEEN 1 AND 4
-        SET @errores += @nl + N'- El número de espacio debe estar entre 1 y 4.';
+        SET @errores += @salto_linea + N'- El número de espacio debe estar entre 1 y 4.';
     ELSE IF EXISTS (SELECT 1 FROM Publicidad.ESPACIO_PUBLICITARIO
                     WHERE id_sede = @id_sede AND numero_espacio = @numero_espacio)
-        SET @errores += @nl + N'- La sede ya tiene el espacio número ' + CAST(@numero_espacio AS NVARCHAR(1)) + N'.';
+        SET @errores += @salto_linea + N'- La sede ya tiene el espacio número ' + CAST(@numero_espacio AS NVARCHAR(1)) + N'.';
 
     IF @tarifa_usd IS NULL
-        SET @errores += @nl + N'- La tarifa es obligatoria.';
+        SET @errores += @salto_linea + N'- La tarifa es obligatoria.';
     ELSE IF @tarifa_usd < 0
-        SET @errores += @nl + N'- La tarifa no puede ser negativa.';
+        SET @errores += @salto_linea + N'- La tarifa no puede ser negativa.';
 
     IF LEN(@descripcion) > 100
-        SET @errores += @nl + N'- La descripción no puede superar los 100 caracteres.';
+        SET @errores += @salto_linea + N'- La descripción no puede superar los 100 caracteres.';
 
     IF @errores <> N''
     BEGIN
@@ -650,24 +650,24 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
 
     SET @descripcion = NULLIF(TRIM(@descripcion), '');
 
     IF @id_espacio IS NULL
-        SET @errores += @nl + N'- El id del espacio es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del espacio es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_espacio = @id_espacio)
-        SET @errores += @nl + N'- No existe un espacio publicitario con id ' + CAST(@id_espacio AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un espacio publicitario con id ' + CAST(@id_espacio AS NVARCHAR(10)) + N'.';
 
     IF @tarifa_usd IS NULL AND @descripcion IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF @tarifa_usd < 0
-        SET @errores += @nl + N'- La tarifa no puede ser negativa.';
+        SET @errores += @salto_linea + N'- La tarifa no puede ser negativa.';
 
     IF LEN(@descripcion) > 100
-        SET @errores += @nl + N'- La descripción no puede superar los 100 caracteres.';
+        SET @errores += @salto_linea + N'- La descripción no puede superar los 100 caracteres.';
 
     IF @errores <> N''
     BEGIN
@@ -693,19 +693,19 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores       NVARCHAR(2048) = N'';
-    DECLARE @nl            NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @exhibiciones  INT;
+    DECLARE @errores      NVARCHAR(2048) = N'';
+    DECLARE @salto_linea  NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @exhibiciones INT;
 
     IF @id_espacio IS NULL
-        SET @errores += @nl + N'- El id del espacio es obligatorio.';
+        SET @errores += @salto_linea + N'- El id del espacio es obligatorio.';
     ELSE IF NOT EXISTS (SELECT 1 FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_espacio = @id_espacio)
-        SET @errores += @nl + N'- No existe un espacio publicitario con id ' + CAST(@id_espacio AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un espacio publicitario con id ' + CAST(@id_espacio AS NVARCHAR(10)) + N'.';
     ELSE
     BEGIN
         SELECT @exhibiciones = COUNT(*) FROM Publicidad.EXHIBICION WHERE id_espacio = @id_espacio;
         IF @exhibiciones > 0
-            SET @errores += @nl + N'- Lo referencian ' + CAST(@exhibiciones AS NVARCHAR(10))
+            SET @errores += @salto_linea + N'- Lo referencian ' + CAST(@exhibiciones AS NVARCHAR(10))
                           + N' registro(s) de Publicidad.EXHIBICION.';
     END;
 
@@ -742,15 +742,15 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores        NVARCHAR(2048) = N'';
-    DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @estado         VARCHAR(12);
-    DECLARE @sede_partido   INT;
-    DECLARE @fecha_partido  DATE;
-    DECLARE @sede_espacio   INT;
-    DECLARE @tarifa         DECIMAL(9,2);
-    DECLARE @inicio         DATE;
-    DECLARE @fin            DATE;
+    DECLARE @errores       NVARCHAR(2048) = N'';
+    DECLARE @salto_linea   NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @estado        VARCHAR(12);
+    DECLARE @sede_partido  INT;
+    DECLARE @fecha_partido DATE;
+    DECLARE @sede_espacio  INT;
+    DECLARE @tarifa        DECIMAL(9,2);
+    DECLARE @inicio        DATE;
+    DECLARE @fin           DATE;
 
     SET @codigo_moneda = UPPER(NULLIF(TRIM(@codigo_moneda), ''));
 
@@ -768,39 +768,39 @@ BEGIN
     WHERE pz.id_pieza = @id_pieza;
 
     IF @id_partido IS NULL
-        SET @errores += @nl + N'- El partido es obligatorio.';
+        SET @errores += @salto_linea + N'- El partido es obligatorio.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un partido con id ' + CAST(@id_partido AS NVARCHAR(10)) + N'.';
     ELSE IF @estado <> 'PROGRAMADO'
-        SET @errores += @nl + N'- La publicidad se asigna antes de que empiece el partido (estado actual: '
+        SET @errores += @salto_linea + N'- La publicidad se asigna antes de que empiece el partido (estado actual: '
                       + @estado + N').';
 
     IF @id_espacio IS NULL
-        SET @errores += @nl + N'- El espacio es obligatorio.';
+        SET @errores += @salto_linea + N'- El espacio es obligatorio.';
     ELSE IF @sede_espacio IS NULL
-        SET @errores += @nl + N'- No existe un espacio publicitario con id ' + CAST(@id_espacio AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe un espacio publicitario con id ' + CAST(@id_espacio AS NVARCHAR(10)) + N'.';
     ELSE IF @sede_espacio <> @sede_partido
-        SET @errores += @nl + N'- El espacio no es de la sede del partido.';
+        SET @errores += @salto_linea + N'- El espacio no es de la sede del partido.';
     ELSE IF EXISTS (SELECT 1 FROM Publicidad.EXHIBICION WHERE id_partido = @id_partido AND id_espacio = @id_espacio)
-        SET @errores += @nl + N'- El espacio ya tiene una pieza asignada en ese partido.';
+        SET @errores += @salto_linea + N'- El espacio ya tiene una pieza asignada en ese partido.';
 
     IF @id_pieza IS NULL
-        SET @errores += @nl + N'- La pieza es obligatoria.';
+        SET @errores += @salto_linea + N'- La pieza es obligatoria.';
     ELSE IF @inicio IS NULL
-        SET @errores += @nl + N'- No existe una pieza con id ' + CAST(@id_pieza AS NVARCHAR(10)) + N'.';
+        SET @errores += @salto_linea + N'- No existe una pieza con id ' + CAST(@id_pieza AS NVARCHAR(10)) + N'.';
     ELSE
     BEGIN
         IF @fecha_partido NOT BETWEEN @inicio AND @fin
-            SET @errores += @nl + N'- La campaña de la pieza no está vigente en la fecha del partido.';
+            SET @errores += @salto_linea + N'- La campaña de la pieza no está vigente en la fecha del partido.';
         IF EXISTS (SELECT 1 FROM Publicidad.EXHIBICION WHERE id_partido = @id_partido AND id_pieza = @id_pieza)
-            SET @errores += @nl + N'- La pieza ya ocupa otro espacio en ese partido.';
+            SET @errores += @salto_linea + N'- La pieza ya ocupa otro espacio en ese partido.';
     END;
 
     IF @costo < 0
-        SET @errores += @nl + N'- El costo no puede ser negativo.';
+        SET @errores += @salto_linea + N'- El costo no puede ser negativo.';
 
     IF @codigo_moneda COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
-        SET @errores += @nl + N'- El código de moneda debe tener 3 letras (ISO 4217).';
+        SET @errores += @salto_linea + N'- El código de moneda debe tener 3 letras (ISO 4217).';
 
     IF @errores <> N''
     BEGIN
@@ -833,12 +833,12 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores        NVARCHAR(2048) = N'';
-    DECLARE @nl             NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @estado         VARCHAR(12);
-    DECLARE @fecha_partido  DATE;
-    DECLARE @inicio         DATE;
-    DECLARE @fin            DATE;
+    DECLARE @errores       NVARCHAR(2048) = N'';
+    DECLARE @salto_linea   NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @estado        VARCHAR(12);
+    DECLARE @fecha_partido DATE;
+    DECLARE @inicio        DATE;
+    DECLARE @fin           DATE;
 
     SET @codigo_moneda = UPPER(NULLIF(TRIM(@codigo_moneda), ''));
 
@@ -848,14 +848,14 @@ BEGIN
     WHERE e.id_partido = @id_partido AND e.id_espacio = @id_espacio;
 
     IF @id_partido IS NULL OR @id_espacio IS NULL
-        SET @errores += @nl + N'- El partido y el espacio son obligatorios.';
+        SET @errores += @salto_linea + N'- El partido y el espacio son obligatorios.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No hay una exhibición en ese espacio para ese partido.';
+        SET @errores += @salto_linea + N'- No hay una exhibición en ese espacio para ese partido.';
     ELSE IF @estado <> 'PROGRAMADO'
-        SET @errores += @nl + N'- El partido está ' + @estado + N': la exhibición ya es parte del historial para facturar.';
+        SET @errores += @salto_linea + N'- El partido está ' + @estado + N': la exhibición ya es parte del historial para facturar.';
 
     IF @id_pieza IS NULL AND @costo IS NULL AND @codigo_moneda IS NULL
-        SET @errores += @nl + N'- No se indicó ningún dato para modificar.';
+        SET @errores += @salto_linea + N'- No se indicó ningún dato para modificar.';
 
     IF @id_pieza IS NOT NULL
     BEGIN
@@ -865,22 +865,22 @@ BEGIN
         WHERE pz.id_pieza = @id_pieza;
 
         IF @inicio IS NULL
-            SET @errores += @nl + N'- No existe una pieza con id ' + CAST(@id_pieza AS NVARCHAR(10)) + N'.';
+            SET @errores += @salto_linea + N'- No existe una pieza con id ' + CAST(@id_pieza AS NVARCHAR(10)) + N'.';
         ELSE
         BEGIN
             IF @fecha_partido NOT BETWEEN @inicio AND @fin
-                SET @errores += @nl + N'- La campaña de la pieza no está vigente en la fecha del partido.';
+                SET @errores += @salto_linea + N'- La campaña de la pieza no está vigente en la fecha del partido.';
             IF EXISTS (SELECT 1 FROM Publicidad.EXHIBICION
                        WHERE id_partido = @id_partido AND id_pieza = @id_pieza AND id_espacio <> @id_espacio)
-                SET @errores += @nl + N'- La pieza ya ocupa otro espacio en ese partido.';
+                SET @errores += @salto_linea + N'- La pieza ya ocupa otro espacio en ese partido.';
         END;
     END;
 
     IF @costo < 0
-        SET @errores += @nl + N'- El costo no puede ser negativo.';
+        SET @errores += @salto_linea + N'- El costo no puede ser negativo.';
 
     IF @codigo_moneda COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
-        SET @errores += @nl + N'- El código de moneda debe tener 3 letras (ISO 4217).';
+        SET @errores += @salto_linea + N'- El código de moneda debe tener 3 letras (ISO 4217).';
 
     IF @errores <> N''
     BEGIN
@@ -909,9 +909,9 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores NVARCHAR(2048) = N'';
-    DECLARE @nl      NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @estado  VARCHAR(12);
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @estado      VARCHAR(12);
 
     SELECT @estado = p.estado
     FROM Publicidad.EXHIBICION AS e
@@ -919,11 +919,11 @@ BEGIN
     WHERE e.id_partido = @id_partido AND e.id_espacio = @id_espacio;
 
     IF @id_partido IS NULL OR @id_espacio IS NULL
-        SET @errores += @nl + N'- El partido y el espacio son obligatorios.';
+        SET @errores += @salto_linea + N'- El partido y el espacio son obligatorios.';
     ELSE IF @estado IS NULL
-        SET @errores += @nl + N'- No hay una exhibición en ese espacio para ese partido.';
+        SET @errores += @salto_linea + N'- No hay una exhibición en ese espacio para ese partido.';
     ELSE IF @estado <> 'PROGRAMADO'
-        SET @errores += @nl + N'- El partido está ' + @estado + N': la exhibición ya es parte del historial para facturar.';
+        SET @errores += @salto_linea + N'- El partido está ' + @estado + N': la exhibición ya es parte del historial para facturar.';
 
     IF @errores <> N''
     BEGIN
