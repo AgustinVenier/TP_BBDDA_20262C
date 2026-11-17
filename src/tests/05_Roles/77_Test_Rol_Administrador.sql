@@ -99,21 +99,18 @@ GO
 
 
 /* Caso 3: PUEDE consultar los países (DatosGenerales.usp_ConsultarPaises)
-   para elegir el del árbitro, y registrar un árbitro; el SP cifra sus datos
-   personales y lo muestra con el nombre descifrado. Se registra de verdad y
-   el mismo usuario lo deshace al final. Nombre y apellido no admiten NULL:
-   si el usuario no pudiera cifrar, el cifrado daría NULL y el alta
-   fallaría. */
+   y registrar un árbitro; el SP cifra sus datos personales y lo muestra con
+   el nombre descifrado. El árbitro es de Estados Unidos (id_pais = 1). Se registra de verdad y el mismo
+   usuario lo deshace al final. Nombre y apellido no admiten NULL: si el
+   usuario no pudiera cifrar, el cifrado daría NULL y el alta fallaría. */
 EXECUTE AS USER = N'usr_administrador';
 BEGIN TRANSACTION;
 BEGIN TRY
-    DECLARE @id_pais SMALLINT, @id_arbitro INT;
-    DECLARE @paises TABLE (id_pais SMALLINT, nombre VARCHAR(60), codigo_fifa CHAR(3), huso_horario VARCHAR(50));
+    DECLARE @id_arbitro INT;
 
-    INSERT INTO @paises EXEC DatosGenerales.usp_ConsultarPaises;
-    SELECT TOP (1) @id_pais = id_pais FROM @paises ORDER BY nombre;
+    EXEC DatosGenerales.usp_ConsultarPaises;
 
-    EXEC Arbitraje.usp_RegistrarArbitro @id_pais = @id_pais, @nombre = N'Prueba', @apellido = N'Administrador',
+    EXEC Arbitraje.usp_RegistrarArbitro @id_pais = 1, @nombre = N'Prueba', @apellido = N'Administrador',
                                         @categoria = 'FIFA', @idiomas = 'es', @fecha_nacimiento = '1985-01-01',
                                         @id_arbitro = @id_arbitro OUTPUT;
     PRINT CONCAT(N'OK     3. Puede consultar los países y registrar un árbitro con Arbitraje.usp_RegistrarArbitro, con sus datos cifrados (id ', @id_arbitro, N'; se deshace).');
@@ -333,8 +330,11 @@ GO
 
 
 /* Caso 17: NO PUEDE escribir en el registro de importaciones ni consumir
-   las APIs: esas cargas quedan para el DBA. No se ejecutan (harían pedidos
-   a internet): se pregunta si tiene el permiso. */
+   las APIs. No se ejecuta nada, solo se pregunta si tiene el permiso. */
+   
+-- HAS_PERMS_BY_NAME ( objeto , clase , permiso )
+-- Ej HAS_PERMS_BY_NAME(N'Torneo.JUGADOR', N'OBJECT', N'SELECT')  puede leer la tabla
+
 EXECUTE AS USER = N'usr_administrador';
 IF HAS_PERMS_BY_NAME(N'DatosGenerales.usp_RegistrarImportacion', N'OBJECT', N'EXECUTE') = 0
     PRINT N'OK    17a. No puede ejecutar DatosGenerales.usp_RegistrarImportacion.';

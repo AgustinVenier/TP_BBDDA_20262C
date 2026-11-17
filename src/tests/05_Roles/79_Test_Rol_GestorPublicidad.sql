@@ -104,19 +104,16 @@ GO
 
 
 /* Caso 4: PUEDE consultar los países (DatosGenerales.usp_ConsultarPaises)
-   para elegir el del anunciante, y dar de alta un anunciante. Se da de alta de verdad y se deshace al
-   final. */
+   y dar de alta un anunciante. El anunciante es de Estados Unidos (id_pais=1). 
+   Se da de alta de verdad y se deshace al final. */
 EXECUTE AS USER = N'usr_gestor_publicidad';
 BEGIN TRANSACTION;
 BEGIN TRY
-    DECLARE @id_pais SMALLINT, @id_anunciante INT;
-    DECLARE @paises TABLE (id_pais SMALLINT, nombre VARCHAR(60), codigo_fifa CHAR(3), huso_horario VARCHAR(50));
+    DECLARE @id_anunciante INT;
 
-    INSERT INTO @paises EXEC DatosGenerales.usp_ConsultarPaises;
-    SELECT TOP (5) id_pais, nombre, codigo_fifa FROM @paises ORDER BY nombre;
-    SELECT TOP (1) @id_pais = id_pais FROM @paises ORDER BY nombre;
+    EXEC DatosGenerales.usp_ConsultarPaises;
 
-    EXEC Publicidad.usp_ANUNCIANTE_Alta @razon_social = N'Anunciante de prueba de rol', @id_pais = @id_pais,
+    EXEC Publicidad.usp_ANUNCIANTE_Alta @razon_social = N'Anunciante de prueba de rol', @id_pais = 1,
                                         @id_anunciante = @id_anunciante OUTPUT;
     PRINT CONCAT(N'OK     4. Puede consultar los países y dar de alta un anunciante con Publicidad.usp_ANUNCIANTE_Alta (id ', @id_anunciante, N'; se deshace).');
 END TRY
