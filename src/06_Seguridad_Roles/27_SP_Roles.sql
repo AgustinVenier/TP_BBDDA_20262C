@@ -30,7 +30,8 @@
  los usuarios de Windows o los logins de la aplicación; no se agregan usuarios
  a db_owner, db_datareader ni db_datawriter.
 
- Roles (el cuadro completo de permisos lo devuelve el SP al final):
+ Roles (el cuadro completo de permisos lo muestran las consultas
+ del final del script):
    rol_AdministradorOperativo  ABM y SP de negocio de todos los módulos,
                                reportes y SP de consulta. Cifra y descifra
                                los datos personales.
@@ -43,8 +44,7 @@
                                y los países. No ve datos personales.
    rol_ConsultaReportes        Solo las vistas y los SP de Reportes, y los
                                países. Descifra.
- Ningún rol lee ni modifica las tablas (tampoco las de catálogos: se
- consultan con los SP de 25_SP_Consultas.sql) ni usa el esquema Seguridad.
+ Ningún rol lee ni modifica las tablas ni usa el esquema Seguridad.
  Los permisos sobre la clave de los datos personales (41_SP_Cifrado.sql) se
  dan solo si la clave ya existe: 40_Ejecutar_Cifrado.sql vuelve a ejecutar
  el SP después de crearla.
@@ -97,7 +97,10 @@ BEGIN
     IF IS_ROLEMEMBER(N'rol_ConsultaReportes', N'usr_consulta') = 0
         ALTER ROLE rol_ConsultaReportes ADD MEMBER usr_consulta;
 
-    /* Administrador operativo: todos los SP de los módulos y los reportes. */
+    /*
+      ******************** Administrador operativo ********************
+      Todos los SP de los módulos y los reportes.
+    */
     GRANT EXECUTE ON SCHEMA::DatosGenerales TO rol_AdministradorOperativo;
     GRANT EXECUTE ON SCHEMA::Torneo TO rol_AdministradorOperativo;
     GRANT EXECUTE ON SCHEMA::DesarrolloPartido TO rol_AdministradorOperativo;
@@ -105,7 +108,10 @@ BEGIN
     GRANT EXECUTE ON SCHEMA::Publicidad TO rol_AdministradorOperativo;
     GRANT SELECT, EXECUTE ON SCHEMA::Reportes TO rol_AdministradorOperativo;
 
-    /* Cargador de resultados: operación del partido y eventos en cancha.  */
+    /*
+      ******************** Cargador de resultados ********************
+      Inicio y fin de los partidos y eventos en cancha.
+    */
     GRANT EXECUTE ON OBJECT::Torneo.usp_IniciarPartido TO rol_CargadorResultados;
     GRANT EXECUTE ON OBJECT::Torneo.usp_FinalizarPartido TO rol_CargadorResultados;
     GRANT EXECUTE ON OBJECT::DesarrolloPartido.usp_RegistrarFormacion TO rol_CargadorResultados;
@@ -114,31 +120,45 @@ BEGIN
     GRANT EXECUTE ON OBJECT::DesarrolloPartido.usp_RegistrarAmonestacion TO rol_CargadorResultados;
     GRANT EXECUTE ON TYPE::DesarrolloPartido.TT_ALINEACION TO rol_CargadorResultados;
 
-    /* Para saber qué cargar, el cargador lee dos vistas de Reportes: los
-       partidos (id, selecciones y estado) y las plantillas (id, dorsal, nombre
-       y posición de cada jugador; sin la fecha de nacimiento). El resto de los
-       reportes no. Los tipos de gol son un catálogo fijo (28_Cargar_DatosIniciales.sql). */
+    /*
+      Para saber qué cargar, el cargador lee dos vistas de Reportes: los
+      partidos (id, selecciones y estado) y las plantillas (id, dorsal, nombre
+      y posición de cada jugador; sin la fecha de nacimiento). El resto de los
+      reportes, no.
+    */
+
     GRANT SELECT ON OBJECT::Reportes.vw_Resultados TO rol_CargadorResultados;
     GRANT SELECT ON OBJECT::Reportes.vw_Plantillas TO rol_CargadorResultados;
 
-    /* Gestor de publicidad: ABM, asignación y reportes de su módulo. */
+    /*
+      ******************** Gestor de publicidad ********************
+      ABM, asignación y reportes de su módulo.
+    */
+
     GRANT EXECUTE ON SCHEMA::Publicidad TO rol_GestorPublicidad;
     GRANT SELECT ON OBJECT::Reportes.vw_OcupacionPublicitaria TO rol_GestorPublicidad;
     GRANT SELECT ON OBJECT::Reportes.vw_IngresosPublicitariosPorMoneda TO rol_GestorPublicidad;
     GRANT EXECUTE ON OBJECT::Reportes.usp_OcupacionPublicitaria TO rol_GestorPublicidad;
 
-    /* Consulta: solo vistas y SP del esquema de reportes. */
+    /*
+      ******************** Consulta de reportes ********************
+      Solo vistas y SP del esquema de reportes.
+    */
+
     GRANT SELECT, EXECUTE ON SCHEMA::Reportes TO rol_ConsultaReportes;
 
-    /* Catálogos: los datos de referencia se consultan con los SP de
-       25_SP_Consultas.sql, no leyendo las tablas. El administrador ya los
-       tiene por su EXECUTE sobre los esquemas; a los demás se les da el que
-       necesitan. */
+    /*
+      Catálogos: acceso para usar los sp de tipo de gol y países, el resto de cosas se consultan con los otros SP
+    */
+
     GRANT EXECUTE ON OBJECT::DesarrolloPartido.usp_ConsultarTiposGol TO rol_CargadorResultados;
     GRANT EXECUTE ON OBJECT::DatosGenerales.usp_ConsultarPaises TO rol_GestorPublicidad, rol_ConsultaReportes;
 
-    /* Las cargas que leen rutas del servidor requieren ADMINISTER BULK OPERATIONS.
-       Ningún rol de aplicación puede usar estos módulos */
+    /*
+      Las cargas que leen rutas del servidor requieren ADMINISTER BULK
+      OPERATIONS. Ninguno de nuestros roles puede usar estos módulos.
+    */
+
     DENY EXECUTE ON OBJECT::DatosGenerales.usp_LeerArchivoUTF8 TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::Torneo.usp_ImportarSedesJSON TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::Torneo.usp_ImportarSeleccionesJSON TO rol_AdministradorOperativo;
@@ -148,9 +168,12 @@ BEGIN
     DENY EXECUTE ON OBJECT::Arbitraje.usp_ImportarDesignacionesCSV TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::Arbitraje.usp_ImportarArbitrosCSV TO rol_AdministradorOperativo;
 
-    /* Idem de lo anterior para las importaciones desde APIs (usan OLE Automation, que es
-       de sysadmin) y ningún rol de aplicación puede escribir ni borrar el historial 
-       de importaciones y sus rechazados. */
+    /*
+      Lo mismo con las importaciones desde APIs (usan OLE Automation, que es
+      permiso de sysadmin). Además, ningún rol de nuestro sistema puede
+      escribir ni borrar el historial de importaciones y sus rechazados.
+    */
+
     DENY EXECUTE ON OBJECT::DatosGenerales.usp_RegistrarImportacion TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::DatosGenerales.usp_BorrarImportacion TO rol_AdministradorOperativo;
     DENY EXECUTE ON OBJECT::DatosGenerales.usp_ConsumirAPI TO rol_AdministradorOperativo;
@@ -163,10 +186,14 @@ BEGIN
     DENY EXECUTE ON OBJECT::Publicidad.usp_ImportarCampaniasAPI TO rol_AdministradorOperativo, rol_GestorPublicidad;
     DENY EXECUTE ON OBJECT::Publicidad.usp_ProcesarCampaniasJSON TO rol_AdministradorOperativo, rol_GestorPublicidad;
 
-    /* Ningún rol de aplicación lee o modifica directamente
-       las tablas, ni usa las vistas de Seguridad. Como el  propietario es dbo, el
-       encadenamiento de propiedad hace que los SP y las vistas usen las
-       tablas y las funciones sin conceder esos permisos a quien los invoca. */
+    /*
+      Ningún rol nuestro lee o modifica directamente las tablas, ni
+      usa los objetos de Seguridad (las funciones de cifrado y los SP que abren
+      la clave). Como el propietario es dbo, el encadenamiento de propiedad
+      hace que los SP y las vistas usen las tablas y las funciones sin conceder
+      esos permisos a quien los invoca.
+    */
+
     DENY SELECT, INSERT, UPDATE, DELETE ON SCHEMA::DatosGenerales TO rol_AdministradorOperativo, rol_CargadorResultados, rol_GestorPublicidad, rol_ConsultaReportes;
     DENY SELECT, INSERT, UPDATE, DELETE ON SCHEMA::Torneo TO rol_AdministradorOperativo, rol_CargadorResultados, rol_GestorPublicidad, rol_ConsultaReportes;
     DENY SELECT, INSERT, UPDATE, DELETE ON SCHEMA::DesarrolloPartido TO rol_AdministradorOperativo, rol_CargadorResultados, rol_GestorPublicidad, rol_ConsultaReportes;
@@ -174,12 +201,16 @@ BEGIN
     DENY SELECT, INSERT, UPDATE, DELETE ON SCHEMA::Publicidad TO rol_AdministradorOperativo, rol_CargadorResultados, rol_GestorPublicidad, rol_ConsultaReportes;
     DENY SELECT, EXECUTE ON SCHEMA::Seguridad TO rol_AdministradorOperativo, rol_CargadorResultados, rol_GestorPublicidad, rol_ConsultaReportes;
 
-    /* Uso de la clave de los datos personales, los SP la abren con
-       Seguridad.usp_AbrirClave, que se ejecuta como su dueño. Descifrar necesita
-       además CONTROL sobre el certificado: se otorga sin ALTER ni TAKE OWNERSHIP,
-       así el rol puede usarlo pero no quitarle la clave privada ni apropiárselo
-       (y no puede borrarlo porque protege a la clave). Con GRANT por objeto, el
-       gestor de publicidad queda sin acceso: para él, descifrar devuelve NULL. */
+    /*
+      Uso de la clave de los datos personales. Cifrar necesita ver la clave
+      (VIEW DEFINITION). Los SP la abren con Seguridad.usp_AbrirClave, que se
+      ejecuta como su dueño. Descifrar necesita además CONTROL sobre el
+      certificado entonces se otorga sin ALTER ni TAKE OWNERSHIP, así el rol puede
+      usarlo pero no sacarle la clave privada ni apropiárselo (y no puede
+      borrarlo porque protege a la clave). Con GRANT por objeto, el gestor de
+      publicidad queda sin acceso, en su caso al querer descifrar va a devolver NULL.
+    */
+
     IF KEY_ID(N'ClaveDatosPersonales') IS NOT NULL AND CERT_ID(N'CertDatosPersonales') IS NOT NULL
     BEGIN
         GRANT VIEW DEFINITION ON SYMMETRIC KEY::ClaveDatosPersonales TO rol_AdministradorOperativo, rol_CargadorResultados, rol_ConsultaReportes;
@@ -188,34 +219,47 @@ BEGIN
         DENY VIEW DEFINITION ON SYMMETRIC KEY::ClaveDatosPersonales TO rol_GestorPublicidad;
         DENY CONTROL ON CERTIFICATE::CertDatosPersonales TO rol_GestorPublicidad;
     END;
-
-    /* Evidencia: roles con su usuario, y el cuadro de permisos. */
-    SELECT r.name AS rol,
-           u.name AS usuario_sin_login
-    FROM sys.database_role_members AS rm
-    INNER JOIN sys.database_principals AS r ON r.principal_id = rm.role_principal_id
-    INNER JOIN sys.database_principals AS u ON u.principal_id = rm.member_principal_id
-    WHERE r.name LIKE N'rol[_]%' AND u.name LIKE N'usr[_]%'
-    ORDER BY r.name, u.name;
-
-    SELECT pr.name                                              AS rol,
-           pe.state_desc                                        AS estado,
-           pe.permission_name                                   AS permiso,
-           pe.class_desc                                        AS sobre,
-           CASE pe.class
-                WHEN 3 THEN SCHEMA_NAME(pe.major_id)
-                WHEN 1 THEN OBJECT_SCHEMA_NAME(pe.major_id) + N'.' + OBJECT_NAME(pe.major_id)
-                WHEN 6 THEN (SELECT SCHEMA_NAME(t.schema_id) + N'.' + t.name
-                             FROM sys.types AS t WHERE t.user_type_id = pe.major_id)
-                WHEN 24 THEN (SELECT k.name FROM sys.symmetric_keys AS k WHERE k.symmetric_key_id = pe.major_id)
-                WHEN 25 THEN (SELECT c.name FROM sys.certificates AS c WHERE c.certificate_id = pe.major_id)
-           END                                                  AS objeto
-    FROM sys.database_permissions AS pe
-    INNER JOIN sys.database_principals AS pr ON pr.principal_id = pe.grantee_principal_id
-    WHERE pr.name LIKE N'rol[_]%'
-    ORDER BY pr.name, pe.state_desc DESC, pe.class_desc, objeto, pe.permission_name;
 END;
 GO
 
 EXEC Seguridad.usp_ConfigurarRoles;
+GO
+
+/*
+  ******************** Evidencia ********************
+*/
+
+SELECT r.name AS rol,
+       u.name AS usuario_sin_login
+FROM sys.database_role_members AS rm
+INNER JOIN sys.database_principals AS r ON r.principal_id = rm.role_principal_id
+INNER JOIN sys.database_principals AS u ON u.principal_id = rm.member_principal_id
+WHERE r.name LIKE N'rol[_]%' AND u.name LIKE N'usr[_]%'
+ORDER BY r.name, u.name;
+
+/*
+    1  = OBJECT_OR_COLUMN  (SP, vistas, tablas)  -> sys.objects
+    3  = SCHEMA                                  -> sys.schemas
+    6  = TYPE              (tipos tabla)         -> sys.types
+    24 = SYMMETRIC_KEYS                          -> sys.symmetric_keys
+    25 = CERTIFICATE                             -> sys.certificates
+    https://learn.microsoft.com/es-es/sql/relational-databases/system-catalog-views/sys-database-permissions-transact-sql
+*/
+
+SELECT pr.name                                          AS rol,
+       pe.state_desc                                    AS estado,
+       pe.permission_name                               AS permiso,
+       pe.class_desc                                    AS sobre,
+       CASE pe.class
+            WHEN 1 THEN OBJECT_SCHEMA_NAME(pe.major_id) + N'.' + OBJECT_NAME(pe.major_id)
+            WHEN 3 THEN SCHEMA_NAME(pe.major_id)
+            WHEN 6 THEN (SELECT SCHEMA_NAME(t.schema_id) + N'.' + t.name
+                         FROM sys.types AS t WHERE t.user_type_id = pe.major_id)
+            WHEN 24 THEN (SELECT k.name FROM sys.symmetric_keys AS k WHERE k.symmetric_key_id = pe.major_id)
+            WHEN 25 THEN (SELECT c.name FROM sys.certificates AS c WHERE c.certificate_id = pe.major_id)
+       END                                              AS objeto
+FROM sys.database_permissions AS pe
+INNER JOIN sys.database_principals AS pr ON pr.principal_id = pe.grantee_principal_id
+WHERE pr.name LIKE N'rol[_]%'
+ORDER BY pr.name, pe.state_desc DESC, pe.class_desc, objeto, pe.permission_name;
 GO
