@@ -150,6 +150,69 @@
             }
           }
         }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "153.85107241436918D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Reportes.vw_Plantillas.Baja"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "187.01519209814052D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Reportes.vw_Plantillas.Club"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "143.17932674845045D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Reportes.vw_Plantillas.Posición"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "196.20668593336256D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Reportes.vw_Plantillas.seleccion"
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {}
+        }
       ]
     },
     "visualContainerObjects": {
