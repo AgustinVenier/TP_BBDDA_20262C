@@ -10,20 +10,21 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 31/10/2026
- Archivo: 28_SP_Importar_Feriados.sql
+ Archivo: 23_SP_Importar_Feriados.sql
  Objetivo: Crear el proceso de importación de feriados nacionales desde la
            API Nager.Date, para saber si un partido cae en día feriado en un
            mercado de la publicidad (Publicidad.fn_MercadosEnPrimeTime). Los
-           SP, en el orden en que se crean (primero el que usa el otro):
+           SP, en el orden en que se crean:
+             DatosGenerales.usp_CargarFeriados        carga masiva de feriados
              DatosGenerales.usp_ProcesarFeriadosJSON  valida la respuesta de la API y carga sus registros
              DatosGenerales.usp_ImportarFeriadosAPI   consulta la API por un país y año, y procesa la respuesta
            El pedido a la API lo hace DatosGenerales.usp_ConsumirAPI
-           (22_SP_ConsumirAPI.sql).
-           Requiere haber ejecutado 00 a 22. Su script de testing es
-           78_Test_SP_Importar_Feriados.sql.
+           (17_SP_Utilidades_Importacion.sql).
+           Requiere haber ejecutado 01 a 22. Su script de testing es
+           73_Test_SP_Importar_Feriados.sql.
 ================================================================================
 
- Fuente: API Nager.Date v3, sin clave (ver datos/fuentes/nager/README.md). Se
+ Fuente: API Nager.Date v3, sin clave (ver doc/Fuentes_de_Datos_y_APIs.docx). Se
  consulta de a un país y año: no tiene un pedido para varios países. Responde
  en JSON: un arreglo con un objeto por feriado, con la fecha (date), el nombre
  en el idioma del país (localName) y en inglés (name), el país (countryCode,
@@ -38,40 +39,31 @@
    1. Se controla el documento: que sea JSON, que no sea un mensaje de error
       de la API y que sea un arreglo. Si no, no se importa nada.
    2. OPENJSON pasa los registros, tal como vienen, a #respuesta_feriados, y
-      ahí se convierten (TRY_CONVERT). Todas las transformaciones se hacen
-      acá, en T-SQL.
+      ahí se convierten (TRY_CONVERT), en T-SQL.
    3. Antes de cargar, cada registro puede quedar:
         OMITIDO      si es de un país que el sistema no tiene, si no es un
                      feriado público (los bancarios, escolares u optativos no
                      cambian la audiencia) o si es regional (rige solo en
                      algunas provincias o estados). No es un error.
-        RECHAZADO    si le falta la fecha o el nombre, o si la fecha no es
-                     una fecha: sin eso no se puede armar el feriado.
+        RECHAZADO    si le falta la fecha o el nombre, si la fecha no es una
+                     fecha o si el nombre tiene más de 200 caracteres.
    4. Cada registro se asigna a los países del sistema que tienen su código
       ISO. Inglaterra y Escocia comparten GB pero tienen feriados distintos:
       a cada una le tocan los de todo el Reino Unido y los de su subdivisión
       (GB-ENG, GB-SCT). Si un país tiene dos feriados el mismo día, se
-      registran juntos, con los nombres separados por " / ". Así queda
-      #staging_feriados, con un feriado por país y día.
-   5. El SP de la Entrega 5 DatosGenerales.usp_ImportarFeriados
-      (16_SP_Importacion.sql) lee #staging_feriados, valida cada feriado con
-      las reglas de la tabla (por ejemplo, que el nombre, con los de los otros
-      feriados del mismo día, no pase de 200 caracteres) y hace el upsert de
-      los válidos, todos juntos. Un registro de la API que forma un feriado
-      rechazado queda rechazado, con los mismos motivos. Se registra la
-      importación (DatosGenerales.IMPORTACION, su número queda en
-      @id_importacion) y los registros rechazados, en
-      DatosGenerales.ERRORES_FERIADO, en la misma transacción que la carga.
+      registran juntos, con los nombres separados por " / " (hasta 200
+      caracteres). Así queda #staging_feriados, con un feriado por país y día.
+   5. DatosGenerales.usp_CargarFeriados valida cada feriado con las reglas
+      de la tabla y hace el upsert, todos juntos. En la misma transacción se
+      registra la importación (su número queda en @id_importacion) y los
+      rechazados en el paso 3, en DatosGenerales.ERRORES_FERIADO.
    6. Se devuelve el resumen, los omitidos por motivo y los rechazados con
       sus motivos.
-   La importación puede correr dentro de una transacción del que la llama
-   (los tests la deshacen con ROLLBACK).
 
- Criterios del upsert (los de usp_ImportarFeriados):
+ Criterios del upsert (los de usp_CargarFeriados):
    - Clave natural: país y fecha.
    - Si la fuente cambia el nombre de un feriado, se actualiza con su
-     fecha_actualizacion. Importar dos veces lo mismo no cambia nada. Un
-     feriado que deja de venir no se borra: se conserva lo ya registrado.
+     fecha_actualizacion. Un feriado que deja de venir no se borra.
    - Se guarda el nombre en el idioma del país; si no viene, el nombre en
      inglés.
 */
@@ -88,17 +80,106 @@ GO
    ============================================================================ */
 
 /*
+  usp_CargarFeriados
+  Upsert de feriados por país y fecha (ej. los de la API Nager.Date), desde
+  #staging_feriados, con un registro por país y día: dos feriados del mismo
+  día van juntos en el nombre. Columnas que usa: id_pais, fecha, nombre,
+  errores y accion.
+  Valida cada registro pendiente: país, fecha y nombre obligatorios; país
+  existente; nombre de hasta 200 caracteres; que no venga dos veces el mismo
+  país y fecha. Con eso cubre las reglas de usp_FERIADO_Alta y _Modificacion.
+  Los feriados que cambiaron de nombre se actualizan con su
+  fecha_actualizacion; los que no existían se insertan.
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_CargarFeriados
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @salto_linea NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia BIT      = IIF(@@TRANCOUNT = 0, 1, 0);
+
+    IF OBJECT_ID(N'tempdb..#staging_feriados') IS NULL
+        THROW 50001, N'DatosGenerales.usp_CargarFeriados: no se importó nada, falta la tabla #staging_feriados con los feriados.', 1;
+
+    UPDATE #staging_feriados
+    SET nombre = NULLIF(TRIM(nombre), N'')
+    WHERE accion IS NULL;
+
+    /* 1. Cada regla anota su motivo en los registros que no la cumplen. */
+    UPDATE st
+    SET errores = NULLIF(CONCAT(st.errores,
+            CASE WHEN st.id_pais IS NULL THEN @salto_linea + N'- El país es obligatorio.'
+                 WHEN NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS AS p WHERE p.id_pais = st.id_pais)
+                     THEN @salto_linea + N'- No existe el país con id ' + CAST(st.id_pais AS NVARCHAR(10)) + N'.'
+            END,
+            IIF(st.fecha IS NULL, @salto_linea + N'- La fecha es obligatoria.', NULL),
+            CASE WHEN st.nombre IS NULL     THEN @salto_linea + N'- El nombre del feriado es obligatorio.'
+                 WHEN LEN(st.nombre) > 200  THEN @salto_linea + N'- El nombre del feriado no puede superar los 200 caracteres.'
+            END), N'')
+    FROM #staging_feriados AS st
+    WHERE st.accion IS NULL;
+
+    UPDATE st
+    SET errores = CONCAT(st.errores, @salto_linea, N'- Este país y fecha vienen ', r.veces, N' veces (dos feriados del mismo día '
+                         + N'van en un solo registro, con los nombres juntos).')
+    FROM #staging_feriados AS st
+    INNER JOIN (SELECT id_pais, fecha, COUNT(*) AS veces FROM #staging_feriados
+                WHERE accion IS NULL AND id_pais IS NOT NULL AND fecha IS NOT NULL
+                GROUP BY id_pais, fecha HAVING COUNT(*) > 1) AS r
+            ON r.id_pais = st.id_pais AND r.fecha = st.fecha
+    WHERE st.accion IS NULL;
+
+    UPDATE #staging_feriados SET accion = 'RECHAZADO' WHERE accion IS NULL AND errores IS NOT NULL;
+
+    /* 2. Lo que le pasa a cada registro válido, antes de cargar. */
+    UPDATE st
+    SET accion = CASE WHEN f.id_feriado IS NULL     THEN 'INSERTADO'
+                      WHEN f.nombre <> st.nombre    THEN 'ACTUALIZADO'
+                      ELSE 'SIN CAMBIOS'
+                 END
+    FROM #staging_feriados AS st
+    LEFT JOIN DatosGenerales.FERIADO AS f ON f.id_pais = st.id_pais AND f.fecha = st.fecha
+    WHERE st.accion IS NULL;
+
+    /* 3. Carga, todos juntos. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        UPDATE f
+        SET nombre = st.nombre, fecha_actualizacion = SYSDATETIME()
+        FROM DatosGenerales.FERIADO AS f
+        INNER JOIN #staging_feriados AS st ON st.id_pais = f.id_pais AND st.fecha = f.fecha
+        WHERE st.accion = 'ACTUALIZADO';
+
+        INSERT INTO DatosGenerales.FERIADO (id_pais, fecha, nombre)
+        SELECT id_pais, fecha, nombre
+        FROM #staging_feriados
+        WHERE accion = 'INSERTADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+END;
+GO
+
+
+/*
   usp_ProcesarFeriadosJSON
   Importa una respuesta de la API Nager.Date v3 (/api/v3/PublicHolidays).
   La llama usp_ImportarFeriadosAPI. @origen es la URL o el texto que
   identifica de dónde salió y @proceso, el SP que importa (el que lo llama;
   si no viene, este). Registra la importación (su número queda en
   @id_importacion) y los registros rechazados en
-  DatosGenerales.ERRORES_FERIADO. Con @mostrar = 1 devuelve el resumen
+  DatosGenerales.ERRORES_FERIADO. Con @mostrar_resultados = 1 devuelve el resumen
   (leídos, insertados, actualizados, sin cambios, omitidos y rechazados), los
-  omitidos por motivo y los rechazados con sus motivos. Los totales también
-  salen en los parámetros OUTPUT, para quien importa varios países y arma un
-  solo resumen. Leídos, omitidos y rechazados cuentan registros de la API;
+  omitidos por motivo y los rechazados con sus motivos; quien importa varios
+  países lo pide en 0 y arma un solo resumen con DatosGenerales.IMPORTACION.
+  Leídos, omitidos y rechazados cuentan registros de la API;
   insertados, actualizados y sin cambios cuentan feriados por país y día (un
   feriado del Reino Unido puede dar dos, uno de Inglaterra y otro de
   Escocia).
@@ -108,31 +189,30 @@ GO
 CREATE OR ALTER PROCEDURE DatosGenerales.usp_ProcesarFeriadosJSON
     @json            NVARCHAR(MAX),
     @origen          NVARCHAR(1000),
-    @mostrar         BIT = 1,
-    @leidos          INT = NULL OUTPUT,
-    @insertados      INT = NULL OUTPUT,
-    @actualizados    INT = NULL OUTPUT,
-    @sin_cambios     INT = NULL OUTPUT,
-    @omitidos        INT = NULL OUTPUT,
-    @rechazados      INT = NULL OUTPUT,
-    @proceso         VARCHAR(100) = NULL,
-    @id_importacion  INT = NULL OUTPUT
+    @mostrar_resultados  BIT          = 1,
+    @proceso             VARCHAR(100) = NULL,
+    @id_importacion      INT          = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @nl           NCHAR(2)     = NCHAR(13) + NCHAR(10);
+    DECLARE @salto_linea  NCHAR(2)     = NCHAR(13) + NCHAR(10);
     DECLARE @mensaje      NVARCHAR(2048);
     DECLARE @tran_propia  BIT          = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @leidos       INT;
+    DECLARE @insertados   INT;
+    DECLARE @actualizados INT;
+    DECLARE @sin_cambios  INT;
+    DECLARE @omitidos     INT;
+    DECLARE @rechazados   INT;
     -- Países del sistema que en la API son una subdivisión de otro código ISO.
     DECLARE @subdivisiones TABLE (codigo_fifa CHAR(3) PRIMARY KEY, subdivision NVARCHAR(10));
 
     INSERT INTO @subdivisiones (codigo_fifa, subdivision)
     VALUES ('ENG', N'GB-ENG'), ('SCO', N'GB-SCT');
 
-    SELECT @leidos = 0, @insertados = 0, @actualizados = 0, @sin_cambios = 0, @omitidos = 0, @rechazados = 0,
-           @id_importacion = NULL,
-           @proceso = ISNULL(NULLIF(TRIM(@proceso), ''), CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)));
+    SET @proceso = ISNULL(NULLIF(TRIM(@proceso), ''), 'DatosGenerales.usp_ProcesarFeriadosJSON');
+    SET @id_importacion = NULL;
 
     /* 1. El documento.
           Si la API rechaza el pedido responde un objeto con title, status y
@@ -172,15 +252,7 @@ BEGIN
         accion            VARCHAR(15)    COLLATE DATABASE_DEFAULT NULL
     );
 
-    -- Feriados de cada registro por país del sistema (paso 4).
-    CREATE TABLE #feriados_pais (
-        id_registro  INT            NOT NULL,
-        id_pais      SMALLINT       NOT NULL,
-        fecha        DATE           NOT NULL,
-        nombre       NVARCHAR(400)  COLLATE DATABASE_DEFAULT NOT NULL
-    );
-
-    -- usp_ImportarFeriados lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
+    -- usp_CargarFeriados lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
     CREATE TABLE #staging_feriados (
         id_pais  SMALLINT       NOT NULL,
         fecha    DATE           NOT NULL,
@@ -234,7 +306,8 @@ BEGIN
                         AND EXISTS (SELECT 1 FROM OPENJSON(s.subdivisiones) WHERE value = sd.subdivision));
 
     -- Conversión y lo que no se pudo convertir: sin fecha o sin nombre no se puede armar el
-    -- feriado. La fecha viene como AAAA-MM-DD (estilo 23).
+    -- feriado, y el nombre no puede pasar del largo de la tabla. La fecha viene como AAAA-MM-DD
+    -- (estilo 23).
     UPDATE #respuesta_feriados
     SET fecha  = TRY_CONVERT(DATE, fecha_txt, 23),
         nombre = ISNULL(nombre_local, nombre_ingles)
@@ -243,11 +316,13 @@ BEGIN
     UPDATE #respuesta_feriados
     SET errores = NULLIF(CONCAT(
             IIF(fecha_txt IS NULL,
-                @nl + N'- La fecha es obligatoria.', N''),
+                @salto_linea + N'- La fecha es obligatoria.', N''),
             IIF(fecha_txt IS NOT NULL AND fecha IS NULL,
-                @nl + N'- La fecha "' + fecha_txt + N'" no es una fecha (AAAA-MM-DD).', N''),
+                @salto_linea + N'- La fecha "' + fecha_txt + N'" no es una fecha (AAAA-MM-DD).', N''),
             IIF(nombre IS NULL,
-                @nl + N'- El nombre del feriado es obligatorio.', N'')), N'')
+                @salto_linea + N'- El nombre del feriado es obligatorio.', N''),
+            IIF(LEN(nombre) > 200,
+                @salto_linea + N'- El nombre del feriado no puede superar los 200 caracteres.', N'')), N'')
     WHERE accion IS NULL;
 
     UPDATE #respuesta_feriados
@@ -258,43 +333,26 @@ BEGIN
           el país si es de todo el país (global no es false) o si es de la
           subdivisión que el sistema registra como país (Inglaterra y Escocia
           dentro del Reino Unido). Dos feriados del mismo país y día van en un
-          solo registro, con los nombres juntos. */
-    INSERT INTO #feriados_pais (id_registro, id_pais, fecha, nombre)
-    SELECT s.id_registro, p.id_pais, s.fecha, s.nombre
-    FROM #respuesta_feriados AS s
-    INNER JOIN DatosGenerales.PAIS AS p ON p.codigo_iso2 = s.iso2
-    LEFT JOIN @subdivisiones AS sd ON sd.codigo_fifa = p.codigo_fifa
-    WHERE s.accion IS NULL
-      AND (s.global_txt IS DISTINCT FROM N'false'
-           OR EXISTS (SELECT 1 FROM OPENJSON(s.subdivisiones) WHERE value = sd.subdivision));
-
+          solo registro, con los nombres juntos (hasta los 200 caracteres de
+          la tabla). */
     INSERT INTO #staging_feriados (id_pais, fecha, nombre)
-    SELECT fp.id_pais, fp.fecha, STRING_AGG(fp.nombre, N' / ') WITHIN GROUP (ORDER BY fp.nombre)
-    FROM (SELECT DISTINCT id_pais, fecha, nombre FROM #feriados_pais) AS fp
+    SELECT fp.id_pais, fp.fecha, LEFT(STRING_AGG(fp.nombre, N' / ') WITHIN GROUP (ORDER BY fp.nombre), 200)
+    FROM (SELECT DISTINCT p.id_pais, s.fecha, s.nombre
+          FROM #respuesta_feriados AS s
+          INNER JOIN DatosGenerales.PAIS AS p ON p.codigo_iso2 = s.iso2
+          LEFT JOIN @subdivisiones AS sd ON sd.codigo_fifa = p.codigo_fifa
+          WHERE s.accion IS NULL
+            AND (s.global_txt IS DISTINCT FROM N'false'
+                 OR EXISTS (SELECT 1 FROM OPENJSON(s.subdivisiones) WHERE value = sd.subdivision))) AS fp
     GROUP BY fp.id_pais, fp.fecha;
 
-    /* 5. El SP de la Entrega 5 valida los feriados de cada país y día y carga los válidos, todos
-          juntos; un registro de la API que forma un feriado rechazado queda rechazado. (Un
-          registro del Reino Unido forma dos feriados: si se rechaza el de un solo país, el del
-          otro se carga y el registro igual queda rechazado, con el motivo.) Después se registran
-          la importación y sus rechazados, en la misma transacción. */
+    /* 5. El SP de carga valida los feriados de cada país y día y los carga, todos juntos;
+          después se registran la importación y los registros rechazados en el paso 3, en la
+          misma transacción. */
     BEGIN TRY
         IF @tran_propia = 1 BEGIN TRANSACTION;
 
-        EXEC DatosGenerales.usp_ImportarFeriados;
-
-        UPDATE s
-        SET accion  = 'RECHAZADO',
-            errores = (SELECT STRING_AGG(x.errores, N'')
-                       FROM (SELECT DISTINCT sf.errores
-                             FROM #feriados_pais AS fp
-                             INNER JOIN #staging_feriados AS sf ON sf.id_pais = fp.id_pais AND sf.fecha = fp.fecha
-                             WHERE fp.id_registro = s.id_registro AND sf.accion = 'RECHAZADO') AS x)
-        FROM #respuesta_feriados AS s
-        WHERE s.accion IS NULL
-          AND EXISTS (SELECT 1 FROM #feriados_pais AS fp
-                      INNER JOIN #staging_feriados AS sf ON sf.id_pais = fp.id_pais AND sf.fecha = fp.fecha
-                      WHERE fp.id_registro = s.id_registro AND sf.accion = 'RECHAZADO');
+        EXEC DatosGenerales.usp_CargarFeriados;
 
         SELECT @leidos     = COUNT(*),
                @omitidos   = ISNULL(SUM(IIF(accion = 'OMITIDO',   1, 0)), 0),
@@ -325,7 +383,7 @@ BEGIN
     END CATCH;
 
     /* 6. Resultado. */
-    IF @mostrar = 1
+    IF @mostrar_resultados = 1
     BEGIN
         SELECT @id_importacion AS id_importacion, @origen AS origen, @leidos AS leidos, @insertados AS insertados,
                @actualizados AS actualizados, @sin_cambios AS sin_cambios, @omitidos AS omitidos, @rechazados AS rechazados;
@@ -356,41 +414,35 @@ GO
   usp_ImportarFeriadosAPI
   Consulta la API Nager.Date v3 con usp_ConsumirAPI por los feriados de
   @anio del país con código ISO alfa-2 @codigo_iso2, y procesa la respuesta
-  con usp_ProcesarFeriadosJSON (@mostrar y los OUTPUT son los de ese SP).
+  con usp_ProcesarFeriadosJSON (@mostrar_resultados es el de ese SP).
   Por defecto trae los del año actual. Para varios países se llama una vez
-  por país, como hace 29_Ejecutar_ImportarAPIs.sql.
+  por país, como hace 31_Importar_APIs.sql.
   Valida: código ISO de 2 letras y de algún país del sistema; año entre 1960
   y el siguiente al actual. Si la API no tiene feriados de ese país (responde
   sin contenido, HTTP 204), no responde, responde con otro código HTTP
   distinto de 200 o no devuelve un JSON válido, no se importa nada (THROW
   50002): los feriados de un país que la API no cubre se cargan con
-  usp_FERIADO_Alta o usp_ImportarFeriados. El número de la importación queda
+  usp_FERIADO_Alta o usp_CargarFeriados. El número de la importación queda
   en @id_importacion.
 */
 CREATE OR ALTER PROCEDURE DatosGenerales.usp_ImportarFeriadosAPI
     @codigo_iso2     VARCHAR(10),
     @anio            SMALLINT = NULL,
-    @mostrar         BIT      = 1,
-    @leidos          INT      = NULL OUTPUT,
-    @insertados      INT      = NULL OUTPUT,
-    @actualizados    INT      = NULL OUTPUT,
-    @sin_cambios     INT      = NULL OUTPUT,
-    @omitidos        INT      = NULL OUTPUT,
-    @rechazados      INT      = NULL OUTPUT,
+    @mostrar_resultados  BIT  = 1,
     @id_importacion  INT      = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores      NVARCHAR(2048) = N'';
-    DECLARE @nl           NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @anio_actual  SMALLINT       = YEAR(GETDATE());
-    DECLARE @paises       NVARCHAR(400);
-    DECLARE @url          NVARCHAR(1000);
-    DECLARE @estado_http  SMALLINT;
-    DECLARE @respuesta    NVARCHAR(MAX);
-    DECLARE @mensaje      NVARCHAR(2048);
-    DECLARE @proceso      VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @anio_actual SMALLINT       = YEAR(GETDATE());
+    DECLARE @paises      NVARCHAR(400);
+    DECLARE @url         NVARCHAR(1000);
+    DECLARE @estado_http SMALLINT;
+    DECLARE @respuesta   NVARCHAR(MAX);
+    DECLARE @mensaje     NVARCHAR(2048);
+    DECLARE @proceso     VARCHAR(100)   = 'DatosGenerales.usp_ImportarFeriadosAPI';
 
     SET @codigo_iso2 = UPPER(NULLIF(TRIM(@codigo_iso2), ''));
     SET @anio        = ISNULL(@anio, @anio_actual);
@@ -402,14 +454,14 @@ BEGIN
     /* El código va dentro de la URL: solo se aceptan dos letras, para que no
        se pueda alterar la consulta. */
     IF @codigo_iso2 IS NULL
-        SET @errores += @nl + N'- El código ISO alfa-2 del país es obligatorio (ej. AR).';
+        SET @errores += @salto_linea + N'- El código ISO alfa-2 del país es obligatorio (ej. AR).';
     ELSE IF @codigo_iso2 COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z]'
-        SET @errores += @nl + N'- El código ISO alfa-2 debe tener 2 letras.';
+        SET @errores += @salto_linea + N'- El código ISO alfa-2 debe tener 2 letras.';
     ELSE IF @paises IS NULL
-        SET @errores += @nl + N'- No hay ningún país del sistema con código ISO alfa-2 "' + @codigo_iso2 + N'".';
+        SET @errores += @salto_linea + N'- No hay ningún país del sistema con código ISO alfa-2 "' + @codigo_iso2 + N'".';
 
     IF @anio NOT BETWEEN 1960 AND @anio_actual + 1
-        SET @errores += @nl + N'- El año debe estar entre 1960 y ' + CAST(@anio_actual + 1 AS NVARCHAR(4)) + N'.';
+        SET @errores += @salto_linea + N'- El año debe estar entre 1960 y ' + CAST(@anio_actual + 1 AS NVARCHAR(4)) + N'.';
 
     IF @errores <> N''
     BEGIN
@@ -445,13 +497,7 @@ BEGIN
     EXEC DatosGenerales.usp_ProcesarFeriadosJSON
         @json         = @respuesta,
         @origen       = @url,
-        @mostrar      = @mostrar,
-        @leidos       = @leidos       OUTPUT,
-        @insertados   = @insertados   OUTPUT,
-        @actualizados = @actualizados OUTPUT,
-        @sin_cambios  = @sin_cambios  OUTPUT,
-        @omitidos       = @omitidos       OUTPUT,
-        @rechazados     = @rechazados     OUTPUT,
+        @mostrar_resultados = @mostrar_resultados,
         @proceso        = @proceso,
         @id_importacion = @id_importacion OUTPUT;
 END;
@@ -463,6 +509,6 @@ SELECT s.name AS esquema, p.name AS procedimiento, p.modify_date AS ultima_modif
 FROM sys.procedures AS p
 INNER JOIN sys.schemas AS s ON s.schema_id = p.schema_id
 WHERE s.name = N'DatosGenerales'
-  AND p.name IN (N'usp_ProcesarFeriadosJSON', N'usp_ImportarFeriadosAPI')
+  AND p.name IN (N'usp_CargarFeriados', N'usp_ProcesarFeriadosJSON', N'usp_ImportarFeriadosAPI')
 ORDER BY p.name;
 GO

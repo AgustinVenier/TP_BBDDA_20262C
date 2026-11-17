@@ -10,23 +10,23 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 29/10/2026
- Archivo: 25_SP_Importar_Indicadores.sql
+ Archivo: 21_SP_Importar_Indicadores.sql
  Objetivo: Crear el proceso de importación masiva de indicadores económicos
            por país del Banco Mundial, como el PBI per cápita
            (NY.GDP.PCAP.CD) con el que la asignación de publicidad estima el
            poder adquisitivo de cada mercado. Se importa consultando la API,
-           que responde en XML. Los SP, en el orden en que se crean (primero
-           el que usa el otro):
+           que responde en XML. Los SP, en el orden en que se crean:
+             DatosGenerales.usp_CargarIndicadoresEconomicos  carga masiva de indicadores
              DatosGenerales.usp_ProcesarIndicadoresXML  valida el XML de la API y carga sus registros
              DatosGenerales.usp_ImportarIndicadoresAPI  consulta la API y procesa la respuesta
            El pedido a la API lo hace DatosGenerales.usp_ConsumirAPI
-           (22_SP_ConsumirAPI.sql).
-           Requiere haber ejecutado 00 a 22. Su script de testing es
-           75_Test_SP_Importar_Indicadores.sql.
+           (17_SP_Utilidades_Importacion.sql).
+           Requiere haber ejecutado 01 a 20. Su script de testing es
+           71_Test_SP_Importar_Indicadores.sql.
 ================================================================================
 
  Fuente: API de indicadores del Banco Mundial (v2), sin clave (ver
- datos/fuentes/bancomundial/README.md). Responde en XML: un elemento wb:data
+ doc/Fuentes_de_Datos_y_APIs.docx). Responde en XML: un elemento wb:data
  por país y año, con el código del indicador (wb:indicator/@id), el país
  (wb:countryiso3code, ISO alfa-3), el año (wb:date) y el valor (wb:value).
 
@@ -36,42 +36,31 @@
       Mundial y no un mensaje de error de la API, y que traiga todos los
       registros (una sola página). Si no, no se importa nada.
    2. nodes() pasa los registros, tal como vienen, a la tabla de staging
-      #staging_indicadores, y ahí se convierten (TRY_CONVERT). La respuesta
-      se importa tal como la entrega la API: todas las transformaciones se
-      hacen acá, en T-SQL.
+      #staging_indicadores, y ahí se convierten (TRY_CONVERT), en T-SQL.
    3. Antes de cargar, cada registro puede quedar:
         OMITIDO      si es de un país que el sistema no tiene registrado (la
                      API trae todos los países y también agregados como
-                     "World" o "High income"), si no tiene valor (el Banco
-                     Mundial todavía no lo publicó) o si repite otro registro
-                     de la respuesta con el mismo valor (si ese registro se
-                     rechaza en el paso 4, la copia también). No es un error.
+                     "World" o "High income") o si no tiene valor (el Banco
+                     Mundial todavía no lo publicó). No es un error.
         RECHAZADO    si el año o el valor no son números.
       Cada regla es un UPDATE sobre toda la tabla de staging, que anota el
       motivo en los registros que no la cumplen.
-   4. El SP de la Entrega 5 DatosGenerales.usp_ImportarIndicadoresEconomicos
-      (16_SP_Importacion.sql) lee #staging_indicadores, valida los demás con
-      las reglas de los indicadores y rechaza los que no las cumplen (sin
-      año o código de indicador, año fuera de 1960 al actual, código de
-      indicador de más de 30 caracteres o con caracteres no admitidos, o el
-      mismo país, indicador y año con valores distintos), y hace el upsert
-      de los válidos, todos juntos. En la misma transacción se registra la
-      importación (DatosGenerales.IMPORTACION, su número queda en
-      @id_importacion) y los rechazados, en
-      DatosGenerales.ERRORES_INDICADOR_ECONOMICO.
+   4. DatosGenerales.usp_CargarIndicadoresEconomicos valida los demás con las
+      reglas de los indicadores (año y código de indicador informados, año
+      de 1960 al actual, código de hasta 30 caracteres admitidos) y hace el
+      upsert de los válidos, todos juntos. En la misma transacción se
+      registra la importación (su número queda en @id_importacion) y los
+      rechazados, en DatosGenerales.ERRORES_INDICADOR_ECONOMICO.
    5. Se devuelve el resumen, los omitidos por motivo y los rechazados con
       sus motivos.
-   La importación puede correr dentro de una transacción del que la llama
-   (los tests la deshacen con ROLLBACK).
 
- Criterios del upsert (los de usp_ImportarIndicadoresEconomicos):
+ Criterios del upsert (los de usp_CargarIndicadoresEconomicos):
    - Clave natural: país (ISO alfa-3), indicador y año.
    - Inglaterra y Escocia comparten el código GBR: el valor se registra para
      las dos.
    - Cada año es un registro, así que la serie histórica se conserva. Si el
      Banco Mundial revisa el valor de un año, se actualiza ese año y su
      fecha_actualizacion. Un valor que no viene no borra el guardado.
-   - Importar dos veces la misma respuesta no cambia nada.
 */
 
 USE MundialFutbol;
@@ -84,6 +73,125 @@ GO
 /* ============================================================================
    PROCESAMIENTO DEL XML (lo usa el SP de abajo)
    ============================================================================ */
+
+/*
+  usp_CargarIndicadoresEconomicos
+  Upsert de indicadores por país, indicador y año (ej. el PBI per cápita de
+  la API del Banco Mundial, NY.GDP.PCAP.CD), desde #staging_indicadores.
+  Columnas que usa: codigo_iso3, codigo_indicador, anio, valor, errores y
+  accion.
+  El país se identifica por su código ISO alfa-3: como Inglaterra y Escocia
+  comparten GBR, un registro con ese código se carga para las dos.
+  Valida cada registro pendiente: país, indicador, año y valor obligatorios;
+  código ISO alfa-3 de algún país; código de indicador de hasta 30
+  caracteres, solo con letras sin acentos, números, puntos y guiones bajos;
+  año entre 1960 y el actual. Con eso cubre las reglas de
+  usp_INDICADOR_ECONOMICO_Alta y _Modificacion. No controla que el mismo
+  país, indicador y año venga dos veces: si pasa, la carga falla por la
+  clave única de la tabla y no se carga nada. Los valores que cambiaron se
+  actualizan con su fecha_actualizacion; los que no existían se insertan. Un
+  registro de GBR queda INSERTADO si le falta a alguno de los dos países,
+  ACTUALIZADO si cambió en alguno y si no, SIN CAMBIOS.
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_CargarIndicadoresEconomicos
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @salto_linea NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia BIT      = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @anio_actual SMALLINT = YEAR(GETDATE());
+
+    IF OBJECT_ID(N'tempdb..#staging_indicadores') IS NULL
+        THROW 50001, N'DatosGenerales.usp_CargarIndicadoresEconomicos: no se importó nada, falta la tabla #staging_indicadores con los indicadores.', 1;
+
+    UPDATE #staging_indicadores
+    SET codigo_iso3      = UPPER(NULLIF(TRIM(codigo_iso3), '')),
+        codigo_indicador = UPPER(NULLIF(TRIM(codigo_indicador), ''))
+    WHERE accion IS NULL;
+
+    /* 1. Cada regla anota su motivo en los registros que no la cumplen. */
+    UPDATE st
+    SET errores = NULLIF(CONCAT(st.errores,
+            CASE WHEN st.codigo_iso3 IS NULL
+                     THEN @salto_linea + N'- El país (código ISO alfa-3) es obligatorio.'
+                 WHEN NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS AS p WHERE p.codigo_iso3 = st.codigo_iso3)
+                     THEN @salto_linea + N'- No hay ningún país con el código ISO alfa-3 ' + st.codigo_iso3 + N'.'
+            END,
+            CASE WHEN st.codigo_indicador IS NULL
+                     THEN @salto_linea + N'- El código del indicador es obligatorio.'
+                 WHEN LEN(st.codigo_indicador) > 30
+                     THEN @salto_linea + N'- El código del indicador no puede superar los 30 caracteres.'
+                 WHEN st.codigo_indicador COLLATE Latin1_General_BIN LIKE '%[^A-Z0-9._]%'
+                     THEN @salto_linea + N'- El código del indicador solo admite letras sin acentos, números, puntos y guiones bajos.'
+            END,
+            CASE WHEN st.anio IS NULL
+                     THEN @salto_linea + N'- El año es obligatorio.'
+                 WHEN st.anio NOT BETWEEN 1960 AND @anio_actual
+                     THEN @salto_linea + N'- El año debe estar entre 1960 y ' + CAST(@anio_actual AS NVARCHAR(4)) + N'.'
+            END,
+            IIF(st.valor IS NULL, @salto_linea + N'- El valor es obligatorio.', NULL)), N'')
+    FROM #staging_indicadores AS st
+    WHERE st.accion IS NULL;
+
+    UPDATE #staging_indicadores SET accion = 'RECHAZADO' WHERE accion IS NULL AND errores IS NOT NULL;
+
+    /* 2. Lo que le pasa a cada registro válido se calcula antes de cargar: después estarían todos sin cambios. */
+    UPDATE st
+    SET accion = CASE WHEN EXISTS (SELECT 1 FROM DatosGenerales.PAIS AS p
+                                   WHERE p.codigo_iso3 = st.codigo_iso3
+                                     AND NOT EXISTS (SELECT 1 FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
+                                                     WHERE ie.id_pais = p.id_pais
+                                                       AND ie.codigo_indicador = st.codigo_indicador
+                                                       AND ie.anio = st.anio))
+                           THEN 'INSERTADO'
+                      WHEN EXISTS (SELECT 1 FROM DatosGenerales.PAIS AS p
+                                   INNER JOIN DatosGenerales.INDICADOR_ECONOMICO AS ie ON ie.id_pais = p.id_pais
+                                   WHERE p.codigo_iso3 = st.codigo_iso3
+                                     AND ie.codigo_indicador = st.codigo_indicador
+                                     AND ie.anio = st.anio
+                                     AND ie.valor <> st.valor)
+                           THEN 'ACTUALIZADO'
+                      ELSE 'SIN CAMBIOS'
+                 END
+    FROM #staging_indicadores AS st
+    WHERE st.accion IS NULL;
+
+    /* 3. Carga, todos juntos. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        -- Los que ya están cargados con otro valor (un registro de GBR puede ser INSERTADO en un país y cambiar en el otro).
+        UPDATE ie
+        SET valor = st.valor, fecha_actualizacion = SYSDATETIME()
+        FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
+        INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = ie.id_pais
+        INNER JOIN #staging_indicadores AS st ON st.codigo_iso3 = p.codigo_iso3
+                                             AND st.codigo_indicador = ie.codigo_indicador
+                                             AND st.anio = ie.anio
+        WHERE st.accion IN ('INSERTADO', 'ACTUALIZADO') AND ie.valor <> st.valor;
+
+        -- Los que todavía no están, en cada país con ese código ISO.
+        INSERT INTO DatosGenerales.INDICADOR_ECONOMICO (id_pais, codigo_indicador, anio, valor)
+        SELECT p.id_pais, st.codigo_indicador, st.anio, st.valor
+        FROM #staging_indicadores AS st
+        INNER JOIN DatosGenerales.PAIS AS p ON p.codigo_iso3 = st.codigo_iso3
+        WHERE st.accion = 'INSERTADO'
+          AND NOT EXISTS (SELECT 1 FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
+                          WHERE ie.id_pais = p.id_pais
+                            AND ie.codigo_indicador = st.codigo_indicador
+                            AND ie.anio = st.anio);
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+END;
+GO
+
 
 /*
   usp_ProcesarIndicadoresXML
@@ -107,22 +215,22 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @nl            NCHAR(2) = NCHAR(13) + NCHAR(10);
-    DECLARE @mensaje       NVARCHAR(2048);
-    DECLARE @raices        INT;
-    DECLARE @es_error_api  BIT;
-    DECLARE @error_api     NVARCHAR(400);
-    DECLARE @pagina        INT;
-    DECLARE @paginas       INT;
-    DECLARE @tran_propia   BIT          = IIF(@@TRANCOUNT = 0, 1, 0);
-    DECLARE @leidos        INT;
-    DECLARE @insertados    INT;
-    DECLARE @actualizados  INT;
-    DECLARE @sin_cambios   INT;
-    DECLARE @omitidos      INT;
-    DECLARE @rechazados    INT;
+    DECLARE @salto_linea  NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @mensaje      NVARCHAR(2048);
+    DECLARE @raices       INT;
+    DECLARE @es_error_api BIT;
+    DECLARE @error_api    NVARCHAR(400);
+    DECLARE @pagina       INT;
+    DECLARE @paginas      INT;
+    DECLARE @tran_propia  BIT          = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @leidos       INT;
+    DECLARE @insertados   INT;
+    DECLARE @actualizados INT;
+    DECLARE @sin_cambios  INT;
+    DECLARE @omitidos     INT;
+    DECLARE @rechazados   INT;
 
-    SET @proceso = ISNULL(NULLIF(TRIM(@proceso), ''), CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)));
+    SET @proceso = ISNULL(NULLIF(TRIM(@proceso), ''), 'DatosGenerales.usp_ProcesarIndicadoresXML');
     SET @id_importacion = NULL;
 
     /* 1. El documento.
@@ -152,26 +260,25 @@ BEGIN
         THROW 50002, @mensaje, 1;
     END;
 
-    -- usp_ImportarIndicadoresEconomicos lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
+    -- usp_CargarIndicadoresEconomicos lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
     CREATE TABLE #staging_indicadores (
         id_registro       INT IDENTITY(1,1) PRIMARY KEY,
         -- Tal como vienen en el XML
         pais_txt          NVARCHAR(200)  COLLATE DATABASE_DEFAULT NULL,
         anio_txt          NVARCHAR(50)   COLLATE DATABASE_DEFAULT NULL,
         valor_txt         NVARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
-        -- Lo que lee usp_ImportarIndicadoresEconomicos, ya convertido
+        -- Lo que lee usp_CargarIndicadoresEconomicos, ya convertido
         codigo_iso3       NVARCHAR(50)   COLLATE DATABASE_DEFAULT NULL,
         codigo_indicador  NVARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
         anio              SMALLINT       NULL,
         valor             DECIMAL(18,4)  NULL,
-        -- Lo que le pasa a cada registro: lo completan este SP y usp_ImportarIndicadoresEconomicos
+        -- Lo que le pasa a cada registro: lo completan este SP y usp_CargarIndicadoresEconomicos
         errores           NVARCHAR(MAX)  COLLATE DATABASE_DEFAULT NULL,
         motivo_omision    VARCHAR(60)    COLLATE DATABASE_DEFAULT NULL,
-        copia_de          INT            NULL,      -- un repetido con el mismo valor: el registro que se importa en su lugar
         accion            VARCHAR(15)    COLLATE DATABASE_DEFAULT NULL
     );
 
-    /* 2. Los registros, como vienen de la api. */
+    /* 2. Los registros, como vienen de la API. */
     WITH XMLNAMESPACES ('http://www.worldbank.org' AS wb)
     INSERT INTO #staging_indicadores (codigo_indicador, pais_txt, codigo_iso3, anio_txt, valor_txt)
     SELECT UPPER(NULLIF(TRIM(d.value('(wb:indicator/@id)[1]', 'NVARCHAR(100)')), N'')),
@@ -192,7 +299,7 @@ BEGIN
     WHERE accion IS NULL AND valor_txt IS NULL;
 
     -- Conversión y lo que no se pudo convertir. Las reglas de los indicadores las aplica
-    -- usp_ImportarIndicadoresEconomicos.
+    -- usp_CargarIndicadoresEconomicos.
     UPDATE #staging_indicadores
     SET anio  = TRY_CONVERT(SMALLINT, anio_txt),
         valor = TRY_CONVERT(DECIMAL(18,4), valor_txt)
@@ -201,44 +308,21 @@ BEGIN
     UPDATE #staging_indicadores
     SET errores = NULLIF(CONCAT(
             IIF(anio_txt IS NOT NULL AND anio IS NULL,
-                @nl + N'- El año "' + anio_txt + N'" no es un año (AAAA): el sistema guarda indicadores anuales.', NULL),
+                @salto_linea + N'- El año "' + anio_txt + N'" no es un año (AAAA): el sistema guarda indicadores anuales.', NULL),
             IIF(valor IS NULL,
-                @nl + N'- El valor "' + valor_txt + N'" no es un número (o tiene más de 14 dígitos enteros).', NULL)), N'')
+                @salto_linea + N'- El valor "' + valor_txt + N'" no es un número (o tiene más de 14 dígitos enteros).', NULL)), N'')
     WHERE accion IS NULL;
 
     UPDATE #staging_indicadores
     SET accion = 'RECHAZADO'
     WHERE accion IS NULL AND errores IS NOT NULL;
 
-    -- Mismo país, indicador y año más de una vez con el mismo valor: se importa una vez y las
-    -- copias se omiten (si ese registro se rechaza, las copias también, en el paso 4). Con
-    -- valores distintos los rechaza usp_ImportarIndicadoresEconomicos.
-    WITH repetidos AS (
-        SELECT accion, motivo_omision, copia_de,
-               MIN(valor) OVER (PARTITION BY codigo_iso3, codigo_indicador, anio) AS valor_minimo,
-               MAX(valor) OVER (PARTITION BY codigo_iso3, codigo_indicador, anio) AS valor_maximo,
-               MIN(id_registro) OVER (PARTITION BY codigo_iso3, codigo_indicador, anio) AS primero,
-               ROW_NUMBER() OVER (PARTITION BY codigo_iso3, codigo_indicador, anio ORDER BY id_registro) AS copia
-        FROM #staging_indicadores
-        WHERE accion IS NULL AND codigo_indicador IS NOT NULL AND anio IS NOT NULL
-    )
-    UPDATE repetidos
-    SET accion = 'OMITIDO', motivo_omision = 'Repetido en la respuesta con el mismo valor', copia_de = primero
-    WHERE copia > 1 AND valor_minimo = valor_maximo;
-
-    /* 4. El SP de la Entrega 5 valida los demás y carga los válidos, todos juntos; después se
+    /* 4. El SP de carga valida los demás y carga los válidos, todos juntos; después se
           registran la importación y sus rechazados, en la misma transacción. */
     BEGIN TRY
         IF @tran_propia = 1 BEGIN TRANSACTION;
 
-        EXEC DatosGenerales.usp_ImportarIndicadoresEconomicos;
-
-        -- Las copias de un registro que se rechazó también se rechazan, con sus mismos motivos.
-        UPDATE c
-        SET accion = 'RECHAZADO', motivo_omision = NULL, errores = r.errores
-        FROM #staging_indicadores AS c
-        INNER JOIN #staging_indicadores AS r ON r.id_registro = c.copia_de
-        WHERE c.accion = 'OMITIDO' AND r.accion = 'RECHAZADO';
+        EXEC DatosGenerales.usp_CargarIndicadoresEconomicos;
 
         SELECT @leidos       = COUNT(*),
                @insertados   = ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
@@ -317,15 +401,15 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores      NVARCHAR(2048) = N'';
-    DECLARE @nl           NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @anio_actual  SMALLINT       = YEAR(GETDATE());
-    DECLARE @url          NVARCHAR(2000);
-    DECLARE @estado_http  SMALLINT;
-    DECLARE @respuesta    NVARCHAR(MAX);
-    DECLARE @xml          XML;
-    DECLARE @mensaje      NVARCHAR(2048);
-    DECLARE @proceso      VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @anio_actual SMALLINT       = YEAR(GETDATE());
+    DECLARE @url         NVARCHAR(2000);
+    DECLARE @estado_http SMALLINT;
+    DECLARE @respuesta   NVARCHAR(MAX);
+    DECLARE @xml         XML;
+    DECLARE @mensaje     NVARCHAR(2048);
+    DECLARE @proceso     VARCHAR(100)   = 'DatosGenerales.usp_ImportarIndicadoresAPI';
 
     SET @codigo_indicador = UPPER(NULLIF(TRIM(@codigo_indicador), ''));
     SET @paises           = UPPER(NULLIF(REPLACE(@paises, ' ', ''), ''));
@@ -336,17 +420,17 @@ BEGIN
        caracteres, para que no se pueda alterar la consulta. Las reglas de
        cada registro las aplica la importación. */
     IF @codigo_indicador IS NULL
-        SET @errores += @nl + N'- El código del indicador es obligatorio (ej. NY.GDP.PCAP.CD).';
+        SET @errores += @salto_linea + N'- El código del indicador es obligatorio (ej. NY.GDP.PCAP.CD).';
     ELSE IF @codigo_indicador COLLATE Latin1_General_BIN LIKE '%[^A-Z0-9._]%'
-        SET @errores += @nl + N'- El código del indicador solo admite letras sin acentos, números, puntos y guiones bajos.';
+        SET @errores += @salto_linea + N'- El código del indicador solo admite letras sin acentos, números, puntos y guiones bajos.';
 
     IF @paises COLLATE Latin1_General_BIN LIKE '%[^A-Z;]%'
-        SET @errores += @nl + N'- Los países van con su código ISO alfa-3, separados por punto y coma (ej. ARG;BRA).';
+        SET @errores += @salto_linea + N'- Los países van con su código ISO alfa-3, separados por punto y coma (ej. ARG;BRA).';
 
     IF @anio_desde NOT BETWEEN 1960 AND @anio_actual OR @anio_hasta NOT BETWEEN 1960 AND @anio_actual
-        SET @errores += @nl + N'- Los años deben estar entre 1960 y ' + CAST(@anio_actual AS NVARCHAR(4)) + N'.';
+        SET @errores += @salto_linea + N'- Los años deben estar entre 1960 y ' + CAST(@anio_actual AS NVARCHAR(4)) + N'.';
     ELSE IF @anio_desde > @anio_hasta
-        SET @errores += @nl + N'- El año desde no puede ser mayor que el año hasta.';
+        SET @errores += @salto_linea + N'- El año desde no puede ser mayor que el año hasta.';
 
     IF @errores <> N''
     BEGIN
@@ -400,6 +484,6 @@ SELECT s.name AS esquema, p.name AS procedimiento, p.modify_date AS ultima_modif
 FROM sys.procedures AS p
 INNER JOIN sys.schemas AS s ON s.schema_id = p.schema_id
 WHERE s.name = N'DatosGenerales'
-  AND p.name IN (N'usp_ProcesarIndicadoresXML', N'usp_ImportarIndicadoresAPI')
+  AND p.name IN (N'usp_CargarIndicadoresEconomicos', N'usp_ProcesarIndicadoresXML', N'usp_ImportarIndicadoresAPI')
 ORDER BY p.name;
 GO

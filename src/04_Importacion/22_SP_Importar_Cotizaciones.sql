@@ -10,20 +10,21 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 31/10/2026
- Archivo: 27_SP_Importar_Cotizaciones.sql
+ Archivo: 22_SP_Importar_Cotizaciones.sql
  Objetivo: Crear el proceso de importación de cotizaciones de monedas desde
            la API Frankfurter, con las que se factura la publicidad en otra
            moneda (las tarifas de los espacios están en dólares). Los SP, en
-           el orden en que se crean (primero el que usa el otro):
+           el orden en que se crean:
+             DatosGenerales.usp_CargarCotizaciones        carga masiva de cotizaciones
              DatosGenerales.usp_ProcesarCotizacionesJSON  valida la respuesta de la API y carga sus registros
              DatosGenerales.usp_ImportarCotizacionesAPI   consulta la API y procesa la respuesta
            El pedido a la API lo hace DatosGenerales.usp_ConsumirAPI
-           (22_SP_ConsumirAPI.sql).
-           Requiere haber ejecutado 00 a 22. Su script de testing es
-           77_Test_SP_Importar_Cotizaciones.sql.
+           (17_SP_Utilidades_Importacion.sql).
+           Requiere haber ejecutado 01 a 21. Su script de testing es
+           72_Test_SP_Importar_Cotizaciones.sql.
 ================================================================================
 
- Fuente: API Frankfurter v2, sin clave (ver datos/fuentes/frankfurter/README.md).
+ Fuente: API Frankfurter v2, sin clave (ver doc/Fuentes_de_Datos_y_APIs.docx).
  Responde en JSON: un arreglo con un objeto por moneda y fecha, con la fecha
  (date), la moneda base (base, siempre USD porque se pide así), la moneda
  cotizada (quote, ISO 4217) y cuántas unidades de esa moneda vale un dólar
@@ -35,33 +36,25 @@
    1. Se controla el documento: que sea JSON, que no sea un mensaje de error
       de la API y que sea un arreglo. Si no, no se importa nada.
    2. OPENJSON pasa los registros, tal como vienen, a la tabla de staging
-      #staging_cotizaciones, y ahí se convierten (TRY_CONVERT). Todas las
-      transformaciones se hacen acá, en T-SQL.
+      #staging_cotizaciones, y ahí se convierten (TRY_CONVERT), en T-SQL.
    3. Antes de cargar, cada registro puede quedar:
-        OMITIDO      si es el dólar contra sí mismo (vale siempre 1) o si
-                     repite otro registro con el mismo valor (si ese registro
-                     se rechaza en el paso 4, la copia también). No es un
-                     error.
+        OMITIDO      si es el dólar contra sí mismo (vale siempre 1). No es
+                     un error.
         RECHAZADO    si no es una cotización contra el dólar o si la fecha o
                      el valor no se pueden convertir.
-   4. El SP de la Entrega 5 DatosGenerales.usp_ImportarCotizaciones
-      (16_SP_Importacion.sql) lee #staging_cotizaciones, valida los demás con
-      las reglas de las cotizaciones y rechaza los que no las cumplen (moneda
-      que no es un código de 3 letras, fecha futura, valor que no es mayor
-      que cero, o la misma moneda y fecha con valores distintos), y hace el
-      upsert de los válidos, todos juntos. En la misma transacción se
-      registra la importación (DatosGenerales.IMPORTACION, su número queda en
+   4. DatosGenerales.usp_CargarCotizaciones valida los demás con las reglas
+      de las cotizaciones (moneda de 3 letras, fecha no futura, valor mayor
+      que cero) y hace el upsert de los válidos, todos juntos. En la misma
+      transacción se registra la importación (su número queda en
       @id_importacion) y los rechazados, en DatosGenerales.ERRORES_COTIZACION.
    5. Se devuelve el resumen, los omitidos por motivo y los rechazados con
       sus motivos.
-   La importación puede correr dentro de una transacción del que la llama
-   (los tests la deshacen con ROLLBACK).
 
- Criterios del upsert (los de usp_ImportarCotizaciones):
+ Criterios del upsert (los de usp_CargarCotizaciones):
    - Clave natural: moneda y fecha. Cada día es un registro, así que se
      conserva la serie histórica.
    - Si la fuente corrige el valor de un día, se actualiza ese día y su
-     fecha_actualizacion. Importar dos veces lo mismo no cambia nada.
+     fecha_actualizacion.
    - Los días sin cotización (fines de semana, feriados bancarios) no se
      inventan: DatosGenerales.fn_CotizacionVigente usa la última anterior.
 */
@@ -76,6 +69,91 @@ GO
 /* ============================================================================
    PROCESAMIENTO DEL JSON (lo usa el SP de abajo)
    ============================================================================ */
+
+/*
+  usp_CargarCotizaciones
+  Upsert de cotizaciones por moneda y fecha (ej. las de la API Frankfurter),
+  desde #staging_cotizaciones. Columnas que usa: codigo_moneda, fecha,
+  unidades_por_usd, errores y accion.
+  Valida cada registro pendiente: moneda, fecha y unidades por dólar
+  obligatorias; moneda de 3 letras y distinta del dólar; fecha no futura;
+  unidades por dólar mayores que cero. Con eso cubre las reglas de
+  usp_COTIZACION_Alta y _Modificacion. No controla que la misma moneda y
+  fecha venga dos veces: si pasa, la carga falla por la clave única de la
+  tabla y no se carga nada. Las cotizaciones que cambiaron se actualizan con
+  su fecha_actualizacion; las que no existían se insertan.
+*/
+CREATE OR ALTER PROCEDURE DatosGenerales.usp_CargarCotizaciones
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @salto_linea NCHAR(2) = NCHAR(13) + NCHAR(10);
+    DECLARE @tran_propia BIT      = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @hoy         DATE     = CONVERT(DATE, GETDATE());
+
+    IF OBJECT_ID(N'tempdb..#staging_cotizaciones') IS NULL
+        THROW 50001, N'DatosGenerales.usp_CargarCotizaciones: no se importó nada, falta la tabla #staging_cotizaciones con las cotizaciones.', 1;
+
+    UPDATE #staging_cotizaciones
+    SET codigo_moneda = UPPER(NULLIF(TRIM(codigo_moneda), ''))
+    WHERE accion IS NULL;
+
+    /* 1. Cada regla anota su motivo en los registros que no la cumplen. */
+    UPDATE #staging_cotizaciones
+    SET errores = NULLIF(CONCAT(errores,
+            CASE WHEN codigo_moneda IS NULL
+                     THEN @salto_linea + N'- La moneda es obligatoria.'
+                 WHEN codigo_moneda COLLATE Latin1_General_BIN NOT LIKE '[A-Z][A-Z][A-Z]'
+                     THEN @salto_linea + N'- La moneda "' + codigo_moneda + N'" no es un código de 3 letras (ISO 4217).'
+                 WHEN codigo_moneda = 'USD'
+                     THEN @salto_linea + N'- El dólar no lleva cotización: es la base y vale siempre 1.'
+            END,
+            CASE WHEN fecha IS NULL THEN @salto_linea + N'- La fecha es obligatoria.'
+                 WHEN fecha > @hoy  THEN @salto_linea + N'- La fecha ' + CONVERT(NVARCHAR(10), fecha, 103) + N' es futura.'
+            END,
+            CASE WHEN unidades_por_usd IS NULL THEN @salto_linea + N'- El valor (unidades por dólar) es obligatorio.'
+                 WHEN unidades_por_usd <= 0    THEN @salto_linea + N'- El valor (unidades por dólar) tiene que ser mayor que cero.'
+            END), N'')
+    WHERE accion IS NULL;
+
+    UPDATE #staging_cotizaciones SET accion = 'RECHAZADO' WHERE accion IS NULL AND errores IS NOT NULL;
+
+    /* 2. Lo que le pasa a cada registro válido, antes de cargar. */
+    UPDATE st
+    SET accion = CASE WHEN c.id_cotizacion IS NULL                      THEN 'INSERTADO'
+                      WHEN c.unidades_por_usd <> st.unidades_por_usd    THEN 'ACTUALIZADO'
+                      ELSE 'SIN CAMBIOS'
+                 END
+    FROM #staging_cotizaciones AS st
+    LEFT JOIN DatosGenerales.COTIZACION AS c ON c.codigo_moneda = st.codigo_moneda AND c.fecha = st.fecha
+    WHERE st.accion IS NULL;
+
+    /* 3. Carga, todas juntas. */
+    BEGIN TRY
+        IF @tran_propia = 1 BEGIN TRANSACTION;
+
+        UPDATE c
+        SET unidades_por_usd = st.unidades_por_usd, fecha_actualizacion = SYSDATETIME()
+        FROM DatosGenerales.COTIZACION AS c
+        INNER JOIN #staging_cotizaciones AS st ON st.codigo_moneda = c.codigo_moneda AND st.fecha = c.fecha
+        WHERE st.accion = 'ACTUALIZADO';
+
+        INSERT INTO DatosGenerales.COTIZACION (codigo_moneda, fecha, unidades_por_usd)
+        SELECT codigo_moneda, fecha, unidades_por_usd
+        FROM #staging_cotizaciones
+        WHERE accion = 'INSERTADO';
+
+        IF @tran_propia = 1 COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @tran_propia = 1 AND @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+END;
+GO
+
 
 /*
   usp_ProcesarCotizacionesJSON
@@ -99,17 +177,17 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @nl            NCHAR(2)     = NCHAR(13) + NCHAR(10);
-    DECLARE @mensaje       NVARCHAR(2048);
-    DECLARE @tran_propia   BIT          = IIF(@@TRANCOUNT = 0, 1, 0);
-    DECLARE @leidos        INT;
-    DECLARE @insertados    INT;
-    DECLARE @actualizados  INT;
-    DECLARE @sin_cambios   INT;
-    DECLARE @omitidos      INT;
-    DECLARE @rechazados    INT;
+    DECLARE @salto_linea  NCHAR(2)     = NCHAR(13) + NCHAR(10);
+    DECLARE @mensaje      NVARCHAR(2048);
+    DECLARE @tran_propia  BIT          = IIF(@@TRANCOUNT = 0, 1, 0);
+    DECLARE @leidos       INT;
+    DECLARE @insertados   INT;
+    DECLARE @actualizados INT;
+    DECLARE @sin_cambios  INT;
+    DECLARE @omitidos     INT;
+    DECLARE @rechazados   INT;
 
-    SET @proceso = ISNULL(NULLIF(TRIM(@proceso), ''), CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)));
+    SET @proceso = ISNULL(NULLIF(TRIM(@proceso), ''), 'DatosGenerales.usp_ProcesarCotizacionesJSON');
     SET @id_importacion = NULL;
 
     /* 1. El documento.
@@ -130,21 +208,20 @@ BEGIN
         THROW 50002, @mensaje, 1;
     END;
 
-    -- usp_ImportarCotizaciones lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
+    -- usp_CargarCotizaciones lee y completa esta tabla: no cambiar su nombre ni el de las columnas que usa.
     CREATE TABLE #staging_cotizaciones (
         id_registro       INT IDENTITY(1,1) PRIMARY KEY,
         -- Tal como vienen en el JSON
         fecha_txt         NVARCHAR(50)   COLLATE DATABASE_DEFAULT NULL,
         base_txt          NVARCHAR(50)   COLLATE DATABASE_DEFAULT NULL,
         valor_txt         NVARCHAR(100)  COLLATE DATABASE_DEFAULT NULL,
-        -- Lo que lee usp_ImportarCotizaciones, ya convertido
+        -- Lo que lee usp_CargarCotizaciones, ya convertido
         codigo_moneda     NVARCHAR(50)   COLLATE DATABASE_DEFAULT NULL,
         fecha             DATE           NULL,
         unidades_por_usd  DECIMAL(19,6)  NULL,
-        -- Lo que le pasa a cada registro: lo completan este SP y usp_ImportarCotizaciones
+        -- Lo que le pasa a cada registro: lo completan este SP y usp_CargarCotizaciones
         errores           NVARCHAR(MAX)  COLLATE DATABASE_DEFAULT NULL,
         motivo_omision    VARCHAR(60)    COLLATE DATABASE_DEFAULT NULL,
-        copia_de          INT            NULL,      -- un repetido con el mismo valor: el registro que se importa en su lugar
         accion            VARCHAR(15)    COLLATE DATABASE_DEFAULT NULL
     );
 
@@ -168,7 +245,7 @@ BEGIN
     /* Conversión y lo que no se pudo convertir. La fecha viene como AAAA-MM-DD
        (estilo 23). El valor puede venir en notación científica (1.5e-05), que
        DECIMAL no acepta: en ese caso se convierte pasando por FLOAT. Las reglas
-       de las cotizaciones las aplica usp_ImportarCotizaciones. */
+       de las cotizaciones las aplica usp_CargarCotizaciones. */
     UPDATE #staging_cotizaciones
     SET fecha            = TRY_CONVERT(DATE, fecha_txt, 23),
         unidades_por_usd = ISNULL(TRY_CONVERT(DECIMAL(19,6), valor_txt),
@@ -178,47 +255,24 @@ BEGIN
     UPDATE #staging_cotizaciones
     SET errores = NULLIF(CONCAT(
             IIF(base_txt IS DISTINCT FROM N'USD',
-                @nl + N'- La cotización es contra ' + ISNULL(base_txt, N'(sin moneda base)')
+                @salto_linea + N'- La cotización es contra ' + ISNULL(base_txt, N'(sin moneda base)')
                 + N' y no contra el dólar (la URL tiene que pedir base=USD).', N''),
             IIF(fecha_txt IS NOT NULL AND fecha IS NULL,
-                @nl + N'- La fecha "' + fecha_txt + N'" no es una fecha (AAAA-MM-DD).', N''),
+                @salto_linea + N'- La fecha "' + fecha_txt + N'" no es una fecha (AAAA-MM-DD).', N''),
             IIF(valor_txt IS NOT NULL AND unidades_por_usd IS NULL,
-                @nl + N'- El valor "' + valor_txt + N'" no es un número (o tiene más de 13 dígitos enteros).', N'')), N'')
+                @salto_linea + N'- El valor "' + valor_txt + N'" no es un número (o tiene más de 13 dígitos enteros).', N'')), N'')
     WHERE accion IS NULL;
 
     UPDATE #staging_cotizaciones
     SET accion = 'RECHAZADO'
     WHERE accion IS NULL AND errores IS NOT NULL;
 
-    /* Misma moneda y fecha más de una vez con el mismo valor: se importa una vez y las copias
-       se omiten (si ese registro se rechaza, las copias también, en el paso 4). Con valores
-       distintos las rechaza usp_ImportarCotizaciones. */
-    WITH repetidos AS (
-        SELECT accion, motivo_omision, copia_de,
-               MIN(unidades_por_usd) OVER (PARTITION BY codigo_moneda, fecha) AS valor_minimo,
-               MAX(unidades_por_usd) OVER (PARTITION BY codigo_moneda, fecha) AS valor_maximo,
-               MIN(id_registro) OVER (PARTITION BY codigo_moneda, fecha) AS primero,
-               ROW_NUMBER() OVER (PARTITION BY codigo_moneda, fecha ORDER BY id_registro) AS copia
-        FROM #staging_cotizaciones
-        WHERE accion IS NULL AND codigo_moneda IS NOT NULL AND fecha IS NOT NULL AND unidades_por_usd IS NOT NULL
-    )
-    UPDATE repetidos
-    SET accion = 'OMITIDO', motivo_omision = 'Repetido con el mismo valor', copia_de = primero
-    WHERE copia > 1 AND valor_minimo = valor_maximo;
-
-    /* 4. El SP de la Entrega 5 valida las demás y carga las válidas, todas juntas; después se
+    /* 4. El SP de carga valida las demás y carga las válidas, todas juntas; después se
           registran la importación y sus rechazados, en la misma transacción. */
     BEGIN TRY
         IF @tran_propia = 1 BEGIN TRANSACTION;
 
-        EXEC DatosGenerales.usp_ImportarCotizaciones;
-
-        -- Las copias de una cotización que se rechazó también se rechazan, con sus mismos motivos.
-        UPDATE c
-        SET accion = 'RECHAZADO', motivo_omision = NULL, errores = r.errores
-        FROM #staging_cotizaciones AS c
-        INNER JOIN #staging_cotizaciones AS r ON r.id_registro = c.copia_de
-        WHERE c.accion = 'OMITIDO' AND r.accion = 'RECHAZADO';
+        EXEC DatosGenerales.usp_CargarCotizaciones;
 
         SELECT @leidos       = COUNT(*),
                @insertados   = ISNULL(SUM(IIF(accion = 'INSERTADO', 1, 0)), 0),
@@ -292,14 +346,14 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @errores      NVARCHAR(2048) = N'';
-    DECLARE @nl           NCHAR(2)       = NCHAR(13) + NCHAR(10);
-    DECLARE @hoy          DATE           = CONVERT(DATE, GETDATE());
-    DECLARE @url          NVARCHAR(1000);
-    DECLARE @estado_http  SMALLINT;
-    DECLARE @respuesta    NVARCHAR(MAX);
-    DECLARE @mensaje      NVARCHAR(2048);
-    DECLARE @proceso      VARCHAR(100)   = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @errores     NVARCHAR(2048) = N'';
+    DECLARE @salto_linea NCHAR(2)       = NCHAR(13) + NCHAR(10);
+    DECLARE @hoy         DATE           = CONVERT(DATE, GETDATE());
+    DECLARE @url         NVARCHAR(1000);
+    DECLARE @estado_http SMALLINT;
+    DECLARE @respuesta   NVARCHAR(MAX);
+    DECLARE @mensaje     NVARCHAR(2048);
+    DECLARE @proceso     VARCHAR(100)   = 'DatosGenerales.usp_ImportarCotizacionesAPI';
 
     SET @monedas     = UPPER(NULLIF(REPLACE(@monedas, ' ', ''), ''));
     SET @fecha_hasta = ISNULL(@fecha_hasta, @hoy);
@@ -315,16 +369,16 @@ BEGIN
        coma, para que no se pueda alterar la consulta. Las reglas de cada
        registro las aplica la importación. */
     IF @monedas IS NULL
-        SET @errores += @nl + N'- No hay monedas para consultar: ningún país del sistema tiene moneda distinta del dólar.';
+        SET @errores += @salto_linea + N'- No hay monedas para consultar: ningún país del sistema tiene moneda distinta del dólar.';
     ELSE IF @monedas COLLATE Latin1_General_BIN LIKE '%[^A-Z;]%'
-        SET @errores += @nl + N'- Las monedas van con su código ISO 4217, separadas por punto y coma (ej. ARS;EUR).';
+        SET @errores += @salto_linea + N'- Las monedas van con su código ISO 4217, separadas por punto y coma (ej. ARS;EUR).';
 
     IF @fecha_hasta > @hoy
-        SET @errores += @nl + N'- La fecha hasta no puede ser futura.';
+        SET @errores += @salto_linea + N'- La fecha hasta no puede ser futura.';
     IF @fecha_desde > @fecha_hasta
-        SET @errores += @nl + N'- La fecha desde no puede ser mayor que la fecha hasta.';
+        SET @errores += @salto_linea + N'- La fecha desde no puede ser mayor que la fecha hasta.';
     ELSE IF DATEDIFF(DAY, @fecha_desde, @fecha_hasta) > 366
-        SET @errores += @nl + N'- El rango no puede superar un año (366 días): para más, importarlo en partes.';
+        SET @errores += @salto_linea + N'- El rango no puede superar un año (366 días): para más, importarlo en partes.';
 
     IF @errores <> N''
     BEGIN
@@ -366,6 +420,6 @@ SELECT s.name AS esquema, p.name AS procedimiento, p.modify_date AS ultima_modif
 FROM sys.procedures AS p
 INNER JOIN sys.schemas AS s ON s.schema_id = p.schema_id
 WHERE s.name = N'DatosGenerales'
-  AND p.name IN (N'usp_ProcesarCotizacionesJSON', N'usp_ImportarCotizacionesAPI')
+  AND p.name IN (N'usp_CargarCotizaciones', N'usp_ProcesarCotizacionesJSON', N'usp_ImportarCotizacionesAPI')
 ORDER BY p.name;
 GO
