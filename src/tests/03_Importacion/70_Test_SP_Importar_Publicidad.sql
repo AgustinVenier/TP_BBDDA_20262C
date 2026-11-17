@@ -10,9 +10,9 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 02/11/2026
- Archivo: 71_Test_SP_Importar_Publicidad.sql
+ Archivo: 70_Test_SP_Importar_Publicidad.sql
  Objetivo: Probar la importación de campañas del Dossier Mundial de
-           21_SP_Importar_Publicidad.sql, con el registro de cada
+           20_SP_Importar_Publicidad.sql, con el registro de cada
            importación y de sus rechazadas (Publicidad.ERRORES_CAMPANIA):
              - procesando respuestas con el formato de la API REST de
                Firestore escritas en el test: alta, reimportación sin
@@ -20,8 +20,8 @@
                y los documentos y parámetros que no se pueden importar;
              - consultando la API (caso AP1, necesita internet).
            Las reglas de anunciantes, campañas y piezas las prueba
-           66_Test_SP_Importacion.sql, con Publicidad.usp_ImportarCampanias.
-           Requiere haber ejecutado 00 a 22. No depende del juego de datos:
+           66_Test_SP_CargaMasiva.sql, con Publicidad.usp_CargarCampanias.
+           Requiere haber ejecutado 01 a 28. No depende del juego de datos:
            las campañas de prueba son del "Anunciante Prueba 71". Los casos
            CD y AP1 corren dentro de una transacción que se deshace, así que
            el test no deja datos y se puede ejecutar más de una vez.
@@ -37,12 +37,13 @@
      rechazadas con sus motivos, las campañas cargadas y los datos que
      quedaron.
    - Casos ERROR: en Mensajes se imprime "OK" y el mensaje que devolvió el SP.
-     Si el SP no falla, o falla con otro número de error, se imprime "FALLÓ".
+     Si el SP no falla, o falla con otro número de error, se imprime "ERROR".
    - Al final, la verificación tiene que mostrar 0 datos de prueba y OLE
      Automation como estaba antes del test.
 */
 
 USE MundialFutbol;
+SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los métodos XML lo necesitan en ON
 GO
 
 SET NOCOUNT ON;
@@ -58,31 +59,16 @@ EXEC sp_set_session_context @key = N'ole_antes', @value = @ole_antes;
 EXEC sp_set_session_context @key = N'avanzadas_antes', @value = @avanzadas_antes;
 
 IF OBJECT_ID(N'Publicidad.usp_ImportarCampaniasAPI', N'P') IS NULL
-   OR OBJECT_ID(N'Publicidad.usp_ImportarCampanias', N'P') IS NULL
+   OR OBJECT_ID(N'Publicidad.usp_CargarCampanias', N'P') IS NULL
    OR OBJECT_ID(N'DatosGenerales.usp_ConsumirAPI', N'P') IS NULL
 BEGIN
-    RAISERROR(N'Faltan los SP de importación de campañas: ejecutar los scripts 00 a 22.', 16, 1);
+    RAISERROR(N'Faltan los SP de importación de campañas: ejecutar los scripts 01 a 28.', 16, 1);
     SET NOEXEC ON;
 END;
 ELSE IF @@TRANCOUNT > 0
 BEGIN
     RAISERROR(N'Hay una transacción abierta: este test usa la suya y la deshace al final. Cerrarla y volver a ejecutar.', 16, 1);
     SET NOEXEC ON;
-END;
-GO
-
-IF OBJECT_ID(N'tempdb..#usp_MostrarError', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_MostrarError;
-GO
-CREATE PROCEDURE #usp_MostrarError
-    @caso            VARCHAR(10),
-    @error_esperado  INT
-AS
-BEGIN
-    PRINT CONCAT(@caso, N': ',
-                 IIF(ERROR_NUMBER() = @error_esperado, N'OK, falló como se esperaba.',
-                     CONCAT(N'FALLÓ, error inesperado ', ERROR_NUMBER(), N'.')),
-                 NCHAR(13), NCHAR(10), ERROR_MESSAGE(), NCHAR(13), NCHAR(10));
 END;
 GO
 
@@ -111,7 +97,7 @@ GO
      - 8 "Campaña Prueba 71 Sin Video": INSERTADO, con 1 pieza.
    Todas del 11/06 al 19/07/2026, del país ARG, con piezas en español y
    mercado ARG. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DECLARE @json NVARCHAR(MAX) = CAST(N'' AS NVARCHAR(MAX)) + N'{"documents": [
     {"name": "projects/p/databases/(default)/documents/campanas/cd1",
@@ -168,7 +154,7 @@ GO
    Esperado: 8 leídos, 3 sin cambios y 5 rechazados (con los mismos motivos
    que en CD1). Siguen siendo 3 campañas y 5 piezas del anunciante de
    prueba. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DECLARE @json NVARCHAR(MAX) = (SELECT json FROM #json_cd);
 
@@ -187,7 +173,7 @@ GO
    Esperado: 8 leídos, 3 actualizados y 5 rechazados. "Uno" suma la pieza
    "Campaña Prueba 71 Uno (2)" y las piezas que ya tenía no cambian de
    título; las tres campañas quedan hasta el 31/07/2026. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DECLARE @json NVARCHAR(MAX) = REPLACE((SELECT json FROM #json_cd),
     N'"youtube": {"stringValue": "aaaaaaaaaa1"},',
@@ -208,7 +194,7 @@ GO
    Esperado: tres importaciones de Publicidad.usp_ProcesarCampaniasJSON
    (origen CD1, CD2 y CD3), cada una con 5 rechazadas en
    Publicidad.ERRORES_CAMPANIA (registros 3 a 7). */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 SELECT 'CD4' AS caso, im.origen, im.proceso, im.leidos, im.insertados, im.actualizados, im.sin_cambios, im.rechazados,
        (SELECT STRING_AGG(CAST(e.registro AS VARCHAR(5)), ', ') WITHIN GROUP (ORDER BY e.registro)
@@ -236,28 +222,40 @@ GO
    Esperado: tres errores 50002. */
 BEGIN TRY
     EXEC Publicidad.usp_ProcesarCampaniasJSON @json = N'<html>no es JSON</html>', @origen = N'ER1a';
-    PRINT N'ER1a: FALLÓ, se esperaba un error.';
+    PRINT N'ER1a: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'ER1a', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'ER1a: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC Publicidad.usp_ProcesarCampaniasJSON
          @json = N'{"error": {"code": 403, "message": "Missing or insufficient permissions.", "status": "PERMISSION_DENIED"}}',
          @origen = N'ER1b';
-    PRINT N'ER1b: FALLÓ, se esperaba un error.';
+    PRINT N'ER1b: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'ER1b', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'ER1b: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC Publicidad.usp_ProcesarCampaniasJSON @json = N'{}', @origen = N'ER1c';
-    PRINT N'ER1c: FALLÓ, se esperaba un error.';
+    PRINT N'ER1c: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'ER1c', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'ER1c: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1c: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -271,18 +269,26 @@ DECLARE @json NVARCHAR(MAX) = N'{"documents": [{"name": "x/cd1", "fields": {"anu
 BEGIN TRY
     EXEC Publicidad.usp_ProcesarCampaniasJSON @json = @json, @origen = N'ER2a',
          @fecha_inicio = '2026-07-19', @fecha_fin = '2026-06-11';
-    PRINT N'ER2a: FALLÓ, se esperaba un error.';
+    PRINT N'ER2a: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'ER2a', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER2a: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER2a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC Publicidad.usp_ProcesarCampaniasJSON @json = @json, @origen = N'ER2b', @codigo_fifa = 'ZZZ', @codigo_idioma = 'zz';
-    PRINT N'ER2b: FALLÓ, se esperaba un error.';
+    PRINT N'ER2b: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'ER2b', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER2b: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER2b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -307,7 +313,7 @@ GO
 /* AP1 (OK) Importación desde la API, dentro de una transacción que se deshace.
    Esperado: el resumen con tantos leídos como campañas tenga el Dossier (75
    el 02/11/2026) y 0 rechazados. Si la base no tenía las campañas, quedan
-   INSERTADO; si ya las importó 29_Ejecutar_ImportarAPIs.sql, SIN CAMBIOS. Sin
+   INSERTADO; si ya las importó 31_Importar_APIs.sql, SIN CAMBIOS. Sin
    conexión, se imprime el error 50002 de la consulta y no se carga nada. */
 SET XACT_ABORT OFF;
 BEGIN TRANSACTION;
@@ -326,7 +332,11 @@ BEGIN TRY
     WHERE im.id_importacion = @id_importacion;
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'AP1', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'AP1: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'AP1: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;

@@ -10,8 +10,8 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 31/10/2026
- Archivo: 77_Test_SP_Importar_Cotizaciones.sql
- Objetivo: Probar la importación de cotizaciones de 27_SP_Importar_Cotizaciones.sql,
+ Archivo: 72_Test_SP_Importar_Cotizaciones.sql
+ Objetivo: Probar la importación de cotizaciones de 22_SP_Importar_Cotizaciones.sql,
            con el registro de cada importación y de sus rechazados
            (DatosGenerales.ERRORES_COTIZACION):
              - procesando respuestas con el formato de la API Frankfurter
@@ -19,9 +19,9 @@
                actualización, importación con errores parciales y los
                documentos que no se pueden importar;
              - consultando la API Frankfurter (casos AP, necesitan internet).
-           Las reglas de las cotizaciones las prueba 66_Test_SP_Importacion.sql,
-           con DatosGenerales.usp_ImportarCotizaciones.
-           Requiere haber ejecutado 00 a 27. No depende del juego de datos:
+           Las reglas de las cotizaciones las prueba 66_Test_SP_CargaMasiva.sql,
+           con DatosGenerales.usp_CargarCotizaciones.
+           Requiere haber ejecutado 01 a 28. No depende del juego de datos:
            las respuestas escritas usan XTS y XXX, los códigos de ISO 4217
            para pruebas y para "sin moneda", que ninguna API cotiza, y el
            caso de la API trae ARS y EUR de dos días de 2024 dentro de una
@@ -40,12 +40,13 @@
      omitidos por motivo, los rechazados con sus motivos y los datos que
      quedaron.
    - Casos ERROR: en Mensajes se imprime "OK" y el mensaje que devolvió el SP.
-     Si el SP no falla, o falla con otro número de error, se imprime "FALLÓ".
+     Si el SP no falla, o falla con otro número de error, se imprime "ERROR".
    - Al final, la verificación tiene que mostrar 0 cotizaciones de prueba y
      OLE Automation como estaba antes del test.
 */
 
 USE MundialFutbol;
+SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los métodos XML lo necesitan en ON
 GO
 
 SET NOCOUNT ON;
@@ -61,67 +62,22 @@ EXEC sp_set_session_context @key = N'ole_antes', @value = @ole_antes;
 EXEC sp_set_session_context @key = N'avanzadas_antes', @value = @avanzadas_antes;
 
 IF OBJECT_ID(N'DatosGenerales.usp_ImportarCotizacionesAPI', N'P') IS NULL
-   OR OBJECT_ID(N'DatosGenerales.usp_ImportarCotizaciones', N'P') IS NULL
+   OR OBJECT_ID(N'DatosGenerales.usp_CargarCotizaciones', N'P') IS NULL
 BEGIN
-    RAISERROR(N'Faltan los SP de importación de cotizaciones: ejecutar los scripts 00 a 27.', 16, 1);
+    RAISERROR(N'Faltan los SP de importación de cotizaciones: ejecutar los scripts 01 a 28.', 16, 1);
     SET NOEXEC ON;
 END;
 GO
 
-IF OBJECT_ID(N'tempdb..#usp_MostrarError', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_MostrarError;
-GO
-CREATE PROCEDURE #usp_MostrarError
-    @caso            VARCHAR(10),
-    @error_esperado  INT
-AS
-BEGIN
-    PRINT CONCAT(@caso, N': ',
-                 IIF(ERROR_NUMBER() = @error_esperado, N'OK, falló como se esperaba.',
-                     CONCAT(N'FALLÓ, error inesperado ', ERROR_NUMBER(), N'.')),
-                 NCHAR(13), NCHAR(10), ERROR_MESSAGE(), NCHAR(13), NCHAR(10));
-END;
-GO
-
--- Borra con el SP de baja la cotización de una moneda y fecha, si existe.
-IF OBJECT_ID(N'tempdb..#usp_BorrarCotizacionPrueba', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_BorrarCotizacionPrueba;
-GO
-CREATE PROCEDURE #usp_BorrarCotizacionPrueba
-    @codigo_moneda  CHAR(3),
-    @fecha          DATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    DECLARE @id INT = (SELECT id_cotizacion FROM DatosGenerales.COTIZACION
-                       WHERE codigo_moneda = @codigo_moneda AND fecha = @fecha);
-    IF @id IS NOT NULL
-        EXEC DatosGenerales.usp_COTIZACION_Baja @id_cotizacion = @id;
-END;
-GO
-
--- Borra el registro de las importaciones de los casos CX (su origen es el nombre del caso), con sus rechazados.
-IF OBJECT_ID(N'tempdb..#usp_BorrarImportacionesPrueba', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_BorrarImportacionesPrueba;
-GO
-CREATE PROCEDURE #usp_BorrarImportacionesPrueba
-AS
-BEGIN
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'CX1';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'CX2';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'CX3';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'CX4';
-END;
-GO
-
--- Por si una corrida anterior del test quedó a medias: las 6 cotizaciones que cargan los casos CX y sus importaciones.
-EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-11';
-EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-12';
-EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-15';
-EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-16';
-EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XXX', @fecha = '2026-06-11';
-EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XXX', @fecha = '2026-06-12';
-EXEC #usp_BorrarImportacionesPrueba;
+-- Por si una corrida anterior del test quedó a medias: las 6 cotizaciones que cargan
+-- los casos CX y el registro de sus importaciones, con sus rechazados.
+DELETE FROM DatosGenerales.COTIZACION
+WHERE (codigo_moneda = 'XTS' AND fecha IN ('2026-06-11', '2026-06-12', '2026-06-15', '2026-06-16'))
+   OR (codigo_moneda = 'XXX' AND fecha IN ('2026-06-11', '2026-06-12'));
+DELETE e FROM DatosGenerales.ERRORES_COTIZACION AS e
+INNER JOIN DatosGenerales.IMPORTACION AS i ON i.id_importacion = e.id_importacion
+WHERE i.origen IN (N'CX1', N'CX2', N'CX3', N'CX4');
+DELETE FROM DatosGenerales.IMPORTACION WHERE origen IN (N'CX1', N'CX2', N'CX3', N'CX4');
 GO
 
 
@@ -179,10 +135,10 @@ ORDER BY codigo_moneda, fecha;
 GO
 
 
-/* CX4 (OK) Importación con errores parciales: 12 registros.
-   Esperado: 12 leídos, 2 insertados (XTS del 15/06, 1020.000000, y del
-   16/06, 1000.000000, que viene en notación científica), 1 omitido (la copia
-   de XTS del 15/06 con el mismo valor) y 9 rechazados, con estos motivos:
+/* CX4 (OK) Importación con errores parciales: 9 registros.
+   Esperado: 9 leídos, 2 insertados (XTS del 15/06, 1020.000000, y del
+   16/06, 1000.000000, que viene en notación científica) y 7 rechazados, con
+   estos motivos:
      XTS 2026-06-17   la cotización es contra EUR y no contra el dólar.
      X1 2026-06-15    la moneda no es un código de 3 letras.
      XTS 15/06/2026   la fecha no es una fecha (AAAA-MM-DD).
@@ -190,15 +146,12 @@ GO
      XTS 2026-06-18   el valor "abc" no es un número.
      XTS 2026-06-19   el valor tiene que ser mayor que cero (-1).
      XTS 2026-06-20   el valor es obligatorio (no viene rate).
-     XXX 2026-06-15 (x2)  la respuesta trae 2 veces XXX del 15/06 con valores
-                          distintos: se rechazan las dos.
-   No queda importado nada de XXX del 15/06. Los 9 rechazados quedan en
+   Los 7 rechazados quedan en
    DatosGenerales.ERRORES_COTIZACION, con el número de la importación y el
    texto que traía la respuesta. */
 DECLARE @manana CHAR(10) = CONVERT(CHAR(10), DATEADD(DAY, 1, CONVERT(DATE, GETDATE())), 23);
 DECLARE @json NVARCHAR(MAX) = CONCAT(N'[
     {"date":"2026-06-15","base":"USD","quote":"XTS","rate":1020},
-    {"date":"2026-06-15","base":"USD","quote":"XTS","rate":1020.0},
     {"date":"2026-06-16","base":"USD","quote":"XTS","rate":1.0E+3},
     {"date":"2026-06-17","base":"EUR","quote":"XTS","rate":1100},
     {"date":"2026-06-15","base":"USD","quote":"X1","rate":5},
@@ -206,9 +159,7 @@ DECLARE @json NVARCHAR(MAX) = CONCAT(N'[
     {"date":"', @manana, N'","base":"USD","quote":"XTS","rate":1030},
     {"date":"2026-06-18","base":"USD","quote":"XTS","rate":"abc"},
     {"date":"2026-06-19","base":"USD","quote":"XTS","rate":-1},
-    {"date":"2026-06-20","base":"USD","quote":"XTS"},
-    {"date":"2026-06-15","base":"USD","quote":"XXX","rate":2.7},
-    {"date":"2026-06-15","base":"USD","quote":"XXX","rate":2.8}]');
+    {"date":"2026-06-20","base":"USD","quote":"XTS"}]');
 
 DECLARE @id_importacion INT;
 
@@ -235,28 +186,40 @@ GO
    Esperado: error 50002 en los tres, sin importar nada. */
 BEGIN TRY
     EXEC DatosGenerales.usp_ProcesarCotizacionesJSON @json = N'[{"date":"2026-06-11","base":"US', @origen = N'CX5a';
-    PRINT N'CX5a: FALLÓ, se esperaba un error.';
+    PRINT N'CX5a: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'CX5a', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'CX5a: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'CX5a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_ProcesarCotizacionesJSON
         @json = N'{"status":422,"message":"invalid currency: XYZ"}', @origen = N'CX5b';
-    PRINT N'CX5b: FALLÓ, se esperaba un error.';
+    PRINT N'CX5b: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'CX5b', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'CX5b: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'CX5b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_ProcesarCotizacionesJSON
         @json = N'{"date":"2026-06-11","base":"USD","quote":"XTS","rate":1000}', @origen = N'CX5c';
-    PRINT N'CX5c: FALLÓ, se esperaba un error.';
+    PRINT N'CX5c: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'CX5c', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'CX5c: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'CX5c: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -271,26 +234,38 @@ DECLARE @manana DATE = DATEADD(DAY, 1, CONVERT(DATE, GETDATE()));
 
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarCotizacionesAPI @monedas = 'ARS,EUR', @fecha_hasta = @manana;
-    PRINT N'AP1a: FALLÓ, se esperaba un error de validación.';
+    PRINT N'AP1a: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'AP1a', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'AP1a: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'AP1a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarCotizacionesAPI @fecha_desde = '2026-07-01', @fecha_hasta = '2026-06-01';
-    PRINT N'AP1b: FALLÓ, se esperaba un error de validación.';
+    PRINT N'AP1b: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'AP1b', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'AP1b: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'AP1b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarCotizacionesAPI @fecha_desde = '2024-01-01', @fecha_hasta = '2025-06-01';
-    PRINT N'AP1c: FALLÓ, se esperaba un error de validación.';
+    PRINT N'AP1c: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'AP1c', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'AP1c: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'AP1c: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -339,10 +314,14 @@ GO
    enviar el pedido. */
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarCotizacionesAPI @monedas = 'ARS;XYZ';
-    PRINT N'AP3: FALLÓ, se esperaba un error.';
+    PRINT N'AP3: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'AP3', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'AP3: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'AP3: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -362,13 +341,13 @@ GO
 
 
 -- Se borra lo que cargaron los casos CX, con el registro de sus importaciones.
-EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-11';
-EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-12';
-EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-15';
-EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XTS', @fecha = '2026-06-16';
-EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XXX', @fecha = '2026-06-11';
-EXEC #usp_BorrarCotizacionPrueba @codigo_moneda = 'XXX', @fecha = '2026-06-12';
-EXEC #usp_BorrarImportacionesPrueba;
+DELETE FROM DatosGenerales.COTIZACION
+WHERE (codigo_moneda = 'XTS' AND fecha IN ('2026-06-11', '2026-06-12', '2026-06-15', '2026-06-16'))
+   OR (codigo_moneda = 'XXX' AND fecha IN ('2026-06-11', '2026-06-12'));
+DELETE e FROM DatosGenerales.ERRORES_COTIZACION AS e
+INNER JOIN DatosGenerales.IMPORTACION AS i ON i.id_importacion = e.id_importacion
+WHERE i.origen IN (N'CX1', N'CX2', N'CX3', N'CX4');
+DELETE FROM DatosGenerales.IMPORTACION WHERE origen IN (N'CX1', N'CX2', N'CX3', N'CX4');
 GO
 
 

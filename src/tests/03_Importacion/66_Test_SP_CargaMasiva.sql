@@ -10,17 +10,18 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 66_Test_SP_Importacion.sql
- Objetivo: Probar los SP de 16_SP_Importacion.sql: el registro de las
-           importaciones y el upsert de cada dataset desde su tabla de
+ Archivo: 66_Test_SP_CargaMasiva.sql
+ Objetivo: Probar los SP de carga masiva (usp_Cargar..., en 18 a 23, 11 y
+           14) y el registro de las importaciones
+           (17_SP_Utilidades_Importacion.sql): el upsert de cada dataset desde su tabla de
            staging (alta si el registro es nuevo, actualización si cambió,
            sin cambios si se importa dos veces lo mismo), con las reglas de
            cada tabla. Cada caso arma la tabla de staging como lo haría un
-           proceso de importación de la Entrega 6, con registros válidos e
+           proceso de importación (18 a 23), con registros válidos e
            inválidos: es el caso obligatorio de importación con errores
            parciales. Los válidos se cargan y los inválidos quedan marcados
            RECHAZADO con todos sus motivos.
-           Requiere haber ejecutado 00 a 20; no depende del juego de datos.
+           Requiere haber ejecutado 01 a 28; no depende del juego de datos.
            Todo se hace dentro de una transacción que se deshace al final,
            así que no deja datos y se puede ejecutar más de una vez:
              - Países de prueba XQA, XQB, XQC y XQE (códigos FIFA que empiezan
@@ -37,8 +38,8 @@
                "Lesionado Arquero").
              - Indicadores, cotizaciones (moneda XTS, la de prueba de ISO
                4217) y feriados de los países de prueba.
-             - "Anunciante Prueba 66" (XQA), con las campañas "Campaña Prueba
-               66 A" y "B" y sus piezas, y el partido 226 (25/08/2026), en el
+             - "Quilmes1" (XQA), con las campañas "Quilmes1
+               Campaña A" y "B" y sus piezas, y el partido 226 (25/08/2026), en el
                que se exhibe una pieza de A.
            SELECCIONES_POR_GRUPO se ajusta dentro de la transacción para que
            el grupo L tenga lugar para las tres selecciones de prueba.
@@ -52,42 +53,28 @@
      sus motivos, y después los datos que quedaron.
    - Casos ERROR: en Mensajes se imprime "OK" y el mensaje que devolvió el SP.
      Si el SP no falla, o falla con un error que no es de validación, se
-     imprime "FALLÓ".
+     imprime "ERROR".
    - Al final, la verificación tiene que mostrar 0 datos de prueba.
 */
 
 USE MundialFutbol;
+SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los métodos XML lo necesitan en ON
 GO
 
 SET NOCOUNT ON;
 GO
 
-IF OBJECT_ID(N'DesarrolloPartido.usp_ImportarDesarrolloPartidos', N'P') IS NULL
+IF OBJECT_ID(N'DesarrolloPartido.usp_CargarDesarrolloPartidos', N'P') IS NULL
    OR OBJECT_ID(N'DatosGenerales.usp_RegistrarImportacion', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'SELECCIONES_POR_GRUPO')
 BEGIN
-    RAISERROR(N'Faltan los SP de importación o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de importación o los datos iniciales: ejecutar los scripts 01 a 28.', 16, 1);
     SET NOEXEC ON;
 END;
 ELSE IF @@TRANCOUNT > 0
 BEGIN
     RAISERROR(N'Hay una transacción abierta: este test usa la suya y la deshace al final. Cerrarla y volver a ejecutar.', 16, 1);
     SET NOEXEC ON;
-END;
-GO
-
-IF OBJECT_ID(N'tempdb..#usp_MostrarError', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_MostrarError;
-GO
-CREATE PROCEDURE #usp_MostrarError
-    @caso            VARCHAR(10),
-    @error_esperado  INT
-AS
-BEGIN
-    PRINT CONCAT(@caso, N': ',
-                 IIF(ERROR_NUMBER() = @error_esperado, N'OK, falló como se esperaba.',
-                     CONCAT(N'FALLÓ, error inesperado ', ERROR_NUMBER(), N'.')),
-                 NCHAR(13), NCHAR(10), ERROR_MESSAGE(), NCHAR(13), NCHAR(10));
 END;
 GO
 
@@ -99,34 +86,32 @@ SET XACT_ABORT OFF;
 BEGIN TRANSACTION;
 GO
 
--- Países de prueba. XQE tiene país pero no va a tener selección.
-EXEC DatosGenerales.usp_PAIS_Alta @nombre = 'Prueba XQA', @huso_horario = 'Argentina Standard Time',
-     @codigo_fifa = 'XQA', @codigo_iso2 = 'XA', @codigo_iso3 = 'XQA', @codigo_moneda = 'XTS';
-EXEC DatosGenerales.usp_PAIS_Alta @nombre = 'Prueba XQB', @huso_horario = 'Argentina Standard Time',
-     @codigo_fifa = 'XQB', @codigo_iso2 = 'XB', @codigo_iso3 = 'XQB', @codigo_moneda = 'XTS';
-EXEC DatosGenerales.usp_PAIS_Alta @nombre = 'Prueba XQC', @huso_horario = 'Argentina Standard Time',
-     @codigo_fifa = 'XQC', @codigo_iso2 = 'XC', @codigo_iso3 = 'XQC', @codigo_moneda = 'XTS';
-EXEC DatosGenerales.usp_PAIS_Alta @nombre = 'Prueba XQE', @huso_horario = 'Argentina Standard Time',
-     @codigo_fifa = 'XQE', @codigo_iso2 = 'XE', @codigo_iso3 = 'XQE', @codigo_moneda = 'XTS';
+-- Países de prueba, con INSERT directos. Chile1 (XQE) tiene país pero no va
+-- a tener selección. Los datos de staging los identifican por código FIFA.
+INSERT INTO DatosGenerales.PAIS (nombre, codigo_fifa, codigo_iso2, codigo_iso3, huso_horario, codigo_moneda) VALUES
+    ('Argentina1', 'XQA', 'XA', 'XQA', 'Argentina Standard Time', 'XTS'),
+    ('Brasil1',    'XQB', 'XB', 'XQB', 'Argentina Standard Time', 'XTS'),
+    ('Uruguay1',   'XQC', 'XC', 'XQC', 'Argentina Standard Time', 'XTS'),
+    ('Chile1',     'XQE', 'XE', 'XQE', 'Argentina Standard Time', 'XTS');
 
 -- El grupo L tiene que tener lugar para exactamente tres selecciones más (las de prueba).
-DECLARE @en_l TINYINT = (SELECT COUNT(*) FROM Torneo.SELECCION WHERE grupo = 'L');
-DECLARE @cupo TINYINT = @en_l + 3;
+DECLARE @en_grupo_l TINYINT = (SELECT COUNT(*) FROM Torneo.SELECCION WHERE grupo = 'L');
+DECLARE @cupo TINYINT = @en_grupo_l + 3;
 EXEC DatosGenerales.usp_PARAMETRO_REGLAMENTO_Modificacion @codigo = 'SELECCIONES_POR_GRUPO', @valor = @cupo;
-SELECT 'Preparación' AS caso, @en_l AS selecciones_en_el_grupo_l, @cupo AS selecciones_por_grupo_en_el_test;
+SELECT 'Preparación' AS caso, @en_grupo_l AS selecciones_en_el_grupo_l, @cupo AS selecciones_por_grupo_en_el_test;
 GO
 
 -- Control: si la preparación falló, no se ejecuta nada más (la transacción ya no existe).
 IF @@TRANCOUNT = 0
 BEGIN
-    PRINT N'FALLÓ: la preparación no se pudo hacer dentro de la transacción; no se ejecuta el resto.';
+    PRINT N'ERROR: la preparación no se pudo hacer dentro de la transacción; no se ejecuta el resto.';
     SET NOEXEC ON;
 END;
 GO
 
 
 /* ============================================================================
-   SEDES (usp_ImportarSedes)
+   SEDES (usp_CargarSedes)
    ============================================================================ */
 
 /* SD1 (OK) Importación con errores parciales.
@@ -137,7 +122,7 @@ GO
    ZZZ, huso inexistente, latitud sin longitud y tarifa negativa (los cuatro
    motivos juntos); capacidad 0; y el mismo estadio dos veces (las dos
    filas). */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 CREATE TABLE #staging_sedes (
     id_registro     INT PRIMARY KEY,
@@ -168,7 +153,7 @@ VALUES (1, 'Estadio Prueba Importación 66', 'Ciudad Prueba', 'xqa', 40000, ' ar
        (7, 'Estadio Prueba Repetido', 'Uno', 'XQA', 1000, 'UTC', NULL, NULL, 1, 1, 1, 1),
        (8, 'Estadio Prueba Repetido', 'Dos', 'XQA', 2000, 'UTC', NULL, NULL, 1, 1, 1, 1);
 
-EXEC Torneo.usp_ImportarSedes;
+EXEC Torneo.usp_CargarSedes;
 
 SELECT 'SD1' AS caso, id_registro, LEFT(nombre_estadio, 30) AS estadio, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -183,29 +168,32 @@ WHERE s.nombre_estadio LIKE 'Estadio Prueba%';
 GO
 
 
-/* SD2 (OK) Reimportación: la sede de SD1 con otra capacidad, y otra vez igual.
-   Esperado: primero ACTUALIZADO (capacidad 45000; la ciudad, el país y las
-   coordenadas que no vienen quedan como estaban), después SIN CAMBIOS; sigue
-   habiendo una sola sede de prueba con 4 espacios. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+/* SD2 (OK) Reimportación: la sede de SD1 con otra capacidad y otra tarifa
+   del espacio 1, y otra vez igual.
+   Esperado: primero ACTUALIZADO (capacidad 45000 y espacio 1 a 1500; la
+   ciudad, el país, las coordenadas y las otras tarifas que no vienen quedan
+   como estaban), después SIN CAMBIOS; sigue habiendo una sola sede de prueba
+   con 4 espacios (1: 1500, 2: 900, 3: 800, 4: 700). */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DELETE FROM #staging_sedes;
-INSERT INTO #staging_sedes (id_registro, nombre_estadio, capacidad) VALUES (1, 'Estadio Prueba Importación 66', 45000);
-EXEC Torneo.usp_ImportarSedes;
+INSERT INTO #staging_sedes (id_registro, nombre_estadio, capacidad, tarifa_1) VALUES (1, 'Estadio Prueba Importación 66', 45000, 1500);
+EXEC Torneo.usp_CargarSedes;
 SELECT 'SD2 primera vez' AS caso, nombre_estadio, accion FROM #staging_sedes;
 
 UPDATE #staging_sedes SET accion = NULL, errores = NULL;
-EXEC Torneo.usp_ImportarSedes;
+EXEC Torneo.usp_CargarSedes;
 SELECT 'SD2 segunda vez' AS caso, nombre_estadio, accion FROM #staging_sedes;
 
 SELECT 'SD2 después' AS caso, s.ciudad, s.capacidad, s.latitud, s.longitud,
-       (SELECT COUNT(*) FROM Publicidad.ESPACIO_PUBLICITARIO AS e WHERE e.id_sede = s.id_sede) AS espacios
+       (SELECT STRING_AGG(CONCAT(e.numero_espacio, N': ', e.tarifa_usd), N', ') WITHIN GROUP (ORDER BY e.numero_espacio)
+        FROM Publicidad.ESPACIO_PUBLICITARIO AS e WHERE e.id_sede = s.id_sede) AS espacios
 FROM Torneo.SEDE AS s WHERE s.nombre_estadio LIKE 'Estadio Prueba%';
 GO
 
 
 /* ============================================================================
-   SELECCIONES (usp_ImportarSelecciones)
+   SELECCIONES (usp_CargarSelecciones)
    ============================================================================ */
 
 /* SL1 (OK) Importación con errores parciales, con las listas presentadas el
@@ -216,7 +204,7 @@ GO
    mayúsculas) y 5 RECHAZADO: QQQ (no hay un país con ese código) y las 4
    filas de XQE, porque viene 4 veces (además, una tiene la confederación
    MARS y otra el grupo Z). */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 CREATE TABLE #staging_selecciones (
     id_registro         INT PRIMARY KEY,
@@ -239,7 +227,7 @@ VALUES (1, 'xqa', 'conmebol', 'l', N'Testland A'),
        (8, 'XQE', 'OFC', 'Z', NULL);
 -- Las filas 5 a 8 son de XQE: las cuatro se rechazan, por repetida y por sus propios motivos.
 
-EXEC Torneo.usp_ImportarSelecciones @fecha_presentacion = '2026-06-01';
+EXEC Torneo.usp_CargarSelecciones @fecha_presentacion = '2026-06-01';
 
 SELECT 'SL1' AS caso, id_registro, codigo_fifa, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -259,24 +247,24 @@ GO
    sin cambios en otro conjunto.
    Esperado: primero XQE RECHAZADO (el grupo L quedaría con una selección más
    que SELECCIONES_POR_GRUPO); después XQB SIN CAMBIOS. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DELETE FROM #staging_selecciones;
 INSERT INTO #staging_selecciones (id_registro, codigo_fifa, confederacion, grupo) VALUES (1, 'XQE', 'AFC', 'L');
-EXEC Torneo.usp_ImportarSelecciones @fecha_presentacion = '2026-06-01';
+EXEC Torneo.usp_CargarSelecciones @fecha_presentacion = '2026-06-01';
 SELECT 'SL2 cupo' AS caso, codigo_fifa, accion, REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
 FROM #staging_selecciones;
 
 DELETE FROM #staging_selecciones;
 INSERT INTO #staging_selecciones (id_registro, codigo_fifa, confederacion, grupo, nombre_alternativo)
 VALUES (1, 'XQB', 'UEFA', 'L', N'Testland B');
-EXEC Torneo.usp_ImportarSelecciones;
+EXEC Torneo.usp_CargarSelecciones;
 SELECT 'SL2 sin cambios' AS caso, codigo_fifa, accion FROM #staging_selecciones;
 GO
 
 
 /* ============================================================================
-   JUGADORES (usp_ImportarJugadores)
+   JUGADORES (usp_CargarJugadores)
    ============================================================================ */
 
 /* JG1 (OK) Listas iniciales de XQA y XQB (23 jugadores cada una, con las
@@ -286,7 +274,7 @@ GO
    XX; el dorsal 0; la fecha de nacimiento futura; "Doble Prueba" dos veces
    (las dos filas); y los 2 jugadores de XQC, porque su lista inicial tendría
    2 jugadores y tienen que ser entre MIN_CONVOCADOS y MAX_CONVOCADOS. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 CREATE TABLE #staging_jugadores (
     id_registro       INT PRIMARY KEY,
@@ -302,19 +290,15 @@ CREATE TABLE #staging_jugadores (
 );
 
 -- 23 jugadores por selección: arqueros los dorsales 1, 12 y 23; el 1 al 11, en un 4-3-3.
-WITH numeros AS (
-    SELECT TOP (23) CAST(ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS TINYINT) AS n FROM sys.all_objects
-)
 INSERT INTO #staging_jugadores (id_registro, codigo_fifa, nombre, apellido, posicion, dorsal, fecha_nacimiento, club_origen)
-SELECT s.base + n.n, s.codigo, CONCAT(N'J', n.n), CONCAT(N'Prueba ', s.codigo),
-       CASE WHEN n.n IN (1, 12, 23) THEN 'GK'
-            WHEN n.n IN (2, 3, 4, 5, 13, 14, 15) THEN 'DF'
-            WHEN n.n IN (6, 7, 8, 16, 17, 18) THEN 'MF'
-            ELSE 'FW'
-       END,
-       n.n, DATEADD(DAY, n.n, '1998-01-01'), N'Club Prueba'
-FROM numeros AS n
-CROSS JOIN (VALUES ('XQA', 0), ('XQB', 100)) AS s (codigo, base);
+SELECT s.base + d.dorsal, s.codigo, CONCAT(N'J', d.dorsal), s.apellido,
+       d.posicion, d.dorsal, DATEADD(DAY, d.dorsal, '1998-01-01'), N'Club Prueba'
+FROM (VALUES (1, 'GK'), (12, 'GK'), (23, 'GK'),
+             (2, 'DF'), (3, 'DF'), (4, 'DF'), (5, 'DF'), (13, 'DF'), (14, 'DF'), (15, 'DF'),
+             (6, 'MF'), (7, 'MF'), (8, 'MF'), (16, 'MF'), (17, 'MF'), (18, 'MF'),
+             (9, 'FW'), (10, 'FW'), (11, 'FW'), (19, 'FW'), (20, 'FW'), (21, 'FW'), (22, 'FW')) AS d (dorsal, posicion)
+-- El apellido es el nombre del país de prueba: JG2 y RE1 buscan a los jugadores como "J2 Argentina1".
+CROSS JOIN (VALUES ('XQA', 0, N'Argentina1'), ('XQB', 100, N'Brasil1')) AS s (codigo, base, apellido);
 
 INSERT INTO #staging_jugadores (id_registro, codigo_fifa, nombre, apellido, posicion, dorsal, fecha_nacimiento)
 VALUES (201, 'QQQ', N'Sin', N'Lista', 'GK', 1, NULL),
@@ -327,7 +311,7 @@ VALUES (201, 'QQQ', N'Sin', N'Lista', 'GK', 1, NULL),
        (208, 'XQC', N'Solo', N'Uno', 'GK', 1, NULL),
        (209, 'XQC', N'Solo', N'Dos', 'FW', 9, NULL);
 
-EXEC Torneo.usp_ImportarJugadores;
+EXEC Torneo.usp_CargarJugadores;
 
 SELECT 'JG1' AS caso, accion, COUNT(*) AS filas FROM #staging_jugadores GROUP BY accion;
 
@@ -352,20 +336,20 @@ GO
    RECHAZADO (el dorsal 5 ya lo tiene J5, que no viene en el conjunto); y los
    4 jugadores nuevos de XQB RECHAZADO (la lista quedaría con 27 convocados y
    el máximo es MAX_CONVOCADOS). */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DELETE FROM #staging_jugadores;
 INSERT INTO #staging_jugadores (id_registro, codigo_fifa, nombre, apellido, posicion, dorsal, fecha_nacimiento, club_origen)
-VALUES (1, 'XQA', N'J24', N'Prueba XQA', 'FW', 24, '1999-05-05', N'Club Prueba'),
-       (2, 'XQA', N'J2',  N'Prueba XQA', 'DF', 2,  '1998-01-03', N'Otro Club'),
-       (3, 'XQA', N'J3',  N'Prueba XQA', 'DF', 3,  '1998-01-04', N'Club Prueba'),
+VALUES (1, 'XQA', N'J24', N'Argentina1', 'FW', 24, '1999-05-05', N'Club Prueba'),
+       (2, 'XQA', N'J2',  N'Argentina1', 'DF', 2,  '1998-01-03', N'Otro Club'),
+       (3, 'XQA', N'J3',  N'Argentina1', 'DF', 3,  '1998-01-04', N'Club Prueba'),
        (4, 'XQA', N'Otro', N'Prueba', 'MF', 5, NULL, NULL),
        (5, 'XQB', N'Nuevo1', N'Prueba', 'MF', 24, NULL, NULL),
        (6, 'XQB', N'Nuevo2', N'Prueba', 'MF', 25, NULL, NULL),
        (7, 'XQB', N'Nuevo3', N'Prueba', 'MF', 26, NULL, NULL),
        (8, 'XQB', N'Nuevo4', N'Prueba', 'MF', 27, NULL, NULL);
 
-EXEC Torneo.usp_ImportarJugadores;
+EXEC Torneo.usp_CargarJugadores;
 
 SELECT 'JG2' AS caso, id_registro, codigo_fifa, nombre, dorsal, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -382,7 +366,7 @@ GO
 
 
 /* ============================================================================
-   CUERPOS TÉCNICOS (usp_ImportarCuerpoTecnico)
+   CUERPOS TÉCNICOS (usp_CargarCuerpoTecnico)
    ============================================================================ */
 
 /* CT1 (OK) Cuerpos técnicos con errores parciales.
@@ -394,7 +378,7 @@ GO
    caracteres; el rol UTILERO; fecha de nacimiento futura y país de
    nacimiento ZZZ (los dos motivos); y "Cuatro" dos veces en XQB (las dos
    filas). */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 CREATE TABLE #staging_cuerpo_tecnico (
     id_registro             INT PRIMARY KEY,
@@ -421,7 +405,7 @@ VALUES (1, ' xqa ', N'Uno', N'Prueba DT', 'director_tecnico', '1975-05-10', 'xqa
        (10, 'XQB', N'Cuatro', N'Prueba CT', 'MEDICO', NULL, NULL),
        (11, 'XQB', N'Cuatro', N'Prueba CT', 'OTRO', NULL, NULL);
 
-EXEC Torneo.usp_ImportarCuerpoTecnico;
+EXEC Torneo.usp_CargarCuerpoTecnico;
 
 SELECT 'CT1' AS caso, id_registro, codigo_fifa, nombre, LEFT(apellido, 20) AS apellido, rol, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -437,14 +421,14 @@ GO
      b) "Dos" pasa a director técnico de XQA y "Uno" a ayudante de campo, en
         el mismo conjunto: los dos ACTUALIZADO (XQA sigue con uno solo).
    Quedan: XQA con "Dos" director técnico y "Uno" ayudante; XQB con "Tres". */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DELETE FROM #staging_cuerpo_tecnico;
 INSERT INTO #staging_cuerpo_tecnico (id_registro, codigo_fifa, nombre, apellido, rol, fecha_nacimiento, codigo_fifa_nacimiento)
 VALUES (1, 'XQA', N'Uno', N'Prueba DT', 'DIRECTOR_TECNICO', '1975-05-10', 'XQA'),
        (2, 'XQA', N'Dos', N'Prueba CT', 'AYUDANTE_CAMPO', '1980-01-01', NULL),
        (3, 'XQB', N'Cinco', N'Prueba DT', 'DIRECTOR_TECNICO', NULL, NULL);
-EXEC Torneo.usp_ImportarCuerpoTecnico;
+EXEC Torneo.usp_CargarCuerpoTecnico;
 SELECT 'CT2a' AS caso, id_registro, codigo_fifa, nombre, rol, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
 FROM #staging_cuerpo_tecnico ORDER BY id_registro;
@@ -453,7 +437,7 @@ DELETE FROM #staging_cuerpo_tecnico;
 INSERT INTO #staging_cuerpo_tecnico (id_registro, codigo_fifa, nombre, apellido, rol)
 VALUES (1, 'XQA', N'Dos', N'Prueba CT', 'DIRECTOR_TECNICO'),
        (2, 'XQA', N'Uno', N'Prueba DT', 'AYUDANTE_CAMPO');
-EXEC Torneo.usp_ImportarCuerpoTecnico;
+EXEC Torneo.usp_CargarCuerpoTecnico;
 SELECT 'CT2b' AS caso, id_registro, codigo_fifa, nombre, rol, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
 FROM #staging_cuerpo_tecnico ORDER BY id_registro;
@@ -470,7 +454,7 @@ GO
 
 
 /* ============================================================================
-   PARTIDOS (usp_ImportarPartidos)
+   PARTIDOS (usp_CargarPartidos)
    ============================================================================ */
 
 /* PA1 (OK) Importación con errores parciales.
@@ -481,7 +465,7 @@ GO
    estadio que no es sede; fase MUNDIAL; la misma selección como local y
    visitante; un empate de eliminación directa sin penales; la selección XQE,
    que no está registrada; asistencia mayor que la capacidad. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 CREATE TABLE #staging_partidos (
     id_registro            INT PRIMARY KEY,
@@ -512,7 +496,7 @@ VALUES (1, 221, 'Estadio Prueba Importación 66', 'Group L', '2026-08-10 20:00',
        (8, 234, 'Estadio Prueba Importación 66', 'Final', '2026-08-25 20:00', 'XQB', 'XQE', NULL, NULL, NULL, NULL, NULL),
        (9, 237, 'Estadio Prueba Importación 66', 'Final', '2026-08-26 20:00', 'XQB', 'XQC', 2, 0, NULL, NULL, 99999);
 
-EXEC Torneo.usp_ImportarPartidos;
+EXEC Torneo.usp_CargarPartidos;
 
 SELECT 'PA1' AS caso, id_registro, numero_partido, fase, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -530,18 +514,17 @@ GO
 /* PA2 (OK) Sobre el fixture cargado.
    Esperado: el 222 ACTUALIZADO (2 a 2 y 4 a 3 en penales: queda FINALIZADO);
    el 221 RECHAZADO (ya se jugó: no se le puede cambiar la fecha); y el 223
-   RECHAZADO (en la misma sede y el mismo día que el 221, y XQB juega los dos
-   partidos con menos de 24 horas de diferencia). */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+   RECHAZADO (la selección local y la visitante son la misma). */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DELETE FROM #staging_partidos;
 INSERT INTO #staging_partidos (id_registro, numero_partido, nombre_estadio, fase, fecha_hora_utc, codigo_fifa_local,
                                codigo_fifa_visitante, goles_local, goles_visitante, penales_local, penales_visitante)
 VALUES (1, 222, NULL, NULL, NULL, NULL, NULL, 2, 2, 4, 3),
        (2, 221, NULL, NULL, '2026-08-11 20:00', NULL, NULL, NULL, NULL, NULL, NULL),
-       (3, 223, 'Estadio Prueba Importación 66', 'Group L', '2026-08-10 23:00', 'XQB', 'XQC', NULL, NULL, NULL, NULL);
+       (3, 223, 'Estadio Prueba Importación 66', 'Group L', '2026-08-10 23:00', 'XQB', 'XQB', NULL, NULL, NULL, NULL);
 
-EXEC Torneo.usp_ImportarPartidos;
+EXEC Torneo.usp_CargarPartidos;
 
 SELECT 'PA2' AS caso, id_registro, numero_partido, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -553,7 +536,7 @@ GO
 
 
 /* ============================================================================
-   LO QUE PASÓ EN LOS PARTIDOS (usp_ImportarDesarrolloPartidos)
+   LO QUE PASÓ EN LOS PARTIDOS (usp_CargarDesarrolloPartidos)
    ============================================================================ */
 
 /* DP1 (OK) Formaciones y eventos del 221, y la formación de XQA en el 222,
@@ -571,7 +554,7 @@ GO
      minuto 50 del PRIMER_TIEMPO; una tarjeta VERDE; un gol en el partido 239,
      que no existe; un gol de J20 de XQA, que no está en la formación; y un
      gol de J9 de XQB en el 222, que es XQA - XQC. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 CREATE TABLE #staging_eventos (
     id_evento           INT IDENTITY(1,1) PRIMARY KEY,
@@ -579,6 +562,7 @@ CREATE TABLE #staging_eventos (
     numero_partido      TINYINT       NULL,
     id_jugador          INT           NULL,
     id_jugador_entra    INT           NULL,
+    id_jugador_asistencia INT         NULL,
     es_titular          BIT           NULL,
     posicion_en_cancha  VARCHAR(30)   COLLATE DATABASE_DEFAULT NULL,
     minuto              TINYINT       NULL,
@@ -642,7 +626,7 @@ FROM (VALUES ('GOL',     221, 'XQA', 9,  NULL, 30,  0, NULL, NULL,         'PRIM
 INNER JOIN #jugadores_prueba AS j ON j.codigo_fifa = v.codigo AND j.dorsal = v.dorsal
 LEFT JOIN #jugadores_prueba AS je ON je.codigo_fifa = v.codigo AND je.dorsal = v.dorsal_entra;
 
-EXEC DesarrolloPartido.usp_ImportarDesarrolloPartidos;
+EXEC DesarrolloPartido.usp_CargarDesarrolloPartidos;
 
 SELECT 'DP1' AS caso, e.id_evento, e.tipo, e.numero_partido, j.codigo_fifa, j.dorsal, je.dorsal AS entra, e.minuto,
        e.minuto_adicional, e.accion, REPLACE(STUFF(e.errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -678,12 +662,12 @@ GO
 
 /* DP2 (OK) Reimportación de los eventos válidos de DP1.
    Esperado: todos SIN CAMBIOS; no se repite nada. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DELETE FROM #staging_eventos WHERE accion = 'RECHAZADO';
 UPDATE #staging_eventos SET accion = NULL, errores = NULL;
 
-EXEC DesarrolloPartido.usp_ImportarDesarrolloPartidos;
+EXEC DesarrolloPartido.usp_CargarDesarrolloPartidos;
 
 SELECT 'DP2' AS caso, accion, COUNT(*) AS eventos FROM #staging_eventos GROUP BY accion;
 
@@ -696,27 +680,30 @@ SELECT 'DP2 cargado' AS caso,
 GO
 
 
-/* DP3 (OK) Correcciones de la fuente sobre lo cargado del 221: los eventos
-   de DP2, con cambios.
+/* DP3 (OK) El archivo vuelve a venir con diferencias sobre lo cargado del
+   221: los eventos de DP2, con cambios.
    Esperado:
-   - ACTUALIZADO: el gol de J9 de XQA, del 30 al 31 (no se repite); el de J10
-     de XQA en el 45+2, de PENAL a JUGADA; el cambio de J11 por J12 de XQA,
-     del entretiempo al minuto 60 y sin motivo (queda TACTICO); la amarilla
-     de J4 de XQB, del 20 al 22 y sin motivo (queda "Falta"); y J11 de XQB,
-     que pasa al banco.
+   - ACTUALIZADO: el gol de J10 de XQA en el 45+2, de PENAL a JUGADA; el
+     cambio de J11 por J12 de XQA, del entretiempo al minuto 60 y sin motivo
+     (queda TACTICO); la amarilla de J4 de XQB en el 20, con otro motivo
+     ("Mano"); y J11 de XQB, que pasa al banco.
    - INSERTADO: J19 de XQB, titular en lugar de J11 (la formación sigue con
      11 titulares y su esquema, 4-3-3), y una amarilla de J5 de XQB en el
      80, sin motivo ("Sin detalle en la fuente").
-   - RECHAZADO: el gol del 60 de XQB, que el archivo le atribuye a J10 en
-     lugar de J9: es otro gol, y XQB quedaría con 2 y su resultado es 1. El
-     de J9 queda.
+   - RECHAZADO, porque con otro minuto u otro autor es otro evento y no una
+     corrección del cargado: el gol de J9 de XQA, que ahora viene en el 31
+     (XQA quedaría con 3 goles y su resultado es 2); el gol del 60 de XQB,
+     que el archivo le atribuye a J10 en lugar de J9 (XQB quedaría con 2 y
+     su resultado es 1); y la amarilla de J4 de XQB, que viene otra vez en
+     el 22 (quedaría con 2 amarillas sin la roja por doble amarilla).
    - El resto, 22 jugadores de las formaciones, SIN CAMBIOS. El 221 sigue con
-     3 goles y 1 cambio, y ahora tiene 2 tarjetas. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+     sus 3 goles (el de J9 de XQA, en el 30) y 1 cambio, y ahora tiene 2
+     tarjetas. */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 UPDATE #staging_eventos SET accion = NULL, errores = NULL;
 
--- Las correcciones, por selección y dorsal del jugador.
+-- Las diferencias, por selección y dorsal del jugador.
 UPDATE e SET minuto = 31
 FROM #staging_eventos AS e INNER JOIN #jugadores_prueba AS j ON j.id_jugador = e.id_jugador
 WHERE e.tipo = 'GOL' AND j.codigo_fifa = 'XQA' AND j.dorsal = 9;
@@ -730,7 +717,7 @@ FROM #staging_eventos AS e INNER JOIN #jugadores_prueba AS j ON j.id_jugador = e
 WHERE e.tipo = 'GOL' AND j.codigo_fifa = 'XQB' AND j.dorsal = 9;
 
 UPDATE #staging_eventos SET minuto = 60, en_entretiempo = 0, motivo = NULL WHERE tipo = 'CAMBIO';
-UPDATE #staging_eventos SET minuto = 22, motivo = NULL WHERE tipo = 'TARJETA';
+UPDATE #staging_eventos SET motivo = 'Mano' WHERE tipo = 'TARJETA';
 
 UPDATE e SET es_titular = 0, posicion_en_cancha = NULL
 FROM #staging_eventos AS e INNER JOIN #jugadores_prueba AS j ON j.id_jugador = e.id_jugador
@@ -742,9 +729,12 @@ SELECT 'FORMACION', 221, id_jugador, 1, posicion_habitual, NULL, NULL, NULL, NUL
 FROM #jugadores_prueba WHERE codigo_fifa = 'XQB' AND dorsal = 19
 UNION ALL
 SELECT 'TARJETA', 221, id_jugador, NULL, NULL, 80, 0, 'AMARILLA', 0
-FROM #jugadores_prueba WHERE codigo_fifa = 'XQB' AND dorsal = 5;
+FROM #jugadores_prueba WHERE codigo_fifa = 'XQB' AND dorsal = 5
+UNION ALL
+SELECT 'TARJETA', 221, id_jugador, NULL, NULL, 22, 0, 'AMARILLA', 0
+FROM #jugadores_prueba WHERE codigo_fifa = 'XQB' AND dorsal = 4;
 
-EXEC DesarrolloPartido.usp_ImportarDesarrolloPartidos;
+EXEC DesarrolloPartido.usp_CargarDesarrolloPartidos;
 
 SELECT 'DP3' AS caso, e.id_evento, e.tipo, j.codigo_fifa, j.dorsal, je.dorsal AS entra, e.minuto, e.minuto_adicional,
        e.accion, REPLACE(STUFF(e.errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -794,15 +784,70 @@ ORDER BY pa.codigo_fifa;
 GO
 
 
+/* DP4 (OK) Asistencias de los goles del 221, tal como quedaron en DP3.
+   Esperado:
+   - ACTUALIZADO: el gol de J9 de XQA en el 30, que ahora lo asiste J7 de XQA.
+   - RECHAZADO: el gol de J10 de XQA en el 45+2, asistido por él mismo; el de
+     J9 de XQB en el 60, asistido por J5 de XQA (otra selección); el mismo
+     gol de J10 en el 45+2 como PENAL asistido por J8 (un gol de penal no
+     tiene asistencia); y la amarilla de J4 de XQB, con asistencia (solo los
+     goles la tienen).
+   - Reimportación del gol de J9 de XQA sin asistencia: SIN CAMBIOS, y
+     conserva la de J7. */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
+
+DELETE FROM #staging_eventos;
+
+INSERT INTO #staging_eventos (tipo, numero_partido, id_jugador, id_jugador_asistencia, minuto, minuto_adicional, periodo,
+                              tipo_gol, tipo_tarjeta, es_doble_amarilla)
+SELECT v.tipo, 221, j.id_jugador, ja.id_jugador, v.minuto, v.adicional, v.periodo, v.tipo_gol, v.tarjeta, v.doble
+FROM (VALUES ('GOL',     'XQA', 9,  'XQA', 7,  30, 0, 'PRIMER_TIEMPO',  'JUGADA', NULL,       NULL),
+             ('GOL',     'XQA', 10, 'XQA', 10, 45, 2, 'ADICIONALES',    'JUGADA', NULL,       NULL),
+             ('GOL',     'XQB', 9,  'XQA', 5,  60, 0, 'SEGUNDO_TIEMPO', 'JUGADA', NULL,       NULL),
+             ('GOL',     'XQA', 10, 'XQA', 8,  45, 2, 'ADICIONALES',    'PENAL',  NULL,       NULL),
+             ('TARJETA', 'XQB', 4,  'XQB', 5,  20, 0, NULL,             NULL,     'AMARILLA', 0))
+     AS v (tipo, codigo, dorsal, codigo_asist, dorsal_asist, minuto, adicional, periodo, tipo_gol, tarjeta, doble)
+INNER JOIN #jugadores_prueba AS j ON j.codigo_fifa = v.codigo AND j.dorsal = v.dorsal
+INNER JOIN #jugadores_prueba AS ja ON ja.codigo_fifa = v.codigo_asist AND ja.dorsal = v.dorsal_asist;
+
+EXEC DesarrolloPartido.usp_CargarDesarrolloPartidos;
+
+SELECT 'DP4' AS caso, e.id_evento, e.tipo, j.codigo_fifa, j.dorsal, ja.codigo_fifa AS asiste_seleccion,
+       ja.dorsal AS asiste_dorsal, e.minuto, e.accion,
+       REPLACE(STUFF(e.errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM #staging_eventos AS e
+LEFT JOIN #jugadores_prueba AS j ON j.id_jugador = e.id_jugador
+LEFT JOIN #jugadores_prueba AS ja ON ja.id_jugador = e.id_jugador_asistencia
+ORDER BY e.id_evento;
+
+-- Reimportación del gol asistido, sin asistencia.
+DELETE FROM #staging_eventos WHERE accion = 'RECHAZADO';
+UPDATE #staging_eventos SET accion = NULL, errores = NULL, id_jugador_asistencia = NULL;
+
+EXEC DesarrolloPartido.usp_CargarDesarrolloPartidos;
+
+SELECT 'DP4 reimportación' AS caso, accion, COUNT(*) AS eventos FROM #staging_eventos GROUP BY accion;
+
+SELECT 'DP4 cargado' AS caso, j.codigo_fifa, j.dorsal, g.periodo, g.minuto, g.minuto_adicional,
+       ja.codigo_fifa AS asiste_seleccion, ja.dorsal AS asiste_dorsal
+FROM DesarrolloPartido.GOL AS g
+INNER JOIN Torneo.PARTIDO AS p ON p.id_partido = g.id_partido
+INNER JOIN #jugadores_prueba AS j ON j.id_jugador = g.id_jugador_autor
+LEFT JOIN #jugadores_prueba AS ja ON ja.id_jugador = g.id_jugador_asistencia
+WHERE p.numero_partido = 221
+ORDER BY g.minuto;
+GO
+
+
 /* PA3 (OK) El resultado del 221 ya tiene sus goles cargados (2 a 1).
    Esperado: el 221 con 3 a 1 RECHAZADO (el resultado cambia y no coincide
    con los goles cargados); el partido sigue 2 a 1. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DELETE FROM #staging_partidos;
 INSERT INTO #staging_partidos (id_registro, numero_partido, goles_local, goles_visitante) VALUES (1, 221, 3, 1);
 
-EXEC Torneo.usp_ImportarPartidos;
+EXEC Torneo.usp_CargarPartidos;
 
 SELECT 'PA3' AS caso, numero_partido, accion, REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
 FROM #staging_partidos;
@@ -815,17 +860,17 @@ GO
    asistencia del 221, 30000); después ACTUALIZADO con el huso "SA Pacific
    Standard Time" (UTC-5): la hora local de los partidos 221 y 222 pasa de
    UTC-3 a UTC-5 (17:00 a 15:00). */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DELETE FROM #staging_sedes;
 INSERT INTO #staging_sedes (id_registro, nombre_estadio, capacidad) VALUES (1, 'Estadio Prueba Importación 66', 20000);
-EXEC Torneo.usp_ImportarSedes;
+EXEC Torneo.usp_CargarSedes;
 SELECT 'SD3 capacidad' AS caso, accion, REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
 FROM #staging_sedes;
 
 DELETE FROM #staging_sedes;
 INSERT INTO #staging_sedes (id_registro, nombre_estadio, huso_horario) VALUES (1, 'Estadio Prueba Importación 66', 'SA Pacific Standard Time');
-EXEC Torneo.usp_ImportarSedes;
+EXEC Torneo.usp_CargarSedes;
 SELECT 'SD3 huso' AS caso, accion FROM #staging_sedes;
 
 SELECT 'SD3 partidos' AS caso, numero_partido, fecha_hora_utc, fecha_hora_local
@@ -834,7 +879,7 @@ GO
 
 
 /* ============================================================================
-   ÁRBITROS Y DESIGNACIONES (usp_ImportarArbitros, usp_ImportarDesignaciones)
+   ÁRBITROS Y DESIGNACIONES (usp_CargarArbitros, usp_CargarDesignaciones)
    ============================================================================ */
 
 /* AR1 (OK) Árbitros con errores parciales, y otra vez con una fecha de
@@ -848,7 +893,7 @@ GO
    y los idiomas qq y zz, que no existen. Después: "Uno" ACTUALIZADO (nacido
    el 01/03/1985, y con francés: conserva el español y el inglés), "Dos" SIN
    CAMBIOS y "Tres" ACTUALIZADO (solo agrega el español). */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 CREATE TABLE #staging_arbitros (
     id_registro       INT PRIMARY KEY,
@@ -876,7 +921,7 @@ VALUES (1, 'xqe', N' Uno ', N'Prueba Arbitro', 'fifa', NULL, 'ES, en'),
        (11, 'XQE', N'Diez', N'Prueba Arbitro', 'FIFA', NULL, NULL),
        (12, 'XQE', N'Doce', N'Prueba Arbitro', 'FIFA', NULL, 'es,qq,zz');
 
-EXEC Arbitraje.usp_ImportarArbitros;
+EXEC Arbitraje.usp_CargarArbitros;
 
 SELECT 'AR1' AS caso, id_registro, codigo_fifa, nombre, LEFT(apellido, 20) AS apellido, categoria, idiomas, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -887,7 +932,7 @@ INSERT INTO #staging_arbitros (id_registro, codigo_fifa, nombre, apellido, categ
 VALUES (1, 'XQE', N'Uno', N'Prueba Arbitro', 'FIFA', '1985-03-01', 'fr'),
        (2, 'XQE', N'Dos', N'Prueba Arbitro', 'CONFEDERACION', NULL, NULL),
        (3, 'XQA', N'Tres', N'Prueba Arbitro', 'FIFA', NULL, 'es');
-EXEC Arbitraje.usp_ImportarArbitros;
+EXEC Arbitraje.usp_CargarArbitros;
 SELECT 'AR1 otra vez' AS caso, nombre, accion FROM #staging_arbitros ORDER BY id_registro;
 
 SELECT 'AR1 árbitros' AS caso, p.codigo_fifa, a.nombre, a.apellido, a.categoria, a.fecha_nacimiento, a.activo,
@@ -909,13 +954,13 @@ GO
    "Tres" en el 221 (conflicto de nacionalidad: es de XQA, que juega el
    partido); el partido 230, que no existe; sin árbitro; un árbitro que no
    existe; el rol JUEZ; y "Dos" dos veces en el 222 (las dos filas). */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
-DECLARE @xqe SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQE');
-DECLARE @xqa SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQA');
-DECLARE @uno INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE id_pais = @xqe AND nombre = N'Uno');
-DECLARE @dos INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE id_pais = @xqe AND nombre = N'Dos');
-DECLARE @tres INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE id_pais = @xqa AND nombre = N'Tres');
+DECLARE @id_pais_xqe SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQE');
+DECLARE @id_pais_xqa SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQA');
+DECLARE @id_arbitro_uno INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE id_pais = @id_pais_xqe AND nombre = N'Uno');
+DECLARE @id_arbitro_dos INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE id_pais = @id_pais_xqe AND nombre = N'Dos');
+DECLARE @id_arbitro_tres INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE id_pais = @id_pais_xqa AND nombre = N'Tres');
 
 CREATE TABLE #staging_designaciones (
     id_registro     INT PRIMARY KEY,
@@ -927,11 +972,11 @@ CREATE TABLE #staging_designaciones (
 );
 
 INSERT INTO #staging_designaciones (id_registro, numero_partido, id_arbitro, rol)
-VALUES (1, 221, @uno, 'Referee'), (2, 221, @dos, 'assistant referee 1'), (3, 221, @tres, 'VAR'),
-       (4, 230, @uno, 'CUARTO'), (5, 222, NULL, 'CUARTO'), (6, 222, 2000000000, 'CUARTO'), (7, 222, @uno, 'JUEZ'),
-       (8, 222, @uno, 'Support video assistant referee'), (9, 222, @dos, 'CUARTO'), (10, 222, @dos, 'AVAR');
+VALUES (1, 221, @id_arbitro_uno, 'Referee'), (2, 221, @id_arbitro_dos, 'assistant referee 1'), (3, 221, @id_arbitro_tres, 'VAR'),
+       (4, 230, @id_arbitro_uno, 'CUARTO'), (5, 222, NULL, 'CUARTO'), (6, 222, 2000000000, 'CUARTO'), (7, 222, @id_arbitro_uno, 'JUEZ'),
+       (8, 222, @id_arbitro_uno, 'Support video assistant referee'), (9, 222, @id_arbitro_dos, 'CUARTO'), (10, 222, @id_arbitro_dos, 'AVAR');
 
-EXEC Arbitraje.usp_ImportarDesignaciones;
+EXEC Arbitraje.usp_CargarDesignaciones;
 
 SELECT 'DA1' AS caso, id_registro, numero_partido, rol, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -945,19 +990,19 @@ GO
    221, RECHAZADOS los dos (el rol lo tendrían 2 árbitros), así que "Uno"
    sigue siendo el principal. Quedan 3 designaciones de prueba: "Uno"
    PRINCIPAL y "Dos" CUARTO en el 221, y "Uno" VAR_APOYO en el 222. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
-DECLARE @xqe SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQE');
-DECLARE @uno INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE id_pais = @xqe AND nombre = N'Uno');
-DECLARE @dos INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE id_pais = @xqe AND nombre = N'Dos');
-DECLARE @diez INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE id_pais = @xqe AND nombre = N'Diez');
+DECLARE @id_pais_xqe SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQE');
+DECLARE @id_arbitro_uno INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE id_pais = @id_pais_xqe AND nombre = N'Uno');
+DECLARE @id_arbitro_dos INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE id_pais = @id_pais_xqe AND nombre = N'Dos');
+DECLARE @id_arbitro_diez INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE id_pais = @id_pais_xqe AND nombre = N'Diez');
 
 DELETE FROM #staging_designaciones;
 INSERT INTO #staging_designaciones (id_registro, numero_partido, id_arbitro, rol)
-VALUES (1, 221, @uno, 'PRINCIPAL'), (2, 221, @dos, 'Fourth official'), (3, 221, @diez, 'PRINCIPAL'),
-       (4, 222, @uno, 'var_apoyo');
+VALUES (1, 221, @id_arbitro_uno, 'PRINCIPAL'), (2, 221, @id_arbitro_dos, 'Fourth official'), (3, 221, @id_arbitro_diez, 'PRINCIPAL'),
+       (4, 222, @id_arbitro_uno, 'var_apoyo');
 
-EXEC Arbitraje.usp_ImportarDesignaciones;
+EXEC Arbitraje.usp_CargarDesignaciones;
 
 SELECT 'DA2' AS caso, id_registro, numero_partido, rol, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -977,7 +1022,7 @@ GO
    CUARTO del 221, con el rol en minúsculas) y 4 RECHAZADO: el VAR del 221 (el
    partido no tiene VAR designado); el partido 230, que no existe; el
    VAR_APOYO del 222 sin informe ni sanción; y una sanción de 501 caracteres. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 CREATE TABLE #staging_informes (
     id_registro          INT PRIMARY KEY,
@@ -997,7 +1042,7 @@ VALUES (1, 221, 'PRINCIPAL', 'Partido sin incidentes.', NULL),
        (5, 222, 'VAR_APOYO', NULL, NULL),
        (6, 222, 'VAR_APOYO', NULL, REPLICATE('x', 501));
 
-EXEC Arbitraje.usp_ImportarInformesArbitrales;
+EXEC Arbitraje.usp_CargarInformesArbitrales;
 
 SELECT 'IN1' AS caso, id_registro, numero_partido, rol, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -1010,13 +1055,13 @@ GO
    una sanción para ese mismo PRINCIPAL, sin informe, ACTUALIZADO: el informe
    que tenía no se borra. Quedan el PRINCIPAL del 221 con informe y sanción y
    el CUARTO con su sanción. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DELETE FROM #staging_informes;
 INSERT INTO #staging_informes (id_registro, numero_partido, rol, informe_postpartido, sancion)
 VALUES (1, 221, 'PRINCIPAL', 'Partido sin incidentes.', NULL);
 
-EXEC Arbitraje.usp_ImportarInformesArbitrales;
+EXEC Arbitraje.usp_CargarInformesArbitrales;
 
 SELECT 'IN2 a' AS caso, id_registro, numero_partido, rol, accion FROM #staging_informes;
 
@@ -1024,7 +1069,7 @@ DELETE FROM #staging_informes;
 INSERT INTO #staging_informes (id_registro, numero_partido, rol, informe_postpartido, sancion)
 VALUES (1, 221, 'PRINCIPAL', NULL, 'Evaluación de desempeño de prueba.');
 
-EXEC Arbitraje.usp_ImportarInformesArbitrales;
+EXEC Arbitraje.usp_CargarInformesArbitrales;
 
 SELECT 'IN2 b' AS caso, id_registro, numero_partido, rol, accion FROM #staging_informes;
 
@@ -1037,7 +1082,7 @@ GO
 
 
 /* ============================================================================
-   REEMPLAZOS DE ÚLTIMO MOMENTO (usp_ImportarReemplazos)
+   REEMPLAZOS DE ÚLTIMO MOMENTO (usp_CargarReemplazos)
    ============================================================================ */
 
 /* RE1 (OK) Reemplazos con errores parciales. XQA juega su primer partido el
@@ -1045,13 +1090,14 @@ GO
    Esperado: 2 INSERTADO ("Lesionado Uno" de XQA, dado de baja el 05/06 con
    el dorsal 4 y la posición de J4, que lo reemplaza desde el 06/06; y
    "Lesionado Arquero", reemplazado por el arquero J23 después del primer
-   partido, como permite el reglamento) y 8 RECHAZADO: J6 no es arquero y
-   el reemplazo es después del primer partido; "Nadie Prueba" no está en la
-   lista; J5 está activo (esa baja se hace con usp_ReemplazarJugador); la
-   selección QQQ; la baja de XQB antes de la presentación de la lista
-   (01/06); el alta de XQB antes de la baja; y las dos filas de XQB con el
-   mismo reemplazante J8. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+   partido, como permite el reglamento) y 9 RECHAZADO: J6 no es arquero y
+   el reemplazo es después del primer partido; J8 de XQA no es arquero y el
+   reemplazo es el mismo día del primer partido (desde ese día solo se
+   reemplaza a un arquero); "Nadie Prueba" no está en la lista; J5 está
+   activo (esa baja se hace con usp_ReemplazarJugador); la selección QQQ; la
+   baja de XQB antes de la presentación de la lista (01/06); el alta de XQB
+   antes de la baja; y las dos filas de XQB con el mismo reemplazante J8. */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 CREATE TABLE #staging_reemplazos (
     id_registro     INT PRIMARY KEY,
@@ -1070,18 +1116,19 @@ CREATE TABLE #staging_reemplazos (
 
 INSERT INTO #staging_reemplazos (id_registro, codigo_fifa, nombre_sale, apellido_sale, fecha_baja, motivo_baja,
                                  nombre_entra, apellido_entra, fecha_alta, motivo_alta)
-VALUES (1, 'XQA', N'Lesionado', N'Uno',     '2026-06-05', 'Lesión', N'J4',    N'Prueba XQA', '2026-06-06', 'Reemplazo de Lesionado Uno'),
-       (2, 'XQA', N'Lesionado', N'Arquero', '2026-08-12', 'Lesión', N'J23',   N'Prueba XQA', '2026-08-12', 'Reemplazo de Lesionado Arquero'),
-       (3, 'XQA', N'Lesionado', N'Dos',     '2026-08-12', 'Lesión', N'J6',    N'Prueba XQA', '2026-08-12', 'Reemplazo de Lesionado Dos'),
+VALUES (1, 'XQA', N'Lesionado', N'Uno',     '2026-06-05', 'Lesión', N'J4',    N'Argentina1', '2026-06-06', 'Reemplazo de Lesionado Uno'),
+       (2, 'XQA', N'Lesionado', N'Arquero', '2026-08-12', 'Lesión', N'J23',   N'Argentina1', '2026-08-12', 'Reemplazo de Lesionado Arquero'),
+       (3, 'XQA', N'Lesionado', N'Dos',     '2026-08-12', 'Lesión', N'J6',    N'Argentina1', '2026-08-12', 'Reemplazo de Lesionado Dos'),
        (4, 'XQA', N'Lesionado', N'Tres',    '2026-06-05', 'Lesión', N'Nadie', N'Prueba',     '2026-06-05', 'Reemplazo de Lesionado Tres'),
-       (5, 'XQA', N'J5',        N'Prueba XQA', '2026-06-05', 'Lesión', N'J7', N'Prueba XQA', '2026-06-05', 'Reemplazo de J5'),
+       (5, 'XQA', N'J5',        N'Argentina1', '2026-06-05', 'Lesión', N'J7', N'Argentina1', '2026-06-05', 'Reemplazo de J5'),
        (6, 'QQQ', N'Lesionado', N'Cuatro',  '2026-06-05', 'Lesión', N'J1',    N'Prueba QQQ', '2026-06-05', 'Reemplazo'),
-       (7, 'XQB', N'Lesionado', N'Cinco',   '2026-05-20', 'Lesión', N'J2',    N'Prueba XQB', '2026-06-02', 'Reemplazo de Lesionado Cinco'),
-       (8, 'XQB', N'Lesionado', N'Seis',    '2026-06-05', 'Lesión', N'J3',    N'Prueba XQB', '2026-06-03', 'Reemplazo de Lesionado Seis'),
-       (9, 'XQB', N'Lesionado', N'Siete',   '2026-06-05', 'Lesión', N'J8',    N'Prueba XQB', '2026-06-05', 'Reemplazo de Lesionado Siete'),
-       (10, 'XQB', N'Lesionado', N'Ocho',   '2026-06-05', 'Lesión', N'J8',    N'Prueba XQB', '2026-06-05', 'Reemplazo de Lesionado Ocho');
+       (7, 'XQB', N'Lesionado', N'Cinco',   '2026-05-20', 'Lesión', N'J2',    N'Brasil1', '2026-06-02', 'Reemplazo de Lesionado Cinco'),
+       (8, 'XQB', N'Lesionado', N'Seis',    '2026-06-05', 'Lesión', N'J3',    N'Brasil1', '2026-06-03', 'Reemplazo de Lesionado Seis'),
+       (9, 'XQB', N'Lesionado', N'Siete',   '2026-06-05', 'Lesión', N'J8',    N'Brasil1', '2026-06-05', 'Reemplazo de Lesionado Siete'),
+       (10, 'XQB', N'Lesionado', N'Ocho',   '2026-06-05', 'Lesión', N'J8',    N'Brasil1', '2026-06-05', 'Reemplazo de Lesionado Ocho'),
+       (11, 'XQA', N'Lesionado', N'Nueve',  '2026-08-10', 'Lesión', N'J8',    N'Argentina1', '2026-08-10', 'Reemplazo de Lesionado Nueve');
 
-EXEC Torneo.usp_ImportarReemplazos;
+EXEC Torneo.usp_CargarReemplazos;
 
 SELECT 'RE1' AS caso, id_registro, codigo_fifa, nombre_sale, apellido_sale, nombre_entra, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -1101,19 +1148,49 @@ GO
 /* RE2 (OK) Sobre los reemplazos cargados.
    Esperado: el de "Lesionado Uno" otra vez igual, SIN CAMBIOS; el de
    "Lesionado Arquero" con otro motivo de baja, ACTUALIZADO. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 DELETE FROM #staging_reemplazos;
 INSERT INTO #staging_reemplazos (id_registro, codigo_fifa, nombre_sale, apellido_sale, fecha_baja, motivo_baja,
                                  nombre_entra, apellido_entra, fecha_alta, motivo_alta)
-VALUES (1, 'XQA', N'Lesionado', N'Uno',     '2026-06-05', 'Lesión', N'J4',  N'Prueba XQA', '2026-06-06', 'Reemplazo de Lesionado Uno'),
-       (2, 'XQA', N'Lesionado', N'Arquero', '2026-08-12', 'Lesión en la rodilla', N'J23', N'Prueba XQA', '2026-08-12', 'Reemplazo de Lesionado Arquero');
+VALUES (1, 'XQA', N'Lesionado', N'Uno',     '2026-06-05', 'Lesión', N'J4',  N'Argentina1', '2026-06-06', 'Reemplazo de Lesionado Uno'),
+       (2, 'XQA', N'Lesionado', N'Arquero', '2026-08-12', 'Lesión en la rodilla', N'J23', N'Argentina1', '2026-08-12', 'Reemplazo de Lesionado Arquero');
 
-EXEC Torneo.usp_ImportarReemplazos;
+EXEC Torneo.usp_CargarReemplazos;
 
 SELECT 'RE2' AS caso, id_registro, nombre_sale, apellido_sale, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
 FROM #staging_reemplazos ORDER BY id_registro;
+GO
+
+
+/* RE3 (OK) Desde el primer partido, el que sale también tiene que ser
+   arquero, como en usp_ReemplazarJugador. "Lesionado Uno" ya figura en la
+   lista dado de baja como DEFENSOR (RE1); un reemplazo suyo por el arquero
+   J12, que entra el día del primer partido de XQA (10/08), se rechaza.
+   Esperado: RECHAZADO ("solo se puede reemplazar a un arquero por otro
+   arquero"); J12 y "Lesionado Uno" quedan como estaban. */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
+
+DELETE FROM #staging_reemplazos;
+INSERT INTO #staging_reemplazos (id_registro, codigo_fifa, nombre_sale, apellido_sale, fecha_baja, motivo_baja,
+                                 nombre_entra, apellido_entra, fecha_alta, motivo_alta)
+VALUES (1, 'XQA', N'Lesionado', N'Uno', '2026-06-05', 'Lesión', N'J12', N'Argentina1', '2026-08-10', 'Reemplazo de Lesionado Uno');
+
+EXEC Torneo.usp_CargarReemplazos;
+
+SELECT 'RE3' AS caso, id_registro, nombre_sale, apellido_sale, nombre_entra, accion,
+       REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
+FROM #staging_reemplazos ORDER BY id_registro;
+
+SELECT 'RE3 jugadores' AS caso, j.nombre, j.apellido, j.posicion_habitual, j.dorsal, j.fecha_alta, j.motivo_alta,
+       j.fecha_baja, j.motivo_baja
+FROM Torneo.JUGADOR AS j
+INNER JOIN Torneo.LISTA_CONVOCADOS AS lc ON lc.id_lista = j.id_lista
+INNER JOIN Torneo.SELECCION AS s ON s.id_seleccion = lc.id_seleccion
+INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = s.id_pais
+WHERE p.codigo_fifa = 'XQA' AND ((j.nombre = N'Lesionado' AND j.apellido = N'Uno') OR j.nombre = N'J12')
+ORDER BY j.dorsal, j.fecha_baja;
 GO
 
 
@@ -1123,11 +1200,10 @@ GO
 
 /* IE1 (OK) Indicadores con errores parciales, y otra vez con un valor revisado.
    Esperado: primero 2 INSERTADO (PBI per cápita de XQA en 2023 y 2024, con el
-   país y el indicador en minúsculas) y 5 RECHAZADO: el país ZZZ; el
-   indicador NY-GDP (caracteres no admitidos); el año 1950; sin valor; y XQB
-   2023 dos veces con valores distintos (las dos filas). Después, con 2024
-   revisado: 2023 SIN CAMBIOS y 2024 ACTUALIZADO (1200). */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+   país y el indicador en minúsculas) y 4 RECHAZADO: el país ZZZ; el
+   indicador NY-GDP (caracteres no admitidos); el año 1950; y sin valor.
+   Después, con 2024 revisado: 2023 SIN CAMBIOS y 2024 ACTUALIZADO (1200). */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 CREATE TABLE #staging_indicadores (
     id_registro       INT IDENTITY(1,1) PRIMARY KEY,
@@ -1142,9 +1218,9 @@ CREATE TABLE #staging_indicadores (
 INSERT INTO #staging_indicadores (codigo_iso3, codigo_indicador, anio, valor)
 VALUES ('xqa', 'ny.gdp.pcap.cd', 2023, 1000), ('XQA', 'NY.GDP.PCAP.CD', 2024, 1100),
        ('ZZZ', 'NY.GDP.PCAP.CD', 2023, 1), ('XQA', 'NY-GDP', 2023, 1), ('XQA', 'NY.GDP.PCAP.CD', 1950, 1),
-       ('XQA', 'NY.GDP.PCAP.CD', 2022, NULL), ('XQB', 'NY.GDP.PCAP.CD', 2023, 10), ('XQB', 'NY.GDP.PCAP.CD', 2023, 20);
+       ('XQA', 'NY.GDP.PCAP.CD', 2022, NULL);
 
-EXEC DatosGenerales.usp_ImportarIndicadoresEconomicos;
+EXEC DatosGenerales.usp_CargarIndicadoresEconomicos;
 
 SELECT 'IE1' AS caso, id_registro, codigo_iso3, codigo_indicador, anio, valor, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -1153,7 +1229,7 @@ FROM #staging_indicadores ORDER BY id_registro;
 DELETE FROM #staging_indicadores;
 INSERT INTO #staging_indicadores (codigo_iso3, codigo_indicador, anio, valor)
 VALUES ('XQA', 'NY.GDP.PCAP.CD', 2023, 1000), ('XQA', 'NY.GDP.PCAP.CD', 2024, 1200);
-EXEC DatosGenerales.usp_ImportarIndicadoresEconomicos;
+EXEC DatosGenerales.usp_CargarIndicadoresEconomicos;
 SELECT 'IE1 revisado' AS caso, codigo_iso3, anio, valor, accion FROM #staging_indicadores ORDER BY anio;
 
 SELECT 'IE1 indicadores' AS caso, p.codigo_fifa, ie.codigo_indicador, ie.anio, ie.valor
@@ -1165,12 +1241,11 @@ GO
 
 
 /* CO1 (OK) Cotizaciones con errores parciales, y otra vez con un valor corregido.
-   Esperado: primero 2 INSERTADO (XTS el 01/06 y el 02/06/2026) y 6
+   Esperado: primero 2 INSERTADO (XTS el 01/06 y el 02/06/2026) y 4
    RECHAZADO: USD (el dólar no lleva cotización); AB (no es un código de 3
-   letras); una fecha futura; un valor 0; y XXX el 01/06/2026 dos veces con
-   valores distintos (las dos filas). Después: el 01/06 SIN CAMBIOS y el
-   02/06 ACTUALIZADO (1.7). */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+   letras); una fecha futura; y un valor 0. Después: el 01/06 SIN CAMBIOS y
+   el 02/06 ACTUALIZADO (1.7). */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
 CREATE TABLE #staging_cotizaciones (
     id_registro       INT IDENTITY(1,1) PRIMARY KEY,
@@ -1183,9 +1258,9 @@ CREATE TABLE #staging_cotizaciones (
 
 INSERT INTO #staging_cotizaciones (codigo_moneda, fecha, unidades_por_usd)
 VALUES ('xts', '2026-06-01', 1.5), ('XTS', '2026-06-02', 1.6), ('USD', '2026-06-01', 1), ('AB', '2026-06-01', 1),
-       ('XTS', '2099-01-01', 1), ('XTS', '2026-06-03', 0), ('XXX', '2026-06-01', 1), ('XXX', '2026-06-01', 2);
+       ('XTS', '2099-01-01', 1), ('XTS', '2026-06-03', 0);
 
-EXEC DatosGenerales.usp_ImportarCotizaciones;
+EXEC DatosGenerales.usp_CargarCotizaciones;
 
 SELECT 'CO1' AS caso, id_registro, codigo_moneda, fecha, unidades_por_usd, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -1194,7 +1269,7 @@ FROM #staging_cotizaciones ORDER BY id_registro;
 DELETE FROM #staging_cotizaciones;
 INSERT INTO #staging_cotizaciones (codigo_moneda, fecha, unidades_por_usd)
 VALUES ('XTS', '2026-06-01', 1.5), ('XTS', '2026-06-02', 1.7);
-EXEC DatosGenerales.usp_ImportarCotizaciones;
+EXEC DatosGenerales.usp_CargarCotizaciones;
 SELECT 'CO1 corregido' AS caso, codigo_moneda, fecha, unidades_por_usd, accion FROM #staging_cotizaciones ORDER BY fecha;
 GO
 
@@ -1204,10 +1279,10 @@ GO
    país que no existe; un nombre de más de 200 caracteres; sin nombre; y XQA
    el 10/07/2026 dos veces (las dos filas). Después: XQA SIN CAMBIOS y XQB
    ACTUALIZADO ("Otro nombre"). */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
-DECLARE @xqa SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQA');
-DECLARE @xqb SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQB');
+DECLARE @id_pais_xqa SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQA');
+DECLARE @id_pais_xqb SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQB');
 
 CREATE TABLE #staging_feriados (
     id_registro  INT IDENTITY(1,1) PRIMARY KEY,
@@ -1219,11 +1294,11 @@ CREATE TABLE #staging_feriados (
 );
 
 INSERT INTO #staging_feriados (id_pais, fecha, nombre)
-VALUES (@xqa, '2026-07-09', N'Día de prueba'), (@xqb, '2026-07-09', N'Día de prueba'),
-       (32000, '2026-07-09', N'País inexistente'), (@xqa, '2026-07-11', REPLICATE(N'x', 201)),
-       (@xqa, '2026-07-12', N'  '), (@xqa, '2026-07-10', N'Uno'), (@xqa, '2026-07-10', N'Dos');
+VALUES (@id_pais_xqa, '2026-07-09', N'Día de prueba'), (@id_pais_xqb, '2026-07-09', N'Día de prueba'),
+       (32000, '2026-07-09', N'País inexistente'), (@id_pais_xqa, '2026-07-11', REPLICATE(N'x', 201)),
+       (@id_pais_xqa, '2026-07-12', N'  '), (@id_pais_xqa, '2026-07-10', N'Uno'), (@id_pais_xqa, '2026-07-10', N'Dos');
 
-EXEC DatosGenerales.usp_ImportarFeriados;
+EXEC DatosGenerales.usp_CargarFeriados;
 
 SELECT 'FE1' AS caso, id_registro, id_pais, fecha, LEFT(nombre, 20) AS nombre, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -1231,22 +1306,22 @@ FROM #staging_feriados ORDER BY id_registro;
 
 DELETE FROM #staging_feriados;
 INSERT INTO #staging_feriados (id_pais, fecha, nombre)
-VALUES (@xqa, '2026-07-09', N'Día de prueba'), (@xqb, '2026-07-09', N'Otro nombre');
-EXEC DatosGenerales.usp_ImportarFeriados;
+VALUES (@id_pais_xqa, '2026-07-09', N'Día de prueba'), (@id_pais_xqb, '2026-07-09', N'Otro nombre');
+EXEC DatosGenerales.usp_CargarFeriados;
 SELECT 'FE1 cambiado' AS caso, id_pais, fecha, nombre, accion FROM #staging_feriados ORDER BY id_registro;
 GO
 
 
 /* ============================================================================
-   CAMPAÑAS PUBLICITARIAS (usp_ImportarCampanias)
+   CAMPAÑAS PUBLICITARIAS (usp_CargarCampanias)
    ============================================================================ */
 
 /* CP1 (OK) Campañas con errores parciales.
    Esperado: 2 INSERTADO y 9 RECHAZADO.
-     - 1 "Campaña Prueba 66 A" del "Anunciante Prueba 66" (XQA): INSERTADO,
+     - 1 "Quilmes1 Campaña A" del "Quilmes1" (XQA): INSERTADO,
        con la pieza "Pieza A1" (español, mercados XQA y XQB) y "Pieza A2" (sin
        idioma, mercado XQA).
-     - 2 "Campaña Prueba 66 B" del mismo anunciante: INSERTADO, con "Pieza
+     - 2 "Quilmes1 Campaña B" del mismo anunciante: INSERTADO, con "Pieza
        B1" (español, sin mercado).
      - 3 sin anunciante; 4 razón social de 151 caracteres.
      - 5 país inexistente, sin nombre y la fecha de fin anterior a la de
@@ -1256,13 +1331,13 @@ GO
        y un país de interés inexistentes, y "Pieza X" en español y en inglés.
      - 8 y 9 la misma campaña del mismo anunciante dos veces.
      - 10 y 11 un anunciante con países distintos (XQA y XQB).
-   Queda un solo "Anunciante Prueba 66", con sus 2 campañas y 3 piezas. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+   Queda un solo "Quilmes1", con sus 2 campañas y 3 piezas. */
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
-DECLARE @xqa SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQA');
-DECLARE @xqb SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQB');
-DECLARE @es  SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE codigo_iso = 'es');
-DECLARE @en  SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE codigo_iso = 'en');
+DECLARE @id_pais_xqa SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQA');
+DECLARE @id_pais_xqb SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQB');
+DECLARE @id_idioma_es  SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE codigo_iso = 'es');
+DECLARE @id_idioma_en  SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE codigo_iso = 'en');
 
 CREATE TABLE #staging_campanias (
     id_registro   INT            PRIMARY KEY,
@@ -1282,27 +1357,27 @@ CREATE TABLE #staging_piezas (
 );
 
 INSERT INTO #staging_campanias (id_registro, anunciante, id_pais, nombre, fecha_inicio, fecha_fin)
-VALUES (1,  N' Anunciante Prueba 66 ', @xqa, N'Campaña Prueba 66 A', '2026-08-01', '2026-08-31'),
-       (2,  N'Anunciante Prueba 66',   @xqa, N'Campaña Prueba 66 B', '2026-08-01', '2026-08-31'),
-       (3,  N'  ',                     @xqa, N'Sin anunciante 66',   '2026-08-01', '2026-08-31'),
-       (4,  REPLICATE(N'x', 151),      @xqa, N'Razón social larga',  '2026-08-01', '2026-08-31'),
+VALUES (1,  N' Quilmes1 ', @id_pais_xqa, N'Quilmes1 Campaña A', '2026-08-01', '2026-08-31'),
+       (2,  N'Quilmes1',   @id_pais_xqa, N'Quilmes1 Campaña B', '2026-08-01', '2026-08-31'),
+       (3,  N'  ',                     @id_pais_xqa, N'Sin anunciante 66',   '2026-08-01', '2026-08-31'),
+       (4,  REPLICATE(N'x', 151),      @id_pais_xqa, N'Razón social larga',  '2026-08-01', '2026-08-31'),
        (5,  N'Anunciante País Inexistente 66', 32000, NULL,          '2026-08-31', '2026-08-01'),
-       (6,  N'Otro Anunciante 66',     @xqa, N'Sin fechas 66',       NULL, NULL),
-       (7,  N'Otro Anunciante 66',     @xqa, N'Piezas inválidas 66', '2026-08-01', '2026-08-31'),
-       (8,  N'Otro Anunciante 66',     @xqa, N'Repetida 66',         '2026-08-01', '2026-08-31'),
-       (9,  N'Otro Anunciante 66',     @xqa, N'Repetida 66',         '2026-08-01', '2026-08-31'),
-       (10, N'Anunciante Dos Países 66', @xqa, N'Uno 66',            '2026-08-01', '2026-08-31'),
-       (11, N'Anunciante Dos Países 66', @xqb, N'Dos 66',            '2026-08-01', '2026-08-31');
+       (6,  N'Otro Anunciante 66',     @id_pais_xqa, N'Sin fechas 66',       NULL, NULL),
+       (7,  N'Otro Anunciante 66',     @id_pais_xqa, N'Piezas inválidas 66', '2026-08-01', '2026-08-31'),
+       (8,  N'Otro Anunciante 66',     @id_pais_xqa, N'Repetida 66',         '2026-08-01', '2026-08-31'),
+       (9,  N'Otro Anunciante 66',     @id_pais_xqa, N'Repetida 66',         '2026-08-01', '2026-08-31'),
+       (10, N'Anunciante Dos Países 66', @id_pais_xqa, N'Uno 66',            '2026-08-01', '2026-08-31'),
+       (11, N'Anunciante Dos Países 66', @id_pais_xqb, N'Dos 66',            '2026-08-01', '2026-08-31');
 
 INSERT INTO #staging_piezas (id_registro, titulo, id_idioma, id_pais_interes)
-VALUES (1, N'Pieza A1', @es, @xqa), (1, N'Pieza A1', @es, @xqb), (1, N'Pieza A2', NULL, @xqa),
-       (2, N'Pieza B1', @es, NULL),
-       (3, N'Pieza', @es, @xqa), (4, N'Pieza', @es, @xqa), (5, N'Pieza', @es, @xqa),
-       (7, NULL, @es, @xqa), (7, REPLICATE(N'y', 151), @es, @xqa), (7, N'Idioma inexistente', 32000, @xqa),
-       (7, N'País inexistente', @es, 32000), (7, N'Pieza X', @es, @xqa), (7, N'Pieza X', @en, @xqa),
-       (8, N'Pieza', @es, @xqa), (9, N'Pieza', @es, @xqa), (10, N'Pieza', @es, @xqa), (11, N'Pieza', @es, @xqb);
+VALUES (1, N'Pieza A1', @id_idioma_es, @id_pais_xqa), (1, N'Pieza A1', @id_idioma_es, @id_pais_xqb), (1, N'Pieza A2', NULL, @id_pais_xqa),
+       (2, N'Pieza B1', @id_idioma_es, NULL),
+       (3, N'Pieza', @id_idioma_es, @id_pais_xqa), (4, N'Pieza', @id_idioma_es, @id_pais_xqa), (5, N'Pieza', @id_idioma_es, @id_pais_xqa),
+       (7, NULL, @id_idioma_es, @id_pais_xqa), (7, REPLICATE(N'y', 151), @id_idioma_es, @id_pais_xqa), (7, N'Idioma inexistente', 32000, @id_pais_xqa),
+       (7, N'País inexistente', @id_idioma_es, 32000), (7, N'Pieza X', @id_idioma_es, @id_pais_xqa), (7, N'Pieza X', @id_idioma_en, @id_pais_xqa),
+       (8, N'Pieza', @id_idioma_es, @id_pais_xqa), (9, N'Pieza', @id_idioma_es, @id_pais_xqa), (10, N'Pieza', @id_idioma_es, @id_pais_xqa), (11, N'Pieza', @id_idioma_es, @id_pais_xqb);
 
-EXEC Publicidad.usp_ImportarCampanias;
+EXEC Publicidad.usp_CargarCampanias;
 
 SELECT 'CP1' AS caso, id_registro, LEFT(anunciante, 30) AS anunciante, nombre, accion,
        REPLACE(STUFF(errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos
@@ -1333,12 +1408,12 @@ GO
      c) una pieza de A se exhibe en el partido 226 (25/08/2026) y A vuelve con
         fecha de fin el 20/08: RECHAZADO (quedaría afuera el partido 226), y
         A sigue hasta el 31/08. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
-DECLARE @xqa SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQA');
-DECLARE @xqb SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQB');
-DECLARE @es  SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE codigo_iso = 'es');
-DECLARE @en  SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE codigo_iso = 'en');
+DECLARE @id_pais_xqa SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQA');
+DECLARE @id_pais_xqb SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codigo_fifa = 'XQB');
+DECLARE @id_idioma_es  SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE codigo_iso = 'es');
+DECLARE @id_idioma_en  SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE codigo_iso = 'en');
 DECLARE @sede INT = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Prueba Importación 66');
 DECLARE @espacio INT = (SELECT id_espacio FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_sede = @sede AND numero_espacio = 1);
 DECLARE @partido INT, @pieza INT;
@@ -1347,20 +1422,20 @@ DECLARE @partido INT, @pieza INT;
 DELETE FROM #staging_campanias;
 DELETE FROM #staging_piezas;
 INSERT INTO #staging_campanias (id_registro, anunciante, id_pais, nombre, fecha_inicio, fecha_fin)
-VALUES (1, N'Anunciante Prueba 66', @xqa, N'Campaña Prueba 66 A', '2026-08-01', '2026-08-31'),
-       (2, N'Anunciante Prueba 66', @xqa, N'Campaña Prueba 66 B', '2026-08-01', '2026-08-31');
+VALUES (1, N'Quilmes1', @id_pais_xqa, N'Quilmes1 Campaña A', '2026-08-01', '2026-08-31'),
+       (2, N'Quilmes1', @id_pais_xqa, N'Quilmes1 Campaña B', '2026-08-01', '2026-08-31');
 INSERT INTO #staging_piezas (id_registro, titulo, id_idioma, id_pais_interes)
-VALUES (1, N'Pieza A1', @es, @xqa), (1, N'Pieza A1', @es, @xqb), (1, N'Pieza A2', NULL, @xqa), (2, N'Pieza B1', @es, NULL);
-EXEC Publicidad.usp_ImportarCampanias;
+VALUES (1, N'Pieza A1', @id_idioma_es, @id_pais_xqa), (1, N'Pieza A1', @id_idioma_es, @id_pais_xqb), (1, N'Pieza A2', NULL, @id_pais_xqa), (2, N'Pieza B1', @id_idioma_es, NULL);
+EXEC Publicidad.usp_CargarCampanias;
 SELECT 'CP2a' AS caso, id_registro, nombre, accion FROM #staging_campanias ORDER BY id_registro;
 
 -- b) Una pieza y un mercado nuevos en A; otro idioma y otras fechas en B.
 UPDATE #staging_campanias SET errores = NULL, accion = NULL;
 UPDATE #staging_campanias SET fecha_inicio = '2026-08-05' WHERE id_registro = 2;
-UPDATE #staging_piezas SET id_idioma = @en WHERE id_registro = 2;
+UPDATE #staging_piezas SET id_idioma = @id_idioma_en WHERE id_registro = 2;
 INSERT INTO #staging_piezas (id_registro, titulo, id_idioma, id_pais_interes)
-VALUES (1, N'Pieza A2', NULL, @xqb), (1, N'Pieza A3', @es, @xqa);
-EXEC Publicidad.usp_ImportarCampanias;
+VALUES (1, N'Pieza A2', NULL, @id_pais_xqb), (1, N'Pieza A3', @id_idioma_es, @id_pais_xqa);
+EXEC Publicidad.usp_CargarCampanias;
 SELECT 'CP2b' AS caso, id_registro, nombre, accion FROM #staging_campanias ORDER BY id_registro;
 
 SELECT 'CP2b cargado' AS caso, c.nombre AS campania, c.fecha_inicio, c.fecha_fin, pz.titulo AS pieza, i.codigo_iso AS idioma,
@@ -1370,21 +1445,23 @@ SELECT 'CP2b cargado' AS caso, c.nombre AS campania, c.fecha_inicio, c.fecha_fin
 FROM Publicidad.CAMPANIA AS c
 INNER JOIN Publicidad.PIEZA_PUBLICITARIA AS pz ON pz.id_campania = c.id_campania
 LEFT JOIN DatosGenerales.IDIOMA AS i ON i.id_idioma = pz.id_idioma
-WHERE c.nombre LIKE N'Campaña Prueba 66 _'
+WHERE c.nombre LIKE N'Quilmes1 Campaña _'
 ORDER BY c.nombre, pz.titulo;
 
 -- c) Una pieza de A exhibida en un partido del 25/08, y A con fecha de fin el 20/08.
-EXEC Torneo.usp_PARTIDO_Alta @numero_partido = 226, @id_sede = @sede, @fase = 'FINAL',
-     @fecha_hora_local = '2026-08-25 20:00', @id_partido = @partido OUTPUT;
+INSERT INTO Torneo.PARTIDO (numero_partido, id_sede, fase, fecha_hora_local, fecha_hora_utc)
+VALUES (226, @sede, 'FINAL', '2026-08-25 20:00', '2026-08-25 23:00');
+SET @partido = SCOPE_IDENTITY();
 SET @pieza = (SELECT pz.id_pieza FROM Publicidad.PIEZA_PUBLICITARIA AS pz
               INNER JOIN Publicidad.CAMPANIA AS c ON c.id_campania = pz.id_campania
-              WHERE c.nombre = N'Campaña Prueba 66 A' AND pz.titulo = N'Pieza A1');
-EXEC Publicidad.usp_EXHIBICION_Alta @id_partido = @partido, @id_espacio = @espacio, @id_pieza = @pieza;
+              WHERE c.nombre = N'Quilmes1 Campaña A' AND pz.titulo = N'Pieza A1');
+INSERT INTO Publicidad.EXHIBICION (id_partido, id_espacio, id_pieza, costo, codigo_moneda)
+SELECT @partido, @espacio, @pieza, tarifa_usd, 'USD' FROM Publicidad.ESPACIO_PUBLICITARIO WHERE id_espacio = @espacio;
 
 DELETE FROM #staging_campanias WHERE id_registro = 2;
 DELETE FROM #staging_piezas WHERE id_registro = 2;
 UPDATE #staging_campanias SET errores = NULL, accion = NULL, fecha_fin = '2026-08-20';
-EXEC Publicidad.usp_ImportarCampanias;
+EXEC Publicidad.usp_CargarCampanias;
 SELECT 'CP2c' AS caso, st.id_registro, st.nombre, st.accion, REPLACE(STUFF(st.errores, 1, 2, N''), NCHAR(13) + NCHAR(10), N' | ') AS motivos,
        c.fecha_fin AS fecha_fin_guardada
 FROM #staging_campanias AS st
@@ -1401,22 +1478,22 @@ GO
    Esperado: las tres quedan registradas con sus totales y la fecha y hora
    actual; después de borrar la primera quedan dos, y después de borrar por
    origen, ninguna. */
-IF @@TRANCOUNT = 0 BEGIN PRINT N'FALLÓ: se perdió la transacción del test.'; SET NOEXEC ON; END;
+IF @@TRANCOUNT = 0 BEGIN PRINT N'ERROR: se perdió la transacción del test.'; SET NOEXEC ON; END;
 
-DECLARE @id1 INT, @id2 INT, @id3 INT;
+DECLARE @id_importacion_1 INT, @id_importacion_2 INT, @id_importacion_3 INT;
 EXEC DatosGenerales.usp_RegistrarImportacion @proceso = 'Prueba 66', @origen = N'C:\prueba66\uno.json',
-     @leidos = 10, @insertados = 6, @actualizados = 1, @sin_cambios = 1, @rechazados = 2, @id_importacion = @id1 OUTPUT;
+     @leidos = 10, @insertados = 6, @actualizados = 1, @sin_cambios = 1, @rechazados = 2, @id_importacion = @id_importacion_1 OUTPUT;
 EXEC DatosGenerales.usp_RegistrarImportacion @proceso = 'Prueba 66', @origen = N'C:\prueba66\dos.json',
      @leidos = 5, @insertados = 0, @actualizados = 0, @sin_cambios = 4, @omitidos = 1, @rechazados = 0,
-     @id_importacion = @id2 OUTPUT;
+     @id_importacion = @id_importacion_2 OUTPUT;
 EXEC DatosGenerales.usp_RegistrarImportacion @proceso = 'Prueba 66', @origen = N'C:\prueba66\dos.json',
-     @leidos = 5, @insertados = 0, @actualizados = 0, @sin_cambios = 5, @rechazados = 0, @id_importacion = @id3 OUTPUT;
+     @leidos = 5, @insertados = 0, @actualizados = 0, @sin_cambios = 5, @rechazados = 0, @id_importacion = @id_importacion_3 OUTPUT;
 
-SELECT 'RI1 registradas' AS caso, id_importacion - @id1 + 1 AS orden, proceso, origen, leidos, insertados, actualizados,
-       sin_cambios, omitidos, rechazados, IIF(ABS(DATEDIFF(MINUTE, fecha_hora, SYSDATETIME())) <= 1, 'ahora', 'FALLÓ') AS fecha_hora
+SELECT 'RI1 registradas' AS caso, id_importacion - @id_importacion_1 + 1 AS orden, proceso, origen, leidos, insertados, actualizados,
+       sin_cambios, omitidos, rechazados, IIF(ABS(DATEDIFF(MINUTE, fecha_hora, SYSDATETIME())) <= 1, 'ahora', 'ERROR') AS fecha_hora
 FROM DatosGenerales.IMPORTACION WHERE proceso = 'Prueba 66' ORDER BY id_importacion;
 
-EXEC DatosGenerales.usp_BorrarImportacion @id_importacion = @id1;
+EXEC DatosGenerales.usp_BorrarImportacion @id_importacion = @id_importacion_1;
 SELECT 'RI1 después de borrar la primera' AS caso, COUNT(*) AS importaciones FROM DatosGenerales.IMPORTACION WHERE proceso = 'Prueba 66';
 
 EXEC DatosGenerales.usp_BorrarImportacion @origen = N'C:\prueba66\dos.json';
@@ -1440,34 +1517,160 @@ GO
 
 /* ER1 (ERROR) Los SP de importación sin su tabla de staging.
    Esperado: catorce errores 50001, uno por SP, sin cargar nada. */
-BEGIN TRY EXEC DatosGenerales.usp_ImportarIndicadoresEconomicos; PRINT N'ER1a: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1a', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC DatosGenerales.usp_ImportarCotizaciones; PRINT N'ER1b: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1b', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC DatosGenerales.usp_ImportarFeriados; PRINT N'ER1c: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1c', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC Torneo.usp_ImportarSedes; PRINT N'ER1d: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1d', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC Torneo.usp_ImportarSelecciones; PRINT N'ER1e: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1e', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC Torneo.usp_ImportarJugadores; PRINT N'ER1f: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1f', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC Torneo.usp_ImportarPartidos; PRINT N'ER1g: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1g', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC DesarrolloPartido.usp_ImportarDesarrolloPartidos; PRINT N'ER1h: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1h', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC Arbitraje.usp_ImportarArbitros; PRINT N'ER1i: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1i', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC Arbitraje.usp_ImportarDesignaciones; PRINT N'ER1j: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1j', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC Publicidad.usp_ImportarCampanias; PRINT N'ER1k: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1k', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC Torneo.usp_ImportarCuerpoTecnico; PRINT N'ER1l: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1l', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC Torneo.usp_ImportarReemplazos; PRINT N'ER1m: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1m', @error_esperado = 50001; END CATCH;
-BEGIN TRY EXEC Arbitraje.usp_ImportarInformesArbitrales; PRINT N'ER1n: FALLÓ, se esperaba un error.'; END TRY
-BEGIN CATCH EXEC #usp_MostrarError @caso = 'ER1n', @error_esperado = 50001; END CATCH;
+BEGIN TRY
+    EXEC DatosGenerales.usp_CargarIndicadoresEconomicos;
+    PRINT N'ER1a: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1a: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC DatosGenerales.usp_CargarCotizaciones;
+    PRINT N'ER1b: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1b: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC DatosGenerales.usp_CargarFeriados;
+    PRINT N'ER1c: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1c: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1c: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC Torneo.usp_CargarSedes;
+    PRINT N'ER1d: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1d: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1d: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC Torneo.usp_CargarSelecciones;
+    PRINT N'ER1e: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1e: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1e: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC Torneo.usp_CargarJugadores;
+    PRINT N'ER1f: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1f: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1f: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC Torneo.usp_CargarPartidos;
+    PRINT N'ER1g: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1g: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1g: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC DesarrolloPartido.usp_CargarDesarrolloPartidos;
+    PRINT N'ER1h: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1h: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1h: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC Arbitraje.usp_CargarArbitros;
+    PRINT N'ER1i: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1i: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1i: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC Arbitraje.usp_CargarDesignaciones;
+    PRINT N'ER1j: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1j: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1j: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC Publicidad.usp_CargarCampanias;
+    PRINT N'ER1k: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1k: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1k: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC Torneo.usp_CargarCuerpoTecnico;
+    PRINT N'ER1l: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1l: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1l: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC Torneo.usp_CargarReemplazos;
+    PRINT N'ER1m: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1m: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1m: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
+BEGIN TRY
+    EXEC Arbitraje.usp_CargarInformesArbitrales;
+    PRINT N'ER1n: ERROR, se esperaba un error.';
+END TRY
+BEGIN CATCH
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER1n: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER1n: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
+END CATCH;
 GO
 
 
@@ -1478,7 +1681,7 @@ GO
    crea la selección ni queda el país. */
 SET XACT_ABORT OFF;
 BEGIN TRANSACTION;
-EXEC DatosGenerales.usp_PAIS_Alta @nombre = 'Prueba XQA', @huso_horario = 'Argentina Standard Time', @codigo_fifa = 'XQA';
+INSERT INTO DatosGenerales.PAIS (nombre, codigo_fifa, huso_horario) VALUES ('Argentina1', 'XQA', 'Argentina Standard Time');
 
 CREATE TABLE #staging_selecciones (
     id_registro         INT PRIMARY KEY,
@@ -1492,11 +1695,15 @@ CREATE TABLE #staging_selecciones (
 INSERT INTO #staging_selecciones (id_registro, codigo_fifa, confederacion) VALUES (1, 'XQA', 'UEFA');
 
 BEGIN TRY
-    EXEC Torneo.usp_ImportarSelecciones;
-    PRINT N'ER2: FALLÓ, se esperaba un error de validación.';
+    EXEC Torneo.usp_CargarSelecciones;
+    PRINT N'ER2: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'ER2', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER2: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER2: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 -- El ROLLBACK también borra la tabla temporal, que se creó dentro de la transacción.
@@ -1514,35 +1721,51 @@ GO
 BEGIN TRY
     EXEC DatosGenerales.usp_RegistrarImportacion @proceso = ' ', @origen = N'', @leidos = -1, @insertados = 0,
          @actualizados = 0, @sin_cambios = 0, @rechazados = 0;
-    PRINT N'ER3a: FALLÓ, se esperaba un error de validación.';
+    PRINT N'ER3a: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'ER3a', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER3a: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER3a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_RegistrarImportacion @proceso = 'Prueba 66', @origen = N'C:\prueba66\tres.json', @leidos = 2,
          @insertados = 0, @actualizados = 0, @sin_cambios = 0, @omitidos = 2, @rechazados = 1;
-    PRINT N'ER3b: FALLÓ, se esperaba un error de validación.';
+    PRINT N'ER3b: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'ER3b', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER3b: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER3b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_BorrarImportacion;
-    PRINT N'ER3c: FALLÓ, se esperaba un error de validación.';
+    PRINT N'ER3c: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'ER3c', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER3c: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER3c: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_BorrarImportacion @id_importacion = 1, @origen = N'C:\prueba66\uno.json';
-    PRINT N'ER3d: FALLÓ, se esperaba un error de validación.';
+    PRINT N'ER3d: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'ER3d', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'ER3d: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'ER3d: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 

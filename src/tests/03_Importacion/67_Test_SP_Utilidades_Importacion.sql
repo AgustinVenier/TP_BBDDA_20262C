@@ -10,12 +10,12 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 31/10/2026
- Archivo: 72_Test_SP_ConsumirAPI.sql
- Objetivo: Probar DatosGenerales.usp_ConsumirAPI de 22_SP_ConsumirAPI.sql:
+ Archivo: 67_Test_SP_Utilidades_Importacion.sql
+ Objetivo: Probar DatosGenerales.usp_ConsumirAPI de 17_SP_Utilidades_Importacion.sql:
            sus validaciones, un pedido a la API del Banco Mundial, una ruta
            que la API no tiene y un servidor que no existe. Los casos CA2 y
            CA3 necesitan internet.
-           Requiere haber ejecutado 00 a 22. No modifica ninguna tabla, así
+           Requiere haber ejecutado 01 a 28. No modifica ninguna tabla, así
            que se puede ejecutar más de una vez.
 ================================================================================
 
@@ -27,12 +27,13 @@
    - Casos OK: la grilla muestra el código HTTP y el largo y el comienzo de
      la respuesta.
    - Casos ERROR: en Mensajes se imprime "OK" y el mensaje que devolvió el SP.
-     Si el SP no falla, o falla con otro número de error, se imprime "FALLÓ".
+     Si el SP no falla, o falla con otro número de error, se imprime "ERROR".
    - Al final, la verificación tiene que mostrar OLE Automation y las
      opciones avanzadas con el mismo valor que antes del test.
 */
 
 USE MundialFutbol;
+SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los métodos XML lo necesitan en ON
 GO
 
 SET NOCOUNT ON;
@@ -49,23 +50,8 @@ EXEC sp_set_session_context @key = N'avanzadas_antes', @value = @avanzadas_antes
 
 IF OBJECT_ID(N'DatosGenerales.usp_ConsumirAPI', N'P') IS NULL
 BEGIN
-    RAISERROR(N'Falta el SP que consume APIs: ejecutar los scripts 00 a 22.', 16, 1);
+    RAISERROR(N'Falta el SP que consume APIs: ejecutar los scripts 01 a 28.', 16, 1);
     SET NOEXEC ON;
-END;
-GO
-
-IF OBJECT_ID(N'tempdb..#usp_MostrarError', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_MostrarError;
-GO
-CREATE PROCEDURE #usp_MostrarError
-    @caso            VARCHAR(10),
-    @error_esperado  INT
-AS
-BEGIN
-    PRINT CONCAT(@caso, N': ',
-                 IIF(ERROR_NUMBER() = @error_esperado, N'OK, falló como se esperaba.',
-                     CONCAT(N'FALLÓ, error inesperado ', ERROR_NUMBER(), N'.')),
-                 NCHAR(13), NCHAR(10), ERROR_MESSAGE(), NCHAR(13), NCHAR(10));
 END;
 GO
 
@@ -75,18 +61,26 @@ GO
    Automation está deshabilitado, cada mensaje también lo informa. */
 BEGIN TRY
     EXEC DatosGenerales.usp_ConsumirAPI @url = N'  ';
-    PRINT N'CA1a: FALLÓ, se esperaba un error de validación.';
+    PRINT N'CA1a: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'CA1a', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'CA1a: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'CA1a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_ConsumirAPI @url = N'http://api.worldbank.org/v2/country/all/indicator/NY.GDP.PCAP.CD';
-    PRINT N'CA1b: FALLÓ, se esperaba un error de validación.';
+    PRINT N'CA1b: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'CA1b', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'CA1b: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'CA1b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -158,10 +152,14 @@ GO
    servidor no se pudo resolver. Sin conexión es el mismo error. */
 BEGIN TRY
     EXEC DatosGenerales.usp_ConsumirAPI @url = N'https://servidor-inexistente.invalid/';
-    PRINT N'CA4: FALLÓ, se esperaba un error.';
+    PRINT N'CA4: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'CA4', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'CA4: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'CA4: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -190,10 +188,14 @@ ELSE
 BEGIN
     BEGIN TRY
         EXEC DatosGenerales.usp_ConsumirAPI @url = N'https://api.worldbank.org/v2/country/ARG/indicator/NY.GDP.PCAP.CD';
-        PRINT N'CA5: FALLÓ, se esperaba un error de validación.';
+        PRINT N'CA5: ERROR, se esperaba un error de validación.';
     END TRY
     BEGIN CATCH
-        EXEC #usp_MostrarError @caso = 'CA5', @error_esperado = 50001;
+        IF ERROR_NUMBER() = 50001
+            PRINT N'CA5: OK, falló como se esperaba.';
+        ELSE
+            PRINT CONCAT(N'CA5: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+        PRINT ERROR_MESSAGE();
     END CATCH;
 END;
 GO

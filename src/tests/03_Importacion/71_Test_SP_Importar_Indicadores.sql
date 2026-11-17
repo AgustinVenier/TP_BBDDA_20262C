@@ -10,9 +10,9 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 29/10/2026
- Archivo: 75_Test_SP_Importar_Indicadores.sql
+ Archivo: 71_Test_SP_Importar_Indicadores.sql
  Objetivo: Probar la importación masiva de indicadores económicos de
-           25_SP_Importar_Indicadores.sql, con el registro de cada
+           21_SP_Importar_Indicadores.sql, con el registro de cada
            importación y de sus rechazados
            (DatosGenerales.ERRORES_INDICADOR_ECONOMICO):
              - procesando respuestas con el formato de la API del Banco
@@ -21,9 +21,9 @@
                los documentos que no se pueden importar;
              - consultando la API del Banco Mundial (casos AP, necesitan
                internet).
-           Las reglas de los indicadores las prueba 66_Test_SP_Importacion.sql,
-           con DatosGenerales.usp_ImportarIndicadoresEconomicos.
-           Requiere haber ejecutado 00 a 25. No depende del juego de datos:
+           Las reglas de los indicadores las prueba 66_Test_SP_CargaMasiva.sql,
+           con DatosGenerales.usp_CargarIndicadoresEconomicos.
+           Requiere haber ejecutado 01 a 28. No depende del juego de datos:
            las respuestas escritas usan su propio indicador (TP.PRUEBA.PBI) y
            el caso de la API importa solo la población de Argentina en 2024
            (SP.POP.TOTL). Al final se borra lo que cargó el test, con el
@@ -33,9 +33,10 @@
 
  Transacciones: la importación puede correr dentro de una transacción del
  que la llama, que IX7 deshace con ROLLBACK (con el registro de la
- importación). Los demás casos no se deshacen: el test borra al final, con
- los SP de baja, los indicadores que cargó y el registro de sus
- importaciones.
+ importación). Los demás casos no se deshacen: el test borra al principio y
+ al final, con DELETE directos, los indicadores que cargó y el registro de
+ sus importaciones. No corre todo en una transacción porque habilitar OLE
+ Automation (RECONFIGURE) no se puede hacer dentro de una.
 
  OLE Automation: los casos AP llaman a la API con OLE Automation. Si la
  instancia lo tiene deshabilitado, el test lo habilita antes de esos casos y
@@ -47,12 +48,13 @@
      omitidos por motivo, los rechazados con sus motivos y los datos que
      quedaron.
    - Casos ERROR: en Mensajes se imprime "OK" y el mensaje que devolvió el SP.
-     Si el SP no falla, o falla con otro número de error, se imprime "FALLÓ".
+     Si el SP no falla, o falla con otro número de error, se imprime "ERROR".
    - Al final, la verificación tiene que mostrar 0 datos de prueba y OLE
      Automation como estaba antes del test.
 */
 
 USE MundialFutbol;
+SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los métodos XML lo necesitan en ON
 GO
 
 SET NOCOUNT ON;
@@ -68,74 +70,22 @@ EXEC sp_set_session_context @key = N'ole_antes', @value = @ole_antes;
 EXEC sp_set_session_context @key = N'avanzadas_antes', @value = @avanzadas_antes;
 
 IF OBJECT_ID(N'DatosGenerales.usp_ImportarIndicadoresAPI', N'P') IS NULL
-   OR OBJECT_ID(N'DatosGenerales.usp_ImportarIndicadoresEconomicos', N'P') IS NULL
+   OR OBJECT_ID(N'DatosGenerales.usp_CargarIndicadoresEconomicos', N'P') IS NULL
    OR OBJECT_ID(N'DatosGenerales.usp_ConsumirAPI', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PAIS WHERE codigo_iso3 = 'GBR')
 BEGIN
-    RAISERROR(N'Faltan los SP de importación o los datos iniciales: ejecutar los scripts 00 a 25.', 16, 1);
+    RAISERROR(N'Faltan los SP de importación o los datos iniciales: ejecutar los scripts 01 a 28.', 16, 1);
     SET NOEXEC ON;
 END;
 GO
 
-IF OBJECT_ID(N'tempdb..#usp_MostrarError', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_MostrarError;
-GO
-CREATE PROCEDURE #usp_MostrarError
-    @caso            VARCHAR(10),
-    @error_esperado  INT
-AS
-BEGIN
-    PRINT CONCAT(@caso, N': ',
-                 IIF(ERROR_NUMBER() = @error_esperado, N'OK, falló como se esperaba.',
-                     CONCAT(N'FALLÓ, error inesperado ', ERROR_NUMBER(), N'.')),
-                 NCHAR(13), NCHAR(10), ERROR_MESSAGE(), NCHAR(13), NCHAR(10));
-END;
-GO
-
--- Borra con el SP de baja el valor de TP.PRUEBA.PBI de un país y año, si existe.
-IF OBJECT_ID(N'tempdb..#usp_BorrarIndicadorPrueba', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_BorrarIndicadorPrueba;
-GO
-CREATE PROCEDURE #usp_BorrarIndicadorPrueba
-    @pais  VARCHAR(60),
-    @anio  SMALLINT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    DECLARE @id INT = (SELECT ie.id_indicador
-                       FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
-                       INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = ie.id_pais
-                       WHERE p.nombre = @pais COLLATE DATABASE_DEFAULT
-                         AND ie.codigo_indicador = 'TP.PRUEBA.PBI' AND ie.anio = @anio);
-    IF @id IS NOT NULL
-        EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Baja @id_indicador = @id;
-END;
-GO
-
--- Borra el registro de las importaciones de los casos IX (su origen es el nombre del caso), con sus rechazados.
-IF OBJECT_ID(N'tempdb..#usp_BorrarImportacionesPrueba', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_BorrarImportacionesPrueba;
-GO
-CREATE PROCEDURE #usp_BorrarImportacionesPrueba
-AS
-BEGIN
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'IX1';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'IX2';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'IX3';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'IX4';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'IX5';
-END;
-GO
-
--- Por si una corrida anterior del test quedó a medias: los 7 valores que cargan los casos IX y sus importaciones.
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Argentina',  @anio = 2023;
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Argentina',  @anio = 2024;
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Inglaterra', @anio = 2024;
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Escocia',    @anio = 2024;
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Brasil',     @anio = 2024;
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Uruguay',    @anio = 2022;
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Ecuador',    @anio = 2023;
-EXEC #usp_BorrarImportacionesPrueba;
+-- Por si una corrida anterior del test quedó a medias: los valores de TP.PRUEBA.PBI que
+-- cargan los casos IX y el registro de sus importaciones, con sus rechazados.
+DELETE FROM DatosGenerales.INDICADOR_ECONOMICO WHERE codigo_indicador = 'TP.PRUEBA.PBI';
+DELETE e FROM DatosGenerales.ERRORES_INDICADOR_ECONOMICO AS e
+INNER JOIN DatosGenerales.IMPORTACION AS i ON i.id_importacion = e.id_importacion
+WHERE i.origen IN (N'IX1', N'IX2', N'IX3', N'IX4', N'IX5');
+DELETE FROM DatosGenerales.IMPORTACION WHERE origen IN (N'IX1', N'IX2', N'IX3', N'IX4', N'IX5');
 GO
 
 
@@ -226,26 +176,23 @@ ORDER BY p.nombre, ie.anio;
 GO
 
 
-/* IX4 (OK) Importación con errores parciales: una respuesta con 12
+/* IX4 (OK) Importación con errores parciales: una respuesta con 9
    registros.
-   Esperado: 12 leídos, 2 insertados (Uruguay 2022 y Ecuador 2023), 1 omitido
-   (la copia de Ecuador 2023 con el mismo valor) y 9 rechazados, con estos
-   motivos:
+   Esperado: 9 leídos, 2 insertados (Uruguay 2022 y Ecuador 2023) y 7
+   rechazados, con estos motivos:
      BOL (sin año)    el año es obligatorio.
      CHL 2023         el código del indicador es obligatorio.
      CHL 2024         el código "TP PRUEBA PBI" tiene espacios.
-     COL 2023 (x2)    la respuesta trae 2 veces Colombia 2023 con valores
-                      distintos: se rechazan las dos.
      PER 2023         el valor no es un número válido (15 dígitos enteros).
      PRY 1950         el año debe estar entre 1960 y el actual.
      URY 2023         el valor "dos mil" no es un número.
      URY 2023Q1       el año no es un año (AAAA).
    Quedan importados Uruguay 2022 (1234.5000) y Ecuador 2023 (300.0000), y
-   nada de Colombia, Paraguay, Perú, Bolivia ni Chile. Los 9 rechazados
+   nada de Paraguay, Perú, Bolivia ni Chile. Los 7 rechazados
    quedan en DatosGenerales.ERRORES_INDICADOR_ECONOMICO, con el número de la
    importación y el texto que traía la respuesta. */
 DECLARE @xml XML = N'
-<wb:data page="1" pages="1" per_page="50" total="12" sourceid="2" lastupdated="2026-10-08" xmlns:wb="http://www.worldbank.org">
+<wb:data page="1" pages="1" per_page="50" total="9" sourceid="2" lastupdated="2026-10-08" xmlns:wb="http://www.worldbank.org">
   <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="UY">Uruguay</wb:country>
            <wb:countryiso3code>URY</wb:countryiso3code><wb:date>2022</wb:date><wb:value>1234.5</wb:value></wb:data>
   <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="UY">Uruguay</wb:country>
@@ -258,12 +205,6 @@ DECLARE @xml XML = N'
            <wb:countryiso3code>CHL</wb:countryiso3code><wb:date>2024</wb:date><wb:value>10</wb:value></wb:data>
   <wb:data><wb:indicator>PBI de prueba</wb:indicator><wb:country id="CL">Chile</wb:country>
            <wb:countryiso3code>CHL</wb:countryiso3code><wb:date>2023</wb:date><wb:value>10</wb:value></wb:data>
-  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="CO">Colombia</wb:country>
-           <wb:countryiso3code>COL</wb:countryiso3code><wb:date>2023</wb:date><wb:value>100</wb:value></wb:data>
-  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="CO">Colombia</wb:country>
-           <wb:countryiso3code>COL</wb:countryiso3code><wb:date>2023</wb:date><wb:value>200</wb:value></wb:data>
-  <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="EC">Ecuador</wb:country>
-           <wb:countryiso3code>ECU</wb:countryiso3code><wb:date>2023</wb:date><wb:value>300</wb:value></wb:data>
   <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="EC">Ecuador</wb:country>
            <wb:countryiso3code>ECU</wb:countryiso3code><wb:date>2023</wb:date><wb:value>300</wb:value></wb:data>
   <wb:data><wb:indicator id="TP.PRUEBA.PBI">PBI de prueba</wb:indicator><wb:country id="PE">Peru</wb:country>
@@ -311,19 +252,27 @@ DECLARE @xml XML;
 BEGIN TRY
     SET @xml = N'<paises><pais codigo="ARG" pbi="13969.78">Argentina</pais></paises>';
     EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = N'IX6a';
-    PRINT N'IX6a: FALLÓ, se esperaba un error.';
+    PRINT N'IX6a: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'IX6a', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'IX6a: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'IX6a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     SET @xml = N'<wb:error xmlns:wb="http://www.worldbank.org"><wb:message id="120" key="Invalid value">The provided parameter value is not valid</wb:message></wb:error>';
     EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = N'IX6b';
-    PRINT N'IX6b: FALLÓ, se esperaba un error.';
+    PRINT N'IX6b: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'IX6b', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'IX6b: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'IX6b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
@@ -333,10 +282,14 @@ BEGIN TRY
            <wb:countryiso3code>ARG</wb:countryiso3code><wb:date>2024</wb:date><wb:value>1100.25</wb:value></wb:data>
 </wb:data>';
     EXEC DatosGenerales.usp_ProcesarIndicadoresXML @xml = @xml, @origen = N'IX6c';
-    PRINT N'IX6c: FALLÓ, se esperaba un error.';
+    PRINT N'IX6c: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'IX6c', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'IX6c: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'IX6c: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -389,18 +342,26 @@ GO
    consultar la API. */
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarIndicadoresAPI @codigo_indicador = 'NY GDP', @paises = 'ARG,BRA', @anio_desde = 1950;
-    PRINT N'AP1a: FALLÓ, se esperaba un error de validación.';
+    PRINT N'AP1a: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'AP1a', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'AP1a: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'AP1a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarIndicadoresAPI @anio_desde = 2024, @anio_hasta = 2020;
-    PRINT N'AP1b: FALLÓ, se esperaba un error de validación.';
+    PRINT N'AP1b: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'AP1b', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'AP1b: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'AP1b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -430,7 +391,7 @@ DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE codig
 DECLARE @existia BIT = IIF(EXISTS (SELECT 1 FROM DatosGenerales.INDICADOR_ECONOMICO
                                    WHERE id_pais = @id_pais AND codigo_indicador = 'SP.POP.TOTL'
                                      AND anio = 2024), 1, 0);
-DECLARE @id INT;
+DECLARE @id_indicador INT;
 DECLARE @id_importacion INT;
 
 BEGIN TRY
@@ -448,12 +409,12 @@ BEGIN CATCH
                  NCHAR(13), NCHAR(10), ERROR_MESSAGE(), NCHAR(13), NCHAR(10));
 END CATCH;
 
-SET @id = (SELECT id_indicador FROM DatosGenerales.INDICADOR_ECONOMICO
+SET @id_indicador = (SELECT id_indicador FROM DatosGenerales.INDICADOR_ECONOMICO
            WHERE id_pais = @id_pais AND codigo_indicador = 'SP.POP.TOTL' AND anio = 2024);
-IF @existia = 0 AND @id IS NOT NULL
-    EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Baja @id_indicador = @id;
-IF @id_importacion IS NOT NULL
-    EXEC DatosGenerales.usp_BorrarImportacion @id_importacion = @id_importacion;
+IF @existia = 0
+    DELETE FROM DatosGenerales.INDICADOR_ECONOMICO WHERE id_indicador = @id_indicador;
+DELETE FROM DatosGenerales.ERRORES_INDICADOR_ECONOMICO WHERE id_importacion = @id_importacion;
+DELETE FROM DatosGenerales.IMPORTACION WHERE id_importacion = @id_importacion;
 GO
 
 
@@ -464,10 +425,14 @@ GO
    pero porque no se pudo enviar el pedido. */
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarIndicadoresAPI @codigo_indicador = 'TP.NO.EXISTE', @anio_desde = 2024;
-    PRINT N'AP3: FALLÓ, se esperaba un error.';
+    PRINT N'AP3: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'AP3', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'AP3: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'AP3: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -487,14 +452,11 @@ GO
 
 
 -- Se borra lo que cargaron los casos IX, con el registro de sus importaciones.
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Argentina',  @anio = 2023;
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Argentina',  @anio = 2024;
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Inglaterra', @anio = 2024;
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Escocia',    @anio = 2024;
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Brasil',     @anio = 2024;
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Uruguay',    @anio = 2022;
-EXEC #usp_BorrarIndicadorPrueba @pais = 'Ecuador',    @anio = 2023;
-EXEC #usp_BorrarImportacionesPrueba;
+DELETE FROM DatosGenerales.INDICADOR_ECONOMICO WHERE codigo_indicador = 'TP.PRUEBA.PBI';
+DELETE e FROM DatosGenerales.ERRORES_INDICADOR_ECONOMICO AS e
+INNER JOIN DatosGenerales.IMPORTACION AS i ON i.id_importacion = e.id_importacion
+WHERE i.origen IN (N'IX1', N'IX2', N'IX3', N'IX4', N'IX5');
+DELETE FROM DatosGenerales.IMPORTACION WHERE origen IN (N'IX1', N'IX2', N'IX3', N'IX4', N'IX5');
 GO
 
 

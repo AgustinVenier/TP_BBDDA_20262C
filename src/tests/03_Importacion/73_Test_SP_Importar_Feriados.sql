@@ -10,22 +10,22 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 31/10/2026
- Archivo: 78_Test_SP_Importar_Feriados.sql
- Objetivo: Probar la importación de feriados de 28_SP_Importar_Feriados.sql,
+ Archivo: 73_Test_SP_Importar_Feriados.sql
+ Objetivo: Probar la importación de feriados de 23_SP_Importar_Feriados.sql,
            con el registro de cada importación y de sus rechazados
            (DatosGenerales.ERRORES_FERIADO). Las reglas de los feriados las
-           prueba 66_Test_SP_Importacion.sql, con
-           DatosGenerales.usp_ImportarFeriados:
+           prueba 66_Test_SP_CargaMasiva.sql, con
+           DatosGenerales.usp_CargarFeriados:
              - procesando respuestas con el formato de la API Nager.Date
                escritas en el test: alta (con Inglaterra y Escocia por
                separado), reimportación sin duplicados, actualización, dos
                feriados el mismo día, importación con errores parciales y los
                documentos que no se pueden importar;
              - consultando la API Nager.Date (casos AP, necesitan internet).
-           Requiere haber ejecutado 00 a 28 (usa Argentina, Inglaterra y
-           Escocia de 20_Ejecutar_DatosIniciales.sql). No depende del juego de datos:
+           Requiere haber ejecutado 01 a 28 (usa Argentina, Inglaterra y
+           Escocia de 28_Cargar_DatosIniciales.sql). No depende del juego de datos:
            las respuestas escritas son de 2001, un año que no importa
-           29_Ejecutar_ImportarAPIs.sql, y el caso de la API corre
+           31_Importar_APIs.sql, y el caso de la API corre
            dentro de una transacción que se deshace. Al final se borra lo que
            cargó el test, con el registro de sus importaciones, así que se
            puede ejecutar más de una vez.
@@ -42,12 +42,13 @@
      quedaron. Leídos, omitidos y rechazados cuentan registros de la API;
      insertados, actualizados y sin cambios, feriados por país y día.
    - Casos ERROR: en Mensajes se imprime "OK" y el mensaje que devolvió el SP.
-     Si el SP no falla, o falla con otro número de error, se imprime "FALLÓ".
+     Si el SP no falla, o falla con otro número de error, se imprime "ERROR".
    - Al final, la verificación tiene que mostrar 0 feriados de prueba y OLE
      Automation como estaba antes del test.
 */
 
 USE MundialFutbol;
+SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los métodos XML lo necesitan en ON
 GO
 
 SET NOCOUNT ON;
@@ -63,71 +64,25 @@ EXEC sp_set_session_context @key = N'ole_antes', @value = @ole_antes;
 EXEC sp_set_session_context @key = N'avanzadas_antes', @value = @avanzadas_antes;
 
 IF OBJECT_ID(N'DatosGenerales.usp_ImportarFeriadosAPI', N'P') IS NULL
-   OR OBJECT_ID(N'DatosGenerales.usp_ImportarFeriados', N'P') IS NULL
+   OR OBJECT_ID(N'DatosGenerales.usp_CargarFeriados', N'P') IS NULL
    OR (SELECT COUNT(*) FROM DatosGenerales.PAIS WHERE codigo_fifa IN ('ARG', 'ENG', 'SCO')) < 3
 BEGIN
-    RAISERROR(N'Faltan los SP de importación de feriados o los datos iniciales: ejecutar los scripts 00 a 28.', 16, 1);
+    RAISERROR(N'Faltan los SP de importación de feriados o los datos iniciales: ejecutar los scripts 01 a 28.', 16, 1);
     SET NOEXEC ON;
 END;
 GO
 
-IF OBJECT_ID(N'tempdb..#usp_MostrarError', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_MostrarError;
-GO
-CREATE PROCEDURE #usp_MostrarError
-    @caso            VARCHAR(10),
-    @error_esperado  INT
-AS
-BEGIN
-    PRINT CONCAT(@caso, N': ',
-                 IIF(ERROR_NUMBER() = @error_esperado, N'OK, falló como se esperaba.',
-                     CONCAT(N'FALLÓ, error inesperado ', ERROR_NUMBER(), N'.')),
-                 NCHAR(13), NCHAR(10), ERROR_MESSAGE(), NCHAR(13), NCHAR(10));
-END;
-GO
-
--- Borra con el SP de baja el feriado de un país (por código FIFA) y fecha, si existe.
-IF OBJECT_ID(N'tempdb..#usp_BorrarFeriadoPrueba', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_BorrarFeriadoPrueba;
-GO
-CREATE PROCEDURE #usp_BorrarFeriadoPrueba
-    @codigo_fifa  CHAR(3),
-    @fecha        DATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    DECLARE @id INT = (SELECT f.id_feriado
-                       FROM DatosGenerales.FERIADO AS f
-                       INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = f.id_pais
-                       WHERE p.codigo_fifa = @codigo_fifa AND f.fecha = @fecha);
-    IF @id IS NOT NULL
-        EXEC DatosGenerales.usp_FERIADO_Baja @id_feriado = @id;
-END;
-GO
-
--- Borra el registro de las importaciones de los casos FX (su origen es el nombre del caso), con sus rechazados.
-IF OBJECT_ID(N'tempdb..#usp_BorrarImportacionesPrueba', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_BorrarImportacionesPrueba;
-GO
-CREATE PROCEDURE #usp_BorrarImportacionesPrueba
-AS
-BEGIN
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'FX1';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'FX2';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'FX3';
-    EXEC DatosGenerales.usp_BorrarImportacion @origen = N'FX4';
-END;
-GO
-
--- Por si una corrida anterior del test quedó a medias: los 7 feriados que cargan los casos FX y sus importaciones.
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-05-25';
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-06-20';
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-07-09';
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-12-25';
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ENG', @fecha = '2001-01-01';
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'SCO', @fecha = '2001-01-01';
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'SCO', @fecha = '2001-01-02';
-EXEC #usp_BorrarImportacionesPrueba;
+-- Por si una corrida anterior del test quedó a medias: los 7 feriados que cargan los
+-- casos FX y el registro de sus importaciones, con sus rechazados.
+DELETE f FROM DatosGenerales.FERIADO AS f
+INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = f.id_pais
+WHERE (p.codigo_fifa = 'ARG' AND f.fecha IN ('2001-05-25', '2001-06-20', '2001-07-09', '2001-12-25'))
+   OR (p.codigo_fifa = 'ENG' AND f.fecha = '2001-01-01')
+   OR (p.codigo_fifa = 'SCO' AND f.fecha IN ('2001-01-01', '2001-01-02'));
+DELETE e FROM DatosGenerales.ERRORES_FERIADO AS e
+INNER JOIN DatosGenerales.IMPORTACION AS i ON i.id_importacion = e.id_importacion
+WHERE i.origen IN (N'FX1', N'FX2', N'FX3', N'FX4');
+DELETE FROM DatosGenerales.IMPORTACION WHERE origen IN (N'FX1', N'FX2', N'FX3', N'FX4');
 GO
 
 
@@ -241,30 +196,42 @@ GO
    Esperado: error 50002 en los tres, sin importar nada. */
 BEGIN TRY
     EXEC DatosGenerales.usp_ProcesarFeriadosJSON @json = N'[{"date":"2001-07-09","localNa', @origen = N'FX5a';
-    PRINT N'FX5a: FALLÓ, se esperaba un error.';
+    PRINT N'FX5a: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'FX5a', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'FX5a: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'FX5a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_ProcesarFeriadosJSON
         @json = N'{"title":"Unknown country code","status":404,"detail":"The country code provided is invalid or not recognized."}',
         @origen = N'FX5b';
-    PRINT N'FX5b: FALLÓ, se esperaba un error.';
+    PRINT N'FX5b: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'FX5b', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'FX5b: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'FX5b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_ProcesarFeriadosJSON
         @json = N'{"date":"2001-07-09","localName":"Independencia","countryCode":"AR","global":true,"types":["Public"]}',
         @origen = N'FX5c';
-    PRINT N'FX5c: FALLÓ, se esperaba un error.';
+    PRINT N'FX5c: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'FX5c', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'FX5c: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'FX5c: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -276,18 +243,26 @@ GO
    consultar la API. */
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarFeriadosAPI @codigo_iso2 = 'ARG', @anio = 1950;
-    PRINT N'AP1a: FALLÓ, se esperaba un error de validación.';
+    PRINT N'AP1a: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'AP1a', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'AP1a: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'AP1a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarFeriadosAPI @codigo_iso2 = 'zz';
-    PRINT N'AP1b: FALLÓ, se esperaba un error de validación.';
+    PRINT N'AP1b: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'AP1b', @error_esperado = 50001;
+    IF ERROR_NUMBER() = 50001
+        PRINT N'AP1b: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'AP1b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -338,10 +313,14 @@ GO
    porque no se pudo enviar el pedido. */
 BEGIN TRY
     EXEC DatosGenerales.usp_ImportarFeriadosAPI @codigo_iso2 = 'IR', @anio = 2026;
-    PRINT N'AP3: FALLÓ, se esperaba un error.';
+    PRINT N'AP3: ERROR, se esperaba un error.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'AP3', @error_esperado = 50002;
+    IF ERROR_NUMBER() = 50002
+        PRINT N'AP3: OK, falló como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'AP3: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -361,14 +340,15 @@ GO
 
 
 -- Se borra lo que cargaron los casos FX, con el registro de sus importaciones.
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-05-25';
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-06-20';
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-07-09';
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ARG', @fecha = '2001-12-25';
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'ENG', @fecha = '2001-01-01';
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'SCO', @fecha = '2001-01-01';
-EXEC #usp_BorrarFeriadoPrueba @codigo_fifa = 'SCO', @fecha = '2001-01-02';
-EXEC #usp_BorrarImportacionesPrueba;
+DELETE f FROM DatosGenerales.FERIADO AS f
+INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = f.id_pais
+WHERE (p.codigo_fifa = 'ARG' AND f.fecha IN ('2001-05-25', '2001-06-20', '2001-07-09', '2001-12-25'))
+   OR (p.codigo_fifa = 'ENG' AND f.fecha = '2001-01-01')
+   OR (p.codigo_fifa = 'SCO' AND f.fecha IN ('2001-01-01', '2001-01-02'));
+DELETE e FROM DatosGenerales.ERRORES_FERIADO AS e
+INNER JOIN DatosGenerales.IMPORTACION AS i ON i.id_importacion = e.id_importacion
+WHERE i.origen IN (N'FX1', N'FX2', N'FX3', N'FX4');
+DELETE FROM DatosGenerales.IMPORTACION WHERE origen IN (N'FX1', N'FX2', N'FX3', N'FX4');
 GO
 
 
