@@ -10,36 +10,39 @@
    Venier, Agustin - AgustinVenier
 
  Fecha: 25/10/2026
- Archivo: 54_Test_SP_ABM_DatosGenerales.sql
- Objetivo: Probar los SP de 04_SP_ABM_DatosGenerales.sql. Para cada tabla hay
+ Archivo: 55_Test_SP_ABM_DatosGenerales.sql
+ Objetivo: Probar los SP de 05_SP_ABM_DatosGenerales.sql. Para cada tabla hay
            casos exitosos, con la evidencia de los datos antes y después, y
            casos que no cumplen las validaciones, que deben fallar con un único
            mensaje que liste todas las condiciones incumplidas.
-           Requiere haber ejecutado 00 a 20: los casos de parámetros usan los
-           valores del reglamento de 20_Ejecutar_DatosIniciales.sql, e I6, el idioma
+           Requiere haber ejecutado 01 a 28: los casos de parámetros usan los
+           valores del reglamento de 28_Cargar_DatosIniciales.sql, e I6, el idioma
            inglés que carga ese script. No depende del juego de
            datos: crea sus propios datos de prueba (dos países, un
            idioma, un parámetro, una cotización, un feriado y, para las bajas
-           rechazadas por referencias, un árbitro y una sede) y los borra al
-           empezar y al terminar con los SP de baja, así que se puede
-           ejecutar más de una vez.
+           rechazadas por referencias, un árbitro y una sede). Corre dentro
+           de una transacción que se deshace al final, así que no deja datos
+           y se puede ejecutar más de una vez.
 ================================================================================
 
  Cómo leer los resultados:
    - Casos OK: la grilla muestra los datos antes y después (columna "caso").
    - Casos ERROR: en Mensajes se imprime "OK" y el mensaje que devolvió el SP.
      Si el SP no falla, o falla con un error que no es de validación, se
-     imprime "FALLÓ".
+     imprime "ERROR".
    - Al final, la verificación tiene que mostrar 0 datos de prueba y los
-     parámetros del reglamento sin cambios.
-   - El árbitro de prueba se llama "Arbitro Prueba DatosGenerales" y la sede,
-     "Estadio Prueba DatosGenerales".
+     parámetros del reglamento sin cambios. Si no da 0, quedó algo sin
+     deshacer.
+   - El árbitro de prueba es Yoshimi Yamashita, de Japón1, y la sede, el
+     "Estadio Nacional1" de Tokio; se cargan con INSERT directos (no son de
+     este script).
  Los datos de prueba usan códigos que no son de ningún país real: XA y XAA son
  de uso privado en ISO 3166 y XTS es el código de prueba de ISO 4217; xx y xy
  no están asignados en ISO 639-1.
 */
 
 USE MundialFutbol;
+SET QUOTED_IDENTIFIER ON;   -- sqlcmd arranca con OFF; los métodos XML lo necesitan en ON
 GO
 
 SET NOCOUNT ON;
@@ -51,104 +54,13 @@ IF OBJECT_ID(N'DatosGenerales.usp_PAIS_Alta', N'P') IS NULL
    OR OBJECT_ID(N'Arbitraje.usp_ARBITRO_Alta', N'P') IS NULL
    OR NOT EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'MAX_CONVOCADOS')
 BEGIN
-    RAISERROR(N'Faltan los SP de ABM o los datos iniciales: ejecutar los scripts 00 a 20.', 16, 1);
+    RAISERROR(N'Faltan los SP de ABM o los datos iniciales: ejecutar los scripts 01 a 28.', 16, 1);
     SET NOEXEC ON;
 END;
 GO
 
--- Procedimiento temporal (dura lo que la sesión) que se llama desde los CATCH
--- de los casos que tienen que fallar: informa si el error fue el de validación.
-IF OBJECT_ID(N'tempdb..#usp_MostrarError', N'P') IS NOT NULL
-    DROP PROCEDURE #usp_MostrarError;
-GO
-CREATE PROCEDURE #usp_MostrarError
-    @caso VARCHAR(10)
-AS
-BEGIN
-    PRINT CONCAT(@caso, N': ',
-                 IIF(ERROR_NUMBER() = 50001, N'OK, falló la validación como se esperaba.',
-                     CONCAT(N'FALLÓ, error inesperado ', ERROR_NUMBER(), N'.')),
-                 NCHAR(13), NCHAR(10), ERROR_MESSAGE(), NCHAR(13), NCHAR(10));
-END;
-GO
-
--- Limpieza de datos de prueba de una corrida anterior que haya quedado a medias.
--- Se usan los SP de baja; el contador evita un ciclo infinito si una baja no borrara.
-DECLARE @id INT, @id_idioma SMALLINT, @vuelta INT = 0;
-
--- Idiomas del árbitro de prueba, el árbitro y la sede de prueba (casos I7 y P8).
-WHILE @vuelta < 20
-BEGIN
-    SET @vuelta += 1;
-    SELECT TOP (1) @id = ai.id_arbitro, @id_idioma = ai.id_idioma
-    FROM Arbitraje.ARBITRO_IDIOMA AS ai
-    INNER JOIN Arbitraje.ARBITRO AS a ON a.id_arbitro = ai.id_arbitro
-    WHERE a.apellido = N'Prueba DatosGenerales';
-    IF @@ROWCOUNT = 0 BREAK;
-    EXEC Arbitraje.usp_ARBITRO_IDIOMA_Baja @id_arbitro = @id, @id_idioma = @id_idioma;
-END;
-
-SET @vuelta = 0;
-WHILE @vuelta < 20
-BEGIN
-    SET @vuelta += 1;
-    SET @id = (SELECT TOP (1) id_arbitro FROM Arbitraje.ARBITRO WHERE apellido = N'Prueba DatosGenerales');
-    IF @id IS NULL BREAK;
-    EXEC Arbitraje.usp_ARBITRO_Baja @id_arbitro = @id, @eliminar_registro = 1;
-END;
-
-SET @id = (SELECT id_sede FROM Torneo.SEDE WHERE nombre_estadio = 'Estadio Prueba DatosGenerales');
-IF @id IS NOT NULL
-    EXEC Torneo.usp_SEDE_Baja @id_sede = @id;
-
-SET @vuelta = 0;
-WHILE @vuelta < 20
-BEGIN
-    SET @vuelta += 1;
-    SET @id = (SELECT TOP (1) ie.id_indicador
-               FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
-               INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = ie.id_pais
-               WHERE p.nombre LIKE 'Pais Prueba%');
-    IF @id IS NULL BREAK;
-    EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Baja @id_indicador = @id;
-END;
-
-SET @vuelta = 0;
-WHILE @vuelta < 20
-BEGIN
-    SET @vuelta += 1;
-    SET @id = (SELECT TOP (1) f.id_feriado
-               FROM DatosGenerales.FERIADO AS f
-               INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = f.id_pais
-               WHERE p.nombre LIKE 'Pais Prueba%');
-    IF @id IS NULL BREAK;
-    EXEC DatosGenerales.usp_FERIADO_Baja @id_feriado = @id;
-END;
-
-SET @id = (SELECT id_cotizacion FROM DatosGenerales.COTIZACION WHERE codigo_moneda = 'XTS' AND fecha = '2026-06-11');
-IF @id IS NOT NULL
-    EXEC DatosGenerales.usp_COTIZACION_Baja @id_cotizacion = @id;
-
-SET @vuelta = 0;
-WHILE @vuelta < 20
-BEGIN
-    SET @vuelta += 1;
-    SET @id = (SELECT TOP (1) id_pais FROM DatosGenerales.PAIS WHERE nombre LIKE 'Pais Prueba%');
-    IF @id IS NULL BREAK;
-    EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id;
-END;
-
-SET @vuelta = 0;
-WHILE @vuelta < 20
-BEGIN
-    SET @vuelta += 1;
-    SET @id = (SELECT TOP (1) id_idioma FROM DatosGenerales.IDIOMA WHERE nombre LIKE 'Idioma Prueba%');
-    IF @id IS NULL BREAK;
-    EXEC DatosGenerales.usp_IDIOMA_Baja @id_idioma = @id;
-END;
-
-IF EXISTS (SELECT 1 FROM DatosGenerales.PARAMETRO_REGLAMENTO WHERE codigo = 'TEST_PARAMETRO')
-    EXEC DatosGenerales.usp_PARAMETRO_REGLAMENTO_Baja @codigo = 'TEST_PARAMETRO';
+-- Todo el test corre en una transacción que se deshace al final: no deja datos de prueba.
+BEGIN TRANSACTION;
 GO
 
 
@@ -157,28 +69,28 @@ GO
    ============================================================================ */
 
 /* P1 (OK) Alta de dos países de prueba.
-   Esperado: 0 países de prueba antes y 2 después. En "Pais Prueba A" el nombre
+   Esperado: 0 países de prueba antes y 2 después. En "Argentina1" el nombre
    queda sin los espacios de los costados, los códigos en mayúsculas (ZZA, XA,
    XAA, XTS) y el huso como "Argentina Standard Time". */
-DECLARE @id_a SMALLINT, @id_b SMALLINT;
+DECLARE @id_pais_arg SMALLINT, @id_pais_jpn SMALLINT;
 
 SELECT 'P1 antes' AS caso, COUNT(*) AS paises_de_prueba
 FROM DatosGenerales.PAIS
-WHERE nombre LIKE 'Pais Prueba%';
+WHERE nombre IN ('Argentina1', 'República Argentina1', 'Japón1');
 
 EXEC DatosGenerales.usp_PAIS_Alta
-    @nombre = '  Pais Prueba A  ', @huso_horario = 'argentina standard time',
+    @nombre = '  Argentina1  ', @huso_horario = 'argentina standard time',
     @codigo_fifa = 'zza', @codigo_iso2 = 'xa', @codigo_iso3 = 'xaa', @codigo_moneda = 'xts',
-    @id_pais = @id_a OUTPUT;
+    @id_pais = @id_pais_arg OUTPUT;
 
 EXEC DatosGenerales.usp_PAIS_Alta
-    @nombre = 'Pais Prueba B', @huso_horario = 'Tokyo Standard Time', @codigo_fifa = 'ZZB',
-    @id_pais = @id_b OUTPUT;
+    @nombre = 'Japón1', @huso_horario = 'Tokyo Standard Time', @codigo_fifa = 'ZZB',
+    @id_pais = @id_pais_jpn OUTPUT;
 
 SELECT 'P1 después' AS caso, id_pais, nombre, codigo_fifa, codigo_iso2, codigo_iso3,
        huso_horario, codigo_moneda
 FROM DatosGenerales.PAIS
-WHERE id_pais IN (@id_a, @id_b);
+WHERE id_pais IN (@id_pais_arg, @id_pais_jpn);
 GO
 
 /* P2 (ERROR) Alta con todos los datos mal.
@@ -189,45 +101,53 @@ BEGIN TRY
     EXEC DatosGenerales.usp_PAIS_Alta
         @nombre = '   ', @huso_horario = 'Hora de Marte',
         @codigo_fifa = 'Z1', @codigo_iso2 = 'XYZ', @codigo_iso3 = 'X1', @codigo_moneda = 'pesos';
-    PRINT N'P2: FALLÓ, se esperaba un error de validación.';
+    PRINT N'P2: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'P2';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'P2: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'P2: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 /* P3 (ERROR) Alta con nombre y código FIFA que ya existen.
-   Esperado: error 50001 con 2 condiciones: ya existe "Pais Prueba A" y el
+   Esperado: error 50001 con 2 condiciones: ya existe "Argentina1" y el
    código FIFA ZZB ya lo tiene otro país. */
 BEGIN TRY
     EXEC DatosGenerales.usp_PAIS_Alta
-        @nombre = 'Pais Prueba A', @huso_horario = 'Argentina Standard Time', @codigo_fifa = 'ZZB';
-    PRINT N'P3: FALLÓ, se esperaba un error de validación.';
+        @nombre = 'Argentina1', @huso_horario = 'Argentina Standard Time', @codigo_fifa = 'ZZB';
+    PRINT N'P3: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'P3';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'P3: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'P3: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
-/* P4 (OK) Modificación parcial de "Pais Prueba A".
-   Esperado: cambian el nombre (a "Pais Prueba A2"), el huso (a
+/* P4 (OK) Modificación parcial de "Argentina1".
+   Esperado: cambian el nombre (a "República Argentina1"), el huso (a
    "Romance Standard Time") y la moneda (a EUR). Los códigos FIFA e ISO, que
    no se pasan, quedan como estaban. */
-DECLARE @id SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A');
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Argentina1');
 
 SELECT 'P4 antes' AS caso, id_pais, nombre, codigo_fifa, codigo_iso2, codigo_iso3,
        huso_horario, codigo_moneda
 FROM DatosGenerales.PAIS
-WHERE id_pais = @id;
+WHERE id_pais = @id_pais;
 
 EXEC DatosGenerales.usp_PAIS_Modificacion
-    @id_pais = @id, @nombre = 'Pais Prueba A2', @huso_horario = 'romance standard time',
+    @id_pais = @id_pais, @nombre = 'República Argentina1', @huso_horario = 'romance standard time',
     @codigo_moneda = 'eur';
 
 SELECT 'P4 después' AS caso, id_pais, nombre, codigo_fifa, codigo_iso2, codigo_iso3,
        huso_horario, codigo_moneda
 FROM DatosGenerales.PAIS
-WHERE id_pais = @id;
+WHERE id_pais = @id_pais;
 GO
 
 /* P5 (ERROR) Modificación de un país que no existe y sin datos.
@@ -235,27 +155,35 @@ GO
    se indicó ningún dato para modificar. */
 BEGIN TRY
     EXEC DatosGenerales.usp_PAIS_Modificacion @id_pais = -1;
-    PRINT N'P5: FALLÓ, se esperaba un error de validación.';
+    PRINT N'P5: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'P5';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'P5: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'P5: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
-/* P6 (ERROR) Modificación de "Pais Prueba B" con datos que chocan con otro país.
+/* P6 (ERROR) Modificación de "Japón1" con datos que chocan con otro país.
    Esperado: error 50001 con 3 condiciones: ya existe otro país llamado
-   "Pais Prueba A2", el código FIFA ZZA ya lo tiene otro país y el huso no
+   "República Argentina1", el código FIFA ZZA ya lo tiene otro país y el huso no
    existe. */
-DECLARE @id SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba B');
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Japón1');
 
 BEGIN TRY
     EXEC DatosGenerales.usp_PAIS_Modificacion
-        @id_pais = @id, @nombre = 'Pais Prueba A2', @codigo_fifa = 'ZZA',
+        @id_pais = @id_pais, @nombre = 'República Argentina1', @codigo_fifa = 'ZZA',
         @huso_horario = 'Hora de Marte';
-    PRINT N'P6: FALLÓ, se esperaba un error de validación.';
+    PRINT N'P6: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'P6';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'P6: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'P6: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -267,18 +195,18 @@ GO
 /* I1 (OK) Alta de un idioma de prueba.
    Esperado: 0 idiomas de prueba antes y una fila nueva después, con el código
    en minúsculas ("xx"). */
-DECLARE @id SMALLINT;
+DECLARE @id_idioma SMALLINT;
 
 SELECT 'I1 antes' AS caso, COUNT(*) AS idiomas_de_prueba
 FROM DatosGenerales.IDIOMA
-WHERE nombre LIKE 'Idioma Prueba%';
+WHERE nombre LIKE 'Guaraní1%';
 
 EXEC DatosGenerales.usp_IDIOMA_Alta
-    @nombre = 'Idioma Prueba', @codigo_iso = 'XX', @id_idioma = @id OUTPUT;
+    @nombre = 'Guaraní1', @codigo_iso = 'XX', @id_idioma = @id_idioma OUTPUT;
 
 SELECT 'I1 después' AS caso, id_idioma, nombre, codigo_iso
 FROM DatosGenerales.IDIOMA
-WHERE id_idioma = @id;
+WHERE id_idioma = @id_idioma;
 GO
 
 /* I2 (ERROR) Alta con nombre demasiado largo y código de 3 letras.
@@ -286,100 +214,119 @@ GO
    caracteres y el código ISO 639-1 no tiene 2 letras. */
 BEGIN TRY
     EXEC DatosGenerales.usp_IDIOMA_Alta
-        @nombre = 'Idioma Prueba con un nombre que supera el máximo', @codigo_iso = 'spa';
-    PRINT N'I2: FALLÓ, se esperaba un error de validación.';
+        @nombre = 'Guaraní1 con un nombre que supera el máximo', @codigo_iso = 'spa';
+    PRINT N'I2: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'I2';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'I2: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'I2: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 /* I3 (ERROR) Alta repetida.
-   Esperado: error 50001 con 2 condiciones: ya existe "Idioma Prueba" y el
+   Esperado: error 50001 con 2 condiciones: ya existe "Guaraní1" y el
    código "xx" ya lo tiene otro idioma. */
 BEGIN TRY
-    EXEC DatosGenerales.usp_IDIOMA_Alta @nombre = 'Idioma Prueba', @codigo_iso = 'xx';
-    PRINT N'I3: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_IDIOMA_Alta @nombre = 'Guaraní1', @codigo_iso = 'xx';
+    PRINT N'I3: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'I3';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'I3: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'I3: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 /* I4 (OK) Modificación del código.
    Esperado: el código pasa de "xx" a "xy" y el nombre no cambia. */
-DECLARE @id SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE nombre = 'Idioma Prueba');
+DECLARE @id_idioma SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE nombre = 'Guaraní1');
 
 SELECT 'I4 antes' AS caso, id_idioma, nombre, codigo_iso
 FROM DatosGenerales.IDIOMA
-WHERE id_idioma = @id;
+WHERE id_idioma = @id_idioma;
 
-EXEC DatosGenerales.usp_IDIOMA_Modificacion @id_idioma = @id, @codigo_iso = 'XY';
+EXEC DatosGenerales.usp_IDIOMA_Modificacion @id_idioma = @id_idioma, @codigo_iso = 'XY';
 
 SELECT 'I4 después' AS caso, id_idioma, nombre, codigo_iso
 FROM DatosGenerales.IDIOMA
-WHERE id_idioma = @id;
+WHERE id_idioma = @id_idioma;
 GO
 
 /* I5 (ERROR) Modificación sin datos: un nombre en blanco cuenta como no informado.
    Esperado: error 50001 con 1 condición: no se indicó ningún dato para
    modificar. */
-DECLARE @id SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE nombre = 'Idioma Prueba');
+DECLARE @id_idioma SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE nombre = 'Guaraní1');
 
 BEGIN TRY
-    EXEC DatosGenerales.usp_IDIOMA_Modificacion @id_idioma = @id, @nombre = '   ';
-    PRINT N'I5: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_IDIOMA_Modificacion @id_idioma = @id_idioma, @nombre = '   ';
+    PRINT N'I5: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'I5';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'I5: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'I5: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 /* I6 (ERROR) Modificación con el nombre y el código de otro idioma.
    Esperado: error 50001 con 2 condiciones: ya existe otro idioma llamado
-   "Inglés" y el código "en" ya lo tiene otro idioma. "Idioma Prueba" no
+   "Inglés" y el código "en" ya lo tiene otro idioma. "Guaraní1" no
    cambia. */
-DECLARE @id SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE nombre = 'Idioma Prueba');
+DECLARE @id_idioma SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE nombre = 'Guaraní1');
 
 BEGIN TRY
-    EXEC DatosGenerales.usp_IDIOMA_Modificacion @id_idioma = @id, @nombre = 'Inglés', @codigo_iso = 'en';
-    PRINT N'I6: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_IDIOMA_Modificacion @id_idioma = @id_idioma, @nombre = 'Inglés', @codigo_iso = 'en';
+    PRINT N'I6: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'I6';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'I6: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'I6: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 SELECT 'I6 después' AS caso, id_idioma, nombre, codigo_iso
 FROM DatosGenerales.IDIOMA
-WHERE id_idioma = @id;
+WHERE id_idioma = @id_idioma;
 GO
 
 /* I7 (ERROR) Baja de un idioma que habla un árbitro.
-   Preparación: se da de alta el árbitro "Arbitro Prueba DatosGenerales"
-   (de "Pais Prueba B") y se le registra "Idioma Prueba".
+   Preparación: con INSERT, la árbitra Yoshimi Yamashita (de Japón1),
+   que habla "Guaraní1".
    Esperado: error 50001 con 1 condición: lo referencia 1 registro de
    Arbitraje.ARBITRO_IDIOMA. El idioma de prueba sigue existiendo. */
-DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba B');
-DECLARE @id SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE nombre = 'Idioma Prueba');
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Japón1');
+DECLARE @id_idioma SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE nombre = 'Guaraní1');
 DECLARE @id_arbitro INT;
 
-EXEC Arbitraje.usp_ARBITRO_Alta
-    @id_pais = @id_pais, @nombre = N'Arbitro', @apellido = N'Prueba DatosGenerales',
-    @categoria = 'FIFA', @id_arbitro = @id_arbitro OUTPUT;
-EXEC Arbitraje.usp_ARBITRO_IDIOMA_Alta @id_arbitro = @id_arbitro, @id_idioma = @id;
+INSERT INTO Arbitraje.ARBITRO (id_pais, nombre, apellido, categoria) VALUES (@id_pais, N'Yoshimi', N'Yamashita', 'FIFA');
+SET @id_arbitro = SCOPE_IDENTITY();
+INSERT INTO Arbitraje.ARBITRO_IDIOMA (id_arbitro, id_idioma) VALUES (@id_arbitro, @id_idioma);
 
 BEGIN TRY
-    EXEC DatosGenerales.usp_IDIOMA_Baja @id_idioma = @id;
-    PRINT N'I7: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_IDIOMA_Baja @id_idioma = @id_idioma;
+    PRINT N'I7: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'I7';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'I7: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'I7: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 SELECT 'I7 después' AS caso, i.id_idioma, i.nombre, COUNT(ai.id_arbitro) AS arbitros_que_lo_hablan
 FROM DatosGenerales.IDIOMA AS i
 LEFT JOIN Arbitraje.ARBITRO_IDIOMA AS ai ON ai.id_idioma = i.id_idioma
-WHERE i.id_idioma = @id
+WHERE i.id_idioma = @id_idioma
 GROUP BY i.id_idioma, i.nombre;
 GO
 
@@ -387,27 +334,31 @@ GO
    Esperado: 1 idioma de prueba antes y 0 después.
    I9 (ERROR) Baja del mismo idioma otra vez.
    Esperado: error 50001 con 1 condición: no existe un idioma con ese id. */
-DECLARE @id SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE nombre = 'Idioma Prueba');
-DECLARE @id_arbitro INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE apellido = N'Prueba DatosGenerales');
+DECLARE @id_idioma SMALLINT = (SELECT id_idioma FROM DatosGenerales.IDIOMA WHERE nombre = 'Guaraní1');
+DECLARE @id_arbitro INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE nombre = N'Yoshimi' AND apellido = N'Yamashita');
 
-EXEC Arbitraje.usp_ARBITRO_IDIOMA_Baja @id_arbitro = @id_arbitro, @id_idioma = @id;
+DELETE FROM Arbitraje.ARBITRO_IDIOMA WHERE id_arbitro = @id_arbitro AND id_idioma = @id_idioma;
 
 SELECT 'I8 antes' AS caso, COUNT(*) AS idiomas_de_prueba
 FROM DatosGenerales.IDIOMA
-WHERE nombre LIKE 'Idioma Prueba%';
+WHERE nombre LIKE 'Guaraní1%';
 
-EXEC DatosGenerales.usp_IDIOMA_Baja @id_idioma = @id;
+EXEC DatosGenerales.usp_IDIOMA_Baja @id_idioma = @id_idioma;
 
 SELECT 'I8 después' AS caso, COUNT(*) AS idiomas_de_prueba
 FROM DatosGenerales.IDIOMA
-WHERE nombre LIKE 'Idioma Prueba%';
+WHERE nombre LIKE 'Guaraní1%';
 
 BEGIN TRY
-    EXEC DatosGenerales.usp_IDIOMA_Baja @id_idioma = @id;
-    PRINT N'I9: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_IDIOMA_Baja @id_idioma = @id_idioma;
+    PRINT N'I9: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'I9';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'I9: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'I9: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -416,11 +367,11 @@ GO
    INDICADOR_ECONOMICO
    ============================================================================ */
 
-/* E1 (OK) Alta del PBI per cápita 2024 de "Pais Prueba A2".
+/* E1 (OK) Alta del PBI per cápita 2024 de "República Argentina1".
    Esperado: 0 indicadores del país antes y una fila nueva después, con el
    código en mayúsculas (NY.GDP.PCAP.CD). */
-DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
-DECLARE @id INT;
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'República Argentina1');
+DECLARE @id_indicador INT;
 
 SELECT 'E1 antes' AS caso, COUNT(*) AS indicadores_del_pais
 FROM DatosGenerales.INDICADOR_ECONOMICO
@@ -428,13 +379,13 @@ WHERE id_pais = @id_pais;
 
 EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Alta
     @id_pais = @id_pais, @codigo_indicador = 'ny.gdp.pcap.cd', @anio = 2024, @valor = 12345.6789,
-    @id_indicador = @id OUTPUT;
+    @id_indicador = @id_indicador OUTPUT;
 
 SELECT 'E1 después' AS caso, ie.id_indicador, p.nombre AS pais, ie.codigo_indicador,
        ie.anio, ie.valor, ie.fecha_actualizacion
 FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
 INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = ie.id_pais
-WHERE ie.id_indicador = @id;
+WHERE ie.id_indicador = @id_indicador;
 GO
 
 /* E2 (ERROR) Alta con todos los datos mal.
@@ -444,84 +395,100 @@ GO
 BEGIN TRY
     EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Alta
         @id_pais = -1, @codigo_indicador = 'PBI per cápita', @anio = 1900, @valor = NULL;
-    PRINT N'E2: FALLÓ, se esperaba un error de validación.';
+    PRINT N'E2: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'E2';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'E2: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'E2: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 /* E3 (ERROR) Alta repetida: mismo país, indicador y año.
    Esperado: error 50001 con 1 condición: ese país ya tiene un valor de
    NY.GDP.PCAP.CD para 2024. */
-DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'República Argentina1');
 
 BEGIN TRY
     EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Alta
         @id_pais = @id_pais, @codigo_indicador = 'NY.GDP.PCAP.CD', @anio = 2024, @valor = 1;
-    PRINT N'E3: FALLÓ, se esperaba un error de validación.';
+    PRINT N'E3: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'E3';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'E3: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'E3: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 /* E4 (OK) Modificación del valor.
    Esperado: el valor pasa de 12345.6789 a 13000.5000; país, código y año no
    cambian y fecha_actualizacion se renueva. */
-DECLARE @id INT = (SELECT ie.id_indicador
+DECLARE @id_indicador INT = (SELECT ie.id_indicador
                    FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
                    INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = ie.id_pais
-                   WHERE p.nombre = 'Pais Prueba A2');
+                   WHERE p.nombre = 'República Argentina1');
 
 SELECT 'E4 antes' AS caso, id_indicador, id_pais, codigo_indicador, anio, valor, fecha_actualizacion
 FROM DatosGenerales.INDICADOR_ECONOMICO
-WHERE id_indicador = @id;
+WHERE id_indicador = @id_indicador;
 
-EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Modificacion @id_indicador = @id, @valor = 13000.5;
+EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Modificacion @id_indicador = @id_indicador, @valor = 13000.5;
 
 SELECT 'E4 después' AS caso, id_indicador, id_pais, codigo_indicador, anio, valor, fecha_actualizacion
 FROM DatosGenerales.INDICADOR_ECONOMICO
-WHERE id_indicador = @id;
+WHERE id_indicador = @id_indicador;
 GO
 
 /* E5 (ERROR) Modificación con código demasiado largo y año futuro.
    Esperado: error 50001 con 2 condiciones: el código supera los 30
    caracteres y el año está fuera de rango. */
-DECLARE @id INT = (SELECT ie.id_indicador
+DECLARE @id_indicador INT = (SELECT ie.id_indicador
                    FROM DatosGenerales.INDICADOR_ECONOMICO AS ie
                    INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = ie.id_pais
-                   WHERE p.nombre = 'Pais Prueba A2');
+                   WHERE p.nombre = 'República Argentina1');
 DECLARE @anio_futuro SMALLINT = YEAR(GETDATE()) + 1;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Modificacion
-        @id_indicador = @id, @codigo_indicador = 'NY.GDP.PCAP.CD.CODIGO.DEMASIADO.LARGO',
+        @id_indicador = @id_indicador, @codigo_indicador = 'NY.GDP.PCAP.CD.CODIGO.DEMASIADO.LARGO',
         @anio = @anio_futuro;
-    PRINT N'E5: FALLÓ, se esperaba un error de validación.';
+    PRINT N'E5: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'E5';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'E5: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'E5: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 /* E6 (ERROR) Modificación que dejaría dos valores para el mismo año.
-   Preparación: el PBI per cápita 2023 de "Pais Prueba A2".
+   Preparación: el PBI per cápita 2023 de "República Argentina1".
    Esperado: error 50001 con 1 condición: ese país ya tiene otro valor de
    NY.GDP.PCAP.CD para 2024. El valor de 2023 queda como estaba; después se
    borra, y el país vuelve a tener solo el de 2024. */
-DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
-DECLARE @id INT;
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'República Argentina1');
+DECLARE @id_indicador INT;
 EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Alta
     @id_pais = @id_pais, @codigo_indicador = 'NY.GDP.PCAP.CD', @anio = 2023, @valor = 11850.25,
-    @id_indicador = @id OUTPUT;
+    @id_indicador = @id_indicador OUTPUT;
 
 BEGIN TRY
-    EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Modificacion @id_indicador = @id, @anio = 2024;
-    PRINT N'E6: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Modificacion @id_indicador = @id_indicador, @anio = 2024;
+    PRINT N'E6: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'E6';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'E6: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'E6: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 SELECT 'E6 después' AS caso, id_indicador, anio, valor
@@ -529,50 +496,58 @@ FROM DatosGenerales.INDICADOR_ECONOMICO
 WHERE id_pais = @id_pais
 ORDER BY anio;
 
-EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Baja @id_indicador = @id;
+EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Baja @id_indicador = @id_indicador;
 GO
 
 /* P7 (ERROR) Baja de un país que todavía tiene indicadores.
    Esperado: error 50001 con 1 condición: lo referencia 1 registro de
    DatosGenerales.INDICADOR_ECONOMICO. El país sigue existiendo. */
-DECLARE @id SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'República Argentina1');
 
 BEGIN TRY
-    EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id;
-    PRINT N'P7: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id_pais;
+    PRINT N'P7: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'P7';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'P7: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'P7: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 SELECT 'P7 después' AS caso, id_pais, nombre
 FROM DatosGenerales.PAIS
-WHERE id_pais = @id;
+WHERE id_pais = @id_pais;
 GO
 
 /* E7 (OK) Baja del indicador.
    Esperado: 1 indicador del país de prueba antes y 0 después.
    E8 (ERROR) Baja del mismo indicador otra vez.
    Esperado: error 50001 con 1 condición: no existe un indicador con ese id. */
-DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
-DECLARE @id INT = (SELECT id_indicador FROM DatosGenerales.INDICADOR_ECONOMICO WHERE id_pais = @id_pais);
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'República Argentina1');
+DECLARE @id_indicador INT = (SELECT id_indicador FROM DatosGenerales.INDICADOR_ECONOMICO WHERE id_pais = @id_pais);
 
 SELECT 'E7 antes' AS caso, COUNT(*) AS indicadores_del_pais
 FROM DatosGenerales.INDICADOR_ECONOMICO
 WHERE id_pais = @id_pais;
 
-EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Baja @id_indicador = @id;
+EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Baja @id_indicador = @id_indicador;
 
 SELECT 'E7 después' AS caso, COUNT(*) AS indicadores_del_pais
 FROM DatosGenerales.INDICADOR_ECONOMICO
 WHERE id_pais = @id_pais;
 
 BEGIN TRY
-    EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Baja @id_indicador = @id;
-    PRINT N'E8: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_INDICADOR_ECONOMICO_Baja @id_indicador = @id_indicador;
+    PRINT N'E8: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'E8';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'E8: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'E8: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -585,18 +560,18 @@ GO
 /* C1 (OK) Alta de la cotización de XTS del 11/06/2026.
    Esperado: 0 cotizaciones de XTS antes y una fila nueva después, con la
    moneda en mayúsculas y 1234.500000 unidades por dólar. */
-DECLARE @id INT;
+DECLARE @id_cotizacion INT;
 
 SELECT 'C1 antes' AS caso, COUNT(*) AS cotizaciones_de_prueba
 FROM DatosGenerales.COTIZACION
 WHERE codigo_moneda = 'XTS';
 
 EXEC DatosGenerales.usp_COTIZACION_Alta
-    @codigo_moneda = ' xts ', @fecha = '2026-06-11', @unidades_por_usd = 1234.5, @id_cotizacion = @id OUTPUT;
+    @codigo_moneda = ' xts ', @fecha = '2026-06-11', @unidades_por_usd = 1234.5, @id_cotizacion = @id_cotizacion OUTPUT;
 
 SELECT 'C1 después' AS caso, id_cotizacion, codigo_moneda, fecha, unidades_por_usd, fecha_actualizacion
 FROM DatosGenerales.COTIZACION
-WHERE id_cotizacion = @id;
+WHERE id_cotizacion = @id_cotizacion;
 GO
 
 /* C2 (ERROR) Alta con todos los datos mal, y alta del dólar.
@@ -607,18 +582,26 @@ DECLARE @manana DATE = DATEADD(DAY, 1, CONVERT(DATE, GETDATE()));
 
 BEGIN TRY
     EXEC DatosGenerales.usp_COTIZACION_Alta @codigo_moneda = 'US1', @fecha = @manana, @unidades_por_usd = 0;
-    PRINT N'C2a: FALLÓ, se esperaba un error de validación.';
+    PRINT N'C2a: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'C2a';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'C2a: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'C2a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_COTIZACION_Alta @codigo_moneda = 'usd', @fecha = '2026-06-11', @unidades_por_usd = 1;
-    PRINT N'C2b: FALLÓ, se esperaba un error de validación.';
+    PRINT N'C2b: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'C2b';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'C2b: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'C2b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -627,27 +610,31 @@ GO
    11/06/2026. */
 BEGIN TRY
     EXEC DatosGenerales.usp_COTIZACION_Alta @codigo_moneda = 'XTS', @fecha = '2026-06-11', @unidades_por_usd = 1;
-    PRINT N'C3: FALLÓ, se esperaba un error de validación.';
+    PRINT N'C3: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'C3';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'C3: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'C3: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 /* C4 (OK) Modificación de las unidades por dólar.
    Esperado: pasan de 1234.500000 a 1250.750000; la moneda y la fecha no
    cambian y fecha_actualizacion se renueva. */
-DECLARE @id INT = (SELECT id_cotizacion FROM DatosGenerales.COTIZACION WHERE codigo_moneda = 'XTS');
+DECLARE @id_cotizacion INT = (SELECT id_cotizacion FROM DatosGenerales.COTIZACION WHERE codigo_moneda = 'XTS');
 
 SELECT 'C4 antes' AS caso, id_cotizacion, codigo_moneda, fecha, unidades_por_usd, fecha_actualizacion
 FROM DatosGenerales.COTIZACION
-WHERE id_cotizacion = @id;
+WHERE id_cotizacion = @id_cotizacion;
 
-EXEC DatosGenerales.usp_COTIZACION_Modificacion @id_cotizacion = @id, @unidades_por_usd = 1250.75;
+EXEC DatosGenerales.usp_COTIZACION_Modificacion @id_cotizacion = @id_cotizacion, @unidades_por_usd = 1250.75;
 
 SELECT 'C4 después' AS caso, id_cotizacion, codigo_moneda, fecha, unidades_por_usd, fecha_actualizacion
 FROM DatosGenerales.COTIZACION
-WHERE id_cotizacion = @id;
+WHERE id_cotizacion = @id_cotizacion;
 GO
 
 /* C5 (ERROR) Modificación de una cotización que no existe y sin datos.
@@ -655,10 +642,14 @@ GO
    -1 y no se indicó ningún dato para modificar. */
 BEGIN TRY
     EXEC DatosGenerales.usp_COTIZACION_Modificacion @id_cotizacion = -1;
-    PRINT N'C5: FALLÓ, se esperaba un error de validación.';
+    PRINT N'C5: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'C5';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'C5: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'C5: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -666,24 +657,28 @@ GO
    Esperado: 1 cotización de XTS antes y 0 después.
    C7 (ERROR) Baja de la misma cotización otra vez.
    Esperado: error 50001 con 1 condición: no existe una cotización con ese id. */
-DECLARE @id INT = (SELECT id_cotizacion FROM DatosGenerales.COTIZACION WHERE codigo_moneda = 'XTS');
+DECLARE @id_cotizacion INT = (SELECT id_cotizacion FROM DatosGenerales.COTIZACION WHERE codigo_moneda = 'XTS');
 
 SELECT 'C6 antes' AS caso, COUNT(*) AS cotizaciones_de_prueba
 FROM DatosGenerales.COTIZACION
 WHERE codigo_moneda = 'XTS';
 
-EXEC DatosGenerales.usp_COTIZACION_Baja @id_cotizacion = @id;
+EXEC DatosGenerales.usp_COTIZACION_Baja @id_cotizacion = @id_cotizacion;
 
 SELECT 'C6 después' AS caso, COUNT(*) AS cotizaciones_de_prueba
 FROM DatosGenerales.COTIZACION
 WHERE codigo_moneda = 'XTS';
 
 BEGIN TRY
-    EXEC DatosGenerales.usp_COTIZACION_Baja @id_cotizacion = @id;
-    PRINT N'C7: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_COTIZACION_Baja @id_cotizacion = @id_cotizacion;
+    PRINT N'C7: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'C7';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'C7: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'C7: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -692,23 +687,23 @@ GO
    FERIADO
    ============================================================================ */
 
-/* F1 (OK) Alta de un feriado de "Pais Prueba A2" el 20/06/2026.
+/* F1 (OK) Alta de un feriado de "República Argentina1" el 20/06/2026.
    Esperado: 0 feriados del país antes y una fila nueva después, con el
    nombre sin los espacios de los costados. */
-DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
-DECLARE @id INT;
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'República Argentina1');
+DECLARE @id_feriado INT;
 
 SELECT 'F1 antes' AS caso, COUNT(*) AS feriados_del_pais
 FROM DatosGenerales.FERIADO
 WHERE id_pais = @id_pais;
 
 EXEC DatosGenerales.usp_FERIADO_Alta
-    @id_pais = @id_pais, @fecha = '2026-06-20', @nombre = N'  Día de Prueba  ', @id_feriado = @id OUTPUT;
+    @id_pais = @id_pais, @fecha = '2026-06-20', @nombre = N'  Día de la Bandera  ', @id_feriado = @id_feriado OUTPUT;
 
 SELECT 'F1 después' AS caso, f.id_feriado, p.nombre AS pais, f.fecha, f.nombre, f.fecha_actualizacion
 FROM DatosGenerales.FERIADO AS f
 INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = f.id_pais
-WHERE f.id_feriado = @id;
+WHERE f.id_feriado = @id_feriado;
 GO
 
 /* F2 (ERROR) Alta con todos los datos mal.
@@ -718,44 +713,52 @@ DECLARE @nombre_largo NVARCHAR(400) = REPLICATE(N'x', 201);
 
 BEGIN TRY
     EXEC DatosGenerales.usp_FERIADO_Alta @id_pais = -1, @fecha = NULL, @nombre = @nombre_largo;
-    PRINT N'F2: FALLÓ, se esperaba un error de validación.';
+    PRINT N'F2: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'F2';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'F2: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'F2: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 /* F3 (ERROR) Alta repetida: mismo país y fecha, con otro nombre.
    Esperado: error 50001 con 1 condición: ese país ya tiene un feriado el
    20/06/2026. */
-DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'República Argentina1');
 
 BEGIN TRY
     EXEC DatosGenerales.usp_FERIADO_Alta @id_pais = @id_pais, @fecha = '2026-06-20', @nombre = N'Otro feriado';
-    PRINT N'F3: FALLÓ, se esperaba un error de validación.';
+    PRINT N'F3: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'F3';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'F3: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'F3: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 /* F4 (OK) Modificación del nombre, para registrar dos feriados del mismo día.
-   Esperado: el nombre pasa a "Día de Prueba / Otro feriado"; el país y la
+   Esperado: el nombre pasa a "Día de la Bandera / Paso a la Inmortalidad de Belgrano"; el país y la
    fecha no cambian y fecha_actualizacion se renueva. */
-DECLARE @id INT = (SELECT f.id_feriado
+DECLARE @id_feriado INT = (SELECT f.id_feriado
                    FROM DatosGenerales.FERIADO AS f
                    INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = f.id_pais
-                   WHERE p.nombre = 'Pais Prueba A2');
+                   WHERE p.nombre = 'República Argentina1');
 
 SELECT 'F4 antes' AS caso, id_feriado, id_pais, fecha, nombre, fecha_actualizacion
 FROM DatosGenerales.FERIADO
-WHERE id_feriado = @id;
+WHERE id_feriado = @id_feriado;
 
-EXEC DatosGenerales.usp_FERIADO_Modificacion @id_feriado = @id, @nombre = N'Día de Prueba / Otro feriado';
+EXEC DatosGenerales.usp_FERIADO_Modificacion @id_feriado = @id_feriado, @nombre = N'Día de la Bandera / Paso a la Inmortalidad de Belgrano';
 
 SELECT 'F4 después' AS caso, id_feriado, id_pais, fecha, nombre, fecha_actualizacion
 FROM DatosGenerales.FERIADO
-WHERE id_feriado = @id;
+WHERE id_feriado = @id_feriado;
 GO
 
 /* F5 (ERROR) Modificación de un feriado que no existe, a un país que no
@@ -764,102 +767,118 @@ GO
    no existe un país con id -1. */
 BEGIN TRY
     EXEC DatosGenerales.usp_FERIADO_Modificacion @id_feriado = -1, @id_pais = -1, @nombre = N'   ';
-    PRINT N'F5: FALLÓ, se esperaba un error de validación.';
+    PRINT N'F5: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'F5';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'F5: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'F5: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 /* P10 (ERROR) Baja de un país que todavía tiene feriados.
    Esperado: error 50001 con 1 condición: lo referencia 1 registro de
    DatosGenerales.FERIADO. El país sigue existiendo. */
-DECLARE @id SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'República Argentina1');
 
 BEGIN TRY
-    EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id;
-    PRINT N'P10: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id_pais;
+    PRINT N'P10: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'P10';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'P10: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'P10: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 SELECT 'P10 después' AS caso, id_pais, nombre
 FROM DatosGenerales.PAIS
-WHERE id_pais = @id;
+WHERE id_pais = @id_pais;
 GO
 
 /* F6 (OK) Baja del feriado.
    Esperado: 1 feriado del país de prueba antes y 0 después.
    F7 (ERROR) Baja del mismo feriado otra vez.
    Esperado: error 50001 con 1 condición: no existe un feriado con ese id. */
-DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
-DECLARE @id INT = (SELECT id_feriado FROM DatosGenerales.FERIADO WHERE id_pais = @id_pais);
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'República Argentina1');
+DECLARE @id_feriado INT = (SELECT id_feriado FROM DatosGenerales.FERIADO WHERE id_pais = @id_pais);
 
 SELECT 'F6 antes' AS caso, COUNT(*) AS feriados_del_pais
 FROM DatosGenerales.FERIADO
 WHERE id_pais = @id_pais;
 
-EXEC DatosGenerales.usp_FERIADO_Baja @id_feriado = @id;
+EXEC DatosGenerales.usp_FERIADO_Baja @id_feriado = @id_feriado;
 
 SELECT 'F6 después' AS caso, COUNT(*) AS feriados_del_pais
 FROM DatosGenerales.FERIADO
 WHERE id_pais = @id_pais;
 
 BEGIN TRY
-    EXEC DatosGenerales.usp_FERIADO_Baja @id_feriado = @id;
-    PRINT N'F7: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_FERIADO_Baja @id_feriado = @id_feriado;
+    PRINT N'F7: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'F7';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'F7: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'F7: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
 /* P8 (ERROR) Baja de un país referenciado desde varias tablas.
-   Preparación: se da de alta la sede "Estadio Prueba DatosGenerales" en
-   "Pais Prueba B", que ya tiene el árbitro de prueba de I7.
+   Preparación: con un INSERT, la sede "Estadio Nacional1" en Japón1, que
+   ya tiene la árbitra de I7.
    Esperado: error 50001 que lista, en un solo mensaje, 2 condiciones: lo
    referencian 1 registro de Torneo.SEDE y 1 de Arbitraje.ARBITRO. El país
-   sigue existiendo. Después se borran la sede y el árbitro de prueba. */
-DECLARE @id SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba B');
+   sigue existiendo. Después se borran la sede y la árbitra con DELETE. */
+DECLARE @id_pais SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Japón1');
 DECLARE @id_sede INT;
-DECLARE @id_arbitro INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE apellido = N'Prueba DatosGenerales');
+DECLARE @id_arbitro INT = (SELECT id_arbitro FROM Arbitraje.ARBITRO WHERE nombre = N'Yoshimi' AND apellido = N'Yamashita');
 
-EXEC Torneo.usp_SEDE_Alta
-    @nombre_estadio = 'Estadio Prueba DatosGenerales', @ciudad = 'Ciudad Prueba', @id_pais = @id,
-    @capacidad = 10000, @huso_horario = 'Tokyo Standard Time', @id_sede = @id_sede OUTPUT;
+INSERT INTO Torneo.SEDE (nombre_estadio, ciudad, id_pais, capacidad, huso_horario)
+VALUES ('Estadio Nacional1', 'Tokio', @id_pais, 68000, 'Tokyo Standard Time');
+SET @id_sede = SCOPE_IDENTITY();
 
 BEGIN TRY
-    EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id;
-    PRINT N'P8: FALLÓ, se esperaba un error de validación.';
+    EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id_pais;
+    PRINT N'P8: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'P8';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'P8: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'P8: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 SELECT 'P8 después' AS caso, id_pais, nombre
 FROM DatosGenerales.PAIS
-WHERE id_pais = @id;
+WHERE id_pais = @id_pais;
 
-EXEC Torneo.usp_SEDE_Baja @id_sede = @id_sede;
-EXEC Arbitraje.usp_ARBITRO_Baja @id_arbitro = @id_arbitro, @eliminar_registro = 1;
+DELETE FROM Torneo.SEDE WHERE id_sede = @id_sede;
+DELETE FROM Arbitraje.ARBITRO WHERE id_arbitro = @id_arbitro;
 GO
 
 /* P9 (OK) Baja de los dos países de prueba, que ya no tienen referencias.
    Esperado: 2 países de prueba antes y 0 después. */
-DECLARE @id_a SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba A2');
-DECLARE @id_b SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Pais Prueba B');
+DECLARE @id_pais_arg SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'República Argentina1');
+DECLARE @id_pais_jpn SMALLINT = (SELECT id_pais FROM DatosGenerales.PAIS WHERE nombre = 'Japón1');
 
 SELECT 'P9 antes' AS caso, COUNT(*) AS paises_de_prueba
 FROM DatosGenerales.PAIS
-WHERE nombre LIKE 'Pais Prueba%';
+WHERE nombre IN ('Argentina1', 'República Argentina1', 'Japón1');
 
-EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id_a;
-EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id_b;
+EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id_pais_arg;
+EXEC DatosGenerales.usp_PAIS_Baja @id_pais = @id_pais_jpn;
 
 SELECT 'P9 después' AS caso, COUNT(*) AS paises_de_prueba
 FROM DatosGenerales.PAIS
-WHERE nombre LIKE 'Pais Prueba%';
+WHERE nombre IN ('Argentina1', 'República Argentina1', 'Japón1');
 GO
 
 
@@ -888,10 +907,14 @@ GO
 BEGIN TRY
     EXEC DatosGenerales.usp_PARAMETRO_REGLAMENTO_Alta
         @codigo = 'TEST-PARAM X', @descripcion = '   ', @valor = NULL;
-    PRINT N'R2: FALLÓ, se esperaba un error de validación.';
+    PRINT N'R2: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'R2';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'R2: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'R2: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -901,10 +924,14 @@ GO
 BEGIN TRY
     EXEC DatosGenerales.usp_PARAMETRO_REGLAMENTO_Alta
         @codigo = 'TEST_PARAMETRO', @descripcion = 'Otra descripción', @valor = 1;
-    PRINT N'R3: FALLÓ, se esperaba un error de validación.';
+    PRINT N'R3: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'R3';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'R3: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'R3: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -927,10 +954,14 @@ GO
    superar a MAX_CONVOCADOS (26). Los dos parámetros quedan como estaban. */
 BEGIN TRY
     EXEC DatosGenerales.usp_PARAMETRO_REGLAMENTO_Modificacion @codigo = 'MIN_CONVOCADOS', @valor = 30;
-    PRINT N'R5: FALLÓ, se esperaba un error de validación.';
+    PRINT N'R5: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'R5';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'R5: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'R5: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 SELECT 'R5 después' AS caso, codigo, valor
@@ -945,10 +976,14 @@ GO
    MAX_CAMBIOS (2). */
 BEGIN TRY
     EXEC DatosGenerales.usp_PARAMETRO_REGLAMENTO_Modificacion @codigo = 'MAX_CAMBIOS', @valor = 2;
-    PRINT N'R6: FALLÓ, se esperaba un error de validación.';
+    PRINT N'R6: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'R6';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'R6: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'R6: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -958,18 +993,26 @@ GO
    PRIME_TIME_HASTA no pueden tener el mismo valor (23). */
 BEGIN TRY
     EXEC DatosGenerales.usp_PARAMETRO_REGLAMENTO_Modificacion @codigo = 'PRIME_TIME_DESDE', @valor = 30;
-    PRINT N'R7a: FALLÓ, se esperaba un error de validación.';
+    PRINT N'R7a: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'R7a';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'R7a: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'R7a: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 
 BEGIN TRY
     EXEC DatosGenerales.usp_PARAMETRO_REGLAMENTO_Modificacion @codigo = 'PRIME_TIME_DESDE', @valor = 23;
-    PRINT N'R7b: FALLÓ, se esperaba un error de validación.';
+    PRINT N'R7b: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'R7b';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'R7b: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'R7b: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -978,10 +1021,14 @@ GO
    y no se indicó ningún dato para modificar. */
 BEGIN TRY
     EXEC DatosGenerales.usp_PARAMETRO_REGLAMENTO_Modificacion @codigo = 'no_existe';
-    PRINT N'R8: FALLÓ, se esperaba un error de validación.';
+    PRINT N'R8: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'R8';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'R8: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'R8: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -990,10 +1037,14 @@ GO
    puede modificar, pero no eliminar. */
 BEGIN TRY
     EXEC DatosGenerales.usp_PARAMETRO_REGLAMENTO_Baja @codigo = 'MAX_CAMBIOS';
-    PRINT N'R9: FALLÓ, se esperaba un error de validación.';
+    PRINT N'R9: ERROR, se esperaba un error de validación.';
 END TRY
 BEGIN CATCH
-    EXEC #usp_MostrarError @caso = 'R9';
+    IF ERROR_NUMBER() = 50001
+        PRINT N'R9: OK, falló la validación como se esperaba.';
+    ELSE
+        PRINT CONCAT(N'R9: ERROR, error inesperado ', ERROR_NUMBER(), N'.');
+    PRINT ERROR_MESSAGE();
 END CATCH;
 GO
 
@@ -1017,19 +1068,21 @@ GO
    reglamento con sus valores originales (MAX_CAMBIOS 5, MAX_CONVOCADOS 26,
    MAX_VENTANAS 3, MIN_CONVOCADOS 23, PRIME_TIME_DESDE 19).
    ============================================================================ */
+ROLLBACK TRANSACTION;
+
 SELECT 'Final' AS caso,
-       (SELECT COUNT(*) FROM DatosGenerales.PAIS WHERE nombre LIKE 'Pais Prueba%')     AS paises_de_prueba,
-       (SELECT COUNT(*) FROM DatosGenerales.IDIOMA WHERE nombre LIKE 'Idioma Prueba%') AS idiomas_de_prueba,
+       (SELECT COUNT(*) FROM DatosGenerales.PAIS WHERE nombre IN ('Argentina1', 'República Argentina1', 'Japón1'))     AS paises_de_prueba,
+       (SELECT COUNT(*) FROM DatosGenerales.IDIOMA WHERE nombre LIKE 'Guaraní1%') AS idiomas_de_prueba,
        (SELECT COUNT(*) FROM DatosGenerales.PARAMETRO_REGLAMENTO
         WHERE codigo = 'TEST_PARAMETRO')                                              AS parametros_de_prueba,
        (SELECT COUNT(*) FROM Arbitraje.ARBITRO
-        WHERE apellido = N'Prueba DatosGenerales')                                    AS arbitros_de_prueba,
+        WHERE nombre = N'Yoshimi' AND apellido = N'Yamashita')                                    AS arbitros_de_prueba,
        (SELECT COUNT(*) FROM Torneo.SEDE
-        WHERE nombre_estadio = 'Estadio Prueba DatosGenerales')                       AS sedes_de_prueba,
+        WHERE nombre_estadio = 'Estadio Nacional1')                       AS sedes_de_prueba,
        (SELECT COUNT(*) FROM DatosGenerales.COTIZACION WHERE codigo_moneda = 'XTS')    AS cotizaciones_de_prueba,
        (SELECT COUNT(*) FROM DatosGenerales.FERIADO AS f
         INNER JOIN DatosGenerales.PAIS AS p ON p.id_pais = f.id_pais
-        WHERE p.nombre LIKE 'Pais Prueba%')                                           AS feriados_de_prueba;
+        WHERE p.nombre IN ('Argentina1', 'República Argentina1', 'Japón1'))                                           AS feriados_de_prueba;
 
 SELECT 'Final' AS caso, codigo, valor
 FROM DatosGenerales.PARAMETRO_REGLAMENTO
